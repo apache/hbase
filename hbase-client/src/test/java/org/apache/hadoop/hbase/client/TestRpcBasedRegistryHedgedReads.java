@@ -33,7 +33,6 @@ import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
@@ -58,21 +57,29 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClusterIdResponse;
 
 @Category({ ClientTests.class, SmallTests.class })
-public class TestMasterRegistryHedgedReads {
+public class TestRpcBasedRegistryHedgedReads {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegistryHedgedReads.class);
+    HBaseClassTestRule.forClass(TestRpcBasedRegistryHedgedReads.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestMasterRegistryHedgedReads.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRpcBasedRegistryHedgedReads.class);
+
+  private static final String HEDGED_REQS_FANOUT_CONFIG_NAME = "hbase.test.hedged.reqs.fanout";
+  private static final String REFRESH_INTERVAL_SECS_CONFIG_NAME =
+    "hbase.test.refresh.interval.secs";
+  private static final String MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME =
+    "hbase.test.min.refresh.interval.secs";
 
   private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   private static final ExecutorService EXECUTOR =
     Executors.newCachedThreadPool(new ThreadFactoryBuilder().setDaemon(true).build());
+
+  private static Set<ServerName> BOOTSTRAP_NODES;
 
   private static AtomicInteger CALLED = new AtomicInteger(0);
 
@@ -142,14 +149,35 @@ public class TestMasterRegistryHedgedReads {
     }
   }
 
+  private AbstractRpcBasedConnectionRegistry createRegistry(int hedged) throws IOException {
+    Configuration conf = UTIL.getConfiguration();
+    conf.setInt(HEDGED_REQS_FANOUT_CONFIG_NAME, hedged);
+    return new AbstractRpcBasedConnectionRegistry(conf, HEDGED_REQS_FANOUT_CONFIG_NAME,
+      REFRESH_INTERVAL_SECS_CONFIG_NAME, MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME) {
+
+      @Override
+      protected Set<ServerName> getBootstrapNodes(Configuration conf) throws IOException {
+        return BOOTSTRAP_NODES;
+      }
+
+      @Override
+      protected CompletableFuture<Set<ServerName>> fetchEndpoints() {
+        return CompletableFuture.completedFuture(BOOTSTRAP_NODES);
+      }
+    };
+  }
+
   @BeforeClass
   public static void setUpBeforeClass() {
     Configuration conf = UTIL.getConfiguration();
     conf.setClass(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, RpcClientImpl.class,
       RpcClient.class);
-    String masters = IntStream.range(0, 10).mapToObj(i -> "localhost:" + (10000 + 100 * i))
-      .collect(Collectors.joining(","));
-    conf.set(HConstants.MASTER_ADDRS_KEY, masters);
+    // disable refresh, we do not need to refresh in this test
+    conf.setLong(REFRESH_INTERVAL_SECS_CONFIG_NAME, Integer.MAX_VALUE);
+    conf.setLong(MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME, Integer.MAX_VALUE - 1);
+    BOOTSTRAP_NODES = IntStream.range(0, 10)
+      .mapToObj(i -> ServerName.valueOf("localhost", (10000 + 100 * i), ServerName.NON_STARTCODE))
+      .collect(Collectors.toSet());
   }
 
   @AfterClass
@@ -175,9 +203,7 @@ public class TestMasterRegistryHedgedReads {
 
   @Test
   public void testAllFailNoHedged() throws IOException {
-    Configuration conf = UTIL.getConfiguration();
-    conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, 1);
-    try (MasterRegistry registry = new MasterRegistry(conf)) {
+    try (AbstractRpcBasedConnectionRegistry registry = createRegistry(1)) {
       assertThrows(IOException.class, () -> logIfError(registry.getClusterId()));
       assertEquals(10, CALLED.get());
     }
@@ -185,10 +211,8 @@ public class TestMasterRegistryHedgedReads {
 
   @Test
   public void testAllFailHedged3() throws IOException {
-    Configuration conf = UTIL.getConfiguration();
-    conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, 3);
     BAD_RESP_INDEX = 5;
-    try (MasterRegistry registry = new MasterRegistry(conf)) {
+    try (AbstractRpcBasedConnectionRegistry registry = createRegistry(3)) {
       assertThrows(IOException.class, () -> logIfError(registry.getClusterId()));
       assertEquals(10, CALLED.get());
     }
@@ -196,12 +220,10 @@ public class TestMasterRegistryHedgedReads {
 
   @Test
   public void testFirstSucceededNoHedge() throws IOException {
-    Configuration conf = UTIL.getConfiguration();
-    // will be set to 1
-    conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, 0);
     GOOD_RESP_INDEXS =
       IntStream.range(0, 10).mapToObj(Integer::valueOf).collect(Collectors.toSet());
-    try (MasterRegistry registry = new MasterRegistry(conf)) {
+    // will be set to 1
+    try (AbstractRpcBasedConnectionRegistry registry = createRegistry(0)) {
       String clusterId = logIfError(registry.getClusterId());
       assertEquals(RESP.getClusterId(), clusterId);
       assertEquals(1, CALLED.get());
@@ -210,10 +232,8 @@ public class TestMasterRegistryHedgedReads {
 
   @Test
   public void testSecondRoundSucceededHedge4() throws IOException {
-    Configuration conf = UTIL.getConfiguration();
-    conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, 4);
     GOOD_RESP_INDEXS = Collections.singleton(6);
-    try (MasterRegistry registry = new MasterRegistry(conf)) {
+    try (AbstractRpcBasedConnectionRegistry registry = createRegistry(4)) {
       String clusterId = logIfError(registry.getClusterId());
       assertEquals(RESP.getClusterId(), clusterId);
       UTIL.waitFor(5000, () -> CALLED.get() == 8);
@@ -222,10 +242,8 @@ public class TestMasterRegistryHedgedReads {
 
   @Test
   public void testSucceededWithLargestHedged() throws IOException, InterruptedException {
-    Configuration conf = UTIL.getConfiguration();
-    conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, Integer.MAX_VALUE);
     GOOD_RESP_INDEXS = Collections.singleton(5);
-    try (MasterRegistry registry = new MasterRegistry(conf)) {
+    try (AbstractRpcBasedConnectionRegistry registry = createRegistry(Integer.MAX_VALUE)) {
       String clusterId = logIfError(registry.getClusterId());
       assertEquals(RESP.getClusterId(), clusterId);
       UTIL.waitFor(5000, () -> CALLED.get() == 10);
