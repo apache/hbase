@@ -20,7 +20,6 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
 import org.apache.yetus.audience.InterfaceAudience;
-import java.util.NoSuchElementException;
 
 /**
  * Captures operation metrics by table. Separates metrics collection for table metrics away from
@@ -37,7 +36,7 @@ public class RegionServerTableMetrics {
     if (enableTableQueryMeter) {
       queryMeter = new MetricsTableQueryMeterImpl(MetricRegistries.global().
         get(((MetricsTableLatenciesImpl) latencies).getMetricRegistryInfo()).orElseThrow(
-        NoSuchElementException::new));
+        ()-> new IllegalStateException("metricRegistry is null")));
     }
   }
 
