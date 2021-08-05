@@ -331,12 +331,12 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
     private Text getKey(Path path) {
       int level = conf.getInt(NUMBER_OF_LEVELS_TO_PRESERVE_KEY, 1);
       int count = 0;
-      String relPath = "";
+      StringBuilder relPath = new StringBuilder();
       while (count++ < level) {
-        relPath = Path.SEPARATOR + path.getName() + relPath;
+        relPath.insert(0, Path.SEPARATOR + path.getName());
         path = path.getParent();
       }
-      return new Text(relPath);
+      return new Text(relPath.toString());
     }
 
     private List<Path> getSourceFiles() throws NoSuchFieldException, SecurityException,
