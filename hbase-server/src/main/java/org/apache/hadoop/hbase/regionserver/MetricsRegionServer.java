@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.metrics.Timer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import java.util.NoSuchElementException;
 
 /**
  * Maintains regionserver statistics and publishes them through the metrics interfaces.
@@ -73,7 +74,8 @@ public class MetricsRegionServer {
 
     // Create hbase-metrics module based metrics. The registry should already be registered by the
     // MetricsRegionServerSource
-    metricRegistry = MetricRegistries.global().get(serverSource.getMetricRegistryInfo()).get();
+    metricRegistry = MetricRegistries.global().get(serverSource.getMetricRegistryInfo()).orElseThrow(
+      NoSuchElementException::new);
 
     // create and use metrics from the new hbase-metrics based registry.
     bulkLoadTimer = metricRegistry.timer("Bulkload");
