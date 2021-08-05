@@ -87,7 +87,6 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
       NettyRpcServer.LOG.warn(requestTooBigMessage);
 
       if (connection.connectionHeaderRead) {
-        in.skipBytes(FRAME_LENGTH_FIELD_LENGTH);
         handleTooBigRequest(in);
         return;
       }
@@ -107,6 +106,7 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
   }
 
   private void handleTooBigRequest(ByteBuf in) throws IOException {
+    in.skipBytes(FRAME_LENGTH_FIELD_LENGTH);
     in.markReaderIndex();
     int preIndex = in.readerIndex();
     int headerSize = readRawVarint32(in);
@@ -118,6 +118,7 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
     }
 
     if (in.readableBytes() < headerSize) {
+      NettyRpcServer.LOG.debug("headerSize is larger than readableBytes");
       in.resetReaderIndex();
       return;
     }
