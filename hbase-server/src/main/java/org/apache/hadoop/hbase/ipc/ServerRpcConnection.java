@@ -629,8 +629,7 @@ abstract class ServerRpcConnection implements Closeable {
     };
     Context traceCtx = GlobalOpenTelemetry.getPropagators().getTextMapPropagator()
       .extract(Context.current(), header.getTraceInfo(), getter);
-    Span span =
-      TraceUtil.getGlobalTracer().spanBuilder("RpcServer.process").setParent(traceCtx).startSpan();
+    Span span = TraceUtil.createRemoteSpan("RpcServer.process", traceCtx);
     try (Scope scope = span.makeCurrent()) {
       int id = header.getCallId();
       if (RpcServer.LOG.isTraceEnabled()) {
