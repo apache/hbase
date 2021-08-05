@@ -20,18 +20,23 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator.ChunkType;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -237,22 +242,30 @@ public class TestMemStoreChunkPool {
     ChunkCreator newCreator = new ChunkCreator(chunkSize, false, 400, 1, 0.5f, null, 0);
     assertEquals(initialCount, newCreator.getPoolSize());
     assertEquals(maxCount, newCreator.getMaxCount());
-    ChunkCreator.instance = newCreator;// Replace the global ref with the new one we created.
-                                             // Used it for the testing. Later in finally we put
-                                             // back the original
+    // Replace the global ref with the new one we created.
+    // Used it for the testing. Later in finally we put
+    // back the original
+    ChunkCreator.instance = newCreator;
+
     final KeyValue kv = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"),
         new byte[valSize]);
+    final AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>();
     try {
       Runnable r = new Runnable() {
         @Override
         public void run() {
-          MemStoreLAB memStoreLAB = new MemStoreLABImpl(conf);
-          for (int i = 0; i < maxCount; i++) {
-            memStoreLAB.copyCellInto(kv);// Try allocate size = chunkSize. Means every
-                                         // allocate call will result in a new chunk
+          try {
+            MemStoreLAB memStoreLAB = new MemStoreLABImpl(conf);
+            for (int i = 0; i < maxCount; i++) {
+              // Try allocate size = chunkSize. Means every
+              // allocate call will result in a new chunk
+              memStoreLAB.copyCellInto(kv);
+            }
+            // Close MemStoreLAB so that all chunks will be tried to be put back to pool
+            memStoreLAB.close();
+          } catch (Throwable execption) {
+            exceptionRef.set(execption);
           }
-          // Close MemStoreLAB so that all chunks will be tried to be put back to pool
-          memStoreLAB.close();
         }
       };
       Thread t1 = new Thread(r);
@@ -264,9 +277,154 @@ public class TestMemStoreChunkPool {
       t1.join();
       t2.join();
       t3.join();
-      assertTrue(newCreator.getPoolSize() <= maxCount);
+      assertTrue(exceptionRef.get() == null);
+      assertTrue(newCreator.getPoolSize() <= maxCount && newCreator.getPoolSize() > 0);
     } finally {
       ChunkCreator.instance = oldCreator;
     }
+  }
+
+  // This test is for HBASE-26142, which throws NPE when indexChunksPool is null.
+  @Test
+  public void testNoIndexChunksPoolOrNoDataChunksPool() throws Exception {
+    final int maxCount = 10;
+    final int initialCount = 5;
+    final int newChunkSize = 40;
+    final int valSize = 7;
+
+    ChunkCreator oldCreator = ChunkCreator.getInstance();
+    try {
+      // Test dataChunksPool is not null and indexChunksPool is null
+      ChunkCreator newCreator = new ChunkCreator(newChunkSize, false, 400, 1, 0.5f, null, 0);
+      assertEquals(initialCount, newCreator.getPoolSize());
+      assertEquals(0, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+      assertEquals(maxCount, newCreator.getMaxCount());
+      assertEquals(0, newCreator.getMaxCount(ChunkType.INDEX_CHUNK));
+      assertTrue(newCreator.getDataChunksPool() != null);
+      assertTrue(newCreator.getIndexChunksPool() == null);
+      ChunkCreator.instance = newCreator;
+      final KeyValue kv = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"),
+          new byte[valSize]);
+
+      MemStoreLAB memStoreLAB = new MemStoreLABImpl(conf);
+      memStoreLAB.copyCellInto(kv);
+      memStoreLAB.close();
+      assertEquals(initialCount, newCreator.getPoolSize());
+      assertEquals(0, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+
+      Chunk dataChunk = newCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
+      assertTrue(dataChunk.isDataChunk());
+      assertTrue(dataChunk.isFromPool());
+      assertEquals(initialCount - 1, newCreator.getPoolSize());
+      assertEquals(0, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+      newCreator.putbackChunks(Collections.singleton(dataChunk.getId()));
+      assertEquals(initialCount, newCreator.getPoolSize());
+      assertEquals(0, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+
+      // We set ChunkCreator.indexChunkSize to 0, but we want to get a IndexChunk
+      try {
+        newCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP, ChunkType.INDEX_CHUNK);
+        fail();
+      } catch (IllegalArgumentException e) {
+      }
+
+      Chunk jumboChunk = newCreator.getJumboChunk(newChunkSize + 10);
+      assertTrue(jumboChunk.isJumbo());
+      assertTrue(!jumboChunk.isFromPool());
+      assertEquals(initialCount, newCreator.getPoolSize());
+      assertEquals(0, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+
+      // Test both dataChunksPool and indexChunksPool are null
+      newCreator = new ChunkCreator(newChunkSize, false, 400, 0, 0.5f, null, 0);
+      assertEquals(0, newCreator.getPoolSize());
+      assertEquals(0, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+      assertEquals(0, newCreator.getMaxCount());
+      assertEquals(0, newCreator.getMaxCount(ChunkType.INDEX_CHUNK));
+      assertTrue(newCreator.getDataChunksPool() == null);
+      assertTrue(newCreator.getIndexChunksPool() == null);
+      ChunkCreator.instance = newCreator;
+
+      memStoreLAB = new MemStoreLABImpl(conf);
+      memStoreLAB.copyCellInto(kv);
+      memStoreLAB.close();
+      assertEquals(0, newCreator.getPoolSize());
+      assertEquals(0, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+
+      dataChunk = newCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
+      assertTrue(dataChunk.isDataChunk());
+      assertTrue(!dataChunk.isFromPool());
+      assertEquals(0, newCreator.getPoolSize());
+      assertEquals(0, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+
+      try {
+        // We set ChunkCreator.indexChunkSize to 0, but we want to get a IndexChunk
+        newCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP, ChunkType.INDEX_CHUNK);
+        fail();
+      } catch (IllegalArgumentException e) {
+      }
+
+      jumboChunk = newCreator.getJumboChunk(newChunkSize + 10);
+      assertTrue(jumboChunk.isJumbo());
+      assertTrue(!jumboChunk.isFromPool());
+      assertEquals(0, newCreator.getPoolSize());
+      assertEquals(0, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+
+      // Test dataChunksPool is null and indexChunksPool is not null
+      newCreator = new ChunkCreator(newChunkSize, false, 400, 1, 0.5f, null, 1);
+      assertEquals(0, newCreator.getPoolSize());
+      assertEquals(initialCount, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+      assertEquals(0, newCreator.getMaxCount());
+      assertEquals(maxCount, newCreator.getMaxCount(ChunkType.INDEX_CHUNK));
+      assertTrue(newCreator.getDataChunksPool() == null);
+      assertTrue(newCreator.getIndexChunksPool() != null);
+      assertEquals(newCreator.getChunkSize(ChunkType.DATA_CHUNK),
+        newCreator.getChunkSize(ChunkType.INDEX_CHUNK));
+      ChunkCreator.instance = newCreator;
+
+      memStoreLAB = new MemStoreLABImpl(conf);
+      memStoreLAB.copyCellInto(kv);
+      memStoreLAB.close();
+      assertEquals(0, newCreator.getPoolSize());
+      assertEquals(initialCount, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+
+      dataChunk = newCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
+      assertTrue(dataChunk.isDataChunk());
+      assertTrue(!dataChunk.isFromPool());
+      assertEquals(0, newCreator.getPoolSize());
+      assertEquals(initialCount, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+
+      Chunk indexChunk =
+          newCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP, ChunkType.INDEX_CHUNK);
+      assertEquals(0, newCreator.getPoolSize());
+      assertEquals(initialCount - 1, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+      assertTrue(indexChunk.isIndexChunk());
+      assertTrue(indexChunk.isFromPool());
+      newCreator.putbackChunks(Collections.singleton(indexChunk.getId()));
+      assertEquals(0, newCreator.getPoolSize());
+      assertEquals(initialCount, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+
+      jumboChunk = newCreator.getJumboChunk(newChunkSize + 10);
+      assertTrue(jumboChunk.isJumbo());
+      assertTrue(!jumboChunk.isFromPool());
+      assertEquals(0, newCreator.getPoolSize());
+      assertEquals(initialCount, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
+    } finally {
+      ChunkCreator.instance = oldCreator;
+    }
+
+    // Test both dataChunksPool and indexChunksPool are not null
+    assertTrue(ChunkCreator.getInstance().getDataChunksPool() != null);
+    assertTrue(ChunkCreator.getInstance().getIndexChunksPool() != null);
+    Chunk dataChunk = ChunkCreator.getInstance().getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
+    assertTrue(dataChunk.isDataChunk());
+    assertTrue(dataChunk.isFromPool());
+    Chunk indexChunk = ChunkCreator.getInstance().getChunk(CompactingMemStore.IndexType.CHUNK_MAP,
+      ChunkType.INDEX_CHUNK);
+    assertTrue(indexChunk.isIndexChunk());
+    assertTrue(indexChunk.isFromPool());
+    Chunk jumboChunk =
+        ChunkCreator.getInstance().getJumboChunk(ChunkCreator.getInstance().getChunkSize() + 10);
+    assertTrue(jumboChunk.isJumbo());
+    assertTrue(!jumboChunk.isFromPool());
   }
 }
