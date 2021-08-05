@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.ipc.RpcServer.MAX_REQUEST_SIZE;
 import static org.junit.Assert.assertTrue;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -48,6 +48,7 @@ public class TestRequestTooBigException {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().setInt(MAX_REQUEST_SIZE, 10000);
     TEST_UTIL.startMiniCluster();
   }
 
@@ -64,17 +65,18 @@ public class TestRequestTooBigException {
     TEST_UTIL.waitTableAvailable(tableName.getName(), 5000);
     try {
       byte[] value = new byte[2 * 2014 * 1024];
-
-      Put p = new Put(Bytes.toBytes("bigrow"));
-      // big request = 400*2 M
-      for (int i = 0; i < 400; i++) {
-        p.addColumn(family, Bytes.toBytes("someQualifier" + i), value);
-      }
-      try {
-        table.put(p);
-        assertTrue("expected RequestTooBigException", false);
-      } catch (RequestTooBigException e) {
-        assertTrue("expected RequestTooBigException", true);
+      for (int m = 0; m < 10000; m++) {
+        Put p = new Put(Bytes.toBytes("bigrow"));
+        // big request = 400*2 M
+        for (int i = 0; i < 400; i++) {
+          p.addColumn(family, Bytes.toBytes("someQualifier" + i), value);
+        }
+        try {
+          table.put(p);
+          assertTrue("expected RequestTooBigException", false);
+        } catch (RequestTooBigException e) {
+          assertTrue("expected RequestTooBigException", true);
+        }
       }
     } finally {
       table.close();
