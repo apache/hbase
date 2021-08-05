@@ -195,6 +195,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
           </div>
         </%if>
 
+        <%if master.getAssignmentManager() != null %>
+        <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
+        </%if>
+
         <section>
             <h2>Region Servers</h2>
             <& RegionServerListTmpl; master= master; servers = servers &>
@@ -241,9 +245,6 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             <h2>Peers</h2>
             <& peerConfigs &>
         </section>
-        <%if master.getAssignmentManager() != null %>
-        <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
-        </%if>
 	<%else>
         <section>
             <& BackupMasterStatusTmpl; master = master &>
@@ -472,6 +473,9 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
           master.getAssignmentManager().getRegionStates()
             .getRegionByStateOfTable(tableName);
       int openRegionsCount = tableRegions.get(RegionState.State.OPEN).size();
+      int openingRegionsCount = tableRegions.get(RegionState.State.OPENING).size();
+      int closedRegionsCount = tableRegions.get(RegionState.State.CLOSED).size();
+      int closingRegionsCount = tableRegions.get(RegionState.State.CLOSING).size();
       int offlineRegionsCount = tableRegions.get(RegionState.State.OFFLINE).size();
       int splitRegionsCount = tableRegions.get(RegionState.State.SPLIT).size();
       int failedRegionsCount = tableRegions.get(RegionState.State.FAILED_OPEN).size()
@@ -492,6 +496,9 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             <td align="center"><% frags.get(tableName.getNameAsString()) != null ? frags.get(tableName.getNameAsString()).intValue() + "%" : "n/a" %></td>
         </%if>
         <td><% openRegionsCount %></td>
+        <%if (openingRegionsCount > 0) %> <td><a href="/rits.jsp?table=<% tableName.getNameAsString() %>&state=OPENING"><% openingRegionsCount %></td> <%else><td><% openingRegionsCount %></td> </%if>
+        <td><% closedRegionsCount %></td>
+        <%if (closingRegionsCount > 0) %> <td><a href="/rits.jsp?table=<% tableName.getNameAsString() %>&state=CLOSING"><% closingRegionsCount %></td> <%else><td><% closingRegionsCount %></td> </%if>
         <td><% offlineRegionsCount %></td>
         <td><% failedRegionsCount %></td>
         <td><% splitRegionsCount %></td>
