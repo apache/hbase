@@ -23,12 +23,14 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import java.io.File;
+import java.io.IOException;
 import java.net.BindException;
 import java.net.SocketException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Properties;
 import javax.net.ssl.SSLException;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -75,6 +77,8 @@ public class TestLogLevel {
   private static Configuration clientConf;
   private static Configuration sslConf;
   private static final String logName = TestLogLevel.class.getName();
+  private static final String protectedPrefix = "protected";
+  private static final String protectedLogName = protectedPrefix + "." + logName;
   private static final Logger log = LogManager.getLogger(logName);
   private final static String PRINCIPAL = "loglevel.principal";
   private final static String KEYTAB  = "loglevel.keytab";
@@ -90,6 +94,7 @@ public class TestLogLevel {
   @BeforeClass
   public static void setUp() throws Exception {
     serverConf = new Configuration();
+    serverConf.setStrings(LogLevel.READONLY_LOGGERS_CONF_KEY, protectedPrefix);
     HTU = new HBaseCommonTestingUtility(serverConf);
 
     File keystoreDir = new File(HTU.getDataTestDir("keystore").toString());
@@ -276,7 +281,13 @@ public class TestLogLevel {
   private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
       final boolean isSpnego)
       throws Exception {
-    testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego, Level.DEBUG.toString());
+    testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego, logName, Level.DEBUG.toString());
+  }
+
+  private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
+      final boolean isSpnego, final String newLevel)
+      throws Exception {
+    testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego, logName, newLevel);
   }
 
   /**
@@ -288,7 +299,7 @@ public class TestLogLevel {
    * @throws Exception if client can't accesss server.
    */
   private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
-      final boolean isSpnego, final String newLevel)
+      final boolean isSpnego, final String loggerName, final String newLevel)
       throws Exception {
     if (!LogLevel.isValidProtocol(bindProtocol)) {
       throw new Exception("Invalid server protocol " + bindProtocol);
@@ -296,7 +307,8 @@ public class TestLogLevel {
     if (!LogLevel.isValidProtocol(connectProtocol)) {
       throw new Exception("Invalid client protocol " + connectProtocol);
     }
-    Level oldLevel = log.getEffectiveLevel();
+    Logger log = LogManager.getLogger(loggerName);
+    Level oldLevel = log.getLevel();
     assertNotEquals("Get default Log Level which shouldn't be ERROR.",
         Level.ERROR, oldLevel);
 
@@ -324,8 +336,8 @@ public class TestLogLevel {
     try {
       clientUGI.doAs((PrivilegedExceptionAction<Void>) () -> {
         // client command line
-        getLevel(connectProtocol, authority);
-        setLevel(connectProtocol, authority, newLevel);
+        getLevel(connectProtocol, authority, loggerName);
+        setLevel(connectProtocol, authority, loggerName, newLevel);
         return null;
       });
     } finally {
@@ -345,7 +357,7 @@ public class TestLogLevel {
    * @param authority daemon's web UI address
    * @throws Exception if unable to connect
    */
-  private void getLevel(String protocol, String authority) throws Exception {
+  private void getLevel(String protocol, String authority, String logName) throws Exception {
     String[] getLevelArgs = {"-getlevel", authority, logName, "-protocol", protocol};
     CLI cli = new CLI(protocol.equalsIgnoreCase("https") ? sslConf : clientConf);
     cli.run(getLevelArgs);
@@ -359,14 +371,28 @@ public class TestLogLevel {
    * @param authority daemon's web UI address
    * @throws Exception if unable to run or log level does not change as expected
    */
-  private void setLevel(String protocol, String authority, String newLevel)
+  private void setLevel(String protocol, String authority, String logName, String newLevel)
       throws Exception {
     String[] setLevelArgs = {"-setlevel", authority, logName, newLevel, "-protocol", protocol};
     CLI cli = new CLI(protocol.equalsIgnoreCase("https") ? sslConf : clientConf);
     cli.run(setLevelArgs);
 
+    Logger log = LogManager.getLogger(logName);
+
     assertEquals("new level not equal to expected: ", newLevel.toUpperCase(),
         log.getEffectiveLevel().toString());
+  }
+
+  @Test
+  public void testSettingProtectedLogLevel() throws Exception {
+    try {
+      testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, true, protectedLogName,
+        "DEBUG");
+      fail("Expected IO exception due to protected logger");
+    } catch (IOException e) {
+      assertTrue(e.getMessage().contains("" + HttpServletResponse.SC_PRECONDITION_FAILED));
+      assertTrue(e.getMessage().contains("Modification of logger " + protectedLogName + " is disallowed in configuration."));
+    }
   }
 
   /**
