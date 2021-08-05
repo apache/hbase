@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.StringUtils;
@@ -448,6 +449,19 @@ public abstract class AbstractTestIPC {
     }
   }
 
+  private SpanData waitSpan(String name) {
+    Waiter.waitFor(CONF, 1000,
+      () -> traceRule.getSpans().stream().map(SpanData::getName).anyMatch(s -> s.equals(name)));
+    return traceRule.getSpans().stream().filter(s -> s.getName().equals(name)).findFirst().get();
+  }
+
+  private void assertRpcAttribute(SpanData data, String methodName) {
+    assertEquals(SERVICE.getDescriptorForType().getName(),
+      data.getAttributes().get(TraceUtil.RPC_SERVICE_KEY));
+    assertEquals(methodName,
+      data.getAttributes().get(TraceUtil.RPC_METHOD_KEY));
+  }
+
   @Test
   public void testTracing() throws IOException, ServiceException {
     RpcServer rpcServer = createRpcServer(null, "testRpcServer",
@@ -457,9 +471,8 @@ public abstract class AbstractTestIPC {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       stub.pause(null, PauseRequestProto.newBuilder().setMs(100).build());
-      Waiter.waitFor(CONF, 1000, () -> traceRule.getSpans().stream().map(SpanData::getName)
-        .anyMatch(s -> s.equals("RpcClient.callMethod.TestProtobufRpcProto.pause")));
-
+      assertRpcAttribute(waitSpan("RpcClient.callMethod"), "pause");
+      assertRpcAttribute(waitSpan("RpcServer.callMethod"), "pause");
       assertSameTraceId();
       for (SpanData data : traceRule.getSpans()) {
         assertThat(
@@ -471,9 +484,8 @@ public abstract class AbstractTestIPC {
       traceRule.clearSpans();
       assertThrows(ServiceException.class,
         () -> stub.error(null, EmptyRequestProto.getDefaultInstance()));
-      Waiter.waitFor(CONF, 1000, () -> traceRule.getSpans().stream().map(SpanData::getName)
-        .anyMatch(s -> s.equals("RpcClient.callMethod.TestProtobufRpcProto.error")));
-
+      assertRpcAttribute(waitSpan("RpcClient.callMethod"), "error");
+      assertRpcAttribute(waitSpan("RpcServer.callMethod"), "error");
       assertSameTraceId();
       for (SpanData data : traceRule.getSpans()) {
         assertEquals(StatusCode.ERROR, data.getStatus().getStatusCode());
