@@ -36,18 +36,16 @@ import java.io.IOException;
 import java.util.Collection;
 
 /**
- * <code></code>MergeRegionStrategy</code> implementation to be used in combination with
+ * <code>MergeRegionStrategy</code> implementation to be used in combination with
  * <code>PersistedStoreEngine</code> to avoid renames when merging regions.
  *
- * To use it, define the following properties under master configuration:
- * 1) <property>
- *      <name>hbase.hregion.file.write.strategy</name>
- *      <value>org.apache.hadoop.hbase.regionserver.DirectStoreFSWriteStrategy</value>
- *    </property>
- * 2) <property>
- *      <name>hbase.hregion.merge.strategy</name>
- *      <value>org.apache.hadoop.hbase.master.assignment.DirectStoreMergeRegionsStrategy</value>
- *    </property>
+ * To use it, define the following properties under table configuration:
+ *
+ * {TABLE_ATTRIBUTES =>
+ *  {METADATA => {'hbase.hregion.file.write.strategy' =>
+ *      'org.apache.hadoop.hbase.regionserver.DirectStoreFSWriteStrategy',
+ *    'hbase.hregion.merge.strategy' =>
+ *      'org.apache.hadoop.hbase.master.assignment.DirectStoreMergeRegionsStrategy'}}}
  *
  * This will create the resulting merging region directory straight under the table dir, instead of
  * creating it under the temporary ".merges" dir as done by the default implementation.
