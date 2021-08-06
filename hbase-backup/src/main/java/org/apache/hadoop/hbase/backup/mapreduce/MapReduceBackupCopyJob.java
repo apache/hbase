@@ -23,6 +23,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 
@@ -331,11 +333,13 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
     private Text getKey(Path path) {
       int level = conf.getInt(NUMBER_OF_LEVELS_TO_PRESERVE_KEY, 1);
       int count = 0;
+      Deque<String> paths = new LinkedList<>();
       StringBuilder relPath = new StringBuilder();
       while (count++ < level) {
-        relPath.insert(0, Path.SEPARATOR + path.getName());
+        paths.addFirst(Path.SEPARATOR + path.getName());
         path = path.getParent();
       }
+      paths.forEach(relPath::append);
       return new Text(relPath.toString());
     }
 
