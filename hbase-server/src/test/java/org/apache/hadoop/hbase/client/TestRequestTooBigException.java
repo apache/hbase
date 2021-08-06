@@ -58,16 +58,17 @@ public class TestRequestTooBigException {
   }
 
   @Test
-  public void testHbasePutDeleteCell() throws Exception {
+  public void testRequestTooBig() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] family = Bytes.toBytes("cf");
     Table table = TEST_UTIL.createTable(tableName, family);
     TEST_UTIL.waitTableAvailable(tableName.getName(), 5000);
+
     try {
-      byte[] value = new byte[2 * 2014 * 1024];
-      for (int m = 0; m < 10000; m++) {
+      byte[] value = new byte[1024];
+      for (int m = 0; m < 1000; m++) {
         Put p = new Put(Bytes.toBytes("bigrow"));
-        // big request = 400*2 M
+        // big request = 400*1024
         for (int i = 0; i < 400; i++) {
           p.addColumn(family, Bytes.toBytes("someQualifier" + i), value);
         }
