@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.ipc.RpcServer.MAX_REQUEST_SIZE;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertThrows;
+
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -29,59 +31,52 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 
-@Category({MediumTests.class, ClientTests.class})
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
+@Category({ MediumTests.class, ClientTests.class })
 public class TestRequestTooBigException {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRequestTooBigException.class);
+    HBaseClassTestRule.forClass(TestRequestTooBigException.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TestName name = new TestName();
+  private static final TableName NAME = TableName.valueOf("request_too_big");
+
+  private static final byte[] FAMILY = Bytes.toBytes("family");
+
+  private static Table TABLE;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setInt(MAX_REQUEST_SIZE, 10000);
-    TEST_UTIL.startMiniCluster();
+    TEST_UTIL.getConfiguration().setInt(MAX_REQUEST_SIZE, 10 * 1024);
+    TEST_UTIL.startMiniCluster(1);
+    TABLE = TEST_UTIL.createTable(NAME, FAMILY);
+    TEST_UTIL.waitTableAvailable(NAME);
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    Closeables.close(TABLE, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
   public void testHbasePutDeleteCell() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    final byte[] family = Bytes.toBytes("cf");
-    Table table = TEST_UTIL.createTable(tableName, family);
-    TEST_UTIL.waitTableAvailable(tableName.getName(), 5000);
-    try {
-      byte[] value = new byte[2 * 2014 * 1024];
-      for (int m = 0; m < 10000; m++) {
-        Put p = new Put(Bytes.toBytes("bigrow"));
-        // big request = 400*2 M
-        for (int i = 0; i < 400; i++) {
-          p.addColumn(family, Bytes.toBytes("someQualifier" + i), value);
-        }
-        try {
-          table.put(p);
-          assertTrue("expected RequestTooBigException", false);
-        } catch (RequestTooBigException e) {
-          assertTrue("expected RequestTooBigException", true);
-        }
+    byte[] value = new byte[1024];
+    ThreadLocalRandom.current().nextBytes(value);
+    for (int m = 0; m < 100; m++) {
+      Put p = new Put(Bytes.toBytes("bigrow-" + m));
+      // max request is 10K, big request = 100 * 1K
+      for (int i = 0; i < 100; i++) {
+        p.addColumn(FAMILY, Bytes.toBytes("someQualifier" + i), value);
       }
-    } finally {
-      table.close();
+      final Put finalPut = p;
+      assertThrows(RequestTooBigException.class, () -> TABLE.put(finalPut));
     }
   }
 }
-
-
