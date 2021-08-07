@@ -41,7 +41,7 @@ class PrimaryRegionCountSkewCostFunction extends CostFunction {
 
   private double computeCostForRegionServer(int regionServerIndex) {
     int cost = 0;
-    for (int regionIdx : cluster.regionsPerServer[regionServerIndex]) {
+    for (Integer regionIdx : cluster.regionsPerServer.get(regionServerIndex)) {
       if (regionIdx == cluster.regionIndexToPrimaryIndex[regionIdx]) {
         cost++;
       }
@@ -66,8 +66,12 @@ class PrimaryRegionCountSkewCostFunction extends CostFunction {
   @Override
   protected void regionMoved(int region, int oldServer, int newServer) {
     cost.applyCostsChange(costs -> {
-      costs[oldServer] = computeCostForRegionServer(oldServer);
-      costs[newServer] = computeCostForRegionServer(newServer);
+      if (region == cluster.regionIndexToPrimaryIndex[region]) {
+        if (oldServer >= 0) {
+          costs[oldServer]--;
+        }
+        costs[newServer]++;
+      }
     });
   }
 

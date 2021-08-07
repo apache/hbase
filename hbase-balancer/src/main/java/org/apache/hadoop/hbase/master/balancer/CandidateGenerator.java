@@ -42,13 +42,13 @@ abstract class CandidateGenerator {
    */
   int pickRandomRegion(BalancerClusterState cluster, int server, double chanceOfNoSwap) {
     // Check to see if this is just a move.
-    if (cluster.regionsPerServer[server].length == 0
+    if (cluster.regionsPerServer.get(server).size() == 0
         || ThreadLocalRandom.current().nextFloat() < chanceOfNoSwap) {
       // signal a move only.
       return -1;
     }
-    int rand = ThreadLocalRandom.current().nextInt(cluster.regionsPerServer[server].length);
-    return cluster.regionsPerServer[server][rand];
+    int rand = ThreadLocalRandom.current().nextInt(cluster.regionsPerServer.get(server).size());
+    return cluster.regionsPerServer.get(server).get(rand);
   }
 
   int pickRandomServer(BalancerClusterState cluster) {

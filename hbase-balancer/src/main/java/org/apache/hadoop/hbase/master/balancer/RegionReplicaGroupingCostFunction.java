@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -44,11 +46,12 @@ abstract class RegionReplicaGroupingCostFunction extends CostFunction {
 
   protected final long getMaxCost(BalancerClusterState cluster) {
     // max cost is the case where every region replica is hosted together regardless of host
-    int[] primariesOfRegions = new int[cluster.numRegions];
-    System.arraycopy(cluster.regionIndexToPrimaryIndex, 0, primariesOfRegions, 0,
-      cluster.regions.length);
-
-    Arrays.sort(primariesOfRegions);
+    HashMap<Integer, ArrayList<Integer>> primariesOfRegions =
+      new HashMap<Integer, ArrayList<Integer>>(cluster.numRegions);
+    for (int i = 0; i < cluster.regionIndexToPrimaryIndex.length; i++) {
+      BalancerClusterState.addElement(primariesOfRegions,
+        cluster.regionIndexToPrimaryIndex[i], i);
+    }
 
     // compute numReplicas from the sorted array
     return costPerGroup(primariesOfRegions);
@@ -80,22 +83,16 @@ abstract class RegionReplicaGroupingCostFunction extends CostFunction {
    * @param primariesOfRegions a sorted array of primary regions ids for the regions hosted
    * @return a sum of numReplicas-1 squared for each primary region in the group.
    */
-  protected final long costPerGroup(int[] primariesOfRegions) {
+  protected final long costPerGroup(HashMap<Integer, ArrayList<Integer>> primariesOfRegions) {
     long cost = 0;
-    int currentPrimary = -1;
-    int currentPrimaryIndex = -1;
-    // primariesOfRegions is a sorted array of primary ids of regions. Replicas of regions
-    // sharing the same primary will have consecutive numbers in the array.
-    for (int j = 0; j <= primariesOfRegions.length; j++) {
-      int primary = j < primariesOfRegions.length ? primariesOfRegions[j] : -1;
-      if (primary != currentPrimary) { // we see a new primary
-        int numReplicas = j - currentPrimaryIndex;
-        // square the cost
-        if (numReplicas > 1) { // means consecutive primaries, indicating co-location
-          cost += (numReplicas - 1) * (numReplicas - 1);
-        }
-        currentPrimary = primary;
-        currentPrimaryIndex = j;
+
+    // primariesOfRegionsPerGroup is a hashmap of count of primary index on a server. a count > 1
+    // means that replicas are co-hosted
+    for(Map.Entry<Integer, ArrayList<Integer>> pair : primariesOfRegions.entrySet()) {
+      int numReplicas = pair.getValue().size();
+      // square the cost
+      if (numReplicas > 1) { // means consecutive primaries, indicating co-location
+        cost += (numReplicas - 1) * (numReplicas - 1);
       }
     }
 
