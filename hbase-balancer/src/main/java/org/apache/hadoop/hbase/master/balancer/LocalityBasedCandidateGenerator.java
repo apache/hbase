@@ -57,12 +57,12 @@ class LocalityBasedCandidateGenerator extends CandidateGenerator {
     // Compare locality gain/loss from swapping fromRegion with regions on toServer
     double fromRegionLocalityDelta = getWeightedLocality(cluster, fromRegion, toServer) -
       getWeightedLocality(cluster, fromRegion, fromServer);
-    int toServertotalRegions = cluster.regionsPerServer[toServer].length;
+    int toServertotalRegions = cluster.regionsPerServer.get(toServer).size();
     if (toServertotalRegions > 0) {
       int startIndex = ThreadLocalRandom.current().nextInt(toServertotalRegions);
       for (int i = 0; i < toServertotalRegions; i++) {
         int toRegionIndex = (startIndex + i) % toServertotalRegions;
-        int toRegion = cluster.regionsPerServer[toServer][toRegionIndex];
+        int toRegion = cluster.regionsPerServer.get(toServer).get(toRegionIndex);
         double toRegionLocalityDelta = getWeightedLocality(cluster, toRegion, fromServer) -
           getWeightedLocality(cluster, toRegion, toServer);
         // If locality would remain neutral or improve, attempt the swap

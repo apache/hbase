@@ -128,11 +128,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected final boolean idleRegionServerExist(BalancerClusterState c){
     boolean isServerExistsWithMoreRegions = false;
     boolean isServerExistsWithZeroRegions = false;
-    for (int[] serverList: c.regionsPerServer){
-      if (serverList.length > 1) {
+    for (ArrayList<Integer> serverList: c.regionsPerServer){
+      if (serverList.size() > 1) {
         isServerExistsWithMoreRegions = true;
       }
-      if (serverList.length == 0) {
+      if (serverList.size() == 0) {
         isServerExistsWithZeroRegions = true;
       }
     }

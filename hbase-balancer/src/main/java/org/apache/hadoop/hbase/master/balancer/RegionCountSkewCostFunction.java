@@ -47,7 +47,7 @@ class RegionCountSkewCostFunction extends CostFunction {
     cost.prepare(cluster.numServers);
     cost.applyCostsChange(costs -> {
       for (int i = 0; i < cluster.numServers; i++) {
-        costs[i] = cluster.regionsPerServer[i].length;
+        costs[i] = cluster.regionsPerServer.get(i).size();
       }
     });
     LOG.debug("{} sees a total of {} servers and {} regions.", getClass().getSimpleName(),
@@ -55,7 +55,7 @@ class RegionCountSkewCostFunction extends CostFunction {
     if (LOG.isTraceEnabled()) {
       for (int i = 0; i < cluster.numServers; i++) {
         LOG.trace("{} sees server '{}' has {} regions", getClass().getSimpleName(),
-          cluster.servers[i], cluster.regionsPerServer[i].length);
+          cluster.servers[i], cluster.regionsPerServer.get(i).size());
       }
     }
   }
@@ -68,8 +68,8 @@ class RegionCountSkewCostFunction extends CostFunction {
   @Override
   protected void regionMoved(int region, int oldServer, int newServer) {
     cost.applyCostsChange(costs -> {
-      costs[oldServer] = cluster.regionsPerServer[oldServer].length;
-      costs[newServer] = cluster.regionsPerServer[newServer].length;
+      costs[oldServer] = cluster.regionsPerServer.get(oldServer).size();
+      costs[newServer] = cluster.regionsPerServer.get(newServer).size();
     });
   }
 }

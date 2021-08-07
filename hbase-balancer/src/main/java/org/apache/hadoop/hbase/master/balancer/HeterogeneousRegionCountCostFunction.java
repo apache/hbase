@@ -137,7 +137,7 @@ public class HeterogeneousRegionCountCostFunction extends CostFunction {
       // retrieve capacity for each RS
       final ServerName sn = this.cluster.servers[i];
       final double limit = this.limitPerRS.getOrDefault(sn, defaultNumberOfRegions);
-      final double nbrRegions = this.cluster.regionsPerServer[i].length;
+      final double nbrRegions = this.cluster.regionsPerServer.get(i).size();
       final double usage = nbrRegions / limit;
       if (usage > targetUsage) {
         // cost is the number of regions above the local limit

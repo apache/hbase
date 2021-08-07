@@ -34,7 +34,7 @@ abstract class CostFromRegionLoadFunction extends CostFunction {
     double cost = 0;
 
     // for every region on this server get the rl
-    for (int regionIndex : cluster.regionsPerServer[regionServerIndex]) {
+    for (Integer regionIndex : cluster.regionsPerServer.get(regionServerIndex)) {
       Collection<BalancerRegionLoad> regionLoadList = cluster.regionLoads[regionIndex];
 
       // Now if we found a region load get the type of cost that was requested.

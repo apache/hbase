@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -32,7 +36,7 @@ class RegionReplicaHostCostFunction extends RegionReplicaGroupingCostFunction {
     "hbase.master.balancer.stochastic.regionReplicaHostCostKey";
   private static final float DEFAULT_REGION_REPLICA_HOST_COST_KEY = 100000;
 
-  private int[][] primariesOfRegionsPerGroup;
+  private ArrayList<HashMap<Integer, HashSet<Integer>>> primariesOfRegionsPerGroup;
 
   public RegionReplicaHostCostFunction(Configuration conf) {
     this.setMultiplier(
@@ -46,8 +50,8 @@ class RegionReplicaHostCostFunction extends RegionReplicaGroupingCostFunction {
     costsPerGroup = new long[cluster.numHosts];
     primariesOfRegionsPerGroup = cluster.multiServersPerHost // either server based or host based
       ? cluster.primariesOfRegionsPerHost : cluster.primariesOfRegionsPerServer;
-    for (int i = 0; i < primariesOfRegionsPerGroup.length; i++) {
-      costsPerGroup[i] = costPerGroup(primariesOfRegionsPerGroup[i]);
+    for (int i = 0; i < primariesOfRegionsPerGroup.size(); i++) {
+      costsPerGroup[i] = costPerGroup(primariesOfRegionsPerGroup.get(i));
     }
   }
 
@@ -60,12 +64,12 @@ class RegionReplicaHostCostFunction extends RegionReplicaGroupingCostFunction {
       int oldHost = cluster.serverIndexToHostIndex[oldServer];
       int newHost = cluster.serverIndexToHostIndex[newServer];
       if (newHost != oldHost) {
-        costsPerGroup[oldHost] = costPerGroup(cluster.primariesOfRegionsPerHost[oldHost]);
-        costsPerGroup[newHost] = costPerGroup(cluster.primariesOfRegionsPerHost[newHost]);
+        costsPerGroup[oldHost] = costPerGroup(cluster.primariesOfRegionsPerHost.get(oldHost));
+        costsPerGroup[newHost] = costPerGroup(cluster.primariesOfRegionsPerHost.get(newHost));
       }
     } else {
-      costsPerGroup[oldServer] = costPerGroup(cluster.primariesOfRegionsPerServer[oldServer]);
-      costsPerGroup[newServer] = costPerGroup(cluster.primariesOfRegionsPerServer[newServer]);
+      costsPerGroup[oldServer] = costPerGroup(cluster.primariesOfRegionsPerServer.get(oldServer));
+      costsPerGroup[newServer] = costPerGroup(cluster.primariesOfRegionsPerServer.get(newServer));
     }
   }
 }

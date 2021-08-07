@@ -526,9 +526,9 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
         thisRegion = pickLowestLocalRegionOnServer(cluster, thisServer);
       }
       if (thisRegion == -1) {
-        if (cluster.regionsPerServer[thisServer].length > 0) {
+        if (cluster.regionsPerServer.get(thisServer).size() > 0) {
           LOG.trace("Could not pick lowest local region even when region server held "
-            + cluster.regionsPerServer[thisServer].length + " regions");
+            + cluster.regionsPerServer.get(thisServer).size() + " regions");
         }
         return BalanceAction.NULL_ACTION;
       }
