@@ -33,7 +33,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
@@ -41,7 +40,6 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -176,8 +174,6 @@ public abstract class RpcServer implements RpcServerInterface,
   protected HBaseRPCErrorHandler errorHandler = null;
 
   public static final String MAX_REQUEST_SIZE = "hbase.ipc.max.request.size";
-  protected static final RequestTooBigException REQUEST_TOO_BIG_EXCEPTION =
-      new RequestTooBigException();
 
   protected static final String WARN_RESPONSE_TIME = "hbase.ipc.warn.response.time";
   protected static final String WARN_RESPONSE_SIZE = "hbase.ipc.warn.response.size";
