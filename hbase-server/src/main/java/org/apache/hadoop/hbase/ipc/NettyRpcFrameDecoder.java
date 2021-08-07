@@ -130,16 +130,17 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
     NettyServerCall reqTooBig = connection.createCall(header.getCallId(), connection.service, null,
       null, null, null, 0, connection.addr, 0, null);
 
-    connection.rpcServer.metrics.exception(SimpleRpcServer.REQUEST_TOO_BIG_EXCEPTION);
+    RequestTooBigException reqTooBigEx = new RequestTooBigException(requestTooBigMessage);
+    connection.rpcServer.metrics.exception(reqTooBigEx);
 
     // Make sure the client recognizes the underlying exception
     // Otherwise, throw a DoNotRetryIOException.
     if (VersionInfoUtil.hasMinimumVersion(connection.connectionHeader.getVersionInfo(),
       RequestTooBigException.MAJOR_VERSION, RequestTooBigException.MINOR_VERSION)) {
-      reqTooBig.setResponse(null, null,
-        SimpleRpcServer.REQUEST_TOO_BIG_EXCEPTION, requestTooBigMessage);
+      reqTooBig.setResponse(null, null, reqTooBigEx, requestTooBigMessage);
     } else {
-      reqTooBig.setResponse(null, null, new DoNotRetryIOException(), requestTooBigMessage);
+      reqTooBig.setResponse(null, null, new DoNotRetryIOException(requestTooBigMessage),
+        requestTooBigMessage);
     }
 
     // To guarantee that the message is written and flushed before closing the channel,
