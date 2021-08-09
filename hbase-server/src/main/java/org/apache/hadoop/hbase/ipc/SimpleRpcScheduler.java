@@ -154,7 +154,8 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
 
     String callQueueType = conf.get(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
       RpcExecutor.CALL_QUEUE_TYPE_CONF_DEFAULT);
-    if (RpcExecutor.isCodelQueueType(callQueueType)) {
+    if (RpcExecutor.isCodelQueueType(callQueueType) ||
+      RpcExecutor.isPluggableQueueType(callQueueType)) {
       callExecutor.onConfigurationChange(conf);
     }
   }
