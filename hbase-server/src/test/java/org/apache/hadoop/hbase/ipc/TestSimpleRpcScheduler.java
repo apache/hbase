@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -240,9 +241,83 @@ public class TestSimpleRpcScheduler {
     testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE);
   }
 
+  @Test
+  public void testPluggableRpcQueue() throws Exception {
+    testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE,
+      "org.apache.hadoop.hbase.ipc.TestPluggableQueueImpl");
+
+    try {
+      testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE,
+        "MissingClass");
+      fail("Expected a PluggableRpcQueueNotFound for unloaded class");
+    } catch (PluggableRpcQueueNotFound e) {
+      // expected
+    } catch (Exception e) {
+      fail("Expected a PluggableRpcQueueNotFound for unloaded class, but instead got " + e);
+    }
+
+    try {
+      testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE,
+        "org.apache.hadoop.hbase.ipc.SimpleRpcServer");
+      fail("Expected a PluggableRpcQueueNotFound for incompatible class");
+    } catch (PluggableRpcQueueNotFound e) {
+      // expected
+    } catch (Exception e) {
+      fail("Expected a PluggableRpcQueueNotFound for incompatible class, but instead got " + e);
+    }
+  }
+
+  @Test
+  public void testPluggableRpcQueueCanListenToConfigurationChanges() throws Exception {
+
+    Configuration schedConf = HBaseConfiguration.create();
+
+    schedConf.setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 2);
+    schedConf.setInt("hbase.ipc.server.max.callqueue.length", 5);
+    schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
+      RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE);
+    schedConf.set(RpcExecutor.PLUGGABLE_CALL_QUEUE_CLASS_NAME,
+      "org.apache.hadoop.hbase.ipc.TestPluggableQueueImpl");
+
+    PriorityFunction priority = mock(PriorityFunction.class);
+    when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
+    SimpleRpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 0, 0, 0, priority,
+      HConstants.QOS_THRESHOLD);
+    try {
+      scheduler.start();
+
+      CallRunner putCallTask = mock(CallRunner.class);
+      ServerCall putCall = mock(ServerCall.class);
+      putCall.param = RequestConverter.buildMutateRequest(
+        Bytes.toBytes("abc"), new Put(Bytes.toBytes("row")));
+      RequestHeader putHead = RequestHeader.newBuilder().setMethodName("mutate").build();
+      when(putCallTask.getRpcCall()).thenReturn(putCall);
+      when(putCall.getHeader()).thenReturn(putHead);
+
+      assertTrue(scheduler.dispatch(putCallTask));
+
+      schedConf.setInt("hbase.ipc.server.max.callqueue.length", 4);
+      scheduler.onConfigurationChange(schedConf);
+      assertTrue(TestPluggableQueueImpl.hasObservedARecentConfigurationChange());
+      waitUntilQueueEmpty(scheduler);
+    } finally {
+      scheduler.stop();
+    }
+  }
+
   private void testRpcScheduler(final String queueType) throws Exception {
+    testRpcScheduler(queueType, null);
+  }
+
+  private void testRpcScheduler(final String queueType, final String pluggableQueueClass)
+    throws Exception {
+
     Configuration schedConf = HBaseConfiguration.create();
     schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, queueType);
+
+    if (RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE.equals(queueType)) {
+      schedConf.set(RpcExecutor.PLUGGABLE_CALL_QUEUE_CLASS_NAME, pluggableQueueClass);
+    }
 
     PriorityFunction priority = mock(PriorityFunction.class);
     when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
