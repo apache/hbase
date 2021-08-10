@@ -434,9 +434,6 @@ public final class ProtobufUtil {
     if (proto.hasLoadColumnFamiliesOnDemand()) {
       get.setLoadColumnFamiliesOnDemand(proto.getLoadColumnFamiliesOnDemand());
     }
-    if (proto.hasMaxResultSize()) {
-      get.setMaxResultSize(proto.getMaxResultSize());
-    }
     return get;
   }
 
@@ -1123,10 +1120,6 @@ public final class ProtobufUtil {
     Boolean loadColumnFamiliesOnDemand = get.getLoadColumnFamiliesOnDemandValue();
     if (loadColumnFamiliesOnDemand != null) {
       builder.setLoadColumnFamiliesOnDemand(loadColumnFamiliesOnDemand);
-    }
-
-    if (get.getMaxResultSize() > 0) {
-      builder.setMaxResultSize(get.getMaxResultSize());
     }
 
     return builder.build();
