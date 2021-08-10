@@ -83,6 +83,11 @@ public class TestMaster {
   public static void beforeAllTests() throws Exception {
     // we will retry operations when PleaseHoldException is thrown
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
+    // Set hbase.min.version.move.system.tables as version 0 so that
+    // testMoveRegionWhenNotInitialized never fails even if hbase-default has valid default
+    // value present for production use-case.
+    // See HBASE-22923 for details.
+    TEST_UTIL.getConfiguration().set("hbase.min.version.move.system.tables", "0.0.0");
     // Start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(2);
     admin = TEST_UTIL.getAdmin();
