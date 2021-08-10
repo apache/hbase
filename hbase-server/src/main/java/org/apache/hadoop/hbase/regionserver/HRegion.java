@@ -7516,31 +7516,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public List<Cell> get(Get get, boolean withCoprocessor) throws IOException {
-    return getInternal(get, withCoprocessor, HConstants.NO_NONCE, HConstants.NO_NONCE).getFirst();
+    return getInternal(get, null, withCoprocessor, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   private Result get(Get get, boolean withCoprocessor, long nonceGroup, long nonce)
     throws IOException {
-    Pair<List<Cell>, ScannerContext> result = getInternal(get, withCoprocessor, nonceGroup, nonce);
+    ScannerContext scannerContext = get.getMaxResultSize() > 0
+      ? ScannerContext.newBuilder()
+      .setSizeLimit(LimitScope.BETWEEN_CELLS, get.getMaxResultSize(), get.getMaxResultSize())
+      .build()
+      : null;
+
+    List<Cell> result = getInternal(get, scannerContext, withCoprocessor, nonceGroup, nonce);
     boolean stale = this.getRegionInfo().getReplicaId() != 0;
+    boolean mayHaveMoreCellsInRow =
+      scannerContext != null && scannerContext.mayHaveMoreCellsInRow();
 
     return Result.create(
-      result.getFirst(),
-      get.isCheckExistenceOnly() ? !result.getFirst().isEmpty() : null,
+      result,
+      get.isCheckExistenceOnly() ? !result.isEmpty() : null,
       stale,
-      result.getSecond().mayHaveMoreCellsInRow());
-  }
-
-  private Pair<List<Cell>, ScannerContext> getInternal(Get get, boolean withCoprocessor, long nonceGroup, long nonce)
-    throws IOException {
-    ScannerContext scannerContext = ScannerContext.newBuilder()
-      .setSizeLimit(LimitScope.BETWEEN_CELLS, get.getMaxResultSize(), get.getMaxResultSize())
-      .build();
-
-    return Pair.newPair(
-        getInternal(get, scannerContext, withCoprocessor, nonceGroup, nonce),
-        scannerContext
-    );
+      mayHaveMoreCellsInRow);
   }
 
   private List<Cell> getInternal(Get get, ScannerContext scannerContext, boolean withCoprocessor,
