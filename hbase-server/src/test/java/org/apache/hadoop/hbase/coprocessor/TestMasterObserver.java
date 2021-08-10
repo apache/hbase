@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
@@ -1166,7 +1167,7 @@ public class TestMasterObserver {
 
     @Override
     public void postBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        String groupName, BalanceRequest request, boolean balancerRan) throws IOException {
+        String groupName, BalanceRequest request, BalanceResponse response) throws IOException {
     }
 
     @Override
@@ -1618,7 +1619,7 @@ public class TestMasterObserver {
       UTIL.waitUntilNoRegionsInTransition();
       // now trigger a balance
       master.balanceSwitch(true);
-      boolean balanceRun = master.balance();
+      master.balance();
       assertTrue("Coprocessor should be called on region rebalancing",
           cp.wasBalanceCalled());
     } finally {

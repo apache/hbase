@@ -21,12 +21,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import java.io.IOException;
+import org.apache.commons.lang3.Validate;
 import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -56,7 +58,9 @@ public class TestMasterDryRunBalancer {
   public void testDryRunBalancer() throws Exception {
     TEST_UTIL.startMiniCluster(2);
 
-    TableName tableName = createTable("testDryRunBalancer");
+    int numRegions = 100;
+    int regionsPerRs = numRegions / 2;
+    TableName tableName = createTable("testDryRunBalancer", numRegions);
     HMaster master = Mockito.spy(TEST_UTIL.getHBaseCluster().getMaster());
 
     // dry run should be possible with balancer disabled
@@ -66,7 +70,14 @@ public class TestMasterDryRunBalancer {
 
     HRegionServer biasedServer = unbalance(master, tableName);
 
-    assertTrue(master.balance(BalanceRequest.newBuilder().setDryRun(true).build()));
+    BalanceResponse response = master.balance(BalanceRequest.newBuilder().setDryRun(true).build());
+    assertTrue(response.isBalancerRan());
+    // we don't know for sure that it will be exactly half the regions
+    assertTrue(
+      response.getMovesCalculated() >= (regionsPerRs - 1)
+        && response.getMovesCalculated() <= (regionsPerRs + 1));
+    // but we expect no moves executed due to dry run
+    assertEquals(0, response.getMovesExecuted());
 
     // sanity check that we truly don't try to execute any plans
     Mockito.verify(master, Mockito.never()).executeRegionPlansWithThrottling(Mockito.anyList());
@@ -77,9 +88,9 @@ public class TestMasterDryRunBalancer {
     TEST_UTIL.deleteTable(tableName);
   }
 
-  private TableName createTable(String table) throws IOException {
+  private TableName createTable(String table, int numRegions) throws IOException {
     TableName tableName = TableName.valueOf(table);
-    TEST_UTIL.createMultiRegionTable(tableName, FAMILYNAME, 100);
+    TEST_UTIL.createMultiRegionTable(tableName, FAMILYNAME, numRegions);
     return tableName;
   }
 

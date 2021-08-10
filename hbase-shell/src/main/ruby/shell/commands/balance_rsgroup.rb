@@ -40,13 +40,14 @@ EOF
 
       def command(group_name, *args)
         # Returns true if balancer was run, otherwise false.
-        ret = rsgroup_admin.balance_rs_group(group_name, args)
-        if ret
-          puts 'Ran the balancer.'
+        resp = rsgroup_admin.balance_rs_group(group_name, args)
+        if resp.isBalancerRan
+          formatter.row(["Balancer ran"])
+          formatter.row(["Moves calculated: #{resp.getMovesCalculated}, moves executed: #{resp.getMovesExecuted}"])
         else
-          puts "Couldn't run the balancer."
+          formatter.row(["Balancer did not run. See logs for details."])
         end
-        ret
+        resp.isBalancerRan
       end
     end
   end

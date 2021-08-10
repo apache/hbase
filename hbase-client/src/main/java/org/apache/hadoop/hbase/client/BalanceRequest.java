@@ -22,7 +22,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Encapsulates options for executing an unscheduled run of the Balancer.
+ * Encapsulates options for executing a run of the Balancer.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

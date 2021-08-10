@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -68,7 +69,7 @@ public interface RSGroupAdmin {
    *
    * @return boolean Whether balance ran or not
    */
-  default boolean balanceRSGroup(String groupName) throws IOException {
+  default BalanceResponse balanceRSGroup(String groupName) throws IOException {
     return balanceRSGroup(groupName, BalanceRequest.defaultInstance());
   }
 
@@ -78,7 +79,7 @@ public interface RSGroupAdmin {
    *
    * @return boolean Whether balance ran or not
    */
-  boolean balanceRSGroup(String groupName, BalanceRequest request) throws IOException;
+  BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException;
 
   /**
    * Lists current set of RegionServer groups.

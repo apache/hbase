@@ -1257,7 +1257,8 @@ public interface AsyncAdmin {
    *         {@link CompletableFuture}.
    */
   default CompletableFuture<Boolean> balance() {
-    return balance(BalanceRequest.defaultInstance());
+    return balance(BalanceRequest.defaultInstance())
+      .thenApply(BalanceResponse::isBalancerRan);
   }
 
   /**
@@ -1275,7 +1276,7 @@ public interface AsyncAdmin {
       BalanceRequest.newBuilder()
         .setIgnoreRegionsInTransition(forcible)
         .build()
-    );
+    ).thenApply(BalanceResponse::isBalancerRan);
   }
 
   /**
@@ -1283,9 +1284,9 @@ public interface AsyncAdmin {
    * balancer will run. See {@link BalanceRequest} for more details.
    *
    * @param request defines how the balancer should run
-   * @return <code>true</code> if balancer ran, <code>false</code> otherwise.
+   * @return {@link BalanceResponse} with details about the results of the invocation.
    */
-  CompletableFuture<Boolean> balance(BalanceRequest request);
+  CompletableFuture<BalanceResponse> balance(BalanceRequest request);
 
   /**
    * Query the current state of the balancer.

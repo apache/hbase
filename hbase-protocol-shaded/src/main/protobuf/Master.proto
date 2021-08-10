@@ -298,6 +298,8 @@ message BalanceRequest {
 
 message BalanceResponse {
   required bool balancer_ran = 1;
+  optional uint32 moves_calculated = 2;
+  optional uint32 moves_executed = 3;
 }
 
 message SetBalancerRunningRequest {

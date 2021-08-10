@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SharedConnection;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -1444,12 +1445,12 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postBalanceRSGroup(final String name, final BalanceRequest request, final boolean balanceRan)
+  public void postBalanceRSGroup(final String name, final BalanceRequest request, final BalanceResponse response)
       throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postBalanceRSGroup(this, name, request, balanceRan);
+        observer.postBalanceRSGroup(this, name, request, response);
       }
     });
   }

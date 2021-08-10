@@ -40,9 +40,14 @@ EOF
       end
 
       def command(*args)
-        did_balancer_run = !!admin.balancer(args)
-        formatter.row([did_balancer_run.to_s])
-        did_balancer_run
+        resp = admin.balancer(args)
+        if resp.isBalancerRan
+          formatter.row(["Balancer ran"])
+          formatter.row(["Moves calculated: #{resp.getMovesCalculated}, moves executed: #{resp.getMovesExecuted}"])
+        else
+          formatter.row(["Balancer did not run. See logs for details."])
+        end
+        resp.isBalancerRan
       end
     end
   end

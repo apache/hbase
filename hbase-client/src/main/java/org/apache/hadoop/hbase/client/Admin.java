@@ -1252,7 +1252,8 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   default boolean balance() throws IOException {
-    return balance(BalanceRequest.defaultInstance());
+    return balance(BalanceRequest.defaultInstance())
+      .isBalancerRan();
   }
 
   /**
@@ -1260,10 +1261,10 @@ public interface Admin extends Abortable, Closeable {
    * balancer will run. See {@link BalanceRequest} for more details.
    *
    * @param request defines how the balancer should run
-   * @return <code>true</code> if balancer ran, <code>false</code> otherwise.
+   * @return {@link BalanceResponse} with details about the results of the invocation.
    * @throws IOException if a remote or network exception occurs
    */
-  boolean balance(BalanceRequest request) throws IOException;
+  BalanceResponse balance(BalanceRequest request) throws IOException;
 
   /**
    * Invoke the balancer.  Will run the balancer and if regions to move, it will
@@ -1298,7 +1299,7 @@ public interface Admin extends Abortable, Closeable {
       BalanceRequest.newBuilder()
       .setIgnoreRegionsInTransition(force)
       .build()
-    );
+    ).isBalancerRan();
   }
 
   /**

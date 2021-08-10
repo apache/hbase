@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
@@ -3765,6 +3766,22 @@ public final class ProtobufUtil {
     return BalanceRequest.newBuilder()
       .setDryRun(request.hasDryRun() && request.getDryRun())
       .setIgnoreRegionsInTransition(request.hasIgnoreRit() && request.getIgnoreRit())
+      .build();
+  }
+
+  public static MasterProtos.BalanceResponse toBalanceResponse(BalanceResponse response) {
+    return MasterProtos.BalanceResponse.newBuilder()
+      .setBalancerRan(response.isBalancerRan())
+      .setMovesCalculated(response.getMovesCalculated())
+      .setMovesExecuted(response.getMovesExecuted())
+      .build();
+  }
+
+  public static BalanceResponse toBalanceResponse(MasterProtos.BalanceResponse response) {
+    return BalanceResponse.newBuilder()
+      .setBalancerRan(response.hasBalancerRan() && response.getBalancerRan())
+      .setMovesCalculated(response.hasMovesCalculated() ? response.getMovesExecuted() : 0)
+      .setMovesExecuted(response.hasMovesExecuted() ? response.getMovesExecuted() : 0)
       .build();
   }
 

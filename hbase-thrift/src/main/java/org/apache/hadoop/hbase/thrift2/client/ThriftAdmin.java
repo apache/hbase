@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
@@ -787,7 +788,8 @@ public class ThriftAdmin implements Admin {
     throw new NotImplementedException("balance not supported in ThriftAdmin");
   }
 
-  @Override public boolean balance(BalanceRequest request) throws IOException {
+  @Override
+  public BalanceResponse balance(BalanceRequest request) throws IOException {
     throw new NotImplementedException("balance not supported in ThriftAdmin");
   }
 

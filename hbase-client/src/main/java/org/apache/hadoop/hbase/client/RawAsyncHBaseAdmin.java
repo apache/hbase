@@ -3209,13 +3209,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> balance(BalanceRequest request) {
+  public CompletableFuture<BalanceResponse> balance(BalanceRequest request) {
     return this
-        .<Boolean> newMasterCaller()
+        .<BalanceResponse> newMasterCaller()
         .action(
-          (controller, stub) -> this.<MasterProtos.BalanceRequest, MasterProtos.BalanceResponse, Boolean> call(controller,
+          (controller, stub) -> this.<MasterProtos.BalanceRequest, MasterProtos.BalanceResponse, BalanceResponse> call(controller,
             stub, ProtobufUtil.toBalanceRequest(request),
-            (s, c, req, done) -> s.balance(c, req, done), (resp) -> resp.getBalancerRan())).call();
+            (s, c, req, done) -> s.balance(c, req, done), (resp) -> ProtobufUtil.toBalanceResponse(resp))).call();
   }
 
 

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -96,7 +97,7 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
 
     // disable balance, balancer will not be run and return false
     admin.balancerSwitch(false, true);
-    assertFalse(rsGroupAdmin.balanceRSGroup(newGroupName));
+    assertFalse(rsGroupAdmin.balanceRSGroup(newGroupName).isBalancerRan());
     assertEquals(6, getTableServerRegionMap().get(tableName).get(first).size());
 
     // enable balance
@@ -128,7 +129,11 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
 
     // run the balancer in dry run mode. it should return true, but should not actually move any regions
     admin.balancerSwitch(true, true);
-    assertTrue(rsGroupAdmin.balanceRSGroup(newGroupName, BalanceRequest.newBuilder().setDryRun(true).build()));
+    BalanceResponse response = rsGroupAdmin.balanceRSGroup(newGroupName,
+      BalanceRequest.newBuilder().setDryRun(true).build());
+    assertTrue(response.isBalancerRan());
+    assertTrue(response.getMovesCalculated() > 0);
+    assertEquals(0, response.getMovesExecuted());
     // validate imbalance still exists.
     assertEquals(6, getTableServerRegionMap().get(tableName).get(first).size());
   }
@@ -194,7 +199,7 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
       RSGroupInfo.getName());
 
     admin.balancerSwitch(true, true);
-    assertTrue(rsGroupAdmin.balanceRSGroup(RSGroupInfo.getName()));
+    assertTrue(rsGroupAdmin.balanceRSGroup(RSGroupInfo.getName()).isBalancerRan());
     admin.balancerSwitch(false, true);
     assertTrue(observer.preBalanceRSGroupCalled);
     assertTrue(observer.postBalanceRSGroupCalled);

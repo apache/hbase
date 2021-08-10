@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
@@ -1772,7 +1773,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (interrupted) Thread.currentThread().interrupt();
   }
 
-  public boolean balance() throws IOException {
+  public BalanceResponse balance() throws IOException {
     return balance(BalanceRequest.defaultInstance());
   }
 
@@ -1799,14 +1800,16 @@ public class HMaster extends HRegionServer implements MasterServices {
     return false;
   }
 
-  public boolean balance(BalanceRequest request) throws IOException {
+  public BalanceResponse balance(BalanceRequest request) throws IOException {
+    BalanceResponse.Builder responseBuilder = BalanceResponse.newBuilder();
+
     if (loadBalancerTracker == null
       || !(loadBalancerTracker.isBalancerOn() || request.isDryRun())) {
-      return false;
+      return responseBuilder.build();
     }
 
     if (skipRegionManagementAction("balancer")) {
-      return false;
+      return responseBuilder.build();
     }
 
     synchronized (this.balancer) {
@@ -1828,24 +1831,24 @@ public class HMaster extends HRegionServer implements MasterServices {
           LOG.info("Not running balancer (ignoreRIT=false" + ", metaRIT=" + metaInTransition +
             ") because " + regionsInTransition.size() + " region(s) in transition: " + toPrint
             + (truncated? "(truncated list)": ""));
-          return false;
+          return responseBuilder.build();
         }
       }
       if (this.serverManager.areDeadServersInProgress()) {
         LOG.info("Not running balancer because processing dead regionserver(s): " +
           this.serverManager.getDeadServers());
-        return false;
+        return responseBuilder.build();
       }
 
       if (this.cpHost != null) {
         try {
           if (this.cpHost.preBalance(request)) {
             LOG.debug("Coprocessor bypassing balancer request");
-            return false;
+            return responseBuilder.build();
           }
         } catch (IOException ioe) {
           LOG.error("Error invoking master coprocessor preBalance()", ioe);
-          return false;
+          return responseBuilder.build();
         }
       }
 
@@ -1861,11 +1864,11 @@ public class HMaster extends HRegionServer implements MasterServices {
 
       List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
 
-      // make one last check that the cluster isn't shutting down before proceeding.
+      responseBuilder.setBalancerRan(true).setMovesCalculated(plans == null ? 0 : plans.size());
+
       if (skipRegionManagementAction("balancer")) {
-        // return isDryRun because in this case the dry run did run, and the user could see
-        // the results in the master logs.
-        return request.isDryRun();
+        // make one last check that the cluster isn't shutting down before proceeding.
+        return responseBuilder.build();
       }
 
       // For dry run we don't actually want to execute the moves, but we do want
@@ -1882,10 +1885,13 @@ public class HMaster extends HRegionServer implements MasterServices {
           LOG.error("Error invoking master coprocessor postBalance()", ioe);
         }
       }
+
+      responseBuilder.setMovesExecuted(sucRPs.size());
     }
+
     // If LoadBalancer did not generate any plans, it means the cluster is already balanced.
     // Return true indicating a success.
-    return true;
+    return responseBuilder.build();
   }
 
   /**

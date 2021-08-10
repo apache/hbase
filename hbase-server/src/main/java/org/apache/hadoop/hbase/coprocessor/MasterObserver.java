@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -1285,9 +1286,11 @@ public interface MasterObserver {
    * Called after a region server group is removed
    * @param ctx the environment to interact with the framework and master
    * @param groupName group name
+   * @param request the request sent to the balancer
+   * @param response the response returned by the balancer
    */
   default void postBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String groupName, BalanceRequest request, boolean balancerRan) throws IOException {
+      String groupName, BalanceRequest request, BalanceResponse response) throws IOException {
   }
 
   /**

@@ -92,6 +92,8 @@ message BalanceRSGroupRequest {
 
 message BalanceRSGroupResponse {
   required bool balanceRan = 1;
+  optional uint32 moves_calculated = 2;
+  optional uint32 moves_executed = 3;
 }
 
 message ListRSGroupInfosRequest {

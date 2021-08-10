@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.AbstractTestUpdateConfiguration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -414,7 +415,7 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
 
     @Override
     public void postBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        String groupName, BalanceRequest request, boolean balancerRan) throws IOException {
+        String groupName, BalanceRequest request, BalanceResponse response) throws IOException {
       postBalanceRSGroupCalled = true;
     }
 
