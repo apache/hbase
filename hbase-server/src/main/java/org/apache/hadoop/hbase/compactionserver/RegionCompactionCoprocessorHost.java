@@ -72,8 +72,13 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 /**
- * Implements the coprocessor environment and runtime support for coprocessors
- * loaded within a {@link Region}.
+ * 1.Inherited from {@link RegionCoprocessorHost}, only be used on CompactionServer. This host only
+ * load coprocessor involves compaction.
+ * 2.Other methods of the host, like preFlush,postFlush,prePut, postPut, etc will be not supported.
+ * 3.Four methods: preOpen, postOpen, preClose, postClose are overridden as blank implementations.
+ * 4.The methods preCompactSelection, postCompactSelection, preCompactScannerOpen, preCompact,
+ * postCompact, preStoreFileReaderOpen, postStoreFileReaderOpen, postInstantiateDeleteTracker
+ * will be retained.
  */
 @InterfaceAudience.Private
 public class RegionCompactionCoprocessorHost extends RegionCoprocessorHost {
@@ -96,7 +101,8 @@ public class RegionCompactionCoprocessorHost extends RegionCoprocessorHost {
   }
 
   /**
-   * Encapsulation of the environment of each coprocessor
+   * The environment will only be used on compactionServer for NotCoreCoprocessor, and the method
+   * getRegion, getOnlineRegions, getSharedData will not be supported.
    */
   private static class RegionCompactionEnvironment extends RegionCoprocessorHost.RegionEnvironment {
 

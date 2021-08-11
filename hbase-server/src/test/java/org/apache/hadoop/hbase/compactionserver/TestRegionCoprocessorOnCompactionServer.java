@@ -75,7 +75,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
  * coprocessor method invoke {@link RegionObserver#preCompactSelection},
  * {@link RegionObserver#postCompactSelection}, {@link RegionObserver#preCompact},
  * {@link RegionObserver#preCompactScannerOpen}, {@link RegionObserver#preStoreFileReaderOpen},
- * {@link RegionObserver#postCommitStoreFile}, {@link RegionObserver#postInstantiateDeleteTracker}
+ * {@link RegionObserver#postStoreFileReaderOpen},
+ * {@link RegionObserver#postInstantiateDeleteTracker}
  */
 @Category({ CompactionServerTests.class, MediumTests.class })
 public class TestRegionCoprocessorOnCompactionServer extends TestCompactionServerBase {
