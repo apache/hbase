@@ -241,6 +241,9 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     }
     region.startRegionOperation(Operation.SCAN);
     try {
+      if (scannerContext == null) {
+        scannerContext = defaultScannerContext;
+      }
       return nextRaw(outResults, scannerContext);
     } finally {
       region.closeRegionOperation(Operation.SCAN);
