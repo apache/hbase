@@ -2669,9 +2669,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
     }
 
-    ScannerContext scannerContext = ScannerContext.newBuilder()
+    ScannerContext scannerContext = get.getMaxResultSize() > 0
+      ? ScannerContext.newBuilder()
       .setSizeLimit(LimitScope.BETWEEN_CELLS, get.getMaxResultSize(), get.getMaxResultSize())
-      .build();
+      .build()
+      : null;
 
     RegionScannerImpl scanner = null;
     try {
@@ -2702,7 +2704,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     region.metricsUpdateForGet(results, before);
 
     return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale,
-      scannerContext.mayHaveMoreCellsInRow());
+      scannerContext != null && scannerContext.mayHaveMoreCellsInRow());
   }
 
   private void checkBatchSizeAndLogLargeSize(MultiRequest request) throws ServiceException {
