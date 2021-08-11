@@ -76,7 +76,6 @@ public class Get extends Query implements Row {
   private boolean checkExistenceOnly = false;
   private boolean closestRowBefore = false;
   private Map<byte [], NavigableSet<byte []>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-  private long maxResultSize = -1;
 
   /**
    * Create a Get operation for the specified row.
@@ -340,21 +339,6 @@ public class Get extends Query implements Row {
     return this;
   }
 
-  /**
-   * Set the maximum result size. The default is -1; this means that no specific
-   * maximum result size will be set for this Get.
-   *
-   * If set to a value greater than zero, the server may respond with a Result where
-   * {@link Result#mayHaveMoreCellsInRow()} is true. The user is required to handle
-   * this case.
-   *
-   * @param maxResultSize The maximum result size in bytes
-   */
-  public Get setMaxResultSize(long maxResultSize) {
-    this.maxResultSize = maxResultSize;
-    return this;
-  }
-
   /* Accessors */
 
   /**
@@ -472,13 +456,6 @@ public class Get extends Query implements Row {
       families.add(Bytes.toStringBinary(entry.getKey()));
     }
     return map;
-  }
-
-  /**
-   * @return the maximum result size in bytes. See {@link #setMaxResultSize(long)}
-   */
-  public long getMaxResultSize() {
-    return maxResultSize;
   }
 
   /**
