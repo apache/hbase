@@ -20,11 +20,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -52,7 +50,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SharedConnection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.compactionserver.HCompactionServer;
 import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
@@ -82,7 +79,6 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.map.AbstractReferenceMap;
@@ -104,9 +100,7 @@ public class RegionCoprocessorHost
 
   // optimization: no need to call postScannerFilterRow, if no coprocessor implements it
   private final boolean hasCustomPostScannerFilterRow;
-  // postCompact will be executed on HRegionServer, so we don't check here
-  private static final Set<String> compactionCoprocessor = ImmutableSet.of("preCompactSelection",
-    "postCompactSelection", "preCompactScannerOpen", "preCompact");
+
   /*
    * Whether any configured CPs override postScannerFilterRow hook
    */
@@ -114,28 +108,16 @@ public class RegionCoprocessorHost
     return hasCustomPostScannerFilterRow;
   }
 
-  private boolean IsCompactionRelatedCoprocessor(Class<?> cpClass) {
-    while (cpClass != null) {
-      for (Method method : cpClass.getDeclaredMethods()) {
-        if (compactionCoprocessor.contains(method.getName())) {
-          return true;
-        }
-      }
-      cpClass = cpClass.getSuperclass();
-    }
-    return false;
-  }
-
   /**
    *
    * Encapsulation of the environment of each coprocessor
    */
-  private static class RegionEnvironment extends BaseEnvironment<RegionCoprocessor>
+  public static class RegionEnvironment extends BaseEnvironment<RegionCoprocessor>
       implements RegionCoprocessorEnvironment {
-    private Region region;
+    protected Region region;
     ConcurrentMap<String, Object> sharedData;
-    private final MetricRegistry metricRegistry;
-    private final RegionCoprocessorService services;
+    protected final MetricRegistry metricRegistry;
+    protected final RegionCoprocessorService services;
 
     /**
      * Constructor
@@ -156,11 +138,7 @@ public class RegionCoprocessorHost
     /** @return the region */
     @Override
     public Region getRegion() {
-      if (services instanceof RegionServerServices) {
-        return region;
-      }
-      throw new UnsupportedOperationException(
-          "Method getRegion is not supported when loaded CP on compactionServer");
+      return region;
     }
 
     @Override
@@ -268,22 +246,22 @@ public class RegionCoprocessorHost
     }
   }
 
-  /** The HRegionServer/HCompaction services */
-  RegionCoprocessorService coprocessorService;
+  /** The region server services */
+  protected RegionCoprocessorService rsServices;
   /** The region */
-  HRegion region;
+  protected HRegion region;
 
   /**
    * Constructor
    * @param region the region
-   * @param coprocessorService interface to available RegionServer/CompactionServer functionality
+   * @param rsServices interface to available region server functionality
    * @param conf the configuration
    */
   public RegionCoprocessorHost(final HRegion region,
-      final RegionCoprocessorService coprocessorService, final Configuration conf) {
-    super(coprocessorService);
+      final RegionCoprocessorService rsServices, final Configuration conf) {
+    super(rsServices);
     this.conf = conf;
-    this.coprocessorService = coprocessorService;
+    this.rsServices = rsServices;
     this.region = region;
     this.pathPrefix = Integer.toString(this.region.getRegionInfo().hashCode());
 
@@ -432,18 +410,6 @@ public class RegionCoprocessorHost
   @Override
   public RegionEnvironment createEnvironment(RegionCoprocessor instance, int priority, int seq,
       Configuration conf) {
-    if (coprocessorService instanceof HCompactionServer) {
-      if (instance.getClass().isAnnotationPresent(CoreCoprocessor.class)) {
-        LOG.info("skip load core coprocessor {} on CompactionServer",
-          instance.getClass().getName());
-        return null;
-      }
-      if (!IsCompactionRelatedCoprocessor(instance.getClass())) {
-        LOG.info("skip load compaction no-related coprocessor {} on CompactionServer",
-          instance.getClass().getName());
-        return null;
-      }
-    }
     // If coprocessor exposes any services, register them.
     for (Service service : instance.getServices()) {
       region.registerService(service);
@@ -460,8 +426,8 @@ public class RegionCoprocessorHost
     // If a CoreCoprocessor, return a 'richer' environment, one laden with RegionServerServices.
     return instance.getClass().isAnnotationPresent(CoreCoprocessor.class)?
         new RegionEnvironmentForCoreCoprocessors(instance, priority, seq, conf, region,
-          (RegionServerServices) coprocessorService, classData):
-        new RegionEnvironment(instance, priority, seq, conf, region, coprocessorService, classData);
+          (RegionServerServices) rsServices, classData):
+        new RegionEnvironment(instance, priority, seq, conf, region, rsServices, classData);
   }
 
   @Override

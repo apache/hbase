@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -41,14 +43,19 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanOptions;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
 import org.apache.hadoop.hbase.testclassification.CompactionServerTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -62,11 +69,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+
 /**
  * use verify table test {@link RegionCoprocessorHost.RegionEnvironment#getConnection()} and record
  * coprocessor method invoke {@link RegionObserver#preCompactSelection},
  * {@link RegionObserver#postCompactSelection}, {@link RegionObserver#preCompact},
- * {@link RegionObserver#preCompactScannerOpen}
+ * {@link RegionObserver#preCompactScannerOpen}, {@link RegionObserver#preStoreFileReaderOpen},
+ * {@link RegionObserver#postCommitStoreFile}, {@link RegionObserver#postInstantiateDeleteTracker}
  */
 @Category({ CompactionServerTests.class, MediumTests.class })
 public class TestRegionCoprocessorOnCompactionServer extends TestCompactionServerBase {
@@ -76,7 +85,8 @@ public class TestRegionCoprocessorOnCompactionServer extends TestCompactionServe
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRegionCoprocessorOnCompactionServer.class);
   private static final Set<String> compactionCoprocessor = ImmutableSet.of("preCompactSelection",
-    "postCompactSelection", "preCompactScannerOpen", "preCompact");
+    "postCompactSelection", "preCompactScannerOpen", "preCompact", "preStoreFileReaderOpen",
+    "postStoreFileReaderOpen", "postInstantiateDeleteTracker");
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRegionCoprocessorOnCompactionServer.class);
@@ -147,6 +157,32 @@ public class TestRegionCoprocessorOnCompactionServer extends TestCompactionServe
         throws IOException {
       recordCoprocessorCall(c, "postCompact");
     }
+
+    @Override
+    public StoreFileReader preStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
+        FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
+        Reference r, StoreFileReader reader) throws IOException {
+      recordCoprocessorCall(ctx, "preStoreFileReaderOpen");
+      return reader;
+    }
+
+    @Override
+    public StoreFileReader postStoreFileReaderOpen(
+        ObserverContext<RegionCoprocessorEnvironment> ctx, FileSystem fs, Path p,
+        FSDataInputStreamWrapper in, long size, CacheConfig cacheConf, Reference r,
+        StoreFileReader reader) throws IOException {
+      recordCoprocessorCall(ctx, "postStoreFileReaderOpen");
+      return reader;
+    }
+
+    @Override
+    public DeleteTracker postInstantiateDeleteTracker(
+        ObserverContext<RegionCoprocessorEnvironment> ctx, DeleteTracker delTracker)
+        throws IOException {
+      recordCoprocessorCall(ctx, "postInstantiateDeleteTracker");
+      return delTracker;
+    }
+
   }
 
   @CoreCoprocessor
@@ -204,7 +240,6 @@ public class TestRegionCoprocessorOnCompactionServer extends TestCompactionServe
           .getRunningCompactionTasks().values().size() == 0);
     for (String methodName : compactionCoprocessor) {
       verifyRecord(methodName.getBytes(), CS.getBytes(), true);
-      verifyRecord(methodName.getBytes(), RS.getBytes(), false);
     }
     verifyRecord("postCompact".getBytes(), CS.getBytes(), false);
     verifyRecord("postCompact".getBytes(), RS.getBytes(), true);
@@ -232,7 +267,6 @@ public class TestRegionCoprocessorOnCompactionServer extends TestCompactionServe
           .getRunningCompactionTasks().values().size() == 0);
     for (String methodName : compactionCoprocessor) {
       verifyRecord(methodName.getBytes(), CS.getBytes(), false);
-      verifyRecord(methodName.getBytes(), RS.getBytes(), false);
     }
     verifyRecord("postCompact".getBytes(), CS.getBytes(), false);
     verifyRecord("postCompact".getBytes(), RS.getBytes(), true);

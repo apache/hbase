@@ -116,6 +116,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.compactionserver.HCompactionServer;
+import org.apache.hadoop.hbase.compactionserver.RegionCompactionCoprocessorHost;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -761,7 +762,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.htableDescriptor = htd;
     this.scannerReadPoints = new ConcurrentHashMap<>();
     this.mvcc = new MultiVersionConcurrencyControl(getRegionInfo().getShortNameToLog());
-    this.coprocessorHost = new RegionCoprocessorHost(this, csServices, conf);
+    this.coprocessorHost = new RegionCompactionCoprocessorHost(this, csServices, conf);
     // we must initialize these final variable below
     this.isLoadingCfsOnDemandDefault = true;
     this.wal = null;
