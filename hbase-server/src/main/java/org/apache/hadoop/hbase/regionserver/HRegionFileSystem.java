@@ -572,13 +572,9 @@ public class HRegionFileSystem {
   // ===========================================================================
   //  Splits Helpers
   // ===========================================================================
-  /** @return {@link Path} to the table directory for split daughters */
-  Path getSplitsDir() {
-    return getTableDir();
-  }
 
   public Path getSplitsDir(final RegionInfo hri) {
-    return new Path(getSplitsDir(), hri.getEncodedName());
+    return new Path(getTableDir(), hri.getEncodedName());
   }
 
   /**
@@ -617,11 +613,6 @@ public class HRegionFileSystem {
    * Creates region split daughter directories under the table dir.
    */
   public void createSplitsDir(RegionInfo daughterA, RegionInfo daughterB) throws IOException {
-    Path splitdir = getSplitsDir();
-    // splitDir doesn't exists now. No need to do an exists() call for it.
-    if (!fs.exists(splitdir)) {
-      throw new IOException("Table dir for splitting region not found:  " + splitdir);
-    }
     Path daughterADir = getSplitsDir(daughterA);
     if (!createDir(daughterADir)) {
       throw new IOException("Failed create of " + daughterADir);
