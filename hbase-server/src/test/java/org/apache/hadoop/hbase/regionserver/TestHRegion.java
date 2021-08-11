@@ -7861,4 +7861,89 @@ public class TestHRegion {
     assertFalse("Region lock holder should not have been interrupted", holderInterrupted.get());
   }
 
+  @Test
+  public void testOversizedGetsReturnPartialResult() throws IOException {
+    HRegion region = initHRegion(tableName, name.getMethodName(), CONF, fam1);
+
+    Put p = new Put(row)
+      .addColumn(fam1, qual1, value1)
+      .addColumn(fam1, qual2, value2);
+
+    region.put(p);
+
+    Get get = new Get(row)
+      .addColumn(fam1, qual1)
+      .addColumn(fam1, qual2)
+      .setMaxResultSize(1); // 0 doesn't count as a limit, according to HBase
+
+    Result r = region.get(get);
+
+    assertTrue("Expected partial result, but result was not marked as partial", r.mayHaveMoreCellsInRow());
+  }
+
+  @Test
+  public void testGetsWithoutResultSizeLimitAreNotPartial() throws IOException {
+    HRegion region = initHRegion(tableName, name.getMethodName(), CONF, fam1);
+
+    Put p = new Put(row)
+      .addColumn(fam1, qual1, value1)
+      .addColumn(fam1, qual2, value2);
+
+    region.put(p);
+
+    Get get = new Get(row)
+      .addColumn(fam1, qual1)
+      .addColumn(fam1, qual2);
+
+    Result r = region.get(get);
+
+    assertFalse("Expected full result, but it was marked as partial", r.mayHaveMoreCellsInRow());
+    assertTrue(Bytes.equals(value1, r.getValue(fam1, qual1)));
+    assertTrue(Bytes.equals(value2, r.getValue(fam1, qual2)));
+  }
+
+  @Test
+  public void testGetsWithinResultSizeLimitAreNotPartial() throws IOException {
+    HRegion region = initHRegion(tableName, name.getMethodName(), CONF, fam1);
+
+    Put p = new Put(row)
+      .addColumn(fam1, qual1, value1)
+      .addColumn(fam1, qual2, value2);
+
+    region.put(p);
+
+    Get get = new Get(row)
+      .addColumn(fam1, qual1)
+      .addColumn(fam1, qual2)
+      .setMaxResultSize(Long.MAX_VALUE);
+
+    Result r = region.get(get);
+
+    assertFalse("Expected full result, but it was marked as partial", r.mayHaveMoreCellsInRow());
+    assertTrue(Bytes.equals(value1, r.getValue(fam1, qual1)));
+    assertTrue(Bytes.equals(value2, r.getValue(fam1, qual2)));
+  }
+
+  @Test
+  public void testGetsWithResultSizeLimitReturnPartialResults() throws IOException {
+    HRegion region = initHRegion(tableName, name.getMethodName(), CONF, fam1);
+
+    Put p = new Put(row)
+      .addColumn(fam1, qual1, value1)
+      .addColumn(fam1, qual2, value2);
+
+    region.put(p);
+
+    Get get = new Get(row)
+      .addColumn(fam1, qual1)
+      .addColumn(fam1, qual2)
+      .setMaxResultSize(10);
+
+    Result r = region.get(get);
+
+    assertTrue("Expected partial result, but it was marked as complete", r.mayHaveMoreCellsInRow());
+    assertTrue(Bytes.equals(value1, r.getValue(fam1, qual1)));
+    assertEquals("Got more results than expected", 1, r.size());
+  }
+
 }

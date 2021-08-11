@@ -2668,10 +2668,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (scan.getLoadColumnFamiliesOnDemandValue() == null) {
       scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
     }
+
+    ScannerContext scannerContext = ScannerContext.newBuilder()
+      .setSizeLimit(LimitScope.BETWEEN_CELLS, get.getMaxResultSize(), get.getMaxResultSize())
+      .build();
+
     RegionScannerImpl scanner = null;
     try {
       scanner = region.getScanner(scan);
-      scanner.next(results);
+      scanner.next(results, scannerContext);
     } finally {
       if (scanner != null) {
         if (closeCallBack == null) {
@@ -2696,7 +2701,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     region.metricsUpdateForGet(results, before);
 
-    return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
+    return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale,
+      scannerContext.mayHaveMoreCellsInRow());
   }
 
   private void checkBatchSizeAndLogLargeSize(MultiRequest request) throws ServiceException {
