@@ -2593,7 +2593,7 @@ public class AssignmentManager extends ZooKeeperListener {
       serverList.add(new Pair<>(s, server.getRegionServerVersion(s)));
     }
     if (serverList.isEmpty()) {
-      return Collections.emptyList();
+      return new ArrayList<>();
     }
     String highestVersion = Collections.max(serverList,
         new Comparator<Pair<ServerName, String>>() {
@@ -2606,7 +2606,7 @@ public class AssignmentManager extends ZooKeeperListener {
       int comparedValue = VersionInfo.compareVersion(minVersionToMoveSysTables,
           highestVersion);
       if (comparedValue > 0) {
-        return Collections.emptyList();
+        return new ArrayList<>();
       }
     }
     List<ServerName> res = new ArrayList<>();
