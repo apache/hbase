@@ -255,11 +255,16 @@ public class TestDefaultMemStore {
     // use case 1: both kvs in kvset
     this.memstore.add(kv1.clone(), null);
     this.memstore.add(kv2.clone(), null);
-    verifyScanAcrossSnapshot2(kv1, kv2);
+    // snapshot is empty,active segment is not empty,
+    // empty segment is skipped.
+    verifyOneScanAcrossSnapshot2(kv1, kv2);
 
     // use case 2: both kvs in snapshot
+    // active segment is empty,snapshot is not empty,
+    // empty segment is skipped.
     this.memstore.snapshot();
-    verifyScanAcrossSnapshot2(kv1, kv2);
+    //
+    verifyOneScanAcrossSnapshot2(kv1, kv2);
 
     // use case 3: first in snapshot second in kvset
     this.memstore = new DefaultMemStore();
@@ -286,6 +291,18 @@ public class TestDefaultMemStore {
         || kv2.equals(scanner1.next()));
     assertNull(scanner0.next());
     assertNull(scanner1.next());
+  }
+
+  protected void verifyOneScanAcrossSnapshot2(KeyValue kv1, KeyValue kv2) throws IOException {
+    List<KeyValueScanner> memstorescanners = this.memstore.getScanners(mvcc.getReadPoint());
+    assertEquals(1, memstorescanners.size());
+    final KeyValueScanner scanner0 = memstorescanners.get(0);
+    scanner0.seek(KeyValueUtil.createFirstOnRow(HConstants.EMPTY_START_ROW));
+    Cell n0 = scanner0.next();
+    Cell n1 = scanner0.next();
+    assertTrue(kv1.equals(n0));
+    assertTrue(kv2.equals(n1));
+    assertNull(scanner0.next());
   }
 
   protected void assertScannerResults(KeyValueScanner scanner, KeyValue[] expected)
