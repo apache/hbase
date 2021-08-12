@@ -176,11 +176,15 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     // use case 1: both kvs in kvset
     this.memstore.add(kv1.clone(), null);
     this.memstore.add(kv2.clone(), null);
-    verifyScanAcrossSnapshot2(kv1, kv2);
+    // snapshot is empty,active segment is not empty,
+    // empty segment is skipped.
+    verifyOneScanAcrossSnapshot2(kv1, kv2);
 
     // use case 2: both kvs in snapshot
     this.memstore.snapshot();
-    verifyScanAcrossSnapshot2(kv1, kv2);
+    // active segment is empty,snapshot is not empty,
+    // empty segment is skipped.
+    verifyOneScanAcrossSnapshot2(kv1, kv2);
 
     // use case 3: first in snapshot second in kvset
     this.memstore = new CompactingMemStore(HBaseConfiguration.create(),
