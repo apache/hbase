@@ -286,6 +286,13 @@ public class TestRegionCoprocessorOnCompactionServer extends TestCompactionServe
         .setCoprocessor(TestCoprocessorNotCompactionRelated.class.getName()).build();
     TEST_UTIL.getAdmin().modifyTable(modifiedTableDescriptor);
     TEST_UTIL.waitTableAvailable(TABLENAME);
+    doPutRecord(1, 1000, true);
+    TEST_UTIL.getAdmin().compactionSwitch(true, new ArrayList<>());
+    TEST_UTIL.compact(TABLENAME, true);
+    Thread.sleep(5000);
+    TEST_UTIL.waitFor(60000,
+      () -> COMPACTION_SERVER.requestCount.sum() > 0 && COMPACTION_SERVER.compactionThreadManager
+        .getRunningCompactionTasks().values().size() == 0);
     verifyRecord("preOpen".getBytes(), CS.getBytes(), false);
     verifyRecord("preOpen".getBytes(), RS.getBytes(), true);
   }
