@@ -182,9 +182,7 @@ public class CatalogJanitor extends ScheduledChore {
       for (Map.Entry<RegionInfo, Result> e : mergedRegions.entrySet()) {
         if (this.services.isInMaintenanceMode()) {
           // Stop cleaning if the master is in maintenance mode
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("In maintenence mode, not cleaning");
-          }
+          LOG.debug("In maintenence mode, not cleaning");
           break;
         }
 

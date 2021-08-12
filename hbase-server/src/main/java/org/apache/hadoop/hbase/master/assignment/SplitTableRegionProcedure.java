@@ -372,7 +372,7 @@ public class SplitTableRegionProcedure
           break;
         case SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS:
         case SPLIT_TABLE_REGION_WRITE_MAX_SEQUENCE_ID_FILE:
-          // Doing nothing, as re-open parent region would clean up daughter region directories.
+          deleteDaughterRegions(env);
           break;
         case SPLIT_TABLE_REGIONS_CHECK_CLOSED_REGIONS:
           // Doing nothing, in SPLIT_TABLE_REGION_CLOSE_PARENT_REGION,
@@ -624,7 +624,6 @@ public class SplitTableRegionProcedure
 
     assertReferenceFileCount(fs, expectedReferences.getFirst(),
       regionFs.getSplitsDir(daughterOneRI));
-    //Move the files from the temporary .splits to the final /table/region directory
     regionFs.commitDaughterRegion(daughterOneRI);
     assertReferenceFileCount(fs, expectedReferences.getFirst(),
       new Path(tabledir, daughterOneRI.getEncodedName()));
@@ -634,6 +633,15 @@ public class SplitTableRegionProcedure
     regionFs.commitDaughterRegion(daughterTwoRI);
     assertReferenceFileCount(fs, expectedReferences.getSecond(),
       new Path(tabledir, daughterTwoRI.getEncodedName()));
+  }
+
+  private void deleteDaughterRegions(final MasterProcedureEnv env) throws IOException {
+    final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
+    final Path tabledir = CommonFSUtils.getTableDir(mfs.getRootDir(), getTableName());
+    HRegionFileSystem.deleteRegionFromFileSystem(env.getMasterConfiguration(),
+      mfs.getFileSystem(), tabledir, daughterOneRI);
+    HRegionFileSystem.deleteRegionFromFileSystem(env.getMasterConfiguration(),
+      mfs.getFileSystem(), tabledir, daughterTwoRI);
   }
 
   /**
