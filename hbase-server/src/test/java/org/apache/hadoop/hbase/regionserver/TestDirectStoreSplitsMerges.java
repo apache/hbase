@@ -18,6 +18,10 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -38,8 +42,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import java.io.IOException;
-import java.util.List;
 
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestDirectStoreSplitsMerges {
@@ -75,12 +77,14 @@ public class TestDirectStoreSplitsMerges {
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(table).get(0);
     HRegionFileSystem regionFS = region.getStores().get(0).getRegionFileSystem();
     RegionInfo daughterA =
-      RegionInfoBuilder.newBuilder(table).setStartKey(region.getRegionInfo().getStartKey()).setEndKey(Bytes.toBytes("002")).setSplit(false)
-        .setRegionId(region.getRegionInfo().getRegionId() + EnvironmentEdgeManager.currentTime()).build();
+      RegionInfoBuilder.newBuilder(table).setStartKey(region.getRegionInfo().getStartKey()).
+        setEndKey(Bytes.toBytes("002")).setSplit(false)
+        .setRegionId(region.getRegionInfo().getRegionId() +
+          EnvironmentEdgeManager.currentTime()).build();
     HStoreFile file = (HStoreFile) region.getStore(FAMILY_NAME).getStorefiles().toArray()[0];
     Path result = regionFS
-      .splitStoreFile(daughterA, Bytes.toString(FAMILY_NAME), file, Bytes.toBytes("002"), false,
-        region.getSplitPolicy());
+      .splitStoreFile(daughterA, Bytes.toString(FAMILY_NAME), file,
+        Bytes.toBytes("002"), false, region.getSplitPolicy());
     //asserts the reference file naming is correct
     validateResultingFile(region.getRegionInfo().getEncodedName(), result);
     //Additionally check if split region dir was created directly under table dir, not on .tmp
@@ -104,7 +108,8 @@ public class TestDirectStoreSplitsMerges {
     RegionInfo mergeResult =
       RegionInfoBuilder.newBuilder(table).setStartKey(first.getRegionInfo().getStartKey())
         .setEndKey(second.getRegionInfo().getEndKey()).setSplit(false)
-        .setRegionId(first.getRegionInfo().getRegionId() + EnvironmentEdgeManager.currentTime()).build();
+        .setRegionId(first.getRegionInfo().getRegionId() +
+          EnvironmentEdgeManager.currentTime()).build();
 
     HRegionFileSystem mergeRegionFs = HRegionFileSystem
       .createRegionOnFileSystem(TEST_UTIL.getHBaseCluster().getMaster().getConfiguration(),
@@ -125,8 +130,10 @@ public class TestDirectStoreSplitsMerges {
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(table).get(0);
     HRegionFileSystem regionFS = region.getStores().get(0).getRegionFileSystem();
     RegionInfo daughterA =
-      RegionInfoBuilder.newBuilder(table).setStartKey(region.getRegionInfo().getStartKey()).setEndKey(Bytes.toBytes("002")).setSplit(false)
-        .setRegionId(region.getRegionInfo().getRegionId() + EnvironmentEdgeManager.currentTime()).build();
+      RegionInfoBuilder.newBuilder(table).setStartKey(region.getRegionInfo().
+        getStartKey()).setEndKey(Bytes.toBytes("002")).setSplit(false).
+        setRegionId(region.getRegionInfo().getRegionId() +
+          EnvironmentEdgeManager.currentTime()).build();
     Path splitDir = regionFS.getSplitsDir(daughterA);
     Path result = regionFS.commitDaughterRegion(daughterA);
     assertEquals(splitDir, result);
@@ -141,8 +148,10 @@ public class TestDirectStoreSplitsMerges {
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(table).get(0);
     HRegionFileSystem regionFS = region.getStores().get(0).getRegionFileSystem();
     RegionInfo daughterA =
-      RegionInfoBuilder.newBuilder(table).setStartKey(region.getRegionInfo().getStartKey()).setEndKey(Bytes.toBytes("002")).setSplit(false)
-        .setRegionId(region.getRegionInfo().getRegionId() + EnvironmentEdgeManager.currentTime()).build();
+      RegionInfoBuilder.newBuilder(table).setStartKey(region.getRegionInfo().getStartKey()).
+        setEndKey(Bytes.toBytes("002")).setSplit(false).
+        setRegionId(region.getRegionInfo().getRegionId() +
+          EnvironmentEdgeManager.currentTime()).build();
     RegionInfo daughterB = RegionInfoBuilder.newBuilder(table).setStartKey(Bytes.toBytes("002"))
       .setEndKey(region.getRegionInfo().getEndKey()).setSplit(false)
       .setRegionId(region.getRegionInfo().getRegionId()).build();
@@ -150,11 +159,11 @@ public class TestDirectStoreSplitsMerges {
     Path splitDirB = regionFS.getSplitsDir(daughterB);
     HStoreFile file = (HStoreFile) region.getStore(FAMILY_NAME).getStorefiles().toArray()[0];
     regionFS
-      .splitStoreFile(daughterA, Bytes.toString(FAMILY_NAME), file, Bytes.toBytes("002"), false,
-        region.getSplitPolicy());
+      .splitStoreFile(daughterA, Bytes.toString(FAMILY_NAME), file,
+        Bytes.toBytes("002"), false, region.getSplitPolicy());
     regionFS
-      .splitStoreFile(daughterB, Bytes.toString(FAMILY_NAME), file, Bytes.toBytes("002"), true,
-        region.getSplitPolicy());
+      .splitStoreFile(daughterB, Bytes.toString(FAMILY_NAME), file,
+        Bytes.toBytes("002"), true, region.getSplitPolicy());
     Path resultA = regionFS.commitDaughterRegion(daughterA);
     Path resultB = regionFS.commitDaughterRegion(daughterB);
     assertEquals(splitDirA, resultA);
@@ -177,7 +186,8 @@ public class TestDirectStoreSplitsMerges {
     RegionInfo mergeResult =
       RegionInfoBuilder.newBuilder(table).setStartKey(first.getRegionInfo().getStartKey())
         .setEndKey(second.getRegionInfo().getEndKey()).setSplit(false)
-        .setRegionId(first.getRegionInfo().getRegionId() + EnvironmentEdgeManager.currentTime()).build();
+        .setRegionId(first.getRegionInfo().getRegionId() +
+          EnvironmentEdgeManager.currentTime()).build();
 
     HRegionFileSystem mergeRegionFs = HRegionFileSystem
       .createRegionOnFileSystem(TEST_UTIL.getHBaseCluster().getMaster().getConfiguration(),

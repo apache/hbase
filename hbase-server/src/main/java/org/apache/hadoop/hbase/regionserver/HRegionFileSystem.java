@@ -610,14 +610,22 @@ public class HRegionFileSystem {
   }
 
   /**
-   * Creates region split daughter directories under the table dir.
+   * Creates region split daughter directories under the table dir. If the daughter regions already
+   * exist, for example, in the case of a recovery from a previous failed split procedure, this
+   * method deletes the given region dir recursively, then recreates it again.
    */
   public void createSplitsDir(RegionInfo daughterA, RegionInfo daughterB) throws IOException {
     Path daughterADir = getSplitsDir(daughterA);
+    if (fs.exists(daughterADir)) {
+      fs.delete(daughterADir, true);
+    }
     if (!createDir(daughterADir)) {
       throw new IOException("Failed create of " + daughterADir);
     }
     Path daughterBDir = getSplitsDir(daughterB);
+    if (fs.exists(daughterBDir)) {
+      fs.delete(daughterBDir, true);
+    }
     if (!createDir(daughterBDir)) {
       throw new IOException("Failed create of " + daughterBDir);
     }
@@ -728,7 +736,8 @@ public class HRegionFileSystem {
    * @return Path to created reference.
    * @throws IOException if the merge write fails.
    */
-  public Path mergeStoreFile(RegionInfo mergingRegion, String familyName, HStoreFile f) throws IOException {
+  public Path mergeStoreFile(RegionInfo mergingRegion, String familyName, HStoreFile f)
+      throws IOException {
     Path referenceDir = new Path(getMergesDir(regionInfoForFs), familyName);
     // A whole reference to the store file.
     Reference r = Reference.createTopReference(mergingRegion.getStartKey());

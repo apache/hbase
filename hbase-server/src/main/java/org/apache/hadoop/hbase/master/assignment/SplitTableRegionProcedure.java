@@ -618,6 +618,7 @@ public class SplitTableRegionProcedure
     final FileSystem fs = mfs.getFileSystem();
     HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
       env.getMasterConfiguration(), fs, tabledir, getParentRegion(), false);
+
     regionFs.createSplitsDir(daughterOneRI, daughterTwoRI);
 
     Pair<Integer, Integer> expectedReferences = splitStoreFiles(env, regionFs);
@@ -659,8 +660,6 @@ public class SplitTableRegionProcedure
     // Note: From HBASE-26187, splitStoreFiles now creates daughter region dirs straight under the
     // table dir. In case of failure, the proc would go through this again, already existing
     // region dirs and split files would just be ignored, new split files should get created.
-    // Cleanups for failed splits that couldn't retry would be done by CatalogJanitor, as there
-    // would be no entry for the region in meta.
     int nbFiles = 0;
     final Map<String, Collection<StoreFileInfo>> files =
         new HashMap<String, Collection<StoreFileInfo>>(htd.getColumnFamilyCount());
