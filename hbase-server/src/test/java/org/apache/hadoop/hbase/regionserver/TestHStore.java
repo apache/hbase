@@ -43,6 +43,7 @@ import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -1732,6 +1733,67 @@ public class TestHStore {
     assertArrayEquals(table, hFileContext.getTableName());
   }
 
+  @Test
+  public void testCompactingMemStoreStuckBug26026() throws IOException, InterruptedException {
+    Configuration conf = HBaseConfiguration.create();
+
+    byte[] smallValue = new byte[3];
+    byte[] largeValue = new byte[9];
+    final long timestamp = EnvironmentEdgeManager.currentTime();
+    final long seqId = 100;
+    final Cell smallCell = createCell(qf1, timestamp, seqId, smallValue);
+    final Cell largeCell = createCell(qf2, timestamp, seqId, largeValue);
+    int smallCellByteSize = MutableSegment.getCellLength(smallCell);
+    int largeCellByteSize = MutableSegment.getCellLength(largeCell);
+    int flushByteSize = smallCellByteSize + largeCellByteSize - 2;
+
+    // set CompactingMemStore.inmemoryFlushSize to flushByteSize.
+    conf.set(HStore.MEMSTORE_CLASS_NAME, MyCompactingMemStore2.class.getName());
+    conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.005);
+    conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(flushByteSize * 200));
+
+    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
+
+    MyCompactingMemStore2 myCompactingMemStore = ((MyCompactingMemStore2) store.memstore);
+    assertTrue((int) (myCompactingMemStore.getInmemoryFlushSize()) == flushByteSize);
+    myCompactingMemStore.smallCellPreUpdateCounter.set(0);
+    myCompactingMemStore.smallCellPostUpdateCounter.set(0);
+    myCompactingMemStore.largeCellPreUpdateCounter.set(0);
+    myCompactingMemStore.largeCellPostUpdateCounter.set(0);
+
+    Thread smallCellThread = new Thread(() -> {
+      store.add(smallCell, new NonThreadSafeMemStoreSizing());
+    });
+    smallCellThread.setName(MyCompactingMemStore2.SMALL_CELL_THREAD_NAME);
+    smallCellThread.start();
+
+    String oldThreadName = Thread.currentThread().getName();
+    try {
+      /**
+       * 1.smallCellThread enters CompactingMemStore.shouldFlushInMemory first, when largeCellThread
+       * enters CompactingMemStore.shouldFlushInMemory, CompactingMemStore.active.getDataSize could
+       * not accommodate cellToAdd and CompactingMemStore.shouldFlushInMemory return true.
+       * <p/>
+       * 2. After largeCellThread finished CompactingMemStore.flushInMemory method, smallCellThread
+       * can add cell to currentActive . That is to say when largeCellThread called flushInMemory
+       * method, CompactingMemStore.active has no cell.
+       */
+      Thread.currentThread().setName(MyCompactingMemStore2.LARGE_CELL_THREAD_NAME);
+      store.add(largeCell, new NonThreadSafeMemStoreSizing());
+      smallCellThread.join();
+
+      for (int i = 0; i < 100; i++) {
+        long currentTimestamp = timestamp + 100 + i;
+        Cell cell = createCell(qf2, currentTimestamp, seqId, largeValue);
+        store.add(cell, new NonThreadSafeMemStoreSizing());
+      }
+    } finally {
+      Thread.currentThread().setName(oldThreadName);
+    }
+
+  }
+
   private HStoreFile mockStoreFileWithLength(long length) {
     HStoreFile sf = mock(HStoreFile.class);
     StoreFileReader sfr = mock(StoreFileReader.class);
@@ -1930,5 +1992,83 @@ public class TestHStore {
 
     @Override
     public List<T> subList(int fromIndex, int toIndex) {return delegatee.subList(fromIndex, toIndex);}
+  }
+
+  public static class MyCompactingMemStore2 extends CompactingMemStore {
+    private static final String LARGE_CELL_THREAD_NAME = "largeCellThread";
+    private static final String SMALL_CELL_THREAD_NAME = "smallCellThread";
+    private final CyclicBarrier preCyclicBarrier = new CyclicBarrier(2);
+    private final CyclicBarrier postCyclicBarrier = new CyclicBarrier(2);
+    private final AtomicInteger largeCellPreUpdateCounter = new AtomicInteger(0);
+    private final AtomicInteger smallCellPreUpdateCounter = new AtomicInteger(0);
+    private final AtomicInteger largeCellPostUpdateCounter = new AtomicInteger(0);
+    private final AtomicInteger smallCellPostUpdateCounter = new AtomicInteger(0);
+
+    public MyCompactingMemStore2(Configuration conf, CellComparatorImpl cellComparator,
+        HStore store, RegionServicesForStores regionServices,
+        MemoryCompactionPolicy compactionPolicy) throws IOException {
+      super(conf, cellComparator, store, regionServices, compactionPolicy);
+    }
+
+    protected boolean shouldFlushInMemory(MutableSegment currActive, Cell cellToAdd,
+        MemStoreSizing memstoreSizing) {
+      if (Thread.currentThread().getName().equals(LARGE_CELL_THREAD_NAME)) {
+        int currentCount = largeCellPreUpdateCounter.incrementAndGet();
+        if (currentCount <= 1) {
+          try {
+            /**
+             * smallCellThread enters super.shouldFlushInMemory first, when largeCellThread enters
+             * super.shouldFlushInMemory, currActive.getDataSize could not accommodate cellToAdd and
+             * super.shouldFlushInMemory return true.
+             */
+            preCyclicBarrier.await();
+          } catch (Throwable e) {
+            throw new RuntimeException(e);
+          }
+        }
+      }
+
+      boolean returnValue = super.shouldFlushInMemory(currActive, cellToAdd, memstoreSizing);
+      if (Thread.currentThread().getName().equals(SMALL_CELL_THREAD_NAME)) {
+        try {
+          preCyclicBarrier.await();
+        } catch (Throwable e) {
+          throw new RuntimeException(e);
+        }
+      }
+      return returnValue;
+    }
+
+    @Override
+    protected void doAdd(MutableSegment currentActive, Cell cell, MemStoreSizing memstoreSizing) {
+      if (Thread.currentThread().getName().equals(SMALL_CELL_THREAD_NAME)) {
+        try {
+          /**
+           * After largeCellThread finished flushInMemory method, smallCellThread can add cell to
+           * currentActive . That is to say when largeCellThread called flushInMemory method,
+           * currentActive has no cell.
+           */
+          postCyclicBarrier.await();
+        } catch (Throwable e) {
+          throw new RuntimeException(e);
+        }
+      }
+      super.doAdd(currentActive, cell, memstoreSizing);
+    }
+
+    @Override
+    protected void flushInMemory(MutableSegment currentActiveMutableSegment) {
+      super.flushInMemory(currentActiveMutableSegment);
+      if (Thread.currentThread().getName().equals(LARGE_CELL_THREAD_NAME)) {
+        if (largeCellPreUpdateCounter.get() <= 1) {
+          try {
+            postCyclicBarrier.await();
+          } catch (Throwable e) {
+            throw new RuntimeException(e);
+          }
+        }
+      }
+    }
+
   }
 }
