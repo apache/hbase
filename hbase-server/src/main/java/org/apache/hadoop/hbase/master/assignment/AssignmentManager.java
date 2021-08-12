@@ -2309,7 +2309,7 @@ public class AssignmentManager {
       .map(s->new Pair<>(s, master.getRegionServerVersion(s)))
       .collect(Collectors.toList());
     if (serverList.isEmpty()) {
-      return Collections.emptyList();
+      return new ArrayList<>();
     }
     String highestVersion = Collections.max(serverList,
       (o1, o2) -> VersionInfo.compareVersion(o1.getSecond(), o2.getSecond())).getSecond();
@@ -2317,7 +2317,7 @@ public class AssignmentManager {
       int comparedValue = VersionInfo.compareVersion(minVersionToMoveSysTables,
         highestVersion);
       if (comparedValue > 0) {
-        return Collections.emptyList();
+        return new ArrayList<>();
       }
     }
     return serverList.stream()
