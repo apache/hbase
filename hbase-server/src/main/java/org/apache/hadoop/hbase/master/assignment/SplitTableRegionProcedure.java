@@ -648,9 +648,11 @@ public class SplitTableRegionProcedure
     // there's files to split. It then fires up everything, waits for
     // completion and finally checks for any exception
     //
-    // Note: splitStoreFiles creates daughter region dirs under the parent splits dir
-    // Nothing to unroll here if failure -- re-run createSplitsDir will
-    // clean this up.
+    // Note: From HBASE-26187, splitStoreFiles now creates daughter region dirs straight under the
+    // table dir. In case of failure, the proc would go through this again, already existing
+    // region dirs and split files would just be ignored, new split files should get created.
+    // Cleanups for failed splits that couldn't retry would be done by CatalogJanitor, as there
+    // would be no entry for the region in meta.
     int nbFiles = 0;
     final Map<String, Collection<StoreFileInfo>> files =
         new HashMap<String, Collection<StoreFileInfo>>(htd.getColumnFamilyCount());

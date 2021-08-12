@@ -639,6 +639,19 @@ public class HRegionFileSystem {
    */
   public Path splitStoreFile(RegionInfo hri, String familyName, HStoreFile f, byte[] splitRow,
       boolean top, RegionSplitPolicy splitPolicy) throws IOException {
+    Path splitDir = new Path(getSplitsDir(hri), familyName);
+    // Add the referred-to regions name as a dot separated suffix.
+    // See REF_NAME_REGEX regex above.  The referred-to regions name is
+    // up in the path of the passed in <code>f</code> -- parentdir is family,
+    // then the directory above is the region name.
+    String parentRegionName = regionInfoForFs.getEncodedName();
+    // Write reference with same file id only with the other region name as
+    // suffix and into the new region location (under same family).
+    Path p = new Path(splitDir, f.getPath().getName() + "." + parentRegionName);
+    if(fs.exists(p)){
+      LOG.warn("Found an already existing split file for {}. Assuming this is a recovery.", p);
+      return p;
+    }
     if (splitPolicy == null || !splitPolicy.skipStoreFileRangeCheck(familyName)) {
       // Check whether the split row lies in the range of the store file
       // If it is outside the range, return directly.
@@ -671,19 +684,9 @@ public class HRegionFileSystem {
         f.closeStoreFile(f.getCacheConf() != null ? f.getCacheConf().shouldEvictOnClose() : true);
       }
     }
-
-    Path splitDir = new Path(getSplitsDir(hri), familyName);
     // A reference to the bottom half of the hsf store file.
     Reference r =
       top ? Reference.createTopReference(splitRow): Reference.createBottomReference(splitRow);
-    // Add the referred-to regions name as a dot separated suffix.
-    // See REF_NAME_REGEX regex above.  The referred-to regions name is
-    // up in the path of the passed in <code>f</code> -- parentdir is family,
-    // then the directory above is the region name.
-    String parentRegionName = regionInfoForFs.getEncodedName();
-    // Write reference with same file id only with the other region name as
-    // suffix and into the new region location (under same family).
-    Path p = new Path(splitDir, f.getPath().getName() + "." + parentRegionName);
     return r.write(fs, p);
   }
 
