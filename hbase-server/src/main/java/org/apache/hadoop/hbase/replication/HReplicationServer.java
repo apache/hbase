@@ -701,25 +701,24 @@ public class HReplicationServer extends Thread implements Server, ReplicationSou
   public void finishRecoveredSource(RecoveredReplicationSource src) {
     this.sources.remove(src.getQueueId());
     this.sourceMetrics.remove(src.getQueueId());
-    deleteQueue(src.getQueueId());
+    deleteQueue(src.getReplicationQueueInfo());
     LOG.info("Finished recovering queue {} with the following stats: {}", src.getQueueId(),
       src.getStats());
   }
 
-  public void startReplicationSource(ServerName producer, String queueId)
+  public void startReplicationSource(ServerName owner, String queueId)
     throws IOException, ReplicationException {
-    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queueId);
+    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(owner, queueId);
     String peerId = replicationQueueInfo.getPeerId();
     this.replicationPeers.addPeer(peerId);
-    Path walDir =
-      new Path(walRootDir, AbstractFSWALProvider.getWALDirectoryName(producer.toString()));
+    Path walDir = new Path(walRootDir, AbstractFSWALProvider.getWALDirectoryName(owner.toString()));
     MetricsSource metrics = new MetricsSource(queueId);
 
     ReplicationSourceInterface src = ReplicationSourceFactory.create(conf, queueId);
     // init replication source
     src.init(conf, walFs, walDir, this, queueStorage, replicationPeers.getPeer(peerId), this,
-      producer, queueId, clusterId, createWALFileLengthProvider(producer, queueId), metrics);
-    queueStorage.getWALsInQueue(producer, queueId)
+      replicationQueueInfo, clusterId, createWALFileLengthProvider(owner, queueId), metrics);
+    queueStorage.getWALsInQueue(owner, queueId)
       .forEach(walName -> src.enqueueLog(new Path(walDir, walName)));
     src.startup();
     sources.put(queueId, src);
@@ -728,10 +727,11 @@ public class HReplicationServer extends Thread implements Server, ReplicationSou
 
   /**
    * Delete a complete queue of wals associated with a replication source
-   * @param queueId the id of replication queue to delete
+   * @param queueInfo the replication queue to delete
    */
-  private void deleteQueue(String queueId) {
-    abortWhenFail(() -> this.queueStorage.removeQueue(getServerName(), queueId));
+  private void deleteQueue(ReplicationQueueInfo queueInfo) {
+    abortWhenFail(() ->
+      this.queueStorage.removeQueue(queueInfo.getOwner(), queueInfo.getQueueId()));
   }
 
   @FunctionalInterface
@@ -748,7 +748,7 @@ public class HReplicationServer extends Thread implements Server, ReplicationSou
   }
 
   private WALFileLengthProvider createWALFileLengthProvider(ServerName producer, String queueId) {
-    if (new ReplicationQueueInfo(queueId).isQueueRecovered()) {
+    if (ReplicationQueueInfo.isQueueRecovered(queueId)) {
       return p -> OptionalLong.empty();
     }
     return new RemoteWALFileLengthProvider(asyncClusterConnection, producer);
