@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.replication;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -146,5 +147,19 @@ public class ReplicationQueueInfo {
 
   public boolean isQueueRecovered() {
     return queueRecovered;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o instanceof ReplicationQueueInfo) {
+      ReplicationQueueInfo other = (ReplicationQueueInfo) o;
+      return Objects.equals(this.owner, other.owner) && Objects.equals(this.queueId, other.queueId);
+    }
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(this.owner, this.queueId);
   }
 }

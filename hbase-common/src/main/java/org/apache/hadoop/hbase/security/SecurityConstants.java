@@ -34,6 +34,10 @@ public final class SecurityConstants {
   public static final String MASTER_KRB_KEYTAB_FILE = "hbase.master.keytab.file";
   public static final String REGIONSERVER_KRB_PRINCIPAL = "hbase.regionserver.kerberos.principal";
   public static final String REGIONSERVER_KRB_KEYTAB_FILE = "hbase.regionserver.keytab.file";
+  public static final String REPLICATION_SERVER_KRB_PRINCIPAL =
+    "hbase.replication.server.kerberos.principal";
+  public static final String REPLICATION_SERVER_KRB_KEYTAB_FILE =
+    "hbase.replication.server.keytab.file";
 
   /**
    * This config is for experts: don't set its value unless you really know what you are doing.
