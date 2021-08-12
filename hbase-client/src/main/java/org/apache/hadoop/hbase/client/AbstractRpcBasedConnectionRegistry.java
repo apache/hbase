@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.trace.TraceUtil.trace;
+import static org.apache.hadoop.hbase.trace.TraceUtil.tracedFuture;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import com.google.errorprone.annotations.RestrictedApi;
@@ -235,38 +237,48 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
 
   @Override
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
-    return this
-      .<GetMetaRegionLocationsResponse> call((c, s, d) -> s.getMetaRegionLocations(c,
-        GetMetaRegionLocationsRequest.getDefaultInstance(), d), r -> r.getMetaLocationsCount() != 0,
+    return tracedFuture(
+      () -> this
+        .<GetMetaRegionLocationsResponse> call(
+          (c, s, d) -> s.getMetaRegionLocations(c,
+            GetMetaRegionLocationsRequest.getDefaultInstance(), d),
+          r -> r.getMetaLocationsCount() != 0,
         "getMetaLocationsCount")
-      .thenApply(AbstractRpcBasedConnectionRegistry::transformMetaRegionLocations);
+        .thenApply(AbstractRpcBasedConnectionRegistry::transformMetaRegionLocations),
+      getClass().getSimpleName() + ".getMetaRegionLocations");
   }
 
   @Override
   public CompletableFuture<String> getClusterId() {
-    return this
-      .<GetClusterIdResponse> call(
-        (c, s, d) -> s.getClusterId(c, GetClusterIdRequest.getDefaultInstance(), d),
-        GetClusterIdResponse::hasClusterId, "getClusterId()")
-      .thenApply(GetClusterIdResponse::getClusterId);
+    return tracedFuture(
+      () -> this
+        .<GetClusterIdResponse> call(
+          (c, s, d) -> s.getClusterId(c, GetClusterIdRequest.getDefaultInstance(), d),
+          GetClusterIdResponse::hasClusterId, "getClusterId()")
+        .thenApply(GetClusterIdResponse::getClusterId),
+      getClass().getSimpleName() + ".getClusterId");
   }
 
   @Override
   public CompletableFuture<ServerName> getActiveMaster() {
-    return this
-      .<GetActiveMasterResponse> call(
-        (c, s, d) -> s.getActiveMaster(c, GetActiveMasterRequest.getDefaultInstance(), d),
-        GetActiveMasterResponse::hasServerName, "getActiveMaster()")
-      .thenApply(resp -> ProtobufUtil.toServerName(resp.getServerName()));
+    return tracedFuture(
+      () -> this
+        .<GetActiveMasterResponse>call(
+          (c, s, d) -> s.getActiveMaster(c, GetActiveMasterRequest.getDefaultInstance(), d),
+          GetActiveMasterResponse::hasServerName, "getActiveMaster()")
+        .thenApply(resp -> ProtobufUtil.toServerName(resp.getServerName())),
+      getClass().getSimpleName() + ".getActiveMaster");
   }
 
   @Override
   public void close() {
-    if (registryEndpointRefresher != null) {
-      registryEndpointRefresher.stop();
-    }
-    if (rpcClient != null) {
-      rpcClient.close();
-    }
+    trace(() -> {
+      if (registryEndpointRefresher != null) {
+        registryEndpointRefresher.stop();
+      }
+      if (rpcClient != null) {
+        rpcClient.close();
+      }
+    }, getClass().getSimpleName() + ".close");
   }
 }
