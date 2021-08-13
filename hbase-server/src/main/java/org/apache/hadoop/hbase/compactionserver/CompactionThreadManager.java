@@ -191,7 +191,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
     synchronized (compactionFilesCache.getCompactedStoreFilesAsLock(regionInfo, cfd)) {
       synchronized (compactionFilesCache.getSelectedStoreFilesAsLock(regionInfo, cfd)) {
         store = openStore(regionInfo, cfd, compactionTask.isRequestMajor(), status);
-        store.setFavoredNodes(compactionTask.getFavoredNodes());
+        store.assignFavoredNodesForCompactionOffload(compactionTask.getFavoredNodes());
         Optional<CompactionContext> compaction = selectCompaction(store, regionInfo, cfd,
           compactionTask.isRequestMajor(), compactionTask.getPriority(), status, logStr);
         if (!compaction.isPresent()) {

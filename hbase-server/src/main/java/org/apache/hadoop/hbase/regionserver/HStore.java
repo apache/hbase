@@ -355,7 +355,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   // Favored nodes used by compaction offload
   private InetSocketAddress[] favoredNodes = null;
 
-  public void setFavoredNodes(List<HBaseProtos.ServerName> favoredNodes) {
+  // This method is not thread safe.
+  // We initialize a new store everytime for a compaction request when compaction offload.
+  // So the method is only called once after initializeStoreContext and before real do compaction.
+  public void assignFavoredNodesForCompactionOffload(List<HBaseProtos.ServerName> favoredNodes) {
     if (CollectionUtils.isNotEmpty(favoredNodes)) {
       this.favoredNodes = new InetSocketAddress[favoredNodes.size()];
       for (int i = 0; i < favoredNodes.size(); i++) {
