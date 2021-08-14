@@ -120,6 +120,8 @@ public class TestReplicationHFileCleaner {
     } catch (IOException e) {
       LOG.warn("Failed to delete files recursively from path " + root);
     }
+    // Remove all HFileRefs (if any)
+    rq.removeHFileRefs(peerId, rq.getReplicableHFiles(peerId));
     rp.getPeerStorage().removePeer(peerId);
   }
 
