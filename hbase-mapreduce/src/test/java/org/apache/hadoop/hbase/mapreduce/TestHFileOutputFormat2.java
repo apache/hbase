@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.TestHRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
+import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
@@ -1693,6 +1694,11 @@ public class TestHFileOutputFormat2  {
       assertEquals(confB.get(HConstants.ZOOKEEPER_ZNODE_PARENT),
         jobConf.get(HFileOutputFormat2.REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY));
 
+      String bSpecificConfigKey = "my.override.config.for.b";
+      String bSpecificConfigValue = "b-specific-value";
+      jobConf.set(HFileOutputFormat2.REMOTE_CLUSTER_CONF_PREFIX + bSpecificConfigKey,
+        bSpecificConfigValue);
+
       FileOutputFormat.setOutputPath(job, testDir);
 
       assertFalse(util.getTestFileSystem().exists(testDir));
@@ -1710,6 +1716,9 @@ public class TestHFileOutputFormat2  {
           config.get(HConstants.ZOOKEEPER_CLIENT_PORT));
         assertEquals(confB.get(HConstants.ZOOKEEPER_ZNODE_PARENT),
           config.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
+
+        assertEquals(bSpecificConfigValue,
+          config.get(bSpecificConfigKey));
       }
     } finally {
       utilB.deleteTable(tableName);
