@@ -70,7 +70,6 @@ public class TestHRegionFileSystem {
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionFileSystem.class);
 
   public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
-
   private static final byte[][] FAMILIES = {
     Bytes.add(FAMILY_NAME, Bytes.toBytes("-A")),
     Bytes.add(FAMILY_NAME, Bytes.toBytes("-B")) };
@@ -381,5 +380,4 @@ public class TestHRegionFileSystem {
 
     fs.delete(rootDir, true);
   }
-
 }
