@@ -616,21 +616,17 @@ public class HRegionFileSystem {
    */
   public void createSplitsDir(RegionInfo daughterA, RegionInfo daughterB) throws IOException {
     Path daughterADir = getSplitsDir(daughterA);
-    if (fs.exists(daughterADir)) {
-      if (!deleteDir(daughterADir)) {
-        throw new IOException("Failed deletion of " + daughterADir +
-          " before creating them again.");
-      }
+    if (fs.exists(daughterADir) && !deleteDir(daughterADir)) {
+      throw new IOException("Failed deletion of " + daughterADir + " before creating them again.");
+
     }
     if (!createDir(daughterADir)) {
       throw new IOException("Failed create of " + daughterADir);
     }
     Path daughterBDir = getSplitsDir(daughterB);
-    if (fs.exists(daughterBDir)) {
-      if (!deleteDir(daughterBDir)) {
-        throw new IOException("Failed deletion of " + daughterBDir +
-          " before creating them again.");
-      }
+    if (fs.exists(daughterBDir) && !deleteDir(daughterBDir)) {
+      throw new IOException("Failed deletion of " + daughterBDir + " before creating them again.");
+
     }
     if (!createDir(daughterBDir)) {
       throw new IOException("Failed create of " + daughterBDir);
