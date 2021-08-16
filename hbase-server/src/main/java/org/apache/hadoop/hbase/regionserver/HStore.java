@@ -118,6 +118,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 
 /**
@@ -344,12 +345,27 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   private InetSocketAddress[] getFavoredNodes() {
-    InetSocketAddress[] favoredNodes = null;
     if (region.getRegionServerServices() != null) {
-      favoredNodes = region.getRegionServerServices().getFavoredNodesForRegion(
-          region.getRegionInfo().getEncodedName());
+      return region.getRegionServerServices()
+          .getFavoredNodesForRegion(region.getRegionInfo().getEncodedName());
     }
     return favoredNodes;
+  }
+
+  // Favored nodes used by compaction offload
+  private InetSocketAddress[] favoredNodes = null;
+
+  // This method is not thread safe.
+  // We initialize a new store everytime for a compaction request when compaction offload.
+  // So the method is only called once after initializeStoreContext and before real do compaction.
+  public void assignFavoredNodesForCompactionOffload(List<HBaseProtos.ServerName> favoredNodes) {
+    if (CollectionUtils.isNotEmpty(favoredNodes)) {
+      this.favoredNodes = new InetSocketAddress[favoredNodes.size()];
+      for (int i = 0; i < favoredNodes.size(); i++) {
+        this.favoredNodes[i] = InetSocketAddress.createUnresolved(favoredNodes.get(i).getHostName(),
+          favoredNodes.get(i).getPort());
+      }
+    }
   }
 
   /**
