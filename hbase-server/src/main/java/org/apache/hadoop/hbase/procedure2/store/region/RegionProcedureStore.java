@@ -261,7 +261,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     long maxProcId = 0;
 
     try (RegionScanner scanner =
-      region.getScanner(new Scan().addColumn(PROC_FAMILY, PROC_QUALIFIER))) {
+      region.getRegionScanner(new Scan().addColumn(PROC_FAMILY, PROC_QUALIFIER))) {
       List<Cell> cells = new ArrayList<>();
       boolean moreRows;
       do {
@@ -426,8 +426,8 @@ public class RegionProcedureStore extends ProcedureStoreBase {
   public void cleanup() {
     // actually delete the procedures if it is not the one with the max procedure id.
     List<Cell> cells = new ArrayList<Cell>();
-    try (RegionScanner scanner =
-      region.getScanner(new Scan().addColumn(PROC_FAMILY, PROC_QUALIFIER).setReversed(true))) {
+    try (RegionScanner scanner = region
+      .getRegionScanner(new Scan().addColumn(PROC_FAMILY, PROC_QUALIFIER).setReversed(true))) {
       // skip the row with max procedure id
       boolean moreRows = scanner.next(cells);
       if (cells.isEmpty()) {
@@ -442,8 +442,9 @@ public class RegionProcedureStore extends ProcedureStoreBase {
         Cell cell = cells.get(0);
         cells.clear();
         if (cell.getValueLength() == 0) {
-          region.update(r -> r
-            .delete(new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())));
+          region.update(
+            r -> r.delete(new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())
+              .addFamily(PROC_FAMILY)));
         }
       }
     } catch (IOException e) {

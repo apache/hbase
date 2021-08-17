@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -134,7 +135,11 @@ public final class MasterRegion {
     return region.get(get);
   }
 
-  public RegionScanner getScanner(Scan scan) throws IOException {
+  public ResultScanner getScanner(Scan scan) throws IOException {
+    return new RegionScannerAsResultScanner(region.getScanner(scan));
+  }
+
+  public RegionScanner getRegionScanner(Scan scan) throws IOException {
     return region.getScanner(scan);
   }
 

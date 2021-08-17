@@ -222,7 +222,7 @@ public class TestMasterRegionOnTwoFileSystems {
       region.close(true);
       region = createMasterRegion(
         ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime() + round + 1));
-      try (RegionScanner scanner = region.getScanner(new Scan())) {
+      try (RegionScanner scanner = region.getRegionScanner(new Scan())) {
         List<Cell> cells = new ArrayList<>();
         boolean moreValues = true;
         for (int i = 0; i < (round + 1) * countPerRound; i++) {
