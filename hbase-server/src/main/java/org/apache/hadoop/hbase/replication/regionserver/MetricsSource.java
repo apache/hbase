@@ -24,6 +24,7 @@ import java.util.Map;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -64,6 +65,18 @@ public class MetricsSource implements BaseSource {
     globalSourceSource = CompatibilitySingletonFactory
       .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
     singleSourceSourceByTable = new HashMap<>();
+  }
+
+
+  /**
+   * Constructor used to register the metrics
+   * On ReplicationServer, there may be multiple queues with the same queueId, so use queueOwner
+   * and queueId to distinguish them.
+   *
+   * @param queueInfo The replication queue this class is monitoring
+   */
+  public MetricsSource(ReplicationQueueInfo queueInfo) {
+    this(queueInfo.getOwner() + "." + queueInfo.getQueueId());
   }
 
   /**

@@ -20,19 +20,12 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import java.lang.management.MemoryUsage;
 import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.OptionalLong;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -49,22 +42,14 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.ReplicationService;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
-import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationGlobalSourceSource;
-import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceFactory;
-import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
-import org.apache.hadoop.hbase.replication.regionserver.RecoveredReplicationSource;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceFactory;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
-import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
-import org.apache.hadoop.hbase.replication.replicationserver.RemoteWALFileLengthProvider;
+import org.apache.hadoop.hbase.replication.replicationserver.ReplicationServerSourceManager;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Sleeper;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -89,7 +74,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerStatus
  */
 @InterfaceAudience.Private
 @SuppressWarnings({ "deprecation"})
-public class HReplicationServer extends Thread implements Server, ReplicationSourceController  {
+public class HReplicationServer extends Thread implements Server {
 
   private static final Logger LOG = LoggerFactory.getLogger(HReplicationServer.class);
 
@@ -150,18 +135,6 @@ public class HReplicationServer extends Thread implements Server, ReplicationSou
 
   final ReplicationServerRpcServices rpcServices;
 
-  // Total buffer size on this RegionServer for holding batched edits to be shipped.
-  private final long totalBufferLimit;
-  private AtomicLong totalBufferUsed = new AtomicLong();
-
-  private final MetricsReplicationGlobalSourceSource globalMetrics;
-  private final Map<String, MetricsSource> sourceMetrics = new HashMap<>();
-  private final ConcurrentMap<String, ReplicationSourceInterface> sources =
-    new ConcurrentHashMap<>();
-
-  private final ReplicationQueueStorage queueStorage;
-  private final ReplicationPeers replicationPeers;
-
   // Stub to do region server status calls against the master.
   private volatile ReplicationServerStatusService.BlockingInterface rssStub;
 
@@ -169,6 +142,8 @@ public class HReplicationServer extends Thread implements Server, ReplicationSou
   private RpcClient rpcClient;
 
   private ReplicationSinkService replicationSinkService;
+
+  private ReplicationServerSourceManager sourceManager;
 
   public HReplicationServer(final Configuration conf) throws Exception {
     try {
@@ -198,11 +173,6 @@ public class HReplicationServer extends Thread implements Server, ReplicationSou
 
       this.shortOperationTimeout = conf.getInt(HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY,
           HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT);
-      this.totalBufferLimit = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
-        HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
-      this.globalMetrics =
-        CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
-          .getGlobalSource();
 
       initializeFileSystem();
       this.choreService = new ChoreService(getName(), true);
@@ -219,10 +189,6 @@ public class HReplicationServer extends Thread implements Server, ReplicationSou
         masterAddressTracker = null;
       }
 
-      this.queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zooKeeper, conf);
-      this.replicationPeers =
-        ReplicationFactory.getReplicationPeers(zooKeeper, this.conf);
-      this.replicationPeers.init();
       this.clusterId = ZKClusterId.getUUIDForCluster(zooKeeper);
       this.rpcServices.start(zooKeeper);
       this.choreService = new ChoreService(getName(), true);
@@ -497,7 +463,11 @@ public class HReplicationServer extends Thread implements Server, ReplicationSou
   /**
    * Start up replication source and sink handlers.
    */
-  private void startReplicationService() throws IOException {
+  private void startReplicationService() throws IOException, ReplicationException {
+    Path oldWalDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    this.sourceManager = new ReplicationServerSourceManager(this, walFs, walRootDir,
+      oldWalDir, clusterId);
+    this.sourceManager.init();
     if (this.replicationSinkService != null) {
       this.replicationSinkService.startReplicationService();
     }
@@ -508,6 +478,10 @@ public class HReplicationServer extends Thread implements Server, ReplicationSou
    */
   public ReplicationSinkService getReplicationSinkService() {
     return replicationSinkService;
+  }
+
+  public ReplicationServerSourceManager getReplicationServerSourceManager() {
+    return this.sourceManager;
   }
 
   /**
@@ -682,75 +656,9 @@ public class HReplicationServer extends Thread implements Server, ReplicationSou
     return interrupted;
   }
 
-  @Override
-  public long getTotalBufferLimit() {
-    return this.totalBufferLimit;
-  }
-
-  @Override
-  public AtomicLong getTotalBufferUsed() {
-    return this.totalBufferUsed;
-  }
-
-  @Override
-  public MetricsReplicationGlobalSourceSource getGlobalMetrics() {
-    return this.globalMetrics;
-  }
-
-  @Override
-  public void finishRecoveredSource(RecoveredReplicationSource src) {
-    this.sources.remove(src.getQueueId());
-    this.sourceMetrics.remove(src.getQueueId());
-    deleteQueue(src.getReplicationQueueInfo());
-    LOG.info("Finished recovering queue {} with the following stats: {}", src.getQueueId(),
-      src.getStats());
-  }
-
   public void startReplicationSource(ServerName owner, String queueId)
     throws IOException, ReplicationException {
-    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(owner, queueId);
-    String peerId = replicationQueueInfo.getPeerId();
-    this.replicationPeers.addPeer(peerId);
-    Path walDir = new Path(walRootDir, AbstractFSWALProvider.getWALDirectoryName(owner.toString()));
-    MetricsSource metrics = new MetricsSource(queueId);
-
-    ReplicationSourceInterface src = ReplicationSourceFactory.create(conf, queueId);
-    // init replication source
-    src.init(conf, walFs, walDir, this, queueStorage, replicationPeers.getPeer(peerId), this,
-      replicationQueueInfo, clusterId, createWALFileLengthProvider(owner, queueId), metrics);
-    queueStorage.getWALsInQueue(owner, queueId)
-      .forEach(walName -> src.enqueueLog(new Path(walDir, walName)));
-    src.startup();
-    sources.put(queueId, src);
-    sourceMetrics.put(queueId, metrics);
-  }
-
-  /**
-   * Delete a complete queue of wals associated with a replication source
-   * @param queueInfo the replication queue to delete
-   */
-  private void deleteQueue(ReplicationQueueInfo queueInfo) {
-    abortWhenFail(() ->
-      this.queueStorage.removeQueue(queueInfo.getOwner(), queueInfo.getQueueId()));
-  }
-
-  @FunctionalInterface
-  private interface ReplicationQueueOperation {
-    void exec() throws ReplicationException;
-  }
-
-  private void abortWhenFail(ReplicationQueueOperation op) {
-    try {
-      op.exec();
-    } catch (ReplicationException e) {
-      abort("Failed to operate on replication queue", e);
-    }
-  }
-
-  private WALFileLengthProvider createWALFileLengthProvider(ServerName producer, String queueId) {
-    if (ReplicationQueueInfo.isQueueRecovered(queueId)) {
-      return p -> OptionalLong.empty();
-    }
-    return new RemoteWALFileLengthProvider(asyncClusterConnection, producer);
+    LOG.info("Start replication source, owner: {}, queueId: {}", owner, queueId);
+    this.sourceManager.startReplicationSource(owner, queueId);
   }
 }
