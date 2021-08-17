@@ -1023,16 +1023,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       fs.cleanupTempDir();
     }
 
-    if (this.writestate.writesEnabled) {
-      status.setStatus("Cleaning up detritus from prior splits");
-      // Get rid of any splits or merges that were lost in-progress.  Clean out
-      // these directories here on open.  We may be opening a region that was
-      // being split but we crashed in the middle of it all.
-      LOG.debug("Cleaning up detritus for " + this.getRegionInfo().getEncodedName());
-      fs.cleanupAnySplitDetritus();
-      fs.cleanupMergesDir();
-    }
-
     // Initialize split policy
     this.splitPolicy = RegionSplitPolicy.create(this, conf);
 

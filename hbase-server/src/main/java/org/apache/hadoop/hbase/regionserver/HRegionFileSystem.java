@@ -572,49 +572,9 @@ public class HRegionFileSystem {
   // ===========================================================================
   //  Splits Helpers
   // ===========================================================================
-  /** @return {@link Path} to the temp directory used during split operations */
-  Path getSplitsDir() {
-    return new Path(getRegionDir(), REGION_SPLITS_DIR);
-  }
 
   public Path getSplitsDir(final RegionInfo hri) {
-    return new Path(getSplitsDir(), hri.getEncodedName());
-  }
-
-  /**
-   * Clean up any split detritus that may have been left around from previous split attempts.
-   */
-  void cleanupSplitsDir() throws IOException {
-    deleteDir(getSplitsDir());
-  }
-
-  /**
-   * Clean up any split detritus that may have been left around from previous
-   * split attempts.
-   * Call this method on initial region deploy.
-   * @throws IOException
-   */
-  void cleanupAnySplitDetritus() throws IOException {
-    Path splitdir = this.getSplitsDir();
-    if (!fs.exists(splitdir)) return;
-    // Look at the splitdir.  It could have the encoded names of the daughter
-    // regions we tried to make.  See if the daughter regions actually got made
-    // out under the tabledir.  If here under splitdir still, then the split did
-    // not complete.  Try and do cleanup.  This code WILL NOT catch the case
-    // where we successfully created daughter a but regionserver crashed during
-    // the creation of region b.  In this case, there'll be an orphan daughter
-    // dir in the filesystem.  TOOD: Fix.
-    FileStatus[] daughters = CommonFSUtils.listStatus(fs, splitdir, new FSUtils.DirFilter(fs));
-    if (daughters != null) {
-      for (FileStatus daughter: daughters) {
-        Path daughterDir = new Path(getTableDir(), daughter.getPath().getName());
-        if (fs.exists(daughterDir) && !deleteDir(daughterDir)) {
-          throw new IOException("Failed delete of " + daughterDir);
-        }
-      }
-    }
-    cleanupSplitsDir();
-    LOG.info("Cleaned up old failed split transaction detritus: " + splitdir);
+    return new Path(getTableDir(), hri.getEncodedName());
   }
 
   /**
@@ -638,47 +598,38 @@ public class HRegionFileSystem {
    */
   public Path commitDaughterRegion(final RegionInfo regionInfo)
       throws IOException {
-    Path regionDir = new Path(this.tableDir, regionInfo.getEncodedName());
-    Path daughterTmpDir = this.getSplitsDir(regionInfo);
-
-    if (fs.exists(daughterTmpDir)) {
-
+    Path regionDir = this.getSplitsDir(regionInfo);
+    if (fs.exists(regionDir)) {
       // Write HRI to a file in case we need to recover hbase:meta
-      Path regionInfoFile = new Path(daughterTmpDir, REGION_INFO_FILE);
+      Path regionInfoFile = new Path(regionDir, REGION_INFO_FILE);
       byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
-
-      // Move the daughter temp dir to the table dir
-      if (!rename(daughterTmpDir, regionDir)) {
-        throw new IOException("Unable to rename " + daughterTmpDir + " to " + regionDir);
-      }
     }
 
     return regionDir;
   }
 
   /**
-   * Create the region splits directory.
+   * Creates region split daughter directories under the table dir. If the daughter regions already
+   * exist, for example, in the case of a recovery from a previous failed split procedure, this
+   * method deletes the given region dir recursively, then recreates it again.
    */
   public void createSplitsDir(RegionInfo daughterA, RegionInfo daughterB) throws IOException {
-    Path splitdir = getSplitsDir();
-    if (fs.exists(splitdir)) {
-      LOG.info("The " + splitdir + " directory exists.  Hence deleting it to recreate it");
-      if (!deleteDir(splitdir)) {
-        throw new IOException("Failed deletion of " + splitdir + " before creating them again.");
-      }
+    Path daughterADir = getSplitsDir(daughterA);
+    if (fs.exists(daughterADir) && !deleteDir(daughterADir)) {
+      throw new IOException("Failed deletion of " + daughterADir + " before creating them again.");
+
     }
-    // splitDir doesn't exists now. No need to do an exists() call for it.
-    if (!createDir(splitdir)) {
-      throw new IOException("Failed create of " + splitdir);
+    if (!createDir(daughterADir)) {
+      throw new IOException("Failed create of " + daughterADir);
     }
-    Path daughterATmpDir = getSplitsDir(daughterA);
-    if (!createDir(daughterATmpDir)) {
-      throw new IOException("Failed create of " + daughterATmpDir);
+    Path daughterBDir = getSplitsDir(daughterB);
+    if (fs.exists(daughterBDir) && !deleteDir(daughterBDir)) {
+      throw new IOException("Failed deletion of " + daughterBDir + " before creating them again.");
+
     }
-    Path daughterBTmpDir = getSplitsDir(daughterB);
-    if (!createDir(daughterBTmpDir)) {
-      throw new IOException("Failed create of " + daughterBTmpDir);
+    if (!createDir(daughterBDir)) {
+      throw new IOException("Failed create of " + daughterBDir);
     }
   }
 
@@ -698,6 +649,19 @@ public class HRegionFileSystem {
    */
   public Path splitStoreFile(RegionInfo hri, String familyName, HStoreFile f, byte[] splitRow,
       boolean top, RegionSplitPolicy splitPolicy) throws IOException {
+    Path splitDir = new Path(getSplitsDir(hri), familyName);
+    // Add the referred-to regions name as a dot separated suffix.
+    // See REF_NAME_REGEX regex above.  The referred-to regions name is
+    // up in the path of the passed in <code>f</code> -- parentdir is family,
+    // then the directory above is the region name.
+    String parentRegionName = regionInfoForFs.getEncodedName();
+    // Write reference with same file id only with the other region name as
+    // suffix and into the new region location (under same family).
+    Path p = new Path(splitDir, f.getPath().getName() + "." + parentRegionName);
+    if(fs.exists(p)){
+      LOG.warn("Found an already existing split file for {}. Assuming this is a recovery.", p);
+      return p;
+    }
     if (splitPolicy == null || !splitPolicy.skipStoreFileRangeCheck(familyName)) {
       // Check whether the split row lies in the range of the store file
       // If it is outside the range, return directly.
@@ -730,40 +694,20 @@ public class HRegionFileSystem {
         f.closeStoreFile(f.getCacheConf() != null ? f.getCacheConf().shouldEvictOnClose() : true);
       }
     }
-
-    Path splitDir = new Path(getSplitsDir(hri), familyName);
     // A reference to the bottom half of the hsf store file.
     Reference r =
       top ? Reference.createTopReference(splitRow): Reference.createBottomReference(splitRow);
-    // Add the referred-to regions name as a dot separated suffix.
-    // See REF_NAME_REGEX regex above.  The referred-to regions name is
-    // up in the path of the passed in <code>f</code> -- parentdir is family,
-    // then the directory above is the region name.
-    String parentRegionName = regionInfoForFs.getEncodedName();
-    // Write reference with same file id only with the other region name as
-    // suffix and into the new region location (under same family).
-    Path p = new Path(splitDir, f.getPath().getName() + "." + parentRegionName);
     return r.write(fs, p);
   }
 
   // ===========================================================================
   //  Merge Helpers
   // ===========================================================================
-  /** @return {@link Path} to the temp directory used during merge operations */
-  public Path getMergesDir() {
-    return new Path(getRegionDir(), REGION_MERGES_DIR);
-  }
 
   Path getMergesDir(final RegionInfo hri) {
-    return new Path(getMergesDir(), hri.getEncodedName());
+    return new Path(getTableDir(), hri.getEncodedName());
   }
 
-  /**
-   * Clean up any merge detritus that may have been left around from previous merge attempts.
-   */
-  void cleanupMergesDir() throws IOException {
-    deleteDir(getMergesDir());
-  }
 
   /**
    * Remove merged region
@@ -787,87 +731,47 @@ public class HRegionFileSystem {
   }
 
   /**
-   * Create the region merges directory, a temporary directory to accumulate
-   * merges in.
-   * @throws IOException If merges dir already exists or we fail to create it.
-   * @see HRegionFileSystem#cleanupMergesDir()
-   */
-  public void createMergesDir() throws IOException {
-    Path mergesdir = getMergesDir();
-    if (fs.exists(mergesdir)) {
-      LOG.info("{} directory exists. Deleting it to recreate it anew", mergesdir);
-      if (!fs.delete(mergesdir, true)) {
-        throw new IOException("Failed deletion of " + mergesdir + " before recreate.");
-      }
-    }
-    if (!mkdirs(fs, conf, mergesdir)) {
-      throw new IOException("Failed create of " + mergesdir);
-    }
-  }
-
-  /**
-   * Write out a merge reference under the given merges directory. Package local
-   * so it doesnt leak out of regionserver.
-   * @param mergedRegion {@link RegionInfo} of the merged region
+   * Write out a merge reference under the given merges directory.
+   * @param mergingRegion {@link RegionInfo} for one of the regions being merged.
    * @param familyName Column Family Name
    * @param f File to create reference.
-   * @param mergedDir
    * @return Path to created reference.
-   * @throws IOException
+   * @throws IOException if the merge write fails.
    */
-  public Path mergeStoreFile(RegionInfo mergedRegion, String familyName, HStoreFile f,
-      Path mergedDir) throws IOException {
-    Path referenceDir = new Path(new Path(mergedDir,
-        mergedRegion.getEncodedName()), familyName);
+  public Path mergeStoreFile(RegionInfo mergingRegion, String familyName, HStoreFile f)
+      throws IOException {
+    Path referenceDir = new Path(getMergesDir(regionInfoForFs), familyName);
     // A whole reference to the store file.
-    Reference r = Reference.createTopReference(regionInfoForFs.getStartKey());
+    Reference r = Reference.createTopReference(mergingRegion.getStartKey());
     // Add the referred-to regions name as a dot separated suffix.
     // See REF_NAME_REGEX regex above. The referred-to regions name is
     // up in the path of the passed in <code>f</code> -- parentdir is family,
     // then the directory above is the region name.
-    String mergingRegionName = regionInfoForFs.getEncodedName();
+    String mergingRegionName = mergingRegion.getEncodedName();
     // Write reference with same file id only with the other region name as
     // suffix and into the new region location (under same family).
     Path p = new Path(referenceDir, f.getPath().getName() + "."
-        + mergingRegionName);
+      + mergingRegionName);
     return r.write(fs, p);
   }
 
   /**
-   * Commit a merged region, moving it from the merges temporary directory to
-   * the proper location in the filesystem.
-   * @param mergedRegionInfo merged region {@link RegionInfo}
+   * Commit a merged region, making it ready for use.
    * @throws IOException
    */
-  public void commitMergedRegion(final RegionInfo mergedRegionInfo) throws IOException {
-    Path regionDir = new Path(this.tableDir, mergedRegionInfo.getEncodedName());
-    Path mergedRegionTmpDir = this.getMergesDir(mergedRegionInfo);
-    // Move the tmp dir to the expected location
-    if (mergedRegionTmpDir != null && fs.exists(mergedRegionTmpDir)) {
-
+  public void commitMergedRegion() throws IOException {
+    Path regionDir = getMergesDir(regionInfoForFs);
+    if (regionDir != null && fs.exists(regionDir)) {
       // Write HRI to a file in case we need to recover hbase:meta
-      Path regionInfoFile = new Path(mergedRegionTmpDir, REGION_INFO_FILE);
+      Path regionInfoFile = new Path(regionDir, REGION_INFO_FILE);
       byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
-
-      if (!fs.rename(mergedRegionTmpDir, regionDir)) {
-        throw new IOException("Unable to rename " + mergedRegionTmpDir + " to "
-            + regionDir);
-      }
     }
   }
 
   // ===========================================================================
   //  Create/Open/Delete Helpers
   // ===========================================================================
-  /**
-   * Log the current state of the region
-   * @param LOG log to output information
-   * @throws IOException if an unexpected exception occurs
-   */
-  void logFileSystemState(final Logger LOG) throws IOException {
-    CommonFSUtils.logFileSystemState(fs, this.getRegionDir(), LOG);
-  }
 
   /**
    * @param hri
@@ -1058,8 +962,6 @@ public class HRegionFileSystem {
     if (!readOnly) {
       // Cleanup temporary directories
       regionFs.cleanupTempDir();
-      regionFs.cleanupSplitsDir();
-      regionFs.cleanupMergesDir();
 
       // If it doesn't exists, Write HRI to a file, in case we need to recover hbase:meta
       // Only create HRI if we are the default replica
