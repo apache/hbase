@@ -480,12 +480,16 @@ public class VerifyReplication extends Configured implements Tool {
       TableMapReduceUtil.initTableMapperJob(tableName, scan, Verifier.class, null, null, job);
     }
 
+    Configuration peerClusterConf;
     if (peerId != null) {
       assert peerConfigPair != null;
-      Configuration peerClusterConf = peerConfigPair.getSecond();
-      // Obtain the auth token from peer cluster
-      TableMapReduceUtil.initCredentialsForCluster(job, peerClusterConf);
+      peerClusterConf = peerConfigPair.getSecond();
+    } else {
+      peerClusterConf = HBaseConfiguration.createClusterConf(conf,
+        peerQuorumAddress, PEER_CONFIG_PREFIX);
     }
+    // Obtain the auth token from peer cluster
+    TableMapReduceUtil.initCredentialsForCluster(job, peerClusterConf);
 
     job.setOutputFormatClass(NullOutputFormat.class);
     job.setNumReduceTasks(0);
