@@ -455,11 +455,14 @@ public abstract class AbstractTestIPC {
     return traceRule.getSpans().stream().filter(s -> s.getName().equals(name)).findFirst().get();
   }
 
-  private void assertRpcAttribute(SpanData data, String methodName) {
+  private void assertRpcAttribute(SpanData data, String methodName, InetSocketAddress addr) {
     assertEquals(SERVICE.getDescriptorForType().getName(),
       data.getAttributes().get(TraceUtil.RPC_SERVICE_KEY));
-    assertEquals(methodName,
-      data.getAttributes().get(TraceUtil.RPC_METHOD_KEY));
+    assertEquals(methodName, data.getAttributes().get(TraceUtil.RPC_METHOD_KEY));
+    if (addr != null) {
+      assertEquals(addr.getHostName(), data.getAttributes().get(TraceUtil.REMOTE_HOST_KEY));
+      assertEquals(addr.getPort(), data.getAttributes().get(TraceUtil.REMOTE_PORT_KEY).intValue());
+    }
   }
 
   @Test
@@ -471,8 +474,8 @@ public abstract class AbstractTestIPC {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       stub.pause(null, PauseRequestProto.newBuilder().setMs(100).build());
-      assertRpcAttribute(waitSpan("RpcClient.callMethod"), "pause");
-      assertRpcAttribute(waitSpan("RpcServer.callMethod"), "pause");
+      assertRpcAttribute(waitSpan("RpcClient.callMethod"), "pause", rpcServer.getListenerAddress());
+      assertRpcAttribute(waitSpan("RpcServer.callMethod"), "pause", null);
       assertSameTraceId();
       for (SpanData data : traceRule.getSpans()) {
         assertThat(
@@ -484,8 +487,8 @@ public abstract class AbstractTestIPC {
       traceRule.clearSpans();
       assertThrows(ServiceException.class,
         () -> stub.error(null, EmptyRequestProto.getDefaultInstance()));
-      assertRpcAttribute(waitSpan("RpcClient.callMethod"), "error");
-      assertRpcAttribute(waitSpan("RpcServer.callMethod"), "error");
+      assertRpcAttribute(waitSpan("RpcClient.callMethod"), "error", rpcServer.getListenerAddress());
+      assertRpcAttribute(waitSpan("RpcServer.callMethod"), "error", null);
       assertSameTraceId();
       for (SpanData data : traceRule.getSpans()) {
         assertEquals(StatusCode.ERROR, data.getStatus().getStatusCode());
