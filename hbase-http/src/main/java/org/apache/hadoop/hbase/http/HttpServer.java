@@ -62,6 +62,7 @@ import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -197,6 +198,7 @@ public class HttpServer implements FilterContainer {
     private String usernameConfKey;
     private String keytabConfKey;
     private boolean needsClientAuth;
+    private String excludeCiphers;
 
     private String hostName;
     private String appDir = APP_DIR;
@@ -374,6 +376,10 @@ public class HttpServer implements FilterContainer {
       return this;
     }
 
+    public void excludeCiphers(String excludeCiphers) {
+      this.excludeCiphers = excludeCiphers;
+    }
+
     public HttpServer build() throws IOException {
 
       // Do we still need to assert this non null name if it is deprecated?
@@ -433,8 +439,13 @@ public class HttpServer implements FilterContainer {
             sslCtxFactory.setTrustStorePath(trustStore);
             sslCtxFactory.setTrustStoreType(trustStoreType);
             sslCtxFactory.setTrustStorePassword(trustStorePassword);
-
           }
+
+          if (excludeCiphers != null && !excludeCiphers.trim().isEmpty()) {
+            sslCtxFactory.setExcludeCipherSuites(StringUtils.getTrimmedStrings(excludeCiphers));
+            LOG.debug("Excluded SSL Cipher List:" + excludeCiphers);
+          }
+
           listener = new ServerConnector(server.webServer, new SslConnectionFactory(sslCtxFactory,
               HttpVersion.HTTP_1_1.toString()), new HttpConnectionFactory(httpsConfig));
         } else {

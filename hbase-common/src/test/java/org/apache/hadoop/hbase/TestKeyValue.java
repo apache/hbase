@@ -39,6 +39,7 @@ import java.util.TreeSet;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -144,7 +145,7 @@ public class TestKeyValue {
 
   @Test
   public void testMoreComparisons() {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
 
     // Meta compares
     KeyValue aaa = new KeyValue(
@@ -174,7 +175,7 @@ public class TestKeyValue {
   @Test
   public void testMetaComparatorTableKeysWithCommaOk() {
     CellComparator c = MetaCellComparator.META_COMPARATOR;
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     // meta keys values are not quite right.  A users can enter illegal values
     // from shell when scanning meta.
     KeyValue a = new KeyValue(Bytes.toBytes("table,key,with,commas1,1234"), now);
@@ -204,7 +205,7 @@ public class TestKeyValue {
   }
 
   private void metacomparisons(final CellComparatorImpl c) {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     assertTrue(c.compare(new KeyValue(
         Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now),
       new KeyValue(
@@ -221,7 +222,7 @@ public class TestKeyValue {
   }
 
   private void comparisons(final CellComparatorImpl c) {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     assertTrue(c.compare(new KeyValue(
         Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now),
       new KeyValue(
@@ -520,7 +521,7 @@ public class TestKeyValue {
   @Test
   public void testMetaKeyComparator() {
     CellComparator c = MetaCellComparator.META_COMPARATOR;
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
 
     KeyValue a = new KeyValue(Bytes.toBytes("table1"), now);
     KeyValue b = new KeyValue(Bytes.toBytes("table2"), now);
@@ -589,12 +590,12 @@ public class TestKeyValue {
       new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes("qualA"),
             Bytes.toBytes("2")),
       new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes("qualA"),
-            System.currentTimeMillis(), Bytes.toBytes("2"),
+            EnvironmentEdgeManager.currentTime(), Bytes.toBytes("2"),
             new Tag[] {
               new ArrayBackedTag((byte) 120, "tagA"),
               new ArrayBackedTag((byte) 121, Bytes.toBytes("tagB")) }),
       new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes("qualA"),
-            System.currentTimeMillis(), Bytes.toBytes("2"),
+            EnvironmentEdgeManager.currentTime(), Bytes.toBytes("2"),
             new Tag[] { new ArrayBackedTag((byte) 0, "tagA") }),
       new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes(""),
             Bytes.toBytes("1")) };

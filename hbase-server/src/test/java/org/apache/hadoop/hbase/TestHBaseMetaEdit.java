@@ -53,7 +53,7 @@ public class TestHBaseMetaEdit {
       HBaseClassTestRule.forClass(TestHBaseMetaEdit.class);
   @Rule
   public TestName name = new TestName();
-  private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @Before
   public void before() throws Exception {

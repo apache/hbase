@@ -58,7 +58,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HadoopShims;
@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.TestHRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
+import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
@@ -153,7 +154,7 @@ public class TestHFileOutputFormat2  {
   private static final TableName[] TABLE_NAMES = Stream.of("TestTable", "TestTable2",
           "TestTable3").map(TableName::valueOf).toArray(TableName[]::new);
 
-  private HBaseTestingUtility util = new HBaseTestingUtility();
+  private HBaseTestingUtil util = new HBaseTestingUtil();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileOutputFormat2.class);
 
@@ -635,7 +636,7 @@ public class TestHFileOutputFormat2  {
 
   private void doIncrementalLoadTest(boolean shouldChangeRegions, boolean shouldKeepLocality,
       boolean putSortReducer, List<String> tableStr) throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     Configuration conf = util.getConfiguration();
     conf.setBoolean(MultiTableHFileOutputFormat.LOCALITY_SENSITIVE_CONF_KEY, shouldKeepLocality);
     int hostCount = 1;
@@ -651,7 +652,7 @@ public class TestHFileOutputFormat2  {
     for (int i = 0; i < hostCount; ++i) {
       hostnames[i] = "datanode_" + i;
     }
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numRegionServers(hostCount).dataNodeHosts(hostnames).build();
     util.startMiniCluster(option);
 
@@ -1177,7 +1178,7 @@ public class TestHFileOutputFormat2  {
       TableDescriptorBuilder.newBuilder(TABLE_NAMES[0]);
 
     Mockito.doReturn(tableDescriptorBuilder.build()).when(table).getDescriptor();
-    for (ColumnFamilyDescriptor hcd : HBaseTestingUtility.generateColumnDescriptors()) {
+    for (ColumnFamilyDescriptor hcd : HBaseTestingUtil.generateColumnDescriptors()) {
       tableDescriptorBuilder.setColumnFamily(hcd);
     }
 
@@ -1454,7 +1455,7 @@ public class TestHFileOutputFormat2  {
 
   public void manualTest(String args[]) throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    util = new HBaseTestingUtility(conf);
+    util = new HBaseTestingUtil(conf);
     if ("newtable".equals(args[0])) {
       TableName tname = TableName.valueOf(args[1]);
       byte[][] splitKeys = generateRandomSplitKeys(4);
@@ -1476,7 +1477,7 @@ public class TestHFileOutputFormat2  {
 
   @Test
   public void testBlockStoragePolicy() throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     Configuration conf = util.getConfiguration();
     conf.set(HFileOutputFormat2.STORAGE_POLICY_PROPERTY, "ALL_SSD");
 
@@ -1652,7 +1653,7 @@ public class TestHFileOutputFormat2  {
   @Test
   public void testMRIncrementalLoadWithLocalityMultiCluster() throws Exception {
     // Start cluster A
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     Configuration confA = util.getConfiguration();
     int hostCount = 3;
     int regionNum = 20;
@@ -1660,12 +1661,12 @@ public class TestHFileOutputFormat2  {
     for (int i = 0; i < hostCount; ++i) {
       hostnames[i] = "datanode_" + i;
     }
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
       .numRegionServers(hostCount).dataNodeHosts(hostnames).build();
     util.startMiniCluster(option);
 
     // Start cluster B
-    HBaseTestingUtility utilB = new HBaseTestingUtility();
+    HBaseTestingUtil utilB = new HBaseTestingUtil();
     Configuration confB = utilB.getConfiguration();
     utilB.startMiniCluster(option);
 
@@ -1693,6 +1694,11 @@ public class TestHFileOutputFormat2  {
       assertEquals(confB.get(HConstants.ZOOKEEPER_ZNODE_PARENT),
         jobConf.get(HFileOutputFormat2.REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY));
 
+      String bSpecificConfigKey = "my.override.config.for.b";
+      String bSpecificConfigValue = "b-specific-value";
+      jobConf.set(HFileOutputFormat2.REMOTE_CLUSTER_CONF_PREFIX + bSpecificConfigKey,
+        bSpecificConfigValue);
+
       FileOutputFormat.setOutputPath(job, testDir);
 
       assertFalse(util.getTestFileSystem().exists(testDir));
@@ -1710,6 +1716,9 @@ public class TestHFileOutputFormat2  {
           config.get(HConstants.ZOOKEEPER_CLIENT_PORT));
         assertEquals(confB.get(HConstants.ZOOKEEPER_ZNODE_PARENT),
           config.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
+
+        assertEquals(bSpecificConfigValue,
+          config.get(bSpecificConfigKey));
       }
     } finally {
       utilB.deleteTable(tableName);

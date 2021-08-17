@@ -617,6 +617,10 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     admin.updateConfiguration();
   }
 
+  public void updateConfiguration(String groupName) throws IOException {
+    admin.updateConfiguration(groupName);
+  }
+
   public List<SecurityCapability> getSecurityCapabilities() throws IOException {
     return admin.getSecurityCapabilities();
   }

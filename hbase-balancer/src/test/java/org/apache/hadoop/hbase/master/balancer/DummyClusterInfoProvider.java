@@ -23,17 +23,21 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalancerDecision;
+import org.apache.hadoop.hbase.client.BalancerRejection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 
 public class DummyClusterInfoProvider implements ClusterInfoProvider {
 
-  private final Configuration conf;
+  private volatile Configuration conf;
 
   public DummyClusterInfoProvider(Configuration conf) {
     this.conf = conf;
@@ -45,8 +49,17 @@ public class DummyClusterInfoProvider implements ClusterInfoProvider {
   }
 
   @Override
+  public Connection getConnection() {
+    return null;
+  }
+
+  @Override
   public List<RegionInfo> getAssignedRegions() {
     return Collections.emptyList();
+  }
+
+  @Override
+  public void unassign(RegionInfo regionInfo) throws IOException {
   }
 
   @Override
@@ -71,6 +84,11 @@ public class DummyClusterInfoProvider implements ClusterInfoProvider {
   }
 
   @Override
+  public List<ServerName> getOnlineServersList() {
+    return Collections.emptyList();
+  }
+
+  @Override
   public List<ServerName> getOnlineServersListWithPredicator(List<ServerName> servers,
     Predicate<ServerMetrics> filter) {
     return Collections.emptyList();
@@ -79,5 +97,28 @@ public class DummyClusterInfoProvider implements ClusterInfoProvider {
   @Override
   public Map<ServerName, List<RegionInfo>> getSnapShotOfAssignment(Collection<RegionInfo> regions) {
     return Collections.emptyMap();
+  }
+
+  @Override
+  public boolean isOffPeakHour() {
+    return false;
+  }
+
+  @Override
+  public void recordBalancerDecision(Supplier<BalancerDecision> decision) {
+  }
+
+  @Override
+  public void recordBalancerRejection(Supplier<BalancerRejection> rejection) {
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    this.conf = conf;
+  }
+
+  @Override
+  public ServerMetrics getLoad(ServerName serverName) {
+    return null;
   }
 }

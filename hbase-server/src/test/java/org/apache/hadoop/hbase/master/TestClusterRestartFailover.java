@@ -27,12 +27,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
@@ -40,6 +39,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.ServerState;
 import org.apache.hadoop.hbase.master.assignment.ServerStateNode;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -99,7 +99,7 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
     UTIL.getHBaseCluster().killAll();
     UTIL.getHBaseCluster().waitUntilShutDown();
     LOG.info("Restarting cluster");
-    UTIL.restartHBaseCluster(StartMiniClusterOption.builder().masterClass(HMasterForTest.class)
+    UTIL.restartHBaseCluster(StartTestingClusterOption.builder().masterClass(HMasterForTest.class)
         .numMasters(1).numRegionServers(3).rsPorts(ports).build());
     LOG.info("Started cluster");
     UTIL.waitFor(60000, () -> UTIL.getHBaseCluster().getMaster().isInitialized());
@@ -138,7 +138,7 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
   private void setupCluster() throws Exception {
     LOG.info("Setup cluster");
     UTIL.startMiniCluster(
-        StartMiniClusterOption.builder().masterClass(HMasterForTest.class).numMasters(1)
+        StartTestingClusterOption.builder().masterClass(HMasterForTest.class).numMasters(1)
             .numRegionServers(3).build());
     LOG.info("Cluster is up");
     UTIL.waitFor(60000, () -> UTIL.getMiniHBaseCluster().getMaster().isInitialized());
@@ -166,15 +166,16 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
     }
 
     @Override
-    protected AssignmentManager createAssignmentManager(MasterServices master) {
-      return new AssignmentManagerForTest(master);
+    protected AssignmentManager createAssignmentManager(MasterServices master,
+      MasterRegion masterRegion) {
+      return new AssignmentManagerForTest(master, masterRegion);
     }
   }
 
   private static final class AssignmentManagerForTest extends AssignmentManager {
 
-    public AssignmentManagerForTest(MasterServices master) {
-      super(master);
+    public AssignmentManagerForTest(MasterServices master, MasterRegion masterRegion) {
+      super(master, masterRegion);
     }
 
     @Override

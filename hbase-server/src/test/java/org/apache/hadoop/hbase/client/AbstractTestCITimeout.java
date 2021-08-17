@@ -23,7 +23,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -42,7 +42,7 @@ import org.junit.rules.TestName;
  */
 public abstract class AbstractTestCITimeout {
 
-  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected static final byte[] FAM_NAM = Bytes.toBytes("f");
 

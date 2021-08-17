@@ -23,11 +23,12 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -60,7 +61,7 @@ public class TestBlockReorderBlockLocation {
 
   private Configuration conf;
   private MiniDFSCluster cluster;
-  private HBaseTestingUtility htu;
+  private HBaseTestingUtil htu;
   private DistributedFileSystem dfs;
   private static final String host1 = "host1";
   private static final String host2 = "host2";
@@ -71,7 +72,7 @@ public class TestBlockReorderBlockLocation {
 
   @Before
   public void setUp() throws Exception {
-    htu = new HBaseTestingUtility();
+    htu = new HBaseTestingUtil();
     htu.getConfiguration().setInt("dfs.blocksize", 1024);// For the test with multiple blocks
     htu.getConfiguration().setInt("dfs.replication", 3);
     htu.startMiniDFSCluster(3,
@@ -101,7 +102,7 @@ public class TestBlockReorderBlockLocation {
   public void testBlockLocation() throws Exception {
     // We need to start HBase to get  HConstants.HBASE_DIR set in conf
     htu.startMiniZKCluster();
-    MiniHBaseCluster hbm = htu.startMiniHBaseCluster();
+    SingleProcessHBaseCluster hbm = htu.startMiniHBaseCluster();
     conf = hbm.getConfiguration();
 
 
@@ -121,13 +122,13 @@ public class TestBlockReorderBlockLocation {
     for (int i=0; i<10; i++){
       // The interceptor is not set in this test, so we get the raw list at this point
       LocatedBlocks l;
-      final long max = System.currentTimeMillis() + 10000;
+      final long max = EnvironmentEdgeManager.currentTime() + 10000;
       do {
         l = getNamenode(dfs.getClient()).getBlockLocations(fileName, 0, 1);
         Assert.assertNotNull(l.getLocatedBlocks());
         Assert.assertEquals(1, l.getLocatedBlocks().size());
         Assert.assertTrue("Expecting " + repCount + " , got " + l.get(0).getLocations().length,
-            System.currentTimeMillis() < max);
+          EnvironmentEdgeManager.currentTime() < max);
       } while (l.get(0).getLocations().length != repCount);
 
       // Should be filtered, the name is different => The order won't change

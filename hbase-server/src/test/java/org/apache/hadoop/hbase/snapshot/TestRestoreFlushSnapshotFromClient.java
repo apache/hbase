@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.snapshot;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -57,7 +58,7 @@ public class TestRestoreFlushSnapshotFromClient {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRestoreFlushSnapshotFromClient.class);
 
-  protected final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   protected final byte[] FAMILY = Bytes.toBytes("cf");
 
@@ -106,7 +107,7 @@ public class TestRestoreFlushSnapshotFromClient {
   public void setup() throws Exception {
     this.admin = UTIL.getAdmin();
 
-    long tid = System.currentTimeMillis();
+    long tid = EnvironmentEdgeManager.currentTime();
     tableName = TableName.valueOf("testtb-" + tid);
     snapshotName0 = "snaptb0-" + tid;
     snapshotName1 = "snaptb1-" + tid;
@@ -172,14 +173,16 @@ public class TestRestoreFlushSnapshotFromClient {
 
   @Test(expected=SnapshotDoesNotExistException.class)
   public void testCloneNonExistentSnapshot() throws IOException, InterruptedException {
-    String snapshotName = "random-snapshot-" + System.currentTimeMillis();
-    TableName tableName = TableName.valueOf("random-table-" + System.currentTimeMillis());
+    String snapshotName = "random-snapshot-" + EnvironmentEdgeManager.currentTime();
+    TableName tableName = TableName.valueOf("random-table-" +
+      EnvironmentEdgeManager.currentTime());
     admin.cloneSnapshot(snapshotName, tableName);
   }
 
   @Test
   public void testCloneSnapshot() throws IOException, InterruptedException {
-    TableName clonedTableName = TableName.valueOf("clonedtb-" + System.currentTimeMillis());
+    TableName clonedTableName = TableName.valueOf("clonedtb-" +
+      EnvironmentEdgeManager.currentTime());
     testCloneSnapshot(clonedTableName, snapshotName0, snapshot0Rows);
     testCloneSnapshot(clonedTableName, snapshotName1, snapshot1Rows);
   }
@@ -195,7 +198,8 @@ public class TestRestoreFlushSnapshotFromClient {
 
   @Test
   public void testRestoreSnapshotOfCloned() throws IOException, InterruptedException {
-    TableName clonedTableName = TableName.valueOf("clonedtb-" + System.currentTimeMillis());
+    TableName clonedTableName = TableName.valueOf("clonedtb-" +
+      EnvironmentEdgeManager.currentTime());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     verifyRowCount(UTIL, clonedTableName, snapshot0Rows);
     admin.snapshot(snapshotName2, clonedTableName, SnapshotType.FLUSH);
@@ -213,7 +217,7 @@ public class TestRestoreFlushSnapshotFromClient {
     UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
   }
 
-  protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
+  protected void verifyRowCount(final HBaseTestingUtil util, final TableName tableName,
       long expectedRows) throws IOException {
     SnapshotTestingUtils.verifyRowCount(util, tableName, expectedRows);
   }

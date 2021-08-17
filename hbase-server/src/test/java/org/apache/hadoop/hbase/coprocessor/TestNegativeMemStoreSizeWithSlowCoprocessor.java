@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
@@ -54,7 +54,7 @@ public class TestNegativeMemStoreSizeWithSlowCoprocessor {
   static final Logger LOG =
       LoggerFactory.getLogger(TestNegativeMemStoreSizeWithSlowCoprocessor.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] tableName = Bytes.toBytes("test_table");
   private static final byte[] family = Bytes.toBytes("f");
   private static final byte[] qualifier = Bytes.toBytes("q");

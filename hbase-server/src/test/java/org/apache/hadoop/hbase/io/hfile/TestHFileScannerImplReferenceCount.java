@@ -38,7 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.io.hfile.bucket.TestBucketCache;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -88,7 +89,7 @@ public class TestHFileScannerImplReferenceCount {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestHFileScannerImplReferenceCount.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
   private static final byte[] SUFFIX = randLongBytes();
@@ -139,7 +140,7 @@ public class TestHFileScannerImplReferenceCount {
     this.allocator = ByteBuffAllocator.create(UTIL.getConfiguration(), true);
     this.conf = new Configuration(UTIL.getConfiguration());
     this.fs = this.workDir.getFileSystem(conf);
-    this.hfilePath = new Path(this.workDir, caseName + System.currentTimeMillis());
+    this.hfilePath = new Path(this.workDir, caseName + EnvironmentEdgeManager.currentTime());
     LOG.info("Start to write {} cells into hfile: {}, case:{}", CELL_COUNT, hfilePath, caseName);
   }
 

@@ -39,7 +39,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>pom</packaging>
-  <version>3.0.0-SNAPSHOT</version>
+  <version>3.0.0-alpha-2-SNAPSHOT</version>
   <name>Apache HBase</name>
   <description>
     Apache HBase is the Hadoop database. Use it when you need
@@ -318,6 +318,12 @@
         <name>Guangxu Cheng</name>
         <email>gxcheng@apache.org</email>
         <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>haxiaolin</id>
+      <name>Xiaolin Ha</name>
+      <email>haxiaolin@apache.org</email>
+      <timezone>+8</timezone>
     </developer>
     <developer>
       <id>huaxiangsun</id>
@@ -631,6 +637,12 @@
       <timezone>0</timezone>
     </developer>
     <developer>
+      <id>weichiu</id>
+      <name>Wei-Chiu Chuang</name>
+      <email>weichiu@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>
+    <developer>
       <id>xucang</id>
       <name>Xu Cang</name>
       <email>xucang@apache.org</email>
@@ -652,6 +664,12 @@
       <id>zhangduo</id>
       <name>Duo Zhang</name>
       <email>zhangduo@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>zhaobaiqiang</id>
+      <name>Baiqiang Zhao</name>
+      <email>zhaobaiqiang@apache.org</email>
       <timezone>+8</timezone>
     </developer>
     <developer>
@@ -1767,7 +1785,7 @@
     <surefire.version>3.0.0-M4</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <hbase-thirdparty.version>3.4.1</hbase-thirdparty.version>
+    <hbase-thirdparty.version>3.5.1</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -2265,6 +2283,10 @@
           <exclusion>
             <groupId>io.netty</groupId>
             <artifactId>netty</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
           </exclusion>
           <exclusion>
             <groupId>org.slf4j</groupId>
@@ -2838,6 +2860,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
+             </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
@@ -2921,6 +2947,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
+             </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
@@ -2945,6 +2975,10 @@
              <exclusion>
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
              </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
@@ -3130,6 +3164,13 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+             <!-- MiniMRCluster needs the hadoop netty-all transitive include... a
+               netty-all 4.0.52 version.... so we have to let it through.
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
+             </exclusion>
+             -->
              <exclusion>
                <groupId>com.google.code.findbugs</groupId>
                <artifactId>jsr305</artifactId>
@@ -3154,6 +3195,14 @@
                <groupId>log4j</groupId>
                <artifactId>log4j</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -3187,6 +3236,10 @@
              <exclusion>
                <groupId>log4j</groupId>
                <artifactId>log4j</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
@@ -3238,6 +3291,10 @@
              <exclusion>
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
              </exclusion>
              <exclusion>
                <groupId>com.google.code.findbugs</groupId>

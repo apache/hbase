@@ -73,13 +73,13 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected static final int MIN_SERVER_BALANCE = 2;
   private volatile boolean stopped = false;
 
-  protected RegionHDFSBlockLocationFinder regionFinder;
+  protected volatile RegionHDFSBlockLocationFinder regionFinder;
   protected boolean useRegionFinder;
   protected boolean isByTable = false;
 
   // slop for regions
   protected float slop;
-  protected RackManager rackManager;
+  protected volatile RackManager rackManager;
   protected MetricsBalancer metricsBalancer = null;
   protected ClusterMetrics clusterStatus = null;
   protected ServerName masterServerName;
@@ -386,14 +386,21 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     return 0.2f;
   }
 
+  private RegionHDFSBlockLocationFinder createRegionLocationFinder(Configuration conf) {
+    RegionHDFSBlockLocationFinder finder = new RegionHDFSBlockLocationFinder();
+    finder.setConf(conf);
+    finder.setClusterInfoProvider(provider);
+    return finder;
+  }
+
   protected void loadConf(Configuration conf) {
-    this.slop =normalizeSlop(conf.getFloat("hbase.regions.slop", getDefaultSlop()));
+    this.slop = normalizeSlop(conf.getFloat("hbase.regions.slop", getDefaultSlop()));
     this.rackManager = new RackManager(conf);
     useRegionFinder = conf.getBoolean("hbase.master.balancer.uselocality", true);
     if (useRegionFinder) {
-      regionFinder = new RegionHDFSBlockLocationFinder();
-      regionFinder.setConf(conf);
-      regionFinder.setClusterInfoProvider(provider);
+      regionFinder = createRegionLocationFinder(conf);
+    } else {
+      regionFinder = null;
     }
     this.isByTable = conf.getBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
     // Print out base configs. Don't print overallSlop since it for simple balancer exclusively.

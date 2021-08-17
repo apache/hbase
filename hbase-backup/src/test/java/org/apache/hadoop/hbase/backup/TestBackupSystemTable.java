@@ -38,8 +38,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -65,9 +66,9 @@ public class TestBackupSystemTable {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestBackupSystemTable.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected static Configuration conf = UTIL.getConfiguration();
-  protected static MiniHBaseCluster cluster;
+  protected static SingleProcessHBaseCluster cluster;
   protected static Connection conn;
   protected BackupSystemTable table;
 
@@ -520,8 +521,8 @@ public class TestBackupSystemTable {
         new BackupInfo("backup_" + System.nanoTime(), BackupType.FULL, new TableName[] {
             TableName.valueOf("t1"), TableName.valueOf("t2"), TableName.valueOf("t3") },
             "/hbase/backup");
-    ctxt.setStartTs(System.currentTimeMillis());
-    ctxt.setCompleteTs(System.currentTimeMillis() + 1);
+    ctxt.setStartTs(EnvironmentEdgeManager.currentTime());
+    ctxt.setCompleteTs(EnvironmentEdgeManager.currentTime() + 1);
     return ctxt;
   }
 

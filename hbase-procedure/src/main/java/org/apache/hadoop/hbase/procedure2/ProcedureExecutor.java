@@ -284,7 +284,7 @@ public class ProcedureExecutor<TEnvironment> {
         }
         long evictTtl = conf.getInt(EVICT_TTL_CONF_KEY, DEFAULT_EVICT_TTL);
         long evictAckTtl = conf.getInt(EVICT_ACKED_TTL_CONF_KEY, DEFAULT_ACKED_EVICT_TTL);
-        if (retainer.isExpired(System.currentTimeMillis(), evictTtl, evictAckTtl)) {
+        if (retainer.isExpired(EnvironmentEdgeManager.currentTime(), evictTtl, evictAckTtl)) {
           LOG.debug("Procedure {} has already been finished and expired, skip force updating",
             procId);
           return;

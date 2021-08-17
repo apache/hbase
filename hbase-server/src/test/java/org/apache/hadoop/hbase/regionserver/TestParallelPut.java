@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -26,7 +26,7 @@ import java.util.Random;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.TableName;
@@ -68,7 +68,7 @@ public class TestParallelPut {
   @Rule public TestName name = new TestName();
 
   private HRegion region = null;
-  private static HBaseTestingUtility HBTU = new HBaseTestingUtility();
+  private static HBaseTestingUtil HBTU = new HBaseTestingUtil();
   private static final int THREADS100 = 100;
 
   // Test names

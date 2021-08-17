@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.security.token;
 
 import java.io.File;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -35,7 +35,7 @@ import org.junit.BeforeClass;
  * The class for set up a security cluster with kerberos, hdfs, hbase.
  */
 public class SecureTestCluster {
-  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected static String USERNAME;
 

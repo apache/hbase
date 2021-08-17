@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
 import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.hadoop.hbase.hbtop.terminal.impl.TerminalImpl;
 import org.apache.hadoop.hbase.hbtop.terminal.impl.batch.BatchTerminal;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,7 +99,7 @@ public class Screen implements Closeable {
           nextScreenView = currentScreenView.handleKeyPress(keyPress);
         } else {
           if (timerTimestamp != null) {
-            long now = System.currentTimeMillis();
+            long now = EnvironmentEdgeManager.currentTime();
             if (timerTimestamp <= now) {
               // Dispatch the timer to the current screen
               timerTimestamp = null;
@@ -131,7 +132,7 @@ public class Screen implements Closeable {
   }
 
   public void setTimer(long delay) {
-    timerTimestamp = System.currentTimeMillis() + delay;
+    timerTimestamp = EnvironmentEdgeManager.currentTime() + delay;
   }
 
   public void cancelTimer() {

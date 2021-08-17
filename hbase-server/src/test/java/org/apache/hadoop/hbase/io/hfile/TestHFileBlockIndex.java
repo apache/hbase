@@ -42,8 +42,8 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -82,7 +82,7 @@ public class TestHFileBlockIndex {
 
   @Parameters
   public static Collection<Object[]> compressionAlgorithms() {
-    return HBaseCommonTestingUtility.COMPRESSION_ALGORITHMS_PARAMETERIZED;
+    return HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS_PARAMETERIZED;
   }
 
   public TestHFileBlockIndex(Compression.Algorithm compr) {
@@ -92,8 +92,8 @@ public class TestHFileBlockIndex {
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileBlockIndex.class);
 
   private static final int NUM_DATA_BLOCKS = 1000;
-  private static final HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL =
+      new HBaseTestingUtil();
 
   private static final int SMALL_BLOCK_SIZE = 4096;
   private static final int NUM_KV = 10000;

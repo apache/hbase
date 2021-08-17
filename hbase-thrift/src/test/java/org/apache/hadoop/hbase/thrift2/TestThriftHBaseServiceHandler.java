@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -76,6 +76,9 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -84,6 +87,7 @@ import org.apache.hadoop.hbase.thrift.HBaseThriftTestingUtility;
 import org.apache.hadoop.hbase.thrift.HbaseHandlerMetricsProxy;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics.ThriftServerType;
+import org.apache.hadoop.hbase.thrift2.generated.TAccessControlEntity;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
@@ -105,6 +109,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TLogQueryFilter;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TOnlineLogRecord;
+import org.apache.hadoop.hbase.thrift2.generated.TPermissionScope;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TReadType;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
@@ -116,6 +121,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.thrift2.generated.TThriftServerType;
 import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
@@ -148,7 +154,7 @@ public class TestThriftHBaseServiceHandler {
       HBaseClassTestRule.forClass(TestThriftHBaseServiceHandler.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestThriftHBaseServiceHandler.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   // Static names for tables, columns, rows, and values
   private static byte[] tableAname = Bytes.toBytes("tableA");
@@ -200,6 +206,20 @@ public class TestThriftHBaseServiceHandler {
   public static void beforeClass() throws Exception {
     UTIL.getConfiguration().set("hbase.client.retries.number", "3");
     UTIL.getConfiguration().setBoolean("hbase.regionserver.slowlog.buffer.enabled", true);
+
+    UTIL.getConfiguration().set("hbase.client.retries.number", "3");
+    UTIL.getConfiguration().setBoolean("hbase.security.authorization", true);
+    UTIL.getConfiguration().set("hbase.coprocessor.master.classes",
+      "org.apache.hadoop.hbase.security.access.AccessController");
+    UTIL.getConfiguration().set("hbase.coprocessor.region.classes",
+      "org.apache.hadoop.hbase.security.access.AccessController");
+    UTIL.getConfiguration().set("hbase.coprocessor.regionserver.classes",
+      "org.apache.hadoop.hbase.security.access.AccessController");
+
+    // as we opened access control, we need to start as a superuser. Otherwise, we will not have
+    // sufficient permission to do operations.
+    UTIL.getConfiguration().set("hbase.superuser", System.getProperty("user.name"));
+
     UTIL.startMiniCluster();
     TableDescriptor tableDescriptor = TableDescriptorBuilder
       .newBuilder(TableName.valueOf(tableAname)).setColumnFamilies(Arrays.asList(families)).build();
@@ -402,14 +422,14 @@ public class TestThriftHBaseServiceHandler {
     List<TColumnValue> columnValues = new ArrayList<>(1);
     TColumnValue columnValueA = new TColumnValue(wrap(familyAname), wrap(qualifierAname),
       wrap(valueAname));
-    columnValueA.setTimestamp(System.currentTimeMillis() - 10);
+    columnValueA.setTimestamp(EnvironmentEdgeManager.currentTime() - 10);
     columnValues.add(columnValueA);
     TPut put = new TPut(wrap(rowName), columnValues);
 
     put.setColumnValues(columnValues);
 
     handler.put(table, put);
-    columnValueA.setTimestamp(System.currentTimeMillis());
+    columnValueA.setTimestamp(EnvironmentEdgeManager.currentTime());
     handler.put(table, put);
 
     TGet get = new TGet(wrap(rowName));
@@ -439,8 +459,8 @@ public class TestThriftHBaseServiceHandler {
     byte[] rowName = Bytes.toBytes("testDeleteSingleTimestamp");
     ByteBuffer table = wrap(tableAname);
 
-    long timestamp1 = System.currentTimeMillis() - 10;
-    long timestamp2 = System.currentTimeMillis();
+    long timestamp1 = EnvironmentEdgeManager.currentTime() - 10;
+    long timestamp2 = EnvironmentEdgeManager.currentTime();
 
     List<TColumnValue> columnValues = new ArrayList<>(1);
     TColumnValue columnValueA = new TColumnValue(wrap(familyAname), wrap(qualifierAname),
@@ -484,8 +504,8 @@ public class TestThriftHBaseServiceHandler {
     byte[] rowName = Bytes.toBytes("testDeleteFamily");
     ByteBuffer table = wrap(tableAname);
 
-    long timestamp1 = System.currentTimeMillis() - 10;
-    long timestamp2 = System.currentTimeMillis();
+    long timestamp1 = EnvironmentEdgeManager.currentTime() - 10;
+    long timestamp2 = EnvironmentEdgeManager.currentTime();
 
     List<TColumnValue> columnValues = new ArrayList<>();
     TColumnValue columnValueA =
@@ -526,8 +546,8 @@ public class TestThriftHBaseServiceHandler {
     byte[] rowName = Bytes.toBytes("testDeleteFamilyVersion");
     ByteBuffer table = wrap(tableAname);
 
-    long timestamp1 = System.currentTimeMillis() - 10;
-    long timestamp2 = System.currentTimeMillis();
+    long timestamp1 = EnvironmentEdgeManager.currentTime() - 10;
+    long timestamp2 = EnvironmentEdgeManager.currentTime();
 
     List<TColumnValue> columnValues = new ArrayList<>();
     TColumnValue columnValueA =
@@ -925,7 +945,7 @@ public class TestThriftHBaseServiceHandler {
         wrap(valueAname));
     TColumnValue familyBColumnValue = new TColumnValue(wrap(familyBname), wrap(qualifierBname),
         wrap(valueBname));
-    long minTimestamp = System.currentTimeMillis();
+    long minTimestamp = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < 10; i++) {
       familyAColumnValue.setTimestamp(minTimestamp + i);
       familyBColumnValue.setTimestamp(minTimestamp + i);
@@ -1773,6 +1793,71 @@ public class TestThriftHBaseServiceHandler {
     assertEquals(tLogRecords.size(), 0);
   }
 
+  @Test
+  public void testPerformTablePermissions() throws Throwable {
+    // initialize fake objects.
+    String fakeUser = "user";
+    TAccessControlEntity tce = new TAccessControlEntity();
+    tce.setActions("R");
+    tce.setTableName(Bytes.toString(tableAname));
+    tce.setScope(TPermissionScope.TABLE);
+    tce.setUsername(fakeUser);
+
+    ThriftHBaseServiceHandler handler = createHandler();
+    handler.grant(tce);
+
+    List<UserPermission> permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
+        Bytes.toString(tableAname), fakeUser);
+    // we only grant one R permission
+    assertEquals(permissionList.size(), 1);
+
+    Permission.Action[] actions = permissionList.get(0).getPermission().getActions();
+    assertEquals(actions.length, 1);
+    assertEquals(actions[0], Permission.Action.READ);
+
+    // than revoke the permission
+    handler.revoke(tce);
+    permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
+      Bytes.toString(tableAname), fakeUser);
+
+    // it should return an empty list
+    assertEquals(0, permissionList.size());
+  }
+
+
+  @Test
+  public void testPerformNamespacePermissions() throws Throwable {
+    // initialize fake objects. We test the permission grant and revoke on default NS.
+    String fakeUser = "user";
+    String defaultNameSpace = "default";
+    TAccessControlEntity tce = new TAccessControlEntity();
+    tce.setActions("R");
+    tce.setNsName(defaultNameSpace);
+    tce.setScope(TPermissionScope.NAMESPACE);
+    tce.setUsername(fakeUser);
+
+    ThriftHBaseServiceHandler handler = createHandler();
+    handler.grant(tce);
+
+    List<UserPermission> permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
+      "@" + defaultNameSpace, fakeUser);
+
+    // we only grant one R permission
+    assertEquals(permissionList.size(), 1);
+
+    Permission.Action[] actions = permissionList.get(0).getPermission().getActions();
+    assertEquals(actions.length, 1);
+    assertEquals(actions[0], Permission.Action.READ);
+
+    // revoke the permission
+    handler.revoke(tce);
+    permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
+      "@" + defaultNameSpace, fakeUser);
+
+    // it should return an empty list
+    assertEquals(0, permissionList.size());
+  }
+
   public static class DelayingRegionObserver implements RegionCoprocessor, RegionObserver {
     private static final Logger LOG = LoggerFactory.getLogger(DelayingRegionObserver.class);
     // sleep time in msec
@@ -1793,10 +1878,10 @@ public class TestThriftHBaseServiceHandler {
     public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
                          List<Cell> results) throws IOException {
       try {
-        long start = System.currentTimeMillis();
+        long start = EnvironmentEdgeManager.currentTime();
         TimeUnit.MILLISECONDS.sleep(delayMillis);
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Slept for " + (System.currentTimeMillis() - start) + " msec");
+          LOG.trace("Slept for " + (EnvironmentEdgeManager.currentTime() - start) + " msec");
         }
       } catch (InterruptedException ie) {
         throw new InterruptedIOException("Interrupted while sleeping");

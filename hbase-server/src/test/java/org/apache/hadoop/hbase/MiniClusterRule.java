@@ -28,22 +28,25 @@ import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
 
 /**
- * A {@link TestRule} that manages an instance of the {@link MiniHBaseCluster}. Can be used in
- * either the {@link Rule} or {@link ClassRule} positions. Built on top of an instance of
- * {@link HBaseTestingUtility}, so be weary of intermixing direct use of that class with this Rule.
+ * A {@link TestRule} that manages an instance of the {@link SingleProcessHBaseCluster}. Can be used
+ * in either the {@link Rule} or {@link ClassRule} positions. Built on top of an instance of
+ * {@link HBaseTestingUtil}, so be weary of intermixing direct use of that class with this Rule.
  * </p>
  * Use in combination with {@link ConnectionRule}, for example:
  *
- * <pre>{@code
+ * <pre>
+ * {
+ *   &#64;code
  *   public class TestMyClass {
- *     @ClassRule
+ *     &#64;ClassRule
  *     public static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
  *
- *     @Rule
+ *     &#64;Rule
  *     public final ConnectionRule connectionRule =
  *       new ConnectionRule(miniClusterRule::createConnection);
  *   }
- * }</pre>
+ * }
+ * </pre>
  */
 public final class MiniClusterRule extends ExternalResource {
 
@@ -52,19 +55,20 @@ public final class MiniClusterRule extends ExternalResource {
    */
   public static class Builder {
 
-    private StartMiniClusterOption miniClusterOption;
+    private StartTestingClusterOption miniClusterOption;
     private Configuration conf;
 
     /**
-     * Use the provided {@link StartMiniClusterOption} to construct the {@link MiniHBaseCluster}.
+     * Use the provided {@link StartTestingClusterOption} to construct the
+     * {@link SingleProcessHBaseCluster}.
      */
-    public Builder setMiniClusterOption(final StartMiniClusterOption miniClusterOption) {
+    public Builder setMiniClusterOption(final StartTestingClusterOption miniClusterOption) {
       this.miniClusterOption = miniClusterOption;
       return this;
     }
 
     /**
-     * Seed the underlying {@link HBaseTestingUtility} with the provided {@link Configuration}.
+     * Seed the underlying {@link HBaseTestingUtil} with the provided {@link Configuration}.
      */
     public Builder setConfiguration(final Configuration conf) {
       this.conf = conf;
@@ -72,22 +76,19 @@ public final class MiniClusterRule extends ExternalResource {
     }
 
     public MiniClusterRule build() {
-      return new MiniClusterRule(
-        conf,
-        miniClusterOption != null
-          ? miniClusterOption
-          : StartMiniClusterOption.builder().build());
+      return new MiniClusterRule(conf, miniClusterOption != null ? miniClusterOption :
+        StartTestingClusterOption.builder().build());
     }
   }
 
-  private final HBaseTestingUtility testingUtility;
-  private final StartMiniClusterOption miniClusterOptions;
+  private final HBaseTestingUtil testingUtility;
+  private final StartTestingClusterOption miniClusterOptions;
 
-  private MiniHBaseCluster miniCluster;
+  private SingleProcessHBaseCluster miniCluster;
 
   private MiniClusterRule(final Configuration conf,
-    final StartMiniClusterOption miniClusterOptions) {
-    this.testingUtility = new HBaseTestingUtility(conf);
+    final StartTestingClusterOption miniClusterOptions) {
+    this.testingUtility = new HBaseTestingUtil(conf);
     this.miniClusterOptions = miniClusterOptions;
   }
 
@@ -96,15 +97,15 @@ public final class MiniClusterRule extends ExternalResource {
   }
 
   /**
-   * @return the underlying instance of {@link HBaseTestingUtility}
+   * Returns the underlying instance of {@link HBaseTestingUtil}
    */
-  public HBaseTestingUtility getTestingUtility() {
+  public HBaseTestingUtil getTestingUtility() {
     return testingUtility;
   }
 
   /**
-   * Create a {@link AsyncConnection} to the managed {@link MiniHBaseCluster}. It's up to the caller
-   * to {@link AsyncConnection#close() close()} the connection when finished.
+   * Create a {@link AsyncConnection} to the managed {@link SingleProcessHBaseCluster}. It's up to
+   * the caller to {@link AsyncConnection#close() close()} the connection when finished.
    */
   public CompletableFuture<AsyncConnection> createConnection() {
     if (miniCluster == null) {

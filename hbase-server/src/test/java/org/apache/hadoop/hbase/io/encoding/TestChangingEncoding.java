@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -72,7 +73,7 @@ public class TestChangingEncoding {
   private static final int NUM_ROWS_PER_BATCH = 100;
   private static final int NUM_COLS_PER_ROW = 20;
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
 
   private static final int TIMEOUT_MS = 600000;
@@ -237,12 +238,12 @@ public class TestChangingEncoding {
     admin.majorCompact(tableName);
 
     // Waiting for the compaction to start, at least .5s.
-    final long maxWaitime = System.currentTimeMillis() + 500;
+    final long maxWaitime = EnvironmentEdgeManager.currentTime() + 500;
     boolean cont;
     do {
       cont = rs.getCompactSplitThread().getCompactionQueueSize() == 0;
       Threads.sleep(1);
-    } while (cont && System.currentTimeMillis() < maxWaitime);
+    } while (cont && EnvironmentEdgeManager.currentTime() < maxWaitime);
 
     while (rs.getCompactSplitThread().getCompactionQueueSize() > 0) {
       Threads.sleep(1);

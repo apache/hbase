@@ -28,9 +28,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -79,8 +79,8 @@ public class TestMasterCoprocessorExceptionWithAbort {
   }
 
   public static class CreateTableThread extends Thread {
-    HBaseTestingUtility UTIL;
-    public CreateTableThread(HBaseTestingUtility UTIL) {
+    HBaseTestingUtil UTIL;
+    public CreateTableThread(HBaseTestingUtil UTIL) {
       this.UTIL = UTIL;
     }
 
@@ -147,7 +147,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
     }
   }
 
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static byte[] TEST_TABLE = Bytes.toBytes("observed_table");
   private static byte[] TEST_FAMILY = Bytes.toBytes("fam1");
 
@@ -169,7 +169,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
   @Test
   public void testExceptionFromCoprocessorWhenCreatingTable()
       throws IOException {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();

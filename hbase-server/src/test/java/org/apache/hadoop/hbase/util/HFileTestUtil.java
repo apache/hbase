@@ -125,7 +125,7 @@ public class HFileTestUtil {
         .withPath(fs, path)
         .withFileContext(meta)
         .create();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     try {
       // subtract 2 since iterateOnSplits doesn't include boundary keys
       for (byte[] key : Bytes.iterateOnSplits(startKey, endKey, numRows - 2)) {
@@ -144,7 +144,8 @@ public class HFileTestUtil {
         writer.append(kv);
       }
     } finally {
-      writer.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(System.currentTimeMillis()));
+      writer.appendFileInfo(BULKLOAD_TIME_KEY,
+        Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
       writer.close();
     }
   }

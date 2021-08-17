@@ -22,11 +22,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider.AsyncWriter;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -50,7 +51,7 @@ public class TestCombinedAsyncWriter {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCombinedAsyncWriter.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static EventLoopGroup EVENT_LOOP_GROUP;
 
@@ -99,7 +100,7 @@ public class TestCombinedAsyncWriter {
     int recordCount = 5;
     TableName tableName = TableName.valueOf("tablename");
     byte[] row = Bytes.toBytes("row");
-    long timestamp = System.currentTimeMillis();
+    long timestamp = EnvironmentEdgeManager.currentTime();
     Path path1 = getPath(1);
     Path path2 = getPath(2);
     FileSystem fs = UTIL.getTestFileSystem();

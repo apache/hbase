@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALClosedException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -153,7 +154,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
   @Override
   public void run() {
     while (running) {
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       checkLowReplication(now);
       synchronized (this) {
         if (wals.values().stream().noneMatch(rc -> rc.needsRoll(now))) {
@@ -230,7 +231,8 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
    */
   public boolean walRollFinished() {
     // TODO add a status field of roll in RollController
-    return wals.values().stream().noneMatch(rc -> rc.needsRoll(System.currentTimeMillis()))
+    return wals.values().stream()
+        .noneMatch(rc -> rc.needsRoll(EnvironmentEdgeManager.currentTime()))
       && isWaiting();
   }
 
@@ -261,7 +263,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
     RollController(WAL wal) {
       this.wal = wal;
       this.rollRequest = new AtomicBoolean(false);
-      this.lastRollTime = System.currentTimeMillis();
+      this.lastRollTime = EnvironmentEdgeManager.currentTime();
     }
 
     public void requestRoll() {

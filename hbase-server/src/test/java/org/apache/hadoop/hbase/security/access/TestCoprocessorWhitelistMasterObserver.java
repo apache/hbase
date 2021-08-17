@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -64,7 +64,7 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestCoprocessorWhitelistMasterObserver.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final TableName TEST_TABLE = TableName.valueOf("testTable");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("fam1");
 

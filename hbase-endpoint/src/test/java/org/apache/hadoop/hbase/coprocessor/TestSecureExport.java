@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -90,7 +91,7 @@ public class TestSecureExport {
       HBaseClassTestRule.forClass(TestSecureExport.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSecureExport.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static MiniKdc KDC;
   private static final File KEYTAB_FILE = new File(UTIL.getDataTestDir("keytab").toUri().getPath());
   private static String USERNAME;
@@ -105,7 +106,7 @@ public class TestSecureExport {
   private static final byte[] ROW3 = Bytes.toBytes("row3");
   private static final byte[] QUAL = Bytes.toBytes("qual");
   private static final String LOCALHOST = "localhost";
-  private static final long NOW = System.currentTimeMillis();
+  private static final long NOW = EnvironmentEdgeManager.currentTime();
   // user granted with all global permission
   private static final String USER_ADMIN = "admin";
   // user is table owner. will have all permissions on table

@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
@@ -63,7 +63,7 @@ public class TestHFileCleaner {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileCleaner.class);
 
-  private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static DirScanPool POOL;
 
@@ -86,7 +86,7 @@ public class TestHFileCleaner {
     Path root = UTIL.getDataTestDirOnTestFS();
     Path file = new Path(root, "file");
     fs.createNewFile(file);
-    long createTime = System.currentTimeMillis();
+    long createTime = EnvironmentEdgeManager.currentTime();
     assertTrue("Test file not created!", fs.exists(file));
     TimeToLiveHFileCleaner cleaner = new TimeToLiveHFileCleaner();
     // update the time info for the file, so the cleaner removes it
@@ -164,7 +164,7 @@ public class TestHFileCleaner {
     HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir, POOL);
 
     // Create 2 invalid files, 1 "recent" file, 1 very new file and 30 old files
-    final long createTime = System.currentTimeMillis();
+    final long createTime = EnvironmentEdgeManager.currentTime();
     fs.delete(archivedHfileDir, true);
     fs.mkdirs(archivedHfileDir);
     // Case 1: 1 invalid file, which should be deleted directly

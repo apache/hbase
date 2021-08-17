@@ -142,7 +142,7 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
     private void recordFailure(final long keyToRead) {
       numReadFailures.addAndGet(1);
       LOG.debug("[" + readerId + "] FAILED read, key = " + (keyToRead + "") + ", "
-          + "time from start: " + (System.currentTimeMillis() - startTimeMs) + " ms");
+          + "time from start: " + (EnvironmentEdgeManager.currentTime() - startTimeMs) + " ms");
     }
   }
 

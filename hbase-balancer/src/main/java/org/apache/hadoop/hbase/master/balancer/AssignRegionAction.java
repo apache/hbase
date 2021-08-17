@@ -50,5 +50,4 @@ class AssignRegionAction extends BalanceAction {
   public String toString() {
     return getType() + ": " + region + ":" + server;
   }
-
 }

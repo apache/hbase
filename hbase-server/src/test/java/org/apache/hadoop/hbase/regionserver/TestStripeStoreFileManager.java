@@ -21,8 +21,9 @@ import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_K
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,7 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -56,7 +57,7 @@ public class TestStripeStoreFileManager {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestStripeStoreFileManager.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Path BASEDIR =
       TEST_UTIL.getDataTestDir(TestStripeStoreFileManager.class.getSimpleName());
   private static final Path CFDIR = HRegionFileSystem.getStoreHomedir(BASEDIR, "region",
@@ -542,14 +543,10 @@ public class TestStripeStoreFileManager {
   }
 
   private void verifyInvalidCompactionScenario(StripeStoreFileManager manager,
-      ArrayList<HStoreFile> filesToCompact, ArrayList<HStoreFile> filesToInsert) throws Exception {
+    ArrayList<HStoreFile> filesToCompact, ArrayList<HStoreFile> filesToInsert) throws Exception {
     Collection<HStoreFile> allFiles = manager.getStorefiles();
-    try {
-      manager.addCompactionResults(filesToCompact, filesToInsert);
-      fail("Should have thrown");
-    } catch (IOException ex) {
-      // Ignore it.
-    }
+    assertThrows(IllegalStateException.class,
+      () -> manager.addCompactionResults(filesToCompact, filesToInsert));
     verifyAllFiles(manager, allFiles); // must have the same files.
   }
 

@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
-
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
@@ -42,7 +42,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
  * Number of tables, regions and operations can be set using cli args.
  */
 public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBaseTool {
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   // Command line options and defaults.
   public static final int DEFAULT_NUM_TABLES = 5;
@@ -201,7 +201,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   private class AddProcsWorker extends Thread {
     @Override
     public void run() {
-      final Random rand = new Random(System.currentTimeMillis());
+      final Random rand = new Random(EnvironmentEdgeManager.currentTime());
       long procId = procIds.incrementAndGet();
       int index;
       while (procId <= numOps) {
@@ -245,14 +245,14 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
    * @return time taken by threads to complete, in milliseconds.
    */
   long runThreads(Thread[] threads) throws Exception {
-    final long startTime = System.currentTimeMillis();
+    final long startTime = EnvironmentEdgeManager.currentTime();
     for (Thread t : threads) {
       t.start();
     }
     for (Thread t : threads) {
       t.join();
     }
-    return System.currentTimeMillis() - startTime;
+    return EnvironmentEdgeManager.currentTime() - startTime;
   }
 
   @Override

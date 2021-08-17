@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
@@ -75,7 +76,7 @@ public class TestMemStoreSegmentsIterator {
   @Before
   public void setup() throws IOException {
     Configuration conf = new Configuration();
-    HBaseTestingUtility hbaseUtility = new HBaseTestingUtility(conf);
+    HBaseTestingUtil hbaseUtility = new HBaseTestingUtil(conf);
     TableDescriptorBuilder tableDescriptorBuilder =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE));
     ColumnFamilyDescriptor columnFamilyDescriptor =
@@ -84,7 +85,7 @@ public class TestMemStoreSegmentsIterator {
 
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(TABLE)).build();
     Path rootPath = hbaseUtility.getDataTestDir(ROOT_SUB_PATH);
-    this.wal = HBaseTestingUtility.createWal(conf, rootPath, info);
+    this.wal = HBaseTestingUtil.createWal(conf, rootPath, info);
     this.region = HRegion.createHRegion(info, rootPath, conf,
       tableDescriptorBuilder.build(), this.wal, true);
     this.store = new HStore(this.region, columnFamilyDescriptor, conf, false);
@@ -117,8 +118,8 @@ public class TestMemStoreSegmentsIterator {
     final byte[] f = Bytes.toBytes(FAMILY);
     final byte[] q = Bytes.toBytes(COLUMN);
     final byte[] v = Bytes.toBytes(3);
-    final KeyValue kv1 = new KeyValue(one, f, q, System.currentTimeMillis(), v);
-    final KeyValue kv2 = new KeyValue(two, f, q, System.currentTimeMillis(), v);
+    final KeyValue kv1 = new KeyValue(one, f, q, EnvironmentEdgeManager.currentTime(), v);
+    final KeyValue kv2 = new KeyValue(two, f, q, EnvironmentEdgeManager.currentTime(), v);
     // the seqId of first cell less than Integer.MAX_VALUE,
     // the seqId of second cell greater than integer.MAX_VALUE
     kv1.setSequenceId(LESS_THAN_INTEGER_MAX_VALUE_SEQ_ID);

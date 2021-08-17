@@ -24,7 +24,7 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -42,7 +42,7 @@ public class EncodedSeekPerformanceTest {
   /** Default number of seeks which will be used in benchmark. */
   public static int DEFAULT_NUMBER_OF_SEEKS = 10000;
 
-  private final HBaseTestingUtility testingUtility = new HBaseTestingUtility();
+  private final HBaseTestingUtil testingUtility = new HBaseTestingUtil();
   private Configuration configuration = testingUtility.getConfiguration();
   private CacheConfig cacheConf = new CacheConfig(configuration);
   private Random randomizer;

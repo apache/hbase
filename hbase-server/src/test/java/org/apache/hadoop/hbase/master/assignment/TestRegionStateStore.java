@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
@@ -72,7 +72,7 @@ public class TestRegionStateStore {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionStateStore.class);
 
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @Rule
   public final TableNameTestRule name = new TableNameTestRule();
@@ -158,7 +158,7 @@ public class TestRegionStateStore {
 
   @Test
   public void testMetaLocationForRegionReplicasIsAddedAtRegionSplit() throws IOException {
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     ServerName serverName0 =
       ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
     TableName tableName = name.getTableName();
@@ -189,7 +189,7 @@ public class TestRegionStateStore {
   @Test
   public void testEmptyMetaDaughterLocationDuringSplit() throws IOException {
     TableName tableName = name.getTableName();
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     ServerName serverName0 =
       ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
     RegionInfo parent = RegionInfoBuilder.newBuilder(tableName)
@@ -230,7 +230,7 @@ public class TestRegionStateStore {
 
   @Test
   public void testMetaLocationForRegionReplicasIsAddedAtRegionMerge() throws IOException {
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     ServerName serverName0 =
       ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
 
@@ -261,7 +261,7 @@ public class TestRegionStateStore {
 
   @Test
   public void testMastersSystemTimeIsUsedInMergeRegions() throws IOException {
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     TableName tableName = name.getTableName();
 
     RegionInfo regionInfoA = RegionInfoBuilder.newBuilder(tableName)
@@ -397,7 +397,7 @@ public class TestRegionStateStore {
 
   @Test
   public void testMetaLocationForRegionReplicasIsRemovedAtTableDeletion() throws IOException {
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     TableName tableName = name.getTableName();
     RegionInfo primary = RegionInfoBuilder.newBuilder(tableName)
       .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)

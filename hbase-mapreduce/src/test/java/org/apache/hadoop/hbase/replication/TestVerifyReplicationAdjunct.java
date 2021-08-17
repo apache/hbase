@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -94,7 +95,7 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
                             .build()).build();
     Connection connection2 = ConnectionFactory.createConnection(CONF2);
     try (Admin admin2 = connection2.getAdmin()) {
-      admin2.createTable(peerTable, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      admin2.createTable(peerTable, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     }
     htable3 = connection2.getTable(peerTableName);
   }
@@ -105,7 +106,7 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
     // normal Batch tests
     byte[] qualifierName = Bytes.toBytes("f1");
     Put put = new Put(Bytes.toBytes("r1"));
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     put.addColumn(famName, qualifierName, ts + 1, Bytes.toBytes("v1002"));
     htable1.put(put);
     put.addColumn(famName, qualifierName, ts + 2, Bytes.toBytes("v1001"));
@@ -169,7 +170,7 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
     // normal Batch tests
     byte[] qualifierName = Bytes.toBytes("f1");
     Put put = new Put(Bytes.toBytes("r1"));
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     put.addColumn(famName, qualifierName, ts + 1, Bytes.toBytes("v1"));
     htable1.put(put);
     put.addColumn(famName, qualifierName, ts + 2, Bytes.toBytes("v2"));
@@ -286,20 +287,20 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
     // Take source and target tables snapshot
     Path rootDir = CommonFSUtils.getRootDir(CONF1);
     FileSystem fs = rootDir.getFileSystem(CONF1);
-    String sourceSnapshotName = "sourceSnapshot-" + System.currentTimeMillis();
+    String sourceSnapshotName = "sourceSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL1.getAdmin(), tableName,
       Bytes.toString(famName), sourceSnapshotName, rootDir, fs, true);
 
     // Take target snapshot
     Path peerRootDir = CommonFSUtils.getRootDir(CONF2);
     FileSystem peerFs = peerRootDir.getFileSystem(CONF2);
-    String peerSnapshotName = "peerSnapshot-" + System.currentTimeMillis();
+    String peerSnapshotName = "peerSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL2.getAdmin(), tableName,
       Bytes.toString(famName), peerSnapshotName, peerRootDir, peerFs, true);
 
     String peerFSAddress = peerFs.getUri().toString();
     String temPath1 = UTIL1.getRandomDir().toString();
-    String temPath2 = "/tmp" + System.currentTimeMillis();
+    String temPath2 = "/tmp" + EnvironmentEdgeManager.currentTime();
 
     String[] args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
       "--sourceSnapshotTmpDir=" + temPath1, "--peerSnapshotName=" + peerSnapshotName,
@@ -323,11 +324,11 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
     Delete delete = new Delete(put.getRow());
     htable2.delete(delete);
 
-    sourceSnapshotName = "sourceSnapshot-" + System.currentTimeMillis();
+    sourceSnapshotName = "sourceSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL1.getAdmin(), tableName,
       Bytes.toString(famName), sourceSnapshotName, rootDir, fs, true);
 
-    peerSnapshotName = "peerSnapshot-" + System.currentTimeMillis();
+    peerSnapshotName = "peerSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL2.getAdmin(), tableName,
       Bytes.toString(famName), peerSnapshotName, peerRootDir, peerFs, true);
 

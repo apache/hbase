@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
@@ -76,7 +77,7 @@ public class TestReplicationHFileCleaner {
       HBaseClassTestRule.forClass(TestReplicationHFileCleaner.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationHFileCleaner.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Server server;
   private static ReplicationQueueStorage rq;
   private static ReplicationPeers rp;
@@ -118,6 +119,8 @@ public class TestReplicationHFileCleaner {
     } catch (IOException e) {
       LOG.warn("Failed to delete files recursively from path " + root);
     }
+    // Remove all HFileRefs (if any)
+    rq.removeHFileRefs(peerId, rq.getReplicableHFiles(peerId));
     rp.getPeerStorage().removePeer(peerId);
   }
 
@@ -191,9 +194,10 @@ public class TestReplicationHFileCleaner {
     ReplicationHFileCleaner cleaner = new ReplicationHFileCleaner();
 
     List<FileStatus> dummyFiles =
-        Lists.newArrayList(new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path(
-            "hfile1")), new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path(
-            "hfile2")));
+      Lists.newArrayList(new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(),
+          new Path("hfile1")),
+        new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(),
+          new Path("hfile2")));
 
     FaultyZooKeeperWatcher faultyZK =
         new FaultyZooKeeperWatcher(conf, "testZooKeeperAbort-faulty", null);

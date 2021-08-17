@@ -23,10 +23,10 @@ import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -47,7 +47,7 @@ public class TestShutdownBackupMaster {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestShutdownBackupMaster.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static volatile CountDownLatch ARRIVE;
 
@@ -72,7 +72,7 @@ public class TestShutdownBackupMaster {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL, MockHMaster.class, HMaster.class);
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numMasters(2).numRegionServers(2).numDataNodes(2).build();
     UTIL.startMiniCluster(option);
     UTIL.waitUntilAllSystemRegionsAssigned();
@@ -86,7 +86,7 @@ public class TestShutdownBackupMaster {
 
   @Test
   public void testShutdownWhileBecomingActive() throws InterruptedException {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     HMaster activeMaster = null;
     HMaster backupMaster = null;
     for (MasterThread t : cluster.getMasterThreads()) {

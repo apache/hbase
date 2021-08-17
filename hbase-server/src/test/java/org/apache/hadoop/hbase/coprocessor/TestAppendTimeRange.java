@@ -29,7 +29,7 @@ import java.util.NavigableMap;
 import java.util.Optional;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Get;
@@ -62,7 +62,7 @@ public class TestAppendTimeRange {
   @Rule
   public TestName name = new TestName();
 
-  private static final HBaseTestingUtility util = new HBaseTestingUtility();
+  private static final HBaseTestingUtil util = new HBaseTestingUtil();
   private static final ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
 
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");

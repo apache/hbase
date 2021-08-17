@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.tool;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
@@ -50,7 +50,7 @@ public class TestSecureBulkLoadHFilesSplitRecovery extends TestBulkLoadHFilesSpl
   // make sure they are in sync
   @BeforeClass
   public static void setupCluster() throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     // set the always on security provider
     UserProvider.setUserProviderForTesting(util.getConfiguration(),
       HadoopSecurityEnabledUserProviderForTesting.class);

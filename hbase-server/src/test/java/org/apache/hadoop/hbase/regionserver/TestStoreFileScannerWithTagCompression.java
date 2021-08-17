@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -56,7 +57,7 @@ public class TestStoreFileScannerWithTagCompression {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestStoreFileScannerWithTagCompression.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf = TEST_UTIL.getConfiguration();
   private static CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
   private static String ROOT_DIR = TEST_UTIL.getDataTestDir(
@@ -109,7 +110,7 @@ public class TestStoreFileScannerWithTagCompression {
   private void writeStoreFile(final StoreFileWriter writer) throws IOException {
     byte[] fam = Bytes.toBytes("f");
     byte[] qualifier = Bytes.toBytes("q");
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     byte[] b = Bytes.toBytes("k1");
     Tag t1 = new ArrayBackedTag((byte) 1, "tag1");
     Tag t2 = new ArrayBackedTag((byte) 2, "tag2");

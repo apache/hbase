@@ -39,7 +39,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
 import org.junit.Before;
@@ -102,7 +103,7 @@ public abstract class TestAssignmentManagerBase {
   protected static final int NREGIONS = 1 * 1000;
   protected static final int NSERVERS = Math.max(1, NREGIONS / 100);
 
-  protected HBaseTestingUtility util;
+  protected HBaseTestingUtil util;
   protected MockRSProcedureDispatcher rsDispatcher;
   protected MockMasterServices master;
   protected AssignmentManager am;
@@ -152,7 +153,7 @@ public abstract class TestAssignmentManagerBase {
 
   @Before
   public void setUp() throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     this.executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
       .setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught: ", e)).build());
     setupConfiguration(util.getConfiguration());
@@ -309,7 +310,8 @@ public abstract class TestAssignmentManagerBase {
     ServerName newSn = ServerName.valueOf("localhost", 10000 + newRsAdded, 1);
     newRsAdded++;
     try {
-      this.master.getServerManager().regionServerReport(newSn, ServerMetricsBuilder.of(newSn));
+      this.master.getServerManager().regionServerReport(newSn, ServerMetricsBuilder
+        .newBuilder(newSn).setLastReportTimestamp(EnvironmentEdgeManager.currentTime()).build());
     } catch (YouAreDeadException e) {
       // should not happen
       throw new UncheckedIOException(e);

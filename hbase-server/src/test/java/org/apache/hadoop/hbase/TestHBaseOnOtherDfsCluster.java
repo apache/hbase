@@ -49,11 +49,11 @@ public class TestHBaseOnOtherDfsCluster {
   @Test
   public void testOveralyOnOtherCluster() throws Exception {
     // just run HDFS
-    HBaseTestingUtility util1 = new HBaseTestingUtility();
+    HBaseTestingUtil util1 = new HBaseTestingUtil();
     MiniDFSCluster dfs = util1.startMiniDFSCluster(1);
 
     // run HBase on that HDFS
-    HBaseTestingUtility util2 = new HBaseTestingUtility();
+    HBaseTestingUtil util2 = new HBaseTestingUtil();
     // set the dfs
     util2.setDFSCluster(dfs, false);
     util2.startMiniCluster();

@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.master.SplitWALManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
+import org.apache.hadoop.hbase.master.replication.ClaimReplicationQueuesProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -234,11 +235,15 @@ public class ServerCrashProcedure
             }
             assignRegions(env, regionsOnCrashedServer);
           }
-          setNextState(ServerCrashState.SERVER_CRASH_FINISH);
+          setNextState(ServerCrashState.SERVER_CRASH_CLAIM_REPLICATION_QUEUES);
           break;
         case SERVER_CRASH_HANDLE_RIT2:
           // Noop. Left in place because we used to call handleRIT here for a second time
           // but no longer necessary since HBASE-20634.
+          setNextState(ServerCrashState.SERVER_CRASH_CLAIM_REPLICATION_QUEUES);
+          break;
+        case SERVER_CRASH_CLAIM_REPLICATION_QUEUES:
+          addChildProcedure(new ClaimReplicationQueuesProcedure(serverName));
           setNextState(ServerCrashState.SERVER_CRASH_FINISH);
           break;
         case SERVER_CRASH_FINISH:

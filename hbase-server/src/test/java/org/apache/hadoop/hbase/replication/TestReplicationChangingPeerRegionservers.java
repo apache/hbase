@@ -23,7 +23,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -121,7 +121,7 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
   @Test
   public void testChangingNumberOfPeerRegionServers() throws IOException, InterruptedException {
     LOG.info("testSimplePutDelete");
-    MiniHBaseCluster peerCluster = UTIL2.getMiniHBaseCluster();
+    SingleProcessHBaseCluster peerCluster = UTIL2.getMiniHBaseCluster();
     // This test wants two RS's up. We only run one generally so add one.
     peerCluster.startRegionServer();
     Waiter.waitFor(peerCluster.getConfiguration(), 30000, new Waiter.Predicate<Exception>() {

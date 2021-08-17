@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -36,12 +36,13 @@ import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 
 public class MasterRegionTestBase {
 
-  protected HBaseCommonTestingUtility htu;
+  protected HBaseCommonTestingUtil htu;
 
   protected MasterRegion region;
 
@@ -73,7 +74,7 @@ public class MasterRegionTestBase {
 
   @Before
   public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
+    htu = new HBaseCommonTestingUtil();
     htu.getConfiguration().setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
     // Runs on local filesystem. Test does not need sync. Turn off checks.
     htu.getConfiguration().setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
@@ -83,7 +84,7 @@ public class MasterRegionTestBase {
     Server server = mock(Server.class);
     when(server.getConfiguration()).thenReturn(htu.getConfiguration());
     when(server.getServerName())
-      .thenReturn(ServerName.valueOf("localhost", 12345, System.currentTimeMillis()));
+      .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));
     when(server.getChoreService()).thenReturn(choreService);
     Path testDir = htu.getDataTestDir();
     CommonFSUtils.setRootDir(htu.getConfiguration(), testDir);

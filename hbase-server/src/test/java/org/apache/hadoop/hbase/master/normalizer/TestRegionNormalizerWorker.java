@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.Waiter;
@@ -93,7 +93,7 @@ public class TestRegionNormalizerWorker {
   @Mock
   private RegionNormalizer regionNormalizer;
 
-  private HBaseCommonTestingUtility testingUtility;
+  private HBaseCommonTestingUtil testingUtility;
   private RegionNormalizerWorkQueue<TableName> queue;
   private ExecutorService workerPool;
 
@@ -103,7 +103,7 @@ public class TestRegionNormalizerWorker {
   public void before() throws Exception {
     MockitoAnnotations.initMocks(this);
     when(masterServices.skipRegionManagementAction(any())).thenReturn(false);
-    testingUtility = new HBaseCommonTestingUtility();
+    testingUtility = new HBaseCommonTestingUtil();
     queue = new RegionNormalizerWorkQueue<>();
     workerThreadThrowable.set(null);
 

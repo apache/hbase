@@ -26,8 +26,8 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -67,7 +67,7 @@ public class TestFlushWithThroughputController {
       LoggerFactory.getLogger(TestFlushWithThroughputController.class);
   private static final double EPSILON = 1.3E-6;
 
-  private HBaseTestingUtility hbtu;
+  private HBaseTestingUtil hbtu;
   @Rule public TestName testName = new TestName();
   private TableName tableName;
   private final byte[] family = Bytes.toBytes("f");
@@ -75,7 +75,7 @@ public class TestFlushWithThroughputController {
 
   @Before
   public void setUp() {
-    hbtu = new HBaseTestingUtility();
+    hbtu = new HBaseTestingUtil();
     tableName = TableName.valueOf("Table-" + testName.getMethodName());
     hbtu.getConfiguration().set(
         FlushThroughputControllerFactory.HBASE_FLUSH_THROUGHPUT_CONTROLLER_KEY,
@@ -88,7 +88,7 @@ public class TestFlushWithThroughputController {
   }
 
   private HStore getStoreWithName(TableName tableName) {
-    MiniHBaseCluster cluster = hbtu.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = hbtu.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();

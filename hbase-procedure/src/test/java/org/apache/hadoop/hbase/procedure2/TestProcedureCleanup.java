@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -60,7 +60,7 @@ public class TestProcedureCleanup {
 
   private static ProcedureExecutor<Void> procExecutor;
 
-  private static HBaseCommonTestingUtility htu;
+  private static HBaseCommonTestingUtil htu;
 
   private static FileSystem fs;
   private static Path testDir;
@@ -79,7 +79,7 @@ public class TestProcedureCleanup {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    htu = new HBaseCommonTestingUtility();
+    htu = new HBaseCommonTestingUtil();
     htu.getConfiguration().setBoolean(WALProcedureStore.EXEC_WAL_CLEANUP_ON_LOAD_CONF_KEY, true);
     // NOTE: The executor will be created by each test
     testDir = htu.getDataTestDir();

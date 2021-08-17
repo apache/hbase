@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD;
+import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD;
 import static org.apache.hadoop.hbase.thrift.Constants.COALESCE_INC_KEY;
 import static org.apache.hadoop.hbase.util.Bytes.getBytes;
 
@@ -26,10 +28,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.Cell;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
@@ -64,6 +67,8 @@ import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
@@ -71,14 +76,18 @@ import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
+import org.apache.hadoop.hbase.thrift.generated.TAccessControlEntity;
 import org.apache.hadoop.hbase.thrift.generated.TAppend;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
+import org.apache.hadoop.hbase.thrift.generated.TPermissionScope;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.thrift.generated.TThriftServerType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.thrift.TException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -99,7 +108,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
 
   // nextScannerId and scannerMap are used to manage scanner state
   private int nextScannerId = 0;
-  private HashMap<Integer, ResultScannerWrapper> scannerMap;
+  private Cache<Integer, ResultScannerWrapper> scannerMap;
   IncrementCoalescer coalescer;
 
   /**
@@ -137,7 +146,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
    * @return a Scanner, or null if ID was invalid.
    */
   private synchronized ResultScannerWrapper getScanner(int id) {
-    return scannerMap.get(id);
+    return scannerMap.getIfPresent(id);
   }
 
   /**
@@ -147,14 +156,19 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
    * @param id the ID of the scanner to remove
    * @return a Scanner, or null if ID was invalid.
    */
-  private synchronized ResultScannerWrapper removeScanner(int id) {
-    return scannerMap.remove(id);
+  private synchronized void removeScanner(int id) {
+    scannerMap.invalidate(id);
   }
 
   protected ThriftHBaseServiceHandler(final Configuration c,
       final UserProvider userProvider) throws IOException {
     super(c, userProvider);
-    scannerMap = new HashMap<>();
+    long cacheTimeout = c.getLong(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD) * 2;
+
+    scannerMap = CacheBuilder.newBuilder()
+      .expireAfterAccess(cacheTimeout, TimeUnit.MILLISECONDS)
+      .build();
+
     this.coalescer = new IncrementCoalescer(this);
   }
 
@@ -858,6 +872,10 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     } catch (IOException e) {
       LOG.warn(e.getMessage(), e);
       throw getIOError(e);
+    } finally {
+      // Add scanner back to scannerMap; protects against case
+      // where scanner expired during processing of request.
+      scannerMap.put(id, resultScannerWrapper);
     }
     return ThriftUtilities.rowResultFromHBase(results, resultScannerWrapper.isColumnSorted());
   }
@@ -1276,8 +1294,53 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     return connectionCache.getClusterId();
   }
 
+  @Override
+  public boolean grant(TAccessControlEntity info) throws IOError, TException {
+    Permission.Action[] actions = ThriftUtilities.permissionActionsFromString(info.actions);
+    try {
+      if (info.scope == TPermissionScope.NAMESPACE) {
+        AccessControlClient.grant(connectionCache.getAdmin().getConnection(),
+          info.getNsName(), info.getUsername(), actions);
+      } else if (info.scope == TPermissionScope.TABLE) {
+        TableName tableName = TableName.valueOf(info.getTableName());
+        AccessControlClient.grant(connectionCache.getAdmin().getConnection(),
+          tableName, info.getUsername(), null, null, actions);
+      }
+    } catch (Throwable t) {
+      if (t instanceof IOException) {
+        throw getIOError(t);
+      } else {
+        throw getIOError(new DoNotRetryIOException(t.getMessage()));
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public boolean revoke(TAccessControlEntity info) throws IOError, TException {
+    Permission.Action[] actions = ThriftUtilities.permissionActionsFromString(info.actions);
+    try {
+      if (info.scope == TPermissionScope.NAMESPACE) {
+        AccessControlClient.revoke(connectionCache.getAdmin().getConnection(),
+          info.getNsName(), info.getUsername(), actions);
+      } else if (info.scope == TPermissionScope.TABLE) {
+        TableName tableName = TableName.valueOf(info.getTableName());
+        AccessControlClient.revoke(connectionCache.getAdmin().getConnection(),
+          tableName, info.getUsername(), null, null, actions);
+      }
+    } catch (Throwable t) {
+      if (t instanceof IOException) {
+        throw getIOError(t);
+      } else {
+        throw getIOError(new DoNotRetryIOException(t.getMessage()));
+      }
+    }
+    return true;
+  }
+
   private static IOError getIOError(Throwable throwable) {
     IOError error = new IOErrorWithCause(throwable);
+    error.setCanRetry(!(throwable instanceof DoNotRetryIOException));
     error.setMessage(Throwables.getStackTraceAsString(throwable));
     return error;
   }

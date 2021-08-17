@@ -34,15 +34,21 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Manages the interactions with an already deployed distributed cluster (as opposed to
- * a pseudo-distributed, or mini/local cluster). This is used by integration and system tests.
+ * Manages the interactions with an already deployed distributed cluster (as opposed to a
+ * pseudo-distributed, or mini/local cluster). This is used by integration and system tests.
  */
 @InterfaceAudience.Private
-public class DistributedHBaseCluster extends HBaseCluster {
+public class DistributedHBaseCluster extends HBaseClusterInterface {
+
+  private static final Logger LOG = LoggerFactory.getLogger(DistributedHBaseCluster.class);
+
   private Admin admin;
   private final Connection connection;
 
@@ -235,9 +241,9 @@ public class DistributedHBaseCluster extends HBaseCluster {
   private void waitForServiceToStop(ServiceType service, ServerName serverName, long timeout)
     throws IOException {
     LOG.info("Waiting for service: {} to stop: {}", service, serverName.getServerName());
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
 
-    while ((System.currentTimeMillis() - start) < timeout) {
+    while ((EnvironmentEdgeManager.currentTime() - start) < timeout) {
       if (!clusterManager.isRunning(service, serverName.getHostname(), serverName.getPort())) {
         return;
       }
@@ -249,9 +255,9 @@ public class DistributedHBaseCluster extends HBaseCluster {
   private void waitForServiceToStart(ServiceType service, ServerName serverName, long timeout)
     throws IOException {
     LOG.info("Waiting for service: {} to start: ", service, serverName.getServerName());
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
 
-    while ((System.currentTimeMillis() - start) < timeout) {
+    while ((EnvironmentEdgeManager.currentTime() - start) < timeout) {
       if (clusterManager.isRunning(service, serverName.getHostname(), serverName.getPort())) {
         return;
       }
@@ -285,8 +291,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
   @Override
   public boolean waitForActiveAndReadyMaster(long timeout) throws IOException {
-    long start = System.currentTimeMillis();
-    while (System.currentTimeMillis() - start < timeout) {
+    long start = EnvironmentEdgeManager.currentTime();
+    while (EnvironmentEdgeManager.currentTime() - start < timeout) {
       try {
         connection.getAdmin().getClusterMetrics(EnumSet.of(ClusterMetrics.Option.HBASE_VERSION));
         return true;

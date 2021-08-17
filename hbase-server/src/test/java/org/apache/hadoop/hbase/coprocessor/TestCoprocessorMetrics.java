@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.junit.AfterClass;
@@ -92,7 +93,7 @@ public class TestCoprocessorMetrics {
       HBaseClassTestRule.forClass(TestCoprocessorMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorMetrics.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static final byte[] foo = Bytes.toBytes("foo");
   private static final byte[] bar = Bytes.toBytes("bar");
@@ -111,14 +112,14 @@ public class TestCoprocessorMetrics {
     public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                TableDescriptor desc, RegionInfo[] regions) throws IOException {
       // we rely on the fact that there is only 1 instance of our MasterObserver
-      this.start = System.currentTimeMillis();
+      this.start = EnvironmentEdgeManager.currentTime();
     }
 
     @Override
     public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                 TableDescriptor desc, RegionInfo[] regions) throws IOException {
       if (this.start > 0) {
-        long time = System.currentTimeMillis() - start;
+        long time = EnvironmentEdgeManager.currentTime() - start;
         LOG.info("Create table took: " + time);
         createTableTimer.updateMillis(time);
       }

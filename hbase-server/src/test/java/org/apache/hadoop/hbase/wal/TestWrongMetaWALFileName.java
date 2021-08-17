@@ -21,7 +21,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -44,7 +44,7 @@ public class TestWrongMetaWALFileName {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestWrongMetaWALFileName.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setUp() throws Exception {

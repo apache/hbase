@@ -335,7 +335,7 @@ public class HFileSystem extends FilterFileSystem {
     try {
       Field nf = DFSClient.class.getDeclaredField("namenode");
       nf.setAccessible(true);
-      Field modifiersField = Field.class.getDeclaredField("modifiers");
+      Field modifiersField = ReflectionUtils.getModifiersField();
       modifiersField.setAccessible(true);
       modifiersField.setInt(nf, nf.getModifiers() & ~Modifier.FINAL);
 

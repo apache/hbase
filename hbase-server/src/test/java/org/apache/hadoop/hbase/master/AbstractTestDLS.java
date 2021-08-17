@@ -38,13 +38,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.SplitLogCounters;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Put;
@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
@@ -85,7 +86,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 public abstract class AbstractTestDLS {
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitLogManager.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   // Start a cluster with 2 masters and 5 regionservers
   private static final int NUM_MASTERS = 2;
@@ -96,7 +97,7 @@ public abstract class AbstractTestDLS {
   public TestName testName = new TestName();
 
   private TableName tableName;
-  private MiniHBaseCluster cluster;
+  private SingleProcessHBaseCluster cluster;
   private HMaster master;
   private Configuration conf;
 
@@ -130,7 +131,7 @@ public abstract class AbstractTestDLS {
     conf.setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, 3);
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     conf.set("hbase.wal.provider", getWalProvider());
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numMasters(NUM_MASTERS).numRegionServers(numRS).build();
     TEST_UTIL.startMiniHBaseCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();
@@ -191,19 +192,19 @@ public abstract class AbstractTestDLS {
       });
 
       Thread.sleep(2000);
-      LOG.info("Current Open Regions:" + HBaseTestingUtility.getAllOnlineRegions(cluster).size());
+      LOG.info("Current Open Regions:" + HBaseTestingUtil.getAllOnlineRegions(cluster).size());
 
       // wait for abort completes
       TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return (HBaseTestingUtility.getAllOnlineRegions(cluster)
+          return (HBaseTestingUtil.getAllOnlineRegions(cluster)
               .size() >= (numRegionsToCreate + 1));
         }
       });
 
       LOG.info("Current Open Regions After Master Node Starts Up:" +
-          HBaseTestingUtility.getAllOnlineRegions(cluster).size());
+          HBaseTestingUtil.getAllOnlineRegions(cluster).size());
 
       assertEquals(numLogLines, TEST_UTIL.countRows(ht));
     }
@@ -347,7 +348,7 @@ public abstract class AbstractTestDLS {
     TEST_UTIL.getAdmin().disableTable(tableName);
     LOG.debug("Waiting for no more RIT\n");
     blockUntilNoRIT();
-    NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
+    NavigableSet<String> regions = HBaseTestingUtil.getAllOnlineRegions(cluster);
     LOG.debug("Verifying only catalog region is assigned\n");
     if (regions.size() != 1) {
       for (String oregion : regions) {
@@ -360,7 +361,7 @@ public abstract class AbstractTestDLS {
     LOG.debug("Waiting for no more RIT\n");
     blockUntilNoRIT();
     LOG.debug("Verifying there are " + numRegions + " assigned on cluster\n");
-    regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
+    regions = HBaseTestingUtil.getAllOnlineRegions(cluster);
     assertEquals(numRegions + 1 + existingRegions, regions.size());
     return table;
   }
@@ -453,9 +454,10 @@ public abstract class AbstractTestDLS {
         row = Arrays.copyOfRange(row, 3, 8); // use last 5 bytes because
         // HBaseTestingUtility.createMultiRegions use 5 bytes key
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
-        e.add(new KeyValue(row, COLUMN_FAMILY, qualifier, System.currentTimeMillis(), value));
+        e.add(new KeyValue(row, COLUMN_FAMILY, qualifier, EnvironmentEdgeManager.currentTime(),
+          value));
         log.appendData(curRegionInfo, new WALKeyImpl(curRegionInfo.getEncodedNameAsBytes(),
-          tableName, System.currentTimeMillis(), mvcc), e);
+          tableName, EnvironmentEdgeManager.currentTime(), mvcc), e);
         if (0 == i % syncEvery) {
           log.sync();
         }
@@ -510,12 +512,12 @@ public abstract class AbstractTestDLS {
 
   private void waitForCounter(LongAdder ctr, long oldval, long newval, long timems)
       throws InterruptedException {
-    long curt = System.currentTimeMillis();
+    long curt = EnvironmentEdgeManager.currentTime();
     long endt = curt + timems;
     while (curt < endt) {
       if (ctr.sum() == oldval) {
         Thread.sleep(100);
-        curt = System.currentTimeMillis();
+        curt = EnvironmentEdgeManager.currentTime();
       } else {
         assertEquals(newval, ctr.sum());
         return;
@@ -524,7 +526,7 @@ public abstract class AbstractTestDLS {
     fail();
   }
 
-  private void abortMaster(MiniHBaseCluster cluster) throws InterruptedException {
+  private void abortMaster(SingleProcessHBaseCluster cluster) throws InterruptedException {
     for (MasterThread mt : cluster.getLiveMasterThreads()) {
       if (mt.getMaster().isActiveMaster()) {
         mt.getMaster().abort("Aborting for tests", new Exception("Trace info"));

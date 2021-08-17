@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
@@ -67,7 +67,6 @@ import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Class to test HBaseHbck. Spins up the minicluster once at test start and then takes it down
@@ -80,7 +79,7 @@ public class TestHbck {
   public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestHbck.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHbck.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -285,12 +284,12 @@ public class TestHbck {
     ServerName serverName = testRs.getServerName();
     Hbck hbck = getHbck();
     List<Long> pids =
-      hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
+      hbck.scheduleServerCrashProcedures(Arrays.asList(serverName));
     assertTrue(pids.get(0) > 0);
     LOG.info("pid is {}", pids.get(0));
 
     List<Long> newPids =
-      hbck.scheduleServerCrashProcedure(Arrays.asList(ProtobufUtil.toServerName(serverName)));
+      hbck.scheduleServerCrashProcedures(Arrays.asList(serverName));
     assertTrue(newPids.get(0) < 0);
     LOG.info("pid is {}", newPids.get(0));
     waitOnPids(pids);

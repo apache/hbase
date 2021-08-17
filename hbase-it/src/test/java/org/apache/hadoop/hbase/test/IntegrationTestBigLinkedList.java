@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.IntegrationTestBase;
@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Random64;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -711,9 +712,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           while (numQueries < maxQueries) {
             numQueries++;
             byte[] prev = node.prev;
-            long t1 = System.currentTimeMillis();
+            long t1 = EnvironmentEdgeManager.currentTime();
             node = getNode(prev, table, node);
-            long t2 = System.currentTimeMillis();
+            long t2 = EnvironmentEdgeManager.currentTime();
             if (node == null) {
               LOG.error("ConcurrentWalker found UNDEFINED NODE: " + Bytes.toStringBinary(prev));
               context.getCounter(Counts.UNDEFINED).increment(1l);
@@ -775,14 +776,14 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
             .build();
 
           // If we want to pre-split compute how many splits.
-          if (conf.getBoolean(HBaseTestingUtility.PRESPLIT_TEST_TABLE_KEY,
-              HBaseTestingUtility.PRESPLIT_TEST_TABLE)) {
+          if (conf.getBoolean(HBaseTestingUtil.PRESPLIT_TEST_TABLE_KEY,
+              HBaseTestingUtil.PRESPLIT_TEST_TABLE)) {
             int numberOfServers = admin.getRegionServers().size();
             if (numberOfServers == 0) {
               throw new IllegalStateException("No live regionservers");
             }
-            int regionsPerServer = conf.getInt(HBaseTestingUtility.REGIONS_PER_SERVER_KEY,
-                HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER);
+            int regionsPerServer = conf.getInt(HBaseTestingUtil.REGIONS_PER_SERVER_KEY,
+                HBaseTestingUtil.DEFAULT_REGIONS_PER_SERVER);
             int totalNumberOfRegions = numberOfServers * regionsPerServer;
             LOG.info("Number of live regionservers: " + numberOfServers + ", " +
                 "pre-splitting table into " + totalNumberOfRegions + " regions " +
@@ -1714,10 +1715,10 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       scan.setBatch(1);
       scan.addColumn(FAMILY_NAME, COLUMN_PREV);
 
-      long t1 = System.currentTimeMillis();
+      long t1 = EnvironmentEdgeManager.currentTime();
       ResultScanner scanner = table.getScanner(scan);
       Result result = scanner.next();
-      long t2 = System.currentTimeMillis();
+      long t2 = EnvironmentEdgeManager.currentTime();
       scanner.close();
 
       if ( result != null) {
@@ -1797,9 +1798,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         while (node != null && node.prev.length != NO_KEY.length &&
             numQueries < maxQueries) {
           byte[] prev = node.prev;
-          long t1 = System.currentTimeMillis();
+          long t1 = EnvironmentEdgeManager.currentTime();
           node = getNode(prev, table, node);
-          long t2 = System.currentTimeMillis();
+          long t2 = EnvironmentEdgeManager.currentTime();
           if (logEvery > 0 && numQueries % logEvery == 0) {
             System.out.printf("CQ %d: %d %s \n", numQueries, t2 - t1, Bytes.toStringBinary(prev));
           }
@@ -1931,9 +1932,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     System.err.println(" -D"+ TABLE_NAME_KEY+ "=<tableName>");
     System.err.println("    Run using the <tableName> as the tablename.  Defaults to "
         + DEFAULT_TABLE_NAME);
-    System.err.println(" -D"+ HBaseTestingUtility.REGIONS_PER_SERVER_KEY+ "=<# regions>");
+    System.err.println(" -D"+ HBaseTestingUtil.REGIONS_PER_SERVER_KEY+ "=<# regions>");
     System.err.println("    Create table with presplit regions per server.  Defaults to "
-        + HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER);
+        + HBaseTestingUtil.DEFAULT_REGIONS_PER_SERVER);
 
     System.err.println(" -DuseMob=<true|false>");
     System.err.println("    Create table so that the mob read/write path is forced.  " +

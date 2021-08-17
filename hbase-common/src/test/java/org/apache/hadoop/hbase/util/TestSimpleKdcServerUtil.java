@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.util;
 import java.io.File;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.kerby.kerberos.kerb.KrbException;
@@ -34,7 +34,7 @@ public class TestSimpleKdcServerUtil {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSimpleKdcServerUtil.class);
-  private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   /**
    * Test we are able to ride over clashing port... BindException.. when starting up a
@@ -46,7 +46,7 @@ public class TestSimpleKdcServerUtil {
     try {
       File dir = new File(UTIL.getDataTestDir().toString());
       kdc = SimpleKdcServerUtil.
-        getRunningSimpleKdcServer(dir, HBaseCommonTestingUtility::randomFreePort, true);
+        getRunningSimpleKdcServer(dir, HBaseCommonTestingUtil::randomFreePort, true);
       kdc.createPrincipal("wah");
     } finally {
       kdc.stop();

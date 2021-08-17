@@ -32,7 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -100,7 +100,7 @@ public class TestSnapshotFromMaster {
       HBaseClassTestRule.forClass(TestSnapshotFromMaster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFromMaster.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final int NUM_RS = 2;
   private static Path rootDir;
   private static FileSystem fs;

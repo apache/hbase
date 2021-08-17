@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +68,7 @@ public class MoveRegionsOfTableAction extends Action {
 
     Collections.shuffle(regions);
 
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     for (RegionInfo regionInfo : regions) {
       // Don't try the move if we're stopping
       if (context.isStopping()) {
@@ -81,7 +82,7 @@ public class MoveRegionsOfTableAction extends Action {
 
       // put a limit on max num regions. Otherwise, this won't finish
       // with a sleep time of 10sec, 100 regions will finish in 16min
-      if (System.currentTimeMillis() - start > maxTime) {
+      if (EnvironmentEdgeManager.currentTime() - start > maxTime) {
         break;
       }
     }

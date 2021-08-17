@@ -25,6 +25,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
@@ -122,7 +123,7 @@ public class ReflectionUtils {
     boolean dumpStack = false;
     if (log.isInfoEnabled()) {
       synchronized (ReflectionUtils.class) {
-        long now = System.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         if (now - previousLogTime >= minInterval * 1000) {
           previousLogTime = now;
           dumpStack = true;
@@ -147,7 +148,7 @@ public class ReflectionUtils {
    * @param stream the stream to
    * @param title a string title for the stack trace
    */
-  private static void printThreadInfo(PrintStream stream,
+  static void printThreadInfo(PrintStream stream,
                                      String title) {
     final int STACK_DEPTH = 20;
     boolean contention = threadBean.isThreadContentionMonitoringEnabled();
@@ -226,6 +227,40 @@ public class ReflectionUtils {
       parameterTypes[i] = params[i].getClass();
     }
     return parameterTypes;
+  }
+
+  public static Field getModifiersField() throws IllegalAccessException, NoSuchFieldException {
+    // this is copied from https://github.com/powermock/powermock/pull/1010/files to work around
+    // JDK 12+
+    Field modifiersField = null;
+    try {
+      modifiersField = Field.class.getDeclaredField("modifiers");
+    } catch (NoSuchFieldException e) {
+      try {
+        Method getDeclaredFields0 = Class.class.getDeclaredMethod(
+          "getDeclaredFields0",boolean.class);
+        boolean accessibleBeforeSet = getDeclaredFields0.isAccessible();
+        getDeclaredFields0.setAccessible(true);
+        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
+        getDeclaredFields0.setAccessible(accessibleBeforeSet);
+        for (Field field : fields) {
+          if ("modifiers".equals(field.getName())) {
+            modifiersField = field;
+            break;
+          }
+        }
+        if (modifiersField == null) {
+          throw e;
+        }
+      } catch (NoSuchMethodException ex) {
+        e.addSuppressed(ex);
+        throw e;
+      } catch (InvocationTargetException ex) {
+        e.addSuppressed(ex);
+        throw e;
+      }
+    }
+    return modifiersField;
   }
 
 }

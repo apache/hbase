@@ -41,7 +41,7 @@ public class TestFSTableDescriptorForceCreation {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestFSTableDescriptorForceCreation.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();

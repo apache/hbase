@@ -21,7 +21,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -52,7 +52,7 @@ public class TestTableOutputFormatConnectionExhaust {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestTableOutputFormatConnectionExhaust.class);
 
-  private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   static final String TABLE = "TestTableOutputFormatConnectionExhaust";
   static final String FAMILY = "family";
 

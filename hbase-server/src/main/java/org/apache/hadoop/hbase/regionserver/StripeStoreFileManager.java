@@ -152,10 +152,9 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public void insertNewFiles(Collection<HStoreFile> sfs) throws IOException {
+  public void insertNewFiles(Collection<HStoreFile> sfs) {
     CompactionOrFlushMergeCopy cmc = new CompactionOrFlushMergeCopy(true);
-    // Passing null does not cause NPE??
-    cmc.mergeResults(null, sfs);
+    cmc.mergeResults(Collections.emptyList(), sfs);
     debugDumpState("Added new files");
   }
 
@@ -321,11 +320,11 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public void addCompactionResults(
-    Collection<HStoreFile> compactedFiles, Collection<HStoreFile> results) throws IOException {
+  public void addCompactionResults(Collection<HStoreFile> compactedFiles,
+    Collection<HStoreFile> results) {
     // See class comment for the assumptions we make here.
-    LOG.debug("Attempting to merge compaction results: " + compactedFiles.size()
-        + " files replaced by " + results.size());
+    LOG.debug("Attempting to merge compaction results: " + compactedFiles.size() +
+      " files replaced by " + results.size());
     // In order to be able to fail in the middle of the operation, we'll operate on lazy
     // copies and apply the result at the end.
     CompactionOrFlushMergeCopy cmc = new CompactionOrFlushMergeCopy(false);
@@ -345,7 +344,7 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public void removeCompactedFiles(Collection<HStoreFile> compactedFiles) throws IOException {
+  public void removeCompactedFiles(Collection<HStoreFile> compactedFiles) {
     // See class comment for the assumptions we make here.
     LOG.debug("Attempting to delete compaction results: " + compactedFiles.size());
     // In order to be able to fail in the middle of the operation, we'll operate on lazy
@@ -728,13 +727,15 @@ public class StripeStoreFileManager
       this.isFlush = isFlush;
     }
 
-    private void mergeResults(Collection<HStoreFile> compactedFiles, Collection<HStoreFile> results)
-        throws IOException {
+    private void mergeResults(Collection<HStoreFile> compactedFiles,
+      Collection<HStoreFile> results) {
       assert this.compactedFiles == null && this.results == null;
       this.compactedFiles = compactedFiles;
       this.results = results;
       // Do logical processing.
-      if (!isFlush) removeCompactedFiles();
+      if (!isFlush) {
+        removeCompactedFiles();
+      }
       TreeMap<byte[], HStoreFile> newStripes = processResults();
       if (newStripes != null) {
         processNewCandidateStripes(newStripes);
@@ -745,7 +746,7 @@ public class StripeStoreFileManager
       updateMetadataMaps();
     }
 
-    private void deleteResults(Collection<HStoreFile> compactedFiles) throws IOException {
+    private void deleteResults(Collection<HStoreFile> compactedFiles) {
       this.compactedFiles = compactedFiles;
       // Create new state and update parent.
       State state = createNewState(true);
@@ -828,11 +829,11 @@ public class StripeStoreFileManager
     }
 
     /**
-     * Process new files, and add them either to the structure of existing stripes,
-     * or to the list of new candidate stripes.
+     * Process new files, and add them either to the structure of existing stripes, or to the list
+     * of new candidate stripes.
      * @return New candidate stripes.
      */
-    private TreeMap<byte[], HStoreFile> processResults() throws IOException {
+    private TreeMap<byte[], HStoreFile> processResults() {
       TreeMap<byte[], HStoreFile> newStripes = null;
       for (HStoreFile sf : this.results) {
         byte[] startRow = startOf(sf), endRow = endOf(sf);
@@ -859,8 +860,9 @@ public class StripeStoreFileManager
         }
         HStoreFile oldSf = newStripes.put(endRow, sf);
         if (oldSf != null) {
-          throw new IOException("Compactor has produced multiple files for the stripe ending in ["
-              + Bytes.toString(endRow) + "], found " + sf.getPath() + " and " + oldSf.getPath());
+          throw new IllegalStateException(
+            "Compactor has produced multiple files for the stripe ending in [" +
+              Bytes.toString(endRow) + "], found " + sf.getPath() + " and " + oldSf.getPath());
         }
       }
       return newStripes;
@@ -869,7 +871,7 @@ public class StripeStoreFileManager
     /**
      * Remove compacted files.
      */
-    private void removeCompactedFiles() throws IOException {
+    private void removeCompactedFiles() {
       for (HStoreFile oldFile : this.compactedFiles) {
         byte[] oldEndRow = endOf(oldFile);
         List<HStoreFile> source = null;
@@ -878,13 +880,14 @@ public class StripeStoreFileManager
         } else {
           int stripeIndex = findStripeIndexByEndRow(oldEndRow);
           if (stripeIndex < 0) {
-            throw new IOException("An allegedly compacted file [" + oldFile + "] does not belong"
-                + " to a known stripe (end row - [" + Bytes.toString(oldEndRow) + "])");
+            throw new IllegalStateException(
+              "An allegedly compacted file [" + oldFile + "] does not belong" +
+                " to a known stripe (end row - [" + Bytes.toString(oldEndRow) + "])");
           }
           source = getStripeCopy(stripeIndex);
         }
         if (!source.remove(oldFile)) {
-          throw new IOException("An allegedly compacted file [" + oldFile + "] was not found");
+          LOG.warn("An allegedly compacted file [{}] was not found", oldFile);
         }
       }
     }
@@ -894,8 +897,7 @@ public class StripeStoreFileManager
      * new candidate stripes/removes old stripes; produces new set of stripe end rows.
      * @param newStripes  New stripes - files by end row.
      */
-    private void processNewCandidateStripes(
-        TreeMap<byte[], HStoreFile> newStripes) throws IOException {
+    private void processNewCandidateStripes(TreeMap<byte[], HStoreFile> newStripes) {
       // Validate that the removed and added aggregate ranges still make for a full key space.
       boolean hasStripes = !this.stripeFiles.isEmpty();
       this.stripeEndRows = new ArrayList<>(Arrays.asList(StripeStoreFileManager.this.state.stripeEndRows));
@@ -903,7 +905,7 @@ public class StripeStoreFileManager
       byte[] firstStartRow = startOf(newStripes.firstEntry().getValue());
       byte[] lastEndRow = newStripes.lastKey();
       if (!hasStripes && (!isOpen(firstStartRow) || !isOpen(lastEndRow))) {
-        throw new IOException("Newly created stripes do not cover the entire key space.");
+        throw new IllegalStateException("Newly created stripes do not cover the entire key space.");
       }
 
       boolean canAddNewStripes = true;
@@ -915,11 +917,15 @@ public class StripeStoreFileManager
           removeFrom = 0;
         } else {
           removeFrom = findStripeIndexByEndRow(firstStartRow);
-          if (removeFrom < 0) throw new IOException("Compaction is trying to add a bad range.");
+          if (removeFrom < 0) {
+            throw new IllegalStateException("Compaction is trying to add a bad range.");
+          }
           ++removeFrom;
         }
         int removeTo = findStripeIndexByEndRow(lastEndRow);
-        if (removeTo < 0) throw new IOException("Compaction is trying to add a bad range.");
+        if (removeTo < 0) {
+          throw new IllegalStateException("Compaction is trying to add a bad range.");
+        }
         // See if there are files in the stripes we are trying to replace.
         ArrayList<HStoreFile> conflictingFiles = new ArrayList<>();
         for (int removeIndex = removeTo; removeIndex >= removeFrom; --removeIndex) {
@@ -961,7 +967,9 @@ public class StripeStoreFileManager
         }
       }
 
-      if (!canAddNewStripes) return; // Files were already put into L0.
+      if (!canAddNewStripes) {
+        return; // Files were already put into L0.
+      }
 
       // Now, insert new stripes. The total ranges match, so we can insert where we removed.
       byte[] previousEndRow = null;
@@ -972,8 +980,8 @@ public class StripeStoreFileManager
           assert !isOpen(previousEndRow);
           byte[] startRow = startOf(newStripe.getValue());
           if (!rowEquals(previousEndRow, startRow)) {
-            throw new IOException("The new stripes produced by "
-                + (isFlush ? "flush" : "compaction") + " are not contiguous");
+            throw new IllegalStateException("The new stripes produced by " +
+              (isFlush ? "flush" : "compaction") + " are not contiguous");
           }
         }
         // Add the new stripe.

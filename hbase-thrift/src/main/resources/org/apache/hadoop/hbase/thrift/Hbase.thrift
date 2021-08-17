@@ -174,6 +174,7 @@ struct TAppend {
  */
 exception IOError {
   1:string message
+  2:bool canRetry
 }
 
 /**
@@ -198,6 +199,22 @@ exception AlreadyExists {
 enum TThriftServerType {
   ONE = 1,
   TWO = 2
+}
+
+enum TPermissionScope {
+  TABLE = 0,
+  NAMESPACE = 1
+}
+
+/**
+ * TAccessControlEntity for permission control
+ */
+struct TAccessControlEntity {
+ 1: required string username
+ 2: required TPermissionScope scope
+ 4: required string actions
+ 5: optional Bytes tableName
+ 6: optional string nsName
 }
 
 //
@@ -977,4 +994,18 @@ service Hbase {
    * Returns the cluster ID for this cluster.
    */
    string getClusterId()
+
+   /**
+    * Grant permissions in namespace or table level.
+    */
+   bool grant(
+     1: required TAccessControlEntity info
+   ) throws (1: IOError io)
+
+   /**
+    * Revoke permissions in namespace or table level.
+    */
+   bool revoke(
+     1: required TAccessControlEntity info
+   ) throws (1: IOError io)
 }

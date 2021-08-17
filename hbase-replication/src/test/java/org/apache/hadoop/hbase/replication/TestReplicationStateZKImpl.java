@@ -21,7 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -46,13 +46,13 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
       HBaseClassTestRule.forClass(TestReplicationStateZKImpl.class);
 
   private static Configuration conf;
-  private static HBaseZKTestingUtility utility;
+  private static HBaseZKTestingUtil utility;
   private static ZKWatcher zkw;
   private static String replicationZNode;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    utility = new HBaseZKTestingUtility();
+    utility = new HBaseZKTestingUtil();
     utility.startMiniZKCluster();
     conf = utility.getConfiguration();
     conf.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);

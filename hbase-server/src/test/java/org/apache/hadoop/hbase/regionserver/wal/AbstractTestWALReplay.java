@@ -51,11 +51,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -120,7 +120,7 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class AbstractTestWALReplay {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractTestWALReplay.class);
-  static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
   private Path hbaseRootDir = null;
   private String logName;
@@ -156,7 +156,8 @@ public abstract class AbstractTestWALReplay {
     this.hbaseRootDir = CommonFSUtils.getRootDir(this.conf);
     this.oldLogDir = new Path(this.hbaseRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName =
-      ServerName.valueOf(currentTest.getMethodName() + "-manual", 16010, System.currentTimeMillis())
+      ServerName.valueOf(currentTest.getMethodName() + "-manual", 16010,
+        EnvironmentEdgeManager.currentTime())
         .toString();
     this.logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
     this.logDir = new Path(this.hbaseRootDir, logName);
@@ -207,7 +208,7 @@ public abstract class AbstractTestWALReplay {
     resultScanner.close();
     assertEquals(1, count);
 
-    MiniHBaseCluster hbaseCluster = TEST_UTIL.getMiniHBaseCluster();
+    SingleProcessHBaseCluster hbaseCluster = TEST_UTIL.getMiniHBaseCluster();
     List<HRegion> regions = hbaseCluster.getRegions(tableName);
     assertEquals(1, regions.size());
 
@@ -277,8 +278,8 @@ public abstract class AbstractTestWALReplay {
 
     TableDescriptor tableDescriptor = createBasic3FamilyHTD(tableName);
     Region region2 =
-      HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, tableDescriptor);
-    HBaseTestingUtility.closeRegionAndWAL(region2);
+      HBaseTestingUtil.createRegionAndWAL(hri, hbaseRootDir, this.conf, tableDescriptor);
+    HBaseTestingUtil.closeRegionAndWAL(region2);
     final byte[] rowName = tableName.getName();
 
     WAL wal1 = createWAL(this.conf, hbaseRootDir, logName);
@@ -335,8 +336,8 @@ public abstract class AbstractTestWALReplay {
     final Path basedir = new Path(this.hbaseRootDir, tableName.getNameAsString());
     deleteDir(basedir);
     final TableDescriptor htd = createBasic3FamilyHTD(tableName);
-    Region region2 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
-    HBaseTestingUtility.closeRegionAndWAL(region2);
+    Region region2 = HBaseTestingUtil.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtil.closeRegionAndWAL(region2);
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
     HRegion region = HRegion.openHRegion(hri, htd, wal, this.conf);
 
@@ -358,7 +359,7 @@ public abstract class AbstractTestWALReplay {
 
     // Now 'crash' the region by stealing its wal
     final Configuration newConf = HBaseConfiguration.create(this.conf);
-    User user = HBaseTestingUtility.getDifferentUser(newConf, tableName.getNameAsString());
+    User user = HBaseTestingUtil.getDifferentUser(newConf, tableName.getNameAsString());
     user.runAs(new PrivilegedExceptionAction() {
       @Override
       public Object run() throws Exception {
@@ -394,8 +395,8 @@ public abstract class AbstractTestWALReplay {
     final Path basedir = new Path(this.hbaseRootDir, tableName.getNameAsString());
     deleteDir(basedir);
     final TableDescriptor htd = createBasic3FamilyHTD(tableName);
-    HRegion region2 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
-    HBaseTestingUtility.closeRegionAndWAL(region2);
+    HRegion region2 = HBaseTestingUtil.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtil.closeRegionAndWAL(region2);
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
     HRegion region = HRegion.openHRegion(hri, htd, wal, this.conf);
 
@@ -422,7 +423,7 @@ public abstract class AbstractTestWALReplay {
 
     // Now 'crash' the region by stealing its wal
     final Configuration newConf = HBaseConfiguration.create(this.conf);
-    User user = HBaseTestingUtility.getDifferentUser(newConf, tableName.getNameAsString());
+    User user = HBaseTestingUtil.getDifferentUser(newConf, tableName.getNameAsString());
     user.runAs(new PrivilegedExceptionAction() {
       @Override
       public Object run() throws Exception {
@@ -457,8 +458,8 @@ public abstract class AbstractTestWALReplay {
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
     final TableDescriptor htd = createBasic3FamilyHTD(tableName);
-    HRegion region3 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
-    HBaseTestingUtility.closeRegionAndWAL(region3);
+    HRegion region3 = HBaseTestingUtil.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtil.closeRegionAndWAL(region3);
     // Write countPerFamily edits into the three families. Do a flush on one
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
@@ -502,7 +503,7 @@ public abstract class AbstractTestWALReplay {
     assertEquals(2 * result.size(), result2.size());
     wal2.sync();
     final Configuration newConf = HBaseConfiguration.create(this.conf);
-    User user = HBaseTestingUtility.getDifferentUser(newConf, tableName.getNameAsString());
+    User user = HBaseTestingUtil.getDifferentUser(newConf, tableName.getNameAsString());
     user.runAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {
@@ -553,8 +554,8 @@ public abstract class AbstractTestWALReplay {
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
     final TableDescriptor htd = createBasic3FamilyHTD(tableName);
-    HRegion region3 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
-    HBaseTestingUtility.closeRegionAndWAL(region3);
+    HRegion region3 = HBaseTestingUtil.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtil.closeRegionAndWAL(region3);
     // Write countPerFamily edits into the three families. Do a flush on one
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
@@ -630,8 +631,8 @@ public abstract class AbstractTestWALReplay {
     final Path basedir = CommonFSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
     final TableDescriptor htd = createBasic3FamilyHTD(tableName);
-    HRegion region3 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
-    HBaseTestingUtility.closeRegionAndWAL(region3);
+    HRegion region3 = HBaseTestingUtil.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtil.closeRegionAndWAL(region3);
     // Write countPerFamily edits into the three families. Do a flush on one
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
@@ -729,8 +730,8 @@ public abstract class AbstractTestWALReplay {
     deleteDir(basedir);
 
     final TableDescriptor htd = createBasic3FamilyHTD(tableName);
-    HRegion region2 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
-    HBaseTestingUtility.closeRegionAndWAL(region2);
+    HRegion region2 = HBaseTestingUtil.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtil.closeRegionAndWAL(region2);
     final WAL wal = createWAL(this.conf, hbaseRootDir, logName);
     final byte[] rowName = tableName.getName();
     final byte[] regionName = hri.getEncodedNameAsBytes();
@@ -770,7 +771,7 @@ public abstract class AbstractTestWALReplay {
     // Make a new conf and a new fs for the splitter to run on so we can take
     // over old wal.
     final Configuration newConf = HBaseConfiguration.create(this.conf);
-    User user = HBaseTestingUtility.getDifferentUser(newConf, ".replay.wal.secondtime");
+    User user = HBaseTestingUtil.getDifferentUser(newConf, ".replay.wal.secondtime");
     user.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -884,9 +885,9 @@ public abstract class AbstractTestWALReplay {
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
     final TableDescriptor htd = createBasic1FamilyHTD(tableName);
-    HRegion region1 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HRegion region1 = HBaseTestingUtil.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
     Path regionDir = region1.getWALRegionDir();
-    HBaseTestingUtility.closeRegionAndWAL(region1);
+    HBaseTestingUtil.closeRegionAndWAL(region1);
 
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
     HRegion region = HRegion.openHRegion(this.conf, this.fs, hbaseRootDir, hri, htd, wal);
@@ -984,8 +985,8 @@ public abstract class AbstractTestWALReplay {
     for (byte[] fam : htd.getColumnFamilyNames()) {
       scopes.put(fam, 0);
     }
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtil.closeRegionAndWAL(region);
     final byte[] family = htd.getColumnFamilies()[0].getName();
     final byte[] rowName = tableName.getName();
     FSWALEntry entry1 = createFSWALEntry(htd, hri, 1L, rowName, family, ee, mvcc, 1, scopes);
@@ -1049,7 +1050,7 @@ public abstract class AbstractTestWALReplay {
     wal.init();
     // Set down maximum recovery so we dfsclient doesn't linger retrying something
     // long gone.
-    HBaseTestingUtility.setMaxRecoveryErrorCount(wal.getOutputStream(), 1);
+    HBaseTestingUtil.setMaxRecoveryErrorCount(wal.getOutputStream(), 1);
     return wal;
   }
 

@@ -32,7 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -81,7 +82,7 @@ public class TestFlushSnapshotFromClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFlushSnapshotFromClient.class);
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected static final int NUM_RS = 2;
   protected static final byte[] TEST_FAM = Bytes.toBytes("fam");
   protected static final TableName TABLE_NAME = TableName.valueOf("test");
@@ -441,18 +442,19 @@ public class TestFlushSnapshotFromClient {
   private void waitRegionsAfterMerge(final long numRegionsAfterMerge)
       throws IOException, InterruptedException {
     // Verify that there's one region less
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     while (admin.getRegions(TABLE_NAME).size() != numRegionsAfterMerge) {
       // This may be flaky... if after 15sec the merge is not complete give up
       // it will fail in the assertEquals(numRegionsAfterMerge).
-      if ((System.currentTimeMillis() - startTime) > 15000)
+      if ((EnvironmentEdgeManager.currentTime() - startTime) > 15000) {
         break;
+      }
       Thread.sleep(100);
     }
     SnapshotTestingUtils.waitForTableToBeOnline(UTIL, TABLE_NAME);
   }
 
-  protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
+  protected void verifyRowCount(final HBaseTestingUtil util, final TableName tableName,
       long expectedRows) throws IOException {
     SnapshotTestingUtils.verifyRowCount(util, tableName, expectedRows);
   }

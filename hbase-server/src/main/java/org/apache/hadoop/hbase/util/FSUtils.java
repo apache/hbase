@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.SAFEMODE_GET;
+
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -79,7 +81,6 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Progressable;
@@ -255,28 +256,14 @@ public final class FSUtils {
   }
 
   /**
-   * We use reflection because {@link DistributedFileSystem#setSafeMode(
-   * HdfsConstants.SafeModeAction action, boolean isChecked)} is not in hadoop 1.1
+   * Inquire the Active NameNode's safe mode status.
    *
-   * @param dfs
+   * @param dfs A DistributedFileSystem object representing the underlying HDFS.
    * @return whether we're in safe mode
    * @throws IOException
    */
   private static boolean isInSafeMode(DistributedFileSystem dfs) throws IOException {
-    boolean inSafeMode = false;
-    try {
-      Method m = DistributedFileSystem.class.getMethod("setSafeMode", new Class<?> []{
-          org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.class, boolean.class});
-      inSafeMode = (Boolean) m.invoke(dfs,
-        org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.SAFEMODE_GET, true);
-    } catch (Exception e) {
-      if (e instanceof IOException) throw (IOException) e;
-
-      // Check whether dfs is on safemode.
-      inSafeMode = dfs.setSafeMode(
-        org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.SAFEMODE_GET);
-    }
-    return inSafeMode;
+    return dfs.setSafeMode(SAFEMODE_GET, true);
   }
 
   /**
@@ -607,7 +594,7 @@ public final class FSUtils {
   throws IOException {
     // Rewrite the file as pb.  Move aside the old one first, write new
     // then delete the moved-aside file.
-    Path movedAsideName = new Path(p + "." + System.currentTimeMillis());
+    Path movedAsideName = new Path(p + "." + EnvironmentEdgeManager.currentTime());
     if (!fs.rename(p, movedAsideName)) throw new IOException("Failed rename of " + p);
     setClusterId(fs, rootdir, cid, 100);
     if (!fs.delete(movedAsideName, false)) {

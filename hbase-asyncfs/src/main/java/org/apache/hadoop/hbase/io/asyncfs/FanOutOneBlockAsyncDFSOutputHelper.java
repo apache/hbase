@@ -139,15 +139,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static final LeaseManager LEASE_MANAGER;
 
-  // This is used to terminate a recoverFileLease call when FileSystem is already closed.
-  // isClientRunning is not public so we need to use reflection.
-  private interface DFSClientAdaptor {
-
-    boolean isClientRunning(DFSClient client);
-  }
-
-  private static final DFSClientAdaptor DFS_CLIENT_ADAPTOR;
-
   // helper class for creating files.
   private interface FileCreator {
     default HdfsFileStatus create(ClientProtocol instance, String src, FsPermission masked,
@@ -172,27 +163,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
   }
 
   private static final FileCreator FILE_CREATOR;
-
-  // CreateFlag.SHOULD_REPLICATE is to make OutputStream on a EC directory support hflush/hsync, but
-  // EC is introduced in hadoop 3.x so we do not have this enum on 2.x, that's why we need to
-  // indirectly reference it through reflection.
-  private static final CreateFlag SHOULD_REPLICATE_FLAG;
-
-  private static DFSClientAdaptor createDFSClientAdaptor() throws NoSuchMethodException {
-    Method isClientRunningMethod = DFSClient.class.getDeclaredMethod("isClientRunning");
-    isClientRunningMethod.setAccessible(true);
-    return new DFSClientAdaptor() {
-
-      @Override
-      public boolean isClientRunning(DFSClient client) {
-        try {
-          return (Boolean) isClientRunningMethod.invoke(client);
-        } catch (IllegalAccessException | InvocationTargetException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    };
-  }
 
   private static LeaseManager createLeaseManager() throws NoSuchMethodException {
     Method beginFileLeaseMethod =
@@ -246,18 +216,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     };
   }
 
-  private static FileCreator createFileCreator2() throws NoSuchMethodException {
-    Method createMethod = ClientProtocol.class.getMethod("create", String.class, FsPermission.class,
-      String.class, EnumSetWritable.class, boolean.class, short.class, long.class,
-      CryptoProtocolVersion[].class);
-
-    return (instance, src, masked, clientName, flag, createParent, replication, blockSize,
-        supportedVersions) -> {
-      return (HdfsFileStatus) createMethod.invoke(instance, src, masked, clientName, flag,
-        createParent, replication, blockSize, supportedVersions);
-    };
-  }
-
   private static FileCreator createFileCreator() throws NoSuchMethodException {
     try {
       return createFileCreator3_3();
@@ -265,21 +223,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       LOG.debug("ClientProtocol::create wrong number of arguments, should be hadoop 3.2 or below");
     }
 
-    try {
-      return createFileCreator3();
-    } catch (NoSuchMethodException e) {
-      LOG.debug("ClientProtocol::create wrong number of arguments, should be hadoop 2.x");
-    }
-    return createFileCreator2();
-  }
-
-  private static CreateFlag loadShouldReplicateFlag() {
-    try {
-      return CreateFlag.valueOf("SHOULD_REPLICATE");
-    } catch (IllegalArgumentException e) {
-      LOG.debug("can not find SHOULD_REPLICATE flag, should be hadoop 2.x", e);
-      return null;
-    }
+    return createFileCreator3();
   }
 
   // cancel the processing if DFSClient is already closed.
@@ -293,16 +237,14 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
     @Override
     public boolean progress() {
-      return DFS_CLIENT_ADAPTOR.isClientRunning(client);
+      return client.isClientRunning();
     }
   }
 
   static {
     try {
       LEASE_MANAGER = createLeaseManager();
-      DFS_CLIENT_ADAPTOR = createDFSClientAdaptor();
       FILE_CREATOR = createFileCreator();
-      SHOULD_REPLICATE_FLAG = loadShouldReplicateFlag();
     } catch (Exception e) {
       String msg = "Couldn't properly initialize access to HDFS internals. Please " +
           "update your WAL Provider to not make use of the 'asyncfs' provider. See " +
@@ -503,9 +445,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     if (overwrite) {
       flags.add(CreateFlag.OVERWRITE);
     }
-    if (SHOULD_REPLICATE_FLAG != null) {
-      flags.add(SHOULD_REPLICATE_FLAG);
-    }
+    flags.add(CreateFlag.SHOULD_REPLICATE);
     return new EnumSetWritable<>(EnumSet.copyOf(flags));
   }
 

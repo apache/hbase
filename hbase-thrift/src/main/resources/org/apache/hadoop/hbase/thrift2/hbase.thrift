@@ -511,6 +511,7 @@ struct TOnlineLogRecord {
  */
 exception TIOError {
   1: optional string message
+  2: optional bool canRetry
 }
 
 /**
@@ -527,6 +528,22 @@ exception TIllegalArgument {
 enum TThriftServerType {
   ONE = 1,
   TWO = 2
+}
+
+enum TPermissionScope {
+  TABLE = 0,
+  NAMESPACE = 1
+}
+
+/**
+ * TAccessControlEntity for permission control
+ */
+struct TAccessControlEntity {
+ 1: required string username
+ 2: required TPermissionScope scope
+ 4: required string actions
+ 5: optional string tableName
+ 6: optional string nsName
 }
 
 service THBaseService {
@@ -1131,4 +1148,17 @@ service THBaseService {
     1: set<TServerName> serverNames
   ) throws (1: TIOError io)
 
+  /**
+   *  Grant permissions in table or namespace level.
+   */
+  bool grant(
+    1: required TAccessControlEntity info
+  ) throws (1: TIOError io)
+
+  /**
+   *  Revoke permissions in table or namespace level.
+   */
+   bool revoke(
+    1: required TAccessControlEntity info
+   ) throws (1: TIOError io)
 }

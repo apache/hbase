@@ -26,12 +26,14 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -137,6 +139,39 @@ public class TestRegionInfoBuilder {
   }
 
   @Test
+  public void testContainsRangeForMetaTable() {
+    TableDescriptor tableDesc =
+        TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableDesc.getTableName()).build();
+    byte[] startRow = HConstants.EMPTY_START_ROW;
+    byte[] row1 = Bytes.toBytes("a,a,0");
+    byte[] row2 = Bytes.toBytes("aaaaa,,1");
+    byte[] row3 = Bytes.toBytes("aaaaa,\u0000\u0000,2");
+    byte[] row4 = Bytes.toBytes("aaaaa,\u0001,3");
+    byte[] row5 = Bytes.toBytes("aaaaa,a,4");
+    byte[] row6 = Bytes.toBytes("aaaaa,\u1000,5");
+
+    // Single row range at start of region
+    assertTrue(hri.containsRange(startRow, startRow));
+    // Fully contained range
+    assertTrue(hri.containsRange(row1, row2));
+    assertTrue(hri.containsRange(row2, row3));
+    assertTrue(hri.containsRange(row3, row4));
+    assertTrue(hri.containsRange(row4, row5));
+    assertTrue(hri.containsRange(row5, row6));
+    // Range overlapping start of region
+    assertTrue(hri.containsRange(startRow, row2));
+    // Fully contained single-row range
+    assertTrue(hri.containsRange(row1, row1));
+    // Degenerate range
+    try {
+      hri.containsRange(row3, row2);
+      fail("Invalid range did not throw IAE");
+    } catch (IllegalArgumentException iae) {
+    }
+  }
+
+  @Test
   public void testLastRegionCompare() {
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(name.getTableName()).build();
     RegionInfo rip = RegionInfoBuilder.newBuilder(tableDesc.getTableName())
@@ -198,7 +233,7 @@ public class TestRegionInfoBuilder {
   public void testParseName() throws IOException {
     final TableName tableName = name.getTableName();
     byte[] startKey = Bytes.toBytes("startKey");
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     int replicaId = 42;
 
     // test without replicaId
@@ -228,7 +263,7 @@ public class TestRegionInfoBuilder {
     byte[] startKey = Bytes.toBytes("startKey");
     byte[] endKey = Bytes.toBytes("endKey");
     boolean split = false;
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     int replicaId = 42;
 
     RegionInfo ri = RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).setEndKey(endKey)

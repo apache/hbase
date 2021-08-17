@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.mob;
 
 import java.util.Random;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -46,7 +47,7 @@ public class TestMobDataBlockEncoding {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobDataBlockEncoding.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static byte [] row1 = Bytes.toBytes("row1");
   private final static byte [] family = Bytes.toBytes("family");
   private final static byte [] qf1 = Bytes.toBytes("qualifier1");
@@ -103,7 +104,7 @@ public class TestMobDataBlockEncoding {
   public void testDataBlockEncoding(DataBlockEncoding encoding) throws Exception {
     String TN = "testDataBlockEncoding" + encoding;
     setUp(defaultThreshold, TN, encoding);
-    long ts1 = System.currentTimeMillis();
+    long ts1 = EnvironmentEdgeManager.currentTime();
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
     byte[] value = generateMobValue((int) defaultThreshold + 1);

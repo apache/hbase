@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -90,7 +90,7 @@ public class TestWALSplitToHFile {
       HBaseClassTestRule.forClass(TestWALSplitToHFile.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractTestWALReplay.class);
-  static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private final EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
   private Path rootDir = null;
   private String logName;
@@ -132,8 +132,9 @@ public class TestWALSplitToHFile {
     this.rootDir = CommonFSUtils.getRootDir(this.conf);
     this.oldLogDir = new Path(this.rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName =
-        ServerName.valueOf(TEST_NAME.getMethodName() + "-manual", 16010, System.currentTimeMillis())
-            .toString();
+      ServerName.valueOf(TEST_NAME.getMethodName() + "-manual", 16010,
+        EnvironmentEdgeManager.currentTime())
+          .toString();
     this.logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
     this.logDir = new Path(this.rootDir, logName);
     if (UTIL.getDFSCluster().getFileSystem().exists(this.rootDir)) {
@@ -188,8 +189,8 @@ public class TestWALSplitToHFile {
     final Path tableDir = CommonFSUtils.getTableDir(this.rootDir, tableName);
     deleteDir(tableDir);
     FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, td, false);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(ri, rootDir, this.conf, td);
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(ri, rootDir, this.conf, td);
+    HBaseTestingUtil.closeRegionAndWAL(region);
     return new Pair<>(td, ri);
   }
 
@@ -209,8 +210,9 @@ public class TestWALSplitToHFile {
     FileSystem walFs = CommonFSUtils.getWALFileSystem(this.conf);
     this.oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName =
-        ServerName.valueOf(TEST_NAME.getMethodName() + "-manual", 16010, System.currentTimeMillis())
-            .toString();
+      ServerName.valueOf(TEST_NAME.getMethodName() + "-manual", 16010,
+        EnvironmentEdgeManager.currentTime())
+          .toString();
     this.logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
     this.logDir = new Path(walRootDir, logName);
     this.wals = new WALFactory(conf, TEST_NAME.getMethodName());
@@ -428,7 +430,7 @@ public class TestWALSplitToHFile {
     assertEquals(2 * result.size(), result2.size());
     wal2.sync();
     final Configuration newConf = HBaseConfiguration.create(this.conf);
-    User user = HBaseTestingUtility.getDifferentUser(newConf, td.getTableName().getNameAsString());
+    User user = HBaseTestingUtil.getDifferentUser(newConf, td.getTableName().getNameAsString());
     user.runAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {

@@ -27,11 +27,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -60,7 +61,7 @@ public class TestSnapshotScannerHDFSAclController2 {
       LoggerFactory.getLogger(TestSnapshotScannerHDFSAclController2.class);
 
   private static final String UN_GRANT_USER = "un_grant_user";
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf = TEST_UTIL.getConfiguration();
   private static Admin admin = null;
   private static SnapshotScannerHDFSAclHelper helper;
@@ -85,6 +86,8 @@ public class TestSnapshotScannerHDFSAclController2 {
           + SnapshotScannerHDFSAclController.class.getName());
 
     TEST_UTIL.startMiniCluster();
+    ProcedureTestingUtility.waitAllProcedures(
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor());
     TEST_UTIL.waitTableAvailable(PermissionStorage.ACL_TABLE_NAME);
     admin = TEST_UTIL.getAdmin();
     Path rootDir = TEST_UTIL.getDefaultRootDirPath();

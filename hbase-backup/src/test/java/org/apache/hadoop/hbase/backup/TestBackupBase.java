@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.AfterClass;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,9 +78,9 @@ import org.slf4j.LoggerFactory;
 public class TestBackupBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupBase.class);
 
-  protected static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  protected static HBaseTestingUtility TEST_UTIL2;
-  protected static Configuration conf1 = TEST_UTIL.getConfiguration();
+  protected static HBaseTestingUtil TEST_UTIL;
+  protected static HBaseTestingUtil TEST_UTIL2;
+  protected static Configuration conf1;
   protected static Configuration conf2;
 
   protected static TableName table1 = TableName.valueOf("table1");
@@ -98,14 +98,13 @@ public class TestBackupBase {
   protected static final byte[] qualName = Bytes.toBytes("q1");
   protected static final byte[] famName = Bytes.toBytes("f");
 
-  protected static String BACKUP_ROOT_DIR = Path.SEPARATOR +"backupUT";
-  protected static String BACKUP_REMOTE_ROOT_DIR = Path.SEPARATOR + "backupUT";
+  protected static String BACKUP_ROOT_DIR;
+  protected static String BACKUP_REMOTE_ROOT_DIR;
   protected static String provider = "defaultProvider";
   protected static boolean secure = false;
 
-  protected static boolean autoRestoreOnFailure = true;
-  protected static boolean setupIsDone = false;
-  protected static boolean useSecondCluster = false;
+  protected static boolean autoRestoreOnFailure;
+  protected static boolean useSecondCluster;
 
   static class IncrementalTableBackupClientForTest extends IncrementalTableBackupClient {
     public IncrementalTableBackupClientForTest() {
@@ -270,14 +269,10 @@ public class TestBackupBase {
     }
   }
 
-  /**
-   * @throws Exception if starting the mini cluster or setting up the tables fails
-   */
-  @Before
-  public void setUp() throws Exception {
-    if (setupIsDone) {
-      return;
-    }
+  public static void setUpHelper() throws Exception {
+    BACKUP_ROOT_DIR = Path.SEPARATOR +"backupUT";
+    BACKUP_REMOTE_ROOT_DIR = Path.SEPARATOR + "backupUT";
+
     if (secure) {
       // set the always on security provider
       UserProvider.setUserProviderForTesting(TEST_UTIL.getConfiguration(),
@@ -301,7 +296,7 @@ public class TestBackupBase {
     if (useSecondCluster) {
       conf2 = HBaseConfiguration.create(conf1);
       conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
-      TEST_UTIL2 = new HBaseTestingUtility(conf2);
+      TEST_UTIL2 = new HBaseTestingUtil(conf2);
       TEST_UTIL2.setZkCluster(TEST_UTIL.getZkCluster());
       TEST_UTIL2.startMiniDFSCluster(3);
       String root2 = TEST_UTIL2.getConfiguration().get("fs.defaultFS");
@@ -324,8 +319,23 @@ public class TestBackupBase {
     }
     createTables();
     populateFromMasterConfig(TEST_UTIL.getHBaseCluster().getMaster().getConfiguration(), conf1);
-    setupIsDone = true;
   }
+
+
+  /**
+   * Setup Cluster with appropriate configurations before running tests.
+   *
+   * @throws Exception if starting the mini cluster or setting up the tables fails
+   */
+  @BeforeClass
+  public static void setUp() throws Exception {
+    TEST_UTIL = new HBaseTestingUtil();
+    conf1 = TEST_UTIL.getConfiguration();
+    autoRestoreOnFailure = true;
+    useSecondCluster = false;
+    setUpHelper();
+  }
+
 
   private static void populateFromMasterConfig(Configuration masterConf, Configuration conf) {
     Iterator<Entry<String, String>> it = masterConf.iterator();
@@ -350,6 +360,8 @@ public class TestBackupBase {
     }
     TEST_UTIL.shutdownMiniCluster();
     TEST_UTIL.shutdownMiniMapReduceCluster();
+    autoRestoreOnFailure = true;
+    useSecondCluster = false;
   }
 
   Table insertIntoTable(Connection conn, TableName table, byte[] family, int id, int numRows)
@@ -413,7 +425,7 @@ public class TestBackupBase {
   }
 
   protected static void createTables() throws Exception {
-    long tid = System.currentTimeMillis();
+    long tid = EnvironmentEdgeManager.currentTime();
     table1 = TableName.valueOf("test-" + tid);
     Admin ha = TEST_UTIL.getAdmin();
 

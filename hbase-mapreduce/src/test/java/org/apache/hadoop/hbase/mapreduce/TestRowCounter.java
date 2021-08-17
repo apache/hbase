@@ -28,13 +28,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
@@ -57,7 +58,7 @@ public class TestRowCounter {
     HBaseClassTestRule.forClass(TestRowCounter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRowCounter.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static String TABLE_NAME = "testRowCounter";
   private final static String TABLE_NAME_TS_RANGE = "testRowCounter_ts_range";
   private final static String COL_FAM = "col_fam";
@@ -249,12 +250,12 @@ public class TestRowCounter {
     // clean up content of TABLE_NAME
     Table table = TEST_UTIL.createTable(TableName.valueOf(TABLE_NAME_TS_RANGE), Bytes.toBytes(COL_FAM));
 
-    ts = System.currentTimeMillis();
+    ts = EnvironmentEdgeManager.currentTime();
     put1.addColumn(family, col1, ts, Bytes.toBytes("val1"));
     table.put(put1);
     Thread.sleep(100);
 
-    ts = System.currentTimeMillis();
+    ts = EnvironmentEdgeManager.currentTime();
     put2.addColumn(family, col1, ts, Bytes.toBytes("val2"));
     put3.addColumn(family, col1, ts, Bytes.toBytes("val3"));
     table.put(put2);
@@ -302,9 +303,9 @@ public class TestRowCounter {
     rowCounter.setConf(TEST_UTIL.getConfiguration());
     args = Arrays.copyOf(args, args.length+1);
     args[args.length-1]="--expectedCount=" + expectedCount;
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     int result = rowCounter.run(args);
-    long duration = System.currentTimeMillis() - start;
+    long duration = EnvironmentEdgeManager.currentTime() - start;
     LOG.debug("row count duration (ms): " + duration);
     assertTrue(result==0);
   }
@@ -318,9 +319,9 @@ public class TestRowCounter {
    */
   private void runCreateSubmittableJobWithArgs(String[] args, int expectedCount) throws Exception {
     Job job = RowCounter.createSubmittableJob(TEST_UTIL.getConfiguration(), args);
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     job.waitForCompletion(true);
-    long duration = System.currentTimeMillis() - start;
+    long duration = EnvironmentEdgeManager.currentTime() - start;
     LOG.debug("row count duration (ms): " + duration);
     assertTrue(job.isSuccessful());
     Counter counter = job.getCounters().findCounter(RowCounter.RowCounterMapper.Counters.ROWS);
@@ -486,12 +487,12 @@ public class TestRowCounter {
     // clean up content of TABLE_NAME
     Table table = TEST_UTIL.createTable(TableName.valueOf(tableName), Bytes.toBytes(COL_FAM));
 
-    ts = System.currentTimeMillis();
+    ts = EnvironmentEdgeManager.currentTime();
     put1.addColumn(family, col1, ts, Bytes.toBytes("val1"));
     table.put(put1);
     Thread.sleep(100);
 
-    ts = System.currentTimeMillis();
+    ts = EnvironmentEdgeManager.currentTime();
     put2.addColumn(family, col1, ts, Bytes.toBytes("val2"));
     put3.addColumn(family, col1, ts, Bytes.toBytes("val3"));
     table.put(put2);

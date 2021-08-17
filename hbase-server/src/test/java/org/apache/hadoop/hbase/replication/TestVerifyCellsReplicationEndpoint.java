@@ -26,7 +26,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -56,7 +56,7 @@ public class TestVerifyCellsReplicationEndpoint {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestVerifyCellsReplicationEndpoint.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static final TableName TABLE_NAME = TableName.valueOf("empty");
 

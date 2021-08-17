@@ -24,7 +24,7 @@ import java.util.Collections;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -94,7 +94,7 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).build())
       .setRegionServerGroup(groupName)
       .build();
-    ADMIN.createTable(desc, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    ADMIN.createTable(desc, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
     // server of test group crash, regions move to default group
     crashRsInGroup(groupName);

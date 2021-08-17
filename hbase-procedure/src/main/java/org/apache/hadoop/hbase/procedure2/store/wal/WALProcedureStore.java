@@ -35,6 +35,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
@@ -53,7 +54,9 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreBase;
 import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -829,12 +832,12 @@ public class WALProcedureStore extends ProcedureStoreBase {
           // Wait SYNC_WAIT_MSEC or the signal of "slots full" before flushing
           syncMaxSlot = runningProcCount;
           assert syncMaxSlot > 0 : "unexpected syncMaxSlot=" + syncMaxSlot;
-          final long syncWaitSt = System.currentTimeMillis();
+          final long syncWaitSt = EnvironmentEdgeManager.currentTime();
           if (slotIndex != syncMaxSlot) {
             slotCond.await(syncWaitMsec, TimeUnit.MILLISECONDS);
           }
 
-          final long currentTs = System.currentTimeMillis();
+          final long currentTs = EnvironmentEdgeManager.currentTime();
           final long syncWaitMs = currentTs - syncWaitSt;
           final float rollSec = getMillisFromLastRoll() / 1000.0f;
           final float syncedPerSec = totalSyncedToStore / rollSec;
@@ -979,7 +982,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   public long getMillisFromLastRoll() {
-    return (System.currentTimeMillis() - lastRollTs.get());
+    return (EnvironmentEdgeManager.currentTime() - lastRollTs.get());
   }
 
   void periodicRollForTesting() throws IOException {
@@ -1069,7 +1072,13 @@ public class WALProcedureStore extends ProcedureStoreBase {
     long startPos = -1;
     newLogFile = getLogFilePath(logId);
     try {
-      newStream = CommonFSUtils.createForWal(fs, newLogFile, false);
+      FSDataOutputStreamBuilder<?, ?> builder = fs.createFile(newLogFile).overwrite(false);
+      if (builder instanceof DistributedFileSystem.HdfsDataOutputStreamBuilder) {
+        newStream = ((DistributedFileSystem.HdfsDataOutputStreamBuilder) builder)
+          .replicate().build();
+      } else {
+        newStream = builder.build();
+      }
     } catch (FileAlreadyExistsException e) {
       LOG.error("Log file with id={} already exists", logId, e);
       return false;
@@ -1103,7 +1112,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     stream = newStream;
     flushLogId = logId;
     totalSynced.set(0);
-    long rollTs = System.currentTimeMillis();
+    long rollTs = EnvironmentEdgeManager.currentTime();
     lastRollTs.set(rollTs);
     logs.add(new ProcedureWALFile(fs, newLogFile, header, startPos, rollTs));
 

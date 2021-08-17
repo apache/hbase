@@ -60,7 +60,7 @@ public class TestPerformanceEvaluation {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestPerformanceEvaluation.class);
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
   @Test
   public void testDefaultInMemoryCompaction() {

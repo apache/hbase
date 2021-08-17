@@ -27,18 +27,30 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface ServerProcedureInterface {
   public enum ServerOperationType {
-    CRASH_HANDLER, SWITCH_RPC_THROTTLE,
+    CRASH_HANDLER,
+    SWITCH_RPC_THROTTLE,
+
     /**
-     * help find a available region server as worker and release worker after task done
-     * invoke SPLIT_WAL_REMOTE operation to send real WAL splitting request to worker
-     * manage the split wal task flow, will retry if SPLIT_WAL_REMOTE failed
+     * help find a available region server as worker and release worker after task done invoke
+     * SPLIT_WAL_REMOTE operation to send real WAL splitting request to worker manage the split wal
+     * task flow, will retry if SPLIT_WAL_REMOTE failed
      */
     SPLIT_WAL,
 
     /**
      * send the split WAL request to region server and handle the response
      */
-    SPLIT_WAL_REMOTE
+    SPLIT_WAL_REMOTE,
+
+    /**
+     * Get all the replication queues of a crash server and assign them to other region servers
+     */
+    CLAIM_REPLICATION_QUEUES,
+
+    /**
+     * send the claim replication queue request to region server to actually assign it
+     */
+    CLAIM_REPLICATION_QUEUE_REMOTE
   }
 
   /**

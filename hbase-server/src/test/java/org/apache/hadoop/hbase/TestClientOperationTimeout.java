@@ -80,7 +80,7 @@ public class TestClientOperationTimeout {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestClientOperationTimeout.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   // Activate the delays after table creation to test get/scan/put
   private static int DELAY_GET;
@@ -100,8 +100,8 @@ public class TestClientOperationTimeout {
   @BeforeClass
   public static void setUp() throws Exception {
     // Set RegionServer class and use default values for other options.
-    StartMiniClusterOption option =
-      StartMiniClusterOption.builder().rsClass(DelayedRegionServer.class).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().rsClass(DelayedRegionServer.class).build();
     UTIL.startMiniCluster(option);
     UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TABLE_NAME)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
@@ -211,7 +211,7 @@ public class TestClientOperationTimeout {
   }
 
   public static final class DelayedRegionServer
-    extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
+    extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
     public DelayedRegionServer(Configuration conf) throws IOException, InterruptedException {
       super(conf);
     }

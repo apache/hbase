@@ -23,7 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -64,7 +64,7 @@ public class TestMasterNoCluster {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterNoCluster.class);
 
-  private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TESTUTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();

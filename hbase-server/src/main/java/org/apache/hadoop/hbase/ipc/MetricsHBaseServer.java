@@ -24,15 +24,21 @@ import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.quotas.QuotaExceededException;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class MetricsHBaseServer {
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsHBaseServer.class);
+
   private MetricsHBaseServerSource source;
   private MetricsHBaseServerWrapper serverWrapper;
 
@@ -116,6 +122,12 @@ public class MetricsHBaseServer {
         source.multiActionTooLargeException();
       } else if (throwable instanceof CallQueueTooBigException) {
         source.callQueueTooBigException();
+      } else if (throwable instanceof QuotaExceededException) {
+        source.quotaExceededException();
+      } else if (throwable instanceof RpcThrottlingException) {
+        source.rpcThrottlingException();
+      } else if (LOG.isDebugEnabled()) {
+        LOG.debug("Unknown exception type", throwable);
       }
     }
   }

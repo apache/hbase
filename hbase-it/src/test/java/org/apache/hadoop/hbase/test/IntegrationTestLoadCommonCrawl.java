@@ -39,7 +39,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.test.util.warc.WARCInputFormat;
 import org.apache.hadoop.hbase.test.util.warc.WARCRecord;
 import org.apache.hadoop.hbase.test.util.warc.WARCWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -447,14 +448,14 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
               .setColumnFamilies(families)
               .build();
 
-          if (getConf().getBoolean(HBaseTestingUtility.PRESPLIT_TEST_TABLE_KEY,
-            HBaseTestingUtility.PRESPLIT_TEST_TABLE)) {
+          if (getConf().getBoolean(HBaseTestingUtil.PRESPLIT_TEST_TABLE_KEY,
+            HBaseTestingUtil.PRESPLIT_TEST_TABLE)) {
             int numberOfServers = admin.getRegionServers().size();
             if (numberOfServers == 0) {
               throw new IllegalStateException("No live regionservers");
             }
-            int regionsPerServer = getConf().getInt(HBaseTestingUtility.REGIONS_PER_SERVER_KEY,
-              HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER);
+            int regionsPerServer = getConf().getInt(HBaseTestingUtil.REGIONS_PER_SERVER_KEY,
+              HBaseTestingUtil.DEFAULT_REGIONS_PER_SERVER);
             int totalNumberOfRegions = numberOfServers * regionsPerServer;
             LOG.info("Creating test table: " + tableDescriptor);
             LOG.info("Number of live regionservers: " + numberOfServers + ", " +
@@ -582,7 +583,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
           String contentType = warcHeader.getField("WARC-Identified-Payload-Type");
           if (contentType != null) {
             LOG.debug("Processing record id=" + recordID + ", targetURI=\"" + targetURI + "\"");
-            long now = System.currentTimeMillis();
+            long now = EnvironmentEdgeManager.currentTime();
 
             // Make row key
 

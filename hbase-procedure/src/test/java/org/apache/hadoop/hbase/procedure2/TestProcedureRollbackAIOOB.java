@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.procedure2;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -43,7 +43,7 @@ public class TestProcedureRollbackAIOOB {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestProcedureRollbackAIOOB.class);
 
-  private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   public static final class ParentProcedure extends NoopProcedure<Void> {
 

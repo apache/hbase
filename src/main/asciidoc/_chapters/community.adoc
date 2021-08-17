@@ -52,8 +52,8 @@ resolve an issue. If master is going to be 3.0.0, branch-2 will be 2.4.0, and br
   2.x+): Mark with 3.0.0 and 2.4.0
 * Commit to master, branch-2, and branch-1 (i.e., backward-compatible new feature, applicable
   everywhere): Mark with 3.0.0, 2.4.0, and 1.7.0
-* Commit to master, branch-2, and branch-2.3, branch-2.2, branch-2, branch-1.4 (i.e., bug fix
-  applicable to all active release lines): Mark with 3.0.0, 2.4.0, 2.3.x, 2.2.x, 1.7.0, and 1.4.x
+* Commit to master, branch-2, and branch-2.3, branch-1, branch-1.4 (i.e., bug fix
+  applicable to all active release lines): Mark with 3.0.0, 2.4.0, 2.3.x, 1.7.0, and 1.4.x
 * Commit a fix to the website: no version
 
 [[hbase.when.to.close.jira]]
@@ -89,9 +89,6 @@ NOTE: End-of-life releases are not included in this list.
 
 | 1.4
 | Andrew Purtell
-
-| 2.2
-| Guanghao Zhang
 
 | 2.3
 | Nick Dimiduk

@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
@@ -71,7 +71,7 @@ public class TestRegionServerNoMaster {
   private static RegionInfo hri;
 
   private static byte[] regionName;
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
 
   @BeforeClass
@@ -93,7 +93,7 @@ public class TestRegionServerNoMaster {
     stopMasterAndAssignMeta(HTU);
   }
 
-  public static void stopMasterAndAssignMeta(HBaseTestingUtility HTU)
+  public static void stopMasterAndAssignMeta(HBaseTestingUtil HTU)
       throws IOException, InterruptedException {
     // Stop master
     HMaster master = HTU.getHBaseCluster().getMaster();
@@ -131,7 +131,7 @@ public class TestRegionServerNoMaster {
   }
 
   /** Flush the given region in the mini cluster. Since no master, we cannot use HBaseAdmin.flush() */
-  public static void flushRegion(HBaseTestingUtility HTU, RegionInfo regionInfo)
+  public static void flushRegion(HBaseTestingUtil HTU, RegionInfo regionInfo)
           throws IOException {
     for (RegionServerThread rst : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
       HRegion region = rst.getRegionServer().getRegionByEncodedName(regionInfo.getEncodedName());
@@ -157,7 +157,7 @@ public class TestRegionServerNoMaster {
   }
 
 
-  public static void openRegion(HBaseTestingUtility HTU, HRegionServer rs, RegionInfo hri)
+  public static void openRegion(HBaseTestingUtil HTU, HRegionServer rs, RegionInfo hri)
       throws Exception {
     AdminProtos.OpenRegionRequest orr =
       RequestConverter.buildOpenRegionRequest(rs.getServerName(), hri, null);
@@ -171,7 +171,7 @@ public class TestRegionServerNoMaster {
     checkRegionIsOpened(HTU, rs, hri);
   }
 
-  public static void checkRegionIsOpened(HBaseTestingUtility HTU, HRegionServer rs,
+  public static void checkRegionIsOpened(HBaseTestingUtil HTU, HRegionServer rs,
       RegionInfo hri) throws Exception {
     while (!rs.getRegionsInTransitionInRS().isEmpty()) {
       Thread.sleep(1);
@@ -180,7 +180,7 @@ public class TestRegionServerNoMaster {
     Assert.assertTrue(rs.getRegion(hri.getRegionName()).isAvailable());
   }
 
-  public static void closeRegion(HBaseTestingUtility HTU, HRegionServer rs, RegionInfo hri)
+  public static void closeRegion(HBaseTestingUtil HTU, HRegionServer rs, RegionInfo hri)
       throws Exception {
     AdminProtos.CloseRegionRequest crr = ProtobufUtil.buildCloseRegionRequest(
       rs.getServerName(), hri.getRegionName());
@@ -189,7 +189,7 @@ public class TestRegionServerNoMaster {
     checkRegionIsClosed(HTU, rs, hri);
   }
 
-  public static void checkRegionIsClosed(HBaseTestingUtility HTU, HRegionServer rs,
+  public static void checkRegionIsClosed(HBaseTestingUtil HTU, HRegionServer rs,
       RegionInfo hri) throws Exception {
     while (!rs.getRegionsInTransitionInRS().isEmpty()) {
       Thread.sleep(1);

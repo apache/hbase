@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterfa
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -46,14 +47,14 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category
-  ({ ReplicationTests.class, LargeTests.class }) public class TestReplicationEmptyWALRecovery
-  extends TestReplicationBase {
+@Category({ ReplicationTests.class, LargeTests.class })
+public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
   MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
   static final RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
   NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
-  @ClassRule public static final HBaseClassTestRule CLASS_RULE =
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestReplicationEmptyWALRecovery.class);
 
   @Before
@@ -125,7 +126,7 @@ import org.junit.experimental.categories.Category;
     final int numRs = UTIL1.getHBaseCluster().getRegionServerThreads().size();
     // for each RS, create an empty wal with same walGroupId
     final List<Path> emptyWalPaths = new ArrayList<>();
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < numRs; i++) {
       RegionInfo regionInfo =
         UTIL1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
@@ -150,10 +151,9 @@ import org.junit.experimental.categories.Category;
   }
 
   /**
-   * Test empty WAL along with non empty WALs in the same batch. This test is to make sure
-   * when we see the empty and handle the EOF exception, we are able to existing the previous
-   * batch of entries without loosing it. This test also tests the number of batches shipped
-   *
+   * Test empty WAL along with non empty WALs in the same batch. This test is to make sure when we
+   * see the empty and handle the EOF exception, we are able to ship the previous batch of entries
+   * without loosing it. This test also tests the number of batches shipped
    * @throws Exception throws any exception
    */
   @Test
@@ -165,7 +165,7 @@ import org.junit.experimental.categories.Category;
     final int numRs = UTIL1.getHBaseCluster().getRegionServerThreads().size();
     // for each RS, create an empty wal with same walGroupId
     final List<Path> emptyWalPaths = new ArrayList<>();
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < numRs; i++) {
       RegionInfo regionInfo =
         UTIL1.getHBaseCluster().getRegions(tableName.getName()).get(0).getRegionInfo();
@@ -173,7 +173,6 @@ import org.junit.experimental.categories.Category;
       Path currentWalPath = AbstractFSWALProvider.getCurrentFileName(wal);
 
       appendEntriesToWal(numOfEntriesToReplicate, wal);
-      wal.rollWriter();
       String walGroupId = AbstractFSWALProvider.getWALPrefixFromWALName(currentWalPath.getName());
       Path emptyWalPath = new Path(UTIL1.getDefaultRootDirPath(), walGroupId + "." + ts);
       UTIL1.getTestFileSystem().create(emptyWalPath).close();
@@ -182,10 +181,10 @@ import org.junit.experimental.categories.Category;
 
     injectEmptyWAL(numRs, emptyWalPaths);
     // There should be three WALs in queue
-    // 1. empty WAL
-    // 2. non empty WAL
+    // 1. non empty WAL
+    // 2. empty WAL
     // 3. live WAL
-    //verifyNumberOfLogsInQueue(3, numRs);
+    verifyNumberOfLogsInQueue(3, numRs);
     hbaseAdmin.enableReplicationPeer(PEER_ID2);
     // ReplicationSource should advance past the empty wal, or else the test will fail
     waitForLogAdvance(numRs);
@@ -208,10 +207,9 @@ import org.junit.experimental.categories.Category;
   }
 
   /**
-   * Test empty WAL along with non empty WALs in the same batch. This test is to make sure
-   * when we see the empty WAL and handle the EOF exception, we are able to proceed
-   * with next batch and replicate it properly without missing data.
-   *
+   * Test empty WAL along with non empty WALs in the same batch. This test is to make sure when we
+   * see the empty WAL and handle the EOF exception, we are able to proceed with next batch and
+   * replicate it properly without missing data.
    * @throws Exception throws any exception
    */
   @Test
@@ -223,8 +221,7 @@ import org.junit.experimental.categories.Category;
     final int numRs = UTIL1.getHBaseCluster().getRegionServerThreads().size();
     // for each RS, create an empty wal with same walGroupId
     final List<Path> emptyWalPaths = new ArrayList<>();
-
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     WAL wal = null;
     for (int i = 0; i < numRs; i++) {
       RegionInfo regionInfo =
@@ -265,9 +262,8 @@ import org.junit.experimental.categories.Category;
   }
 
   /**
-   * This test make sure we replicate all the enties from the non empty WALs which
-   * are surrounding the empty WALs
-   *
+   * This test make sure we replicate all the enties from the non empty WALs which are surrounding
+   * the empty WALs
    * @throws Exception throws exception
    */
   @Test
@@ -279,8 +275,7 @@ import org.junit.experimental.categories.Category;
     final int numRs = UTIL1.getHBaseCluster().getRegionServerThreads().size();
     // for each RS, create an empty wal with same walGroupId
     final List<Path> emptyWalPaths = new ArrayList<>();
-
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     WAL wal = null;
     for (int i = 0; i < numRs; i++) {
       RegionInfo regionInfo =

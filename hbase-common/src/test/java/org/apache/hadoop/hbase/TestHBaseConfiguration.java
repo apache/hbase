@@ -48,7 +48,7 @@ public class TestHBaseConfiguration {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHBaseConfiguration.class);
 
-  private static HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+  private static HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   @AfterClass
   public static void tearDown() throws IOException {
@@ -131,6 +131,19 @@ public class TestHBaseConfiguration {
             conf.getPropertySources("dfs.domain.socket.path")[0]);
     assertEquals("true", conf.get("dfs.client.read.shortcircuit"));
     assertEquals("/var/lib/hadoop-hdfs/dn_socket", conf.get("dfs.domain.socket.path"));
+  }
+
+  @Test
+  public void testDeprecatedConfigurations() {
+    // Configuration.addDeprecations before create Configuration object
+    Configuration.addDeprecations(new Configuration.DeprecationDelta[]{
+      new Configuration.DeprecationDelta("hbase.deprecated.conf", "hbase.new.conf"),
+      new Configuration.DeprecationDelta("hbase.deprecated.conf2", "hbase.new.conf2")
+    });
+    Configuration conf = HBaseConfiguration.create();
+    conf.addResource("hbase-deprecated-conf.xml");
+    assertEquals("1000", conf.get("hbase.new.conf"));
+    assertEquals("1000", conf.get("hbase.new.conf2"));
   }
 
   private static class ReflectiveCredentialProviderClient {

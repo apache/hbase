@@ -39,7 +39,7 @@ public class TableNameTestRule extends TestWatcher {
    * This helper strips out the parameter suffixes.
    * @return current test method name with out parameterized suffixes.
    */
-  private static String cleanUpTestName(String methodName) {
+  public static String cleanUpTestName(String methodName) {
     int index = methodName.indexOf('[');
     if (index == -1) {
       return methodName;

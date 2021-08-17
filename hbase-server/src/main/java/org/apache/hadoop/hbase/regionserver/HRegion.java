@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
-
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.opentelemetry.api.trace.Span;
 import java.io.EOFException;
@@ -74,6 +73,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
@@ -176,7 +176,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -191,7 +190,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceCall;
@@ -830,7 +828,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     /*
      * timestamp.slop provides a server-side constraint on the timestamp. This
-     * assumes that you base your TS around currentTimeMillis(). In this case,
+     * assumes that you base your TS around EnvironmentEdgeManager.currentTime(). In this case,
      * throw an error to the user if the user-specified TS is newer than now +
      * slop. LATEST_TIMESTAMP == don't use this functionality
      */
@@ -1023,16 +1021,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // Remove temporary data left over from old regions
       status.setStatus("Cleaning up temporary data from old regions");
       fs.cleanupTempDir();
-    }
-
-    if (this.writestate.writesEnabled) {
-      status.setStatus("Cleaning up detritus from prior splits");
-      // Get rid of any splits or merges that were lost in-progress.  Clean out
-      // these directories here on open.  We may be opening a region that was
-      // being split but we crashed in the middle of it all.
-      LOG.debug("Cleaning up detritus for " + this.getRegionInfo().getEncodedName());
-      fs.cleanupAnySplitDetritus();
-      fs.cleanupMergesDir();
     }
 
     // Initialize split policy
@@ -1945,7 +1933,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         return true;
       }
       if (!writestate.flushing) return true;
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       long duration = 0;
       boolean interrupted = false;
       LOG.debug("waiting for cache flush to complete for region " + this);
@@ -1961,7 +1949,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             interrupted = true;
             break;
           } finally {
-            duration = System.currentTimeMillis() - start;
+            duration = EnvironmentEdgeManager.currentTime() - start;
           }
         }
       } finally {
@@ -3244,18 +3232,23 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private void updateDeleteLatestVersionTimestamp(Cell cell, Get get, int count, byte[] byteNow)
       throws IOException {
-    List<Cell> result = get(get, false);
+    try (RegionScanner scanner = getScanner(new Scan(get))) {
+      // NOTE: Please don't use HRegion.get() instead,
+      // because it will copy cells to heap. See HBASE-26036
+      List<Cell> result = new ArrayList<>();
+      scanner.next(result);
 
-    if (result.size() < count) {
-      // Nothing to delete
-      PrivateCellUtil.updateLatestStamp(cell, byteNow);
-      return;
+      if (result.size() < count) {
+        // Nothing to delete
+        PrivateCellUtil.updateLatestStamp(cell, byteNow);
+        return;
+      }
+      if (result.size() > count) {
+        throw new RuntimeException("Unexpected size: " + result.size());
+      }
+      Cell getCell = result.get(count - 1);
+      PrivateCellUtil.setTimestamp(cell, getCell.getTimestamp());
     }
-    if (result.size() > count) {
-      throw new RuntimeException("Unexpected size: " + result.size());
-    }
-    Cell getCell = result.get(count - 1);
-    PrivateCellUtil.setTimestamp(cell, getCell.getTimestamp());
   }
 
   @Override
@@ -4044,59 +4037,63 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         get.setTimeRange(tr.getMin(), tr.getMax());
       }
 
-      List<Cell> currentValues = region.get(get, false);
-
-      // Iterate the input columns and update existing values if they were found, otherwise
-      // add new column initialized to the delta amount
-      int currentValuesIndex = 0;
-      for (int i = 0; i < deltas.size(); i++) {
-        Cell delta = deltas.get(i);
-        Cell currentValue = null;
-        if (currentValuesIndex < currentValues.size() &&
-          CellUtil.matchingQualifier(currentValues.get(currentValuesIndex), delta)) {
-          currentValue = currentValues.get(currentValuesIndex);
-          if (i < (deltas.size() - 1) && !CellUtil.matchingQualifier(delta, deltas.get(i + 1))) {
-            currentValuesIndex++;
+      try (RegionScanner scanner = region.getScanner(new Scan(get))) {
+        // NOTE: Please don't use HRegion.get() instead,
+        // because it will copy cells to heap. See HBASE-26036
+        List<Cell> currentValues = new ArrayList<>();
+        scanner.next(currentValues);
+        // Iterate the input columns and update existing values if they were found, otherwise
+        // add new column initialized to the delta amount
+        int currentValuesIndex = 0;
+        for (int i = 0; i < deltas.size(); i++) {
+          Cell delta = deltas.get(i);
+          Cell currentValue = null;
+          if (currentValuesIndex < currentValues.size() && CellUtil
+            .matchingQualifier(currentValues.get(currentValuesIndex), delta)) {
+            currentValue = currentValues.get(currentValuesIndex);
+            if (i < (deltas.size() - 1) && !CellUtil.matchingQualifier(delta, deltas.get(i + 1))) {
+              currentValuesIndex++;
+            }
           }
-        }
-        // Switch on whether this an increment or an append building the new Cell to apply.
-        Cell newCell;
-        if (mutation instanceof Increment) {
-          long deltaAmount = getLongValue(delta);
-          final long newValue = currentValue == null ?
-            deltaAmount : getLongValue(currentValue) + deltaAmount;
-          newCell = reckonDelta(delta, currentValue, columnFamily, now, mutation,
-            (oldCell) -> Bytes.toBytes(newValue));
-        } else {
-          newCell = reckonDelta(delta, currentValue, columnFamily, now, mutation,
-            (oldCell) ->
-              ByteBuffer.wrap(new byte[delta.getValueLength() + oldCell.getValueLength()])
+          // Switch on whether this an increment or an append building the new Cell to apply.
+          Cell newCell;
+          if (mutation instanceof Increment) {
+            long deltaAmount = getLongValue(delta);
+            final long newValue = currentValue == null ? deltaAmount :
+              getLongValue(currentValue) + deltaAmount;
+            newCell = reckonDelta(delta, currentValue, columnFamily, now, mutation,
+              (oldCell) -> Bytes.toBytes(newValue));
+          } else {
+            newCell = reckonDelta(delta, currentValue, columnFamily, now, mutation,
+              (oldCell) -> ByteBuffer.wrap(new byte[delta.getValueLength() +
+                oldCell.getValueLength()])
                 .put(oldCell.getValueArray(), oldCell.getValueOffset(), oldCell.getValueLength())
                 .put(delta.getValueArray(), delta.getValueOffset(), delta.getValueLength())
-                .array()
-          );
-        }
-        if (region.maxCellSize > 0) {
-          int newCellSize = PrivateCellUtil.estimatedSerializedSizeOf(newCell);
-          if (newCellSize > region.maxCellSize) {
-            String msg = "Cell with size " + newCellSize + " exceeds limit of "
-              + region.maxCellSize + " bytes in region " + this;
-            LOG.debug(msg);
-            throw new DoNotRetryIOException(msg);
+                .array());
+          }
+          if (region.maxCellSize > 0) {
+            int newCellSize = PrivateCellUtil.estimatedSerializedSizeOf(newCell);
+            if (newCellSize > region.maxCellSize) {
+              String msg =
+                "Cell with size " + newCellSize + " exceeds limit of " + region.maxCellSize +
+                  " bytes in region " + this;
+              LOG.debug(msg);
+              throw new DoNotRetryIOException(msg);
+            }
+          }
+          cellPairs.add(new Pair<>(currentValue, newCell));
+          // Add to results to get returned to the Client. If null, cilent does not want results.
+          if (results != null) {
+            results.add(newCell);
           }
         }
-        cellPairs.add(new Pair<>(currentValue, newCell));
-        // Add to results to get returned to the Client. If null, cilent does not want results.
-        if (results != null) {
-          results.add(newCell);
+        // Give coprocessors a chance to update the new cells before apply to WAL or memstore
+        if (region.coprocessorHost != null) {
+          // Here the operation must be increment or append.
+          cellPairs = mutation instanceof Increment ?
+            region.coprocessorHost.postIncrementBeforeWAL(mutation, cellPairs) :
+            region.coprocessorHost.postAppendBeforeWAL(mutation, cellPairs);
         }
-      }
-      // Give coprocessors a chance to update the new cells before apply to WAL or memstore
-      if (region.coprocessorHost != null) {
-        // Here the operation must be increment or append.
-        cellPairs = mutation instanceof Increment ?
-          region.coprocessorHost.postIncrementBeforeWAL(mutation, cellPairs) :
-          region.coprocessorHost.postAppendBeforeWAL(mutation, cellPairs);
       }
       return cellPairs.stream().map(Pair::getSecond).collect(Collectors.toList());
     }
@@ -4106,9 +4103,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Function<Cell, byte[]> supplier) throws IOException {
       // Forward any tags found on the delta.
       List<Tag> tags = TagUtil.carryForwardTags(delta);
-      tags = TagUtil.carryForwardTTLTag(tags, mutation.getTTL());
       if (currentCell != null) {
         tags = TagUtil.carryForwardTags(tags, currentCell);
+        tags = TagUtil.carryForwardTTLTag(tags, mutation.getTTL());
         byte[] newValue = supplier.apply(currentCell);
         return ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
           .setRow(mutation.getRow(), 0, mutation.getRow().length)
@@ -4121,6 +4118,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           .setTags(TagUtil.fromList(tags))
           .build();
       } else {
+        tags = TagUtil.carryForwardTTLTag(tags, mutation.getTTL());
         PrivateCellUtil.updateLatestStamp(delta, now);
         return CollectionUtils.isEmpty(tags) ? delta : PrivateCellUtil.createCell(delta, tags);
       }
@@ -4857,26 +4855,32 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // NOTE: We used to wait here until mvcc caught up: mvcc.await();
         // Supposition is that now all changes are done under row locks, then when we go to read,
         // we'll get the latest on this row.
-        List<Cell> result = get(get, false);
         boolean matches = false;
         long cellTs = 0;
-        if (filter != null) {
-          if (!result.isEmpty()) {
-            matches = true;
-            cellTs = result.get(0).getTimestamp();
-          }
-        } else {
-          boolean valueIsNull = comparator.getValue() == null || comparator.getValue().length == 0;
-          if (result.isEmpty() && valueIsNull) {
-            matches = true;
-          } else if (result.size() > 0 && result.get(0).getValueLength() == 0 && valueIsNull) {
-            matches = true;
-            cellTs = result.get(0).getTimestamp();
-          } else if (result.size() == 1 && !valueIsNull) {
-            Cell kv = result.get(0);
-            cellTs = kv.getTimestamp();
-            int compareResult = PrivateCellUtil.compareValue(kv, comparator);
-            matches = matches(op, compareResult);
+        try (RegionScanner scanner = getScanner(new Scan(get))) {
+          // NOTE: Please don't use HRegion.get() instead,
+          // because it will copy cells to heap. See HBASE-26036
+          List<Cell> result = new ArrayList<>(1);
+          scanner.next(result);
+          if (filter != null) {
+            if (!result.isEmpty()) {
+              matches = true;
+              cellTs = result.get(0).getTimestamp();
+            }
+          } else {
+            boolean valueIsNull =
+              comparator.getValue() == null || comparator.getValue().length == 0;
+            if (result.isEmpty() && valueIsNull) {
+              matches = true;
+            } else if (result.size() > 0 && result.get(0).getValueLength() == 0 && valueIsNull) {
+              matches = true;
+              cellTs = result.get(0).getTimestamp();
+            } else if (result.size() == 1 && !valueIsNull) {
+              Cell kv = result.get(0);
+              cellTs = kv.getTimestamp();
+              int compareResult = PrivateCellUtil.compareValue(kv, comparator);
+              matches = matches(op, compareResult);
+            }
           }
         }
 
@@ -6620,7 +6624,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (call.isPresent()) {
         long deadline = call.get().getDeadline();
         if (deadline < Long.MAX_VALUE) {
-          int timeToDeadline = (int) (deadline - System.currentTimeMillis());
+          int timeToDeadline = (int) (deadline - EnvironmentEdgeManager.currentTime());
           if (timeToDeadline <= this.rowLockWaitDuration) {
             reachDeadlineFirst = true;
             timeout = timeToDeadline;
@@ -7557,7 +7561,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       scan.setLoadColumnFamiliesOnDemand(isLoadingCfsOnDemandDefault());
     }
     try (RegionScanner scanner = getScanner(scan, null, nonceGroup, nonce)) {
-      scanner.next(results);
+      List<Cell> tmp = new ArrayList<>();
+      scanner.next(tmp);
+      // Copy EC to heap, then close the scanner.
+      // This can be an EXPENSIVE call. It may make an extra copy from offheap to onheap buffers.
+      // See more details in HBASE-26036.
+      for (Cell cell : tmp) {
+        results.add(cell instanceof ByteBufferExtendedCell ?
+          ((ByteBufferExtendedCell) cell).deepClone(): cell);
+      }
     }
 
     // post-get CP hook
@@ -7574,6 +7586,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.metricsRegion != null) {
       this.metricsRegion.updateGet(EnvironmentEdgeManager.currentTime() - before);
     }
+    if (this.rsServices != null && this.rsServices.getMetrics() != null) {
+      rsServices.getMetrics().updateReadQueryMeter(getRegionInfo().getTable(), 1);
+    }
+    
   }
 
   @Override

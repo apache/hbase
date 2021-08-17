@@ -19,8 +19,7 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.fail;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -28,19 +27,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ReplicationTests.class, LargeTests.class })
-public class TestReplicationKillRS extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationKillRS.class);
+public abstract class TestReplicationKillRS extends TestReplicationBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationKillRS.class);
 
@@ -48,7 +39,7 @@ public class TestReplicationKillRS extends TestReplicationBase {
    * Load up 1 tables over 2 region servers and kill a source during the upload. The failover
    * happens internally. WARNING this test sometimes fails because of HBASE-3515
    */
-  public void loadTableAndKillRS(HBaseTestingUtility util) throws Exception {
+  protected void loadTableAndKillRS(HBaseTestingUtil util) throws Exception {
     // killing the RS with hbase:meta can result into failed puts until we solve
     // IO fencing
     int rsToKill1 = util.getHBaseCluster().getServerWithMeta() == 0 ? 1 : 0;
@@ -84,14 +75,14 @@ public class TestReplicationKillRS extends TestReplicationBase {
     }
 
     int lastCount = 0;
-    final long start = System.currentTimeMillis();
+    final long start = EnvironmentEdgeManager.currentTime();
     int i = 0;
     try (Connection conn = ConnectionFactory.createConnection(CONF2)) {
       try (Table table = conn.getTable(tableName)) {
         while (true) {
           if (i == NB_RETRIES - 1) {
             fail("Waited too much time for queueFailover replication. " + "Waited "
-                + (System.currentTimeMillis() - start) + "ms.");
+                + (EnvironmentEdgeManager.currentTime() - start) + "ms.");
           }
           Result[] res2;
           try (ResultScanner scanner = table.getScanner(new Scan())) {
@@ -115,7 +106,7 @@ public class TestReplicationKillRS extends TestReplicationBase {
     }
   }
 
-  private static Thread killARegionServer(final HBaseTestingUtility utility, final long timeout,
+  private static Thread killARegionServer(final HBaseTestingUtil utility, final long timeout,
       final int rs) {
     Thread killer = new Thread() {
       @Override

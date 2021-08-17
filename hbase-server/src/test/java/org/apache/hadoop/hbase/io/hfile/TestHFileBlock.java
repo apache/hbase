@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.compress.Compressor;
 import org.junit.After;
@@ -109,7 +110,7 @@ public class TestHFileBlock {
   private static int FIELD_LENGTH = 10;
   private static float CHANCE_TO_REPEAT = 0.6f;
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private FileSystem fs;
 
   private final boolean includesMemstoreTS;
@@ -760,11 +761,11 @@ public class TestHFileBlock {
     @Override
     public Boolean call() throws Exception {
       Random rand = new Random(clientId.hashCode());
-      long endTime = System.currentTimeMillis() + 10000;
+      long endTime = EnvironmentEdgeManager.currentTime() + 10000;
       int numBlocksRead = 0;
       int numPositionalRead = 0;
       int numWithOnDiskSize = 0;
-      while (System.currentTimeMillis() < endTime) {
+      while (EnvironmentEdgeManager.currentTime() < endTime) {
         int blockId = rand.nextInt(NUM_TEST_BLOCKS);
         long offset = offsets.get(blockId);
         // now we only support concurrent read with pread = true

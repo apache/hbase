@@ -29,7 +29,7 @@ import java.io.FileOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.IOUtils;
@@ -46,7 +46,7 @@ public class TestCoprocessorClassLoader {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCoprocessorClassLoader.class);
 
-  private static final HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil TEST_UTIL = new HBaseCommonTestingUtil();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
   static {
     TEST_UTIL.getDataTestDir(); // prepare data test dir and hbase local dir

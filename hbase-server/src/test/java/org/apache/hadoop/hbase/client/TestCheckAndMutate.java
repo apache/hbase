@@ -31,7 +31,7 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.FamilyFilter;
@@ -58,7 +58,7 @@ public class TestCheckAndMutate {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCheckAndMutate.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] ROWKEY = Bytes.toBytes("12345");
   private static final byte[] ROWKEY2 = Bytes.toBytes("67890");
   private static final byte[] ROWKEY3 = Bytes.toBytes("abcde");

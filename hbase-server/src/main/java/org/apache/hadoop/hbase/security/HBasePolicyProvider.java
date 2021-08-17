@@ -17,17 +17,19 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos;
 
 /**
  * Implementation of secure Hadoop policy provider for mapping
@@ -41,7 +43,7 @@ public class HBasePolicyProvider extends PolicyProvider {
     new Service("security.client.protocol.acl",
       MasterProtos.HbckService.BlockingInterface.class),
     new Service("security.client.protocol.acl",
-      MasterProtos.ClientMetaService.BlockingInterface.class),
+      RegistryProtos.ClientMetaService.BlockingInterface.class),
     new Service("security.admin.protocol.acl", MasterService.BlockingInterface.class),
     new Service("security.masterregion.protocol.acl",
       RegionServerStatusService.BlockingInterface.class)

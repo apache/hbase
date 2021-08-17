@@ -28,7 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -66,7 +67,7 @@ public class TestFuzzyRowFilterEndToEnd {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestFuzzyRowFilterEndToEnd.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static byte fuzzyValue = (byte) 63;
   private static final Logger LOG = LoggerFactory.getLogger(TestFuzzyRowFilterEndToEnd.class);
 
@@ -341,14 +342,14 @@ public class TestFuzzyRowFilterEndToEnd {
     RegionScanner scanner = first.getScanner(scan);
     List<Cell> results = new ArrayList<>();
     // Result result;
-    long timeBeforeScan = System.currentTimeMillis();
+    long timeBeforeScan = EnvironmentEdgeManager.currentTime();
     int found = 0;
     while (scanner.next(results)) {
       found += results.size();
       results.clear();
     }
     found += results.size();
-    long scanTime = System.currentTimeMillis() - timeBeforeScan;
+    long scanTime = EnvironmentEdgeManager.currentTime() - timeBeforeScan;
     scanner.close();
 
     LOG.info("\nscan time = " + scanTime + "ms");
@@ -442,7 +443,7 @@ public class TestFuzzyRowFilterEndToEnd {
     ResultScanner scanner = hTable.getScanner(scan);
     List<Cell> results = new ArrayList<>();
     Result result;
-    long timeBeforeScan = System.currentTimeMillis();
+    long timeBeforeScan = EnvironmentEdgeManager.currentTime();
     while ((result = scanner.next()) != null) {
       for (Cell kv : result.listCells()) {
         LOG.info("Got rk: " + Bytes.toStringBinary(CellUtil.cloneRow(kv)) + " cq: "
@@ -450,7 +451,7 @@ public class TestFuzzyRowFilterEndToEnd {
         results.add(kv);
       }
     }
-    long scanTime = System.currentTimeMillis() - timeBeforeScan;
+    long scanTime = EnvironmentEdgeManager.currentTime() - timeBeforeScan;
     scanner.close();
 
     LOG.info("scan time = " + scanTime + "ms");

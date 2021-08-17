@@ -148,7 +148,7 @@ function personality_modules
   # If we have HADOOP_PROFILE specified and we're on branch-2.x, pass along
   # the hadoop.profile system property. Ensures that Hadoop2 and Hadoop3
   # logic is not both activated within Maven.
-  if [[ -n "${HADOOP_PROFILE}" ]] && [[ "${PATCH_BRANCH}" =~ branch-2* ]] ; then
+  if [[ -n "${HADOOP_PROFILE}" ]] && [[ "${PATCH_BRANCH}" = branch-2* ]] ; then
     extra="${extra} -Dhadoop.profile=${HADOOP_PROFILE}"
   fi
 
@@ -354,7 +354,7 @@ function refguide_filefilter
 
   if [[ ${filename} =~ src/main/asciidoc ]] ||
      [[ ${filename} =~ src/main/xslt ]] ||
-     [[ ${filename} =~ hbase-common/src/main/resources/hbase-default.xml ]]; then
+     [[ ${filename} =~ hbase-common/src/main/resources/hbase-default\.xml ]]; then
     add_test refguide
   fi
 }
@@ -464,7 +464,7 @@ function shadedjars_rebuild
   # If we have HADOOP_PROFILE specified and we're on branch-2.x, pass along
   # the hadoop.profile system property. Ensures that Hadoop2 and Hadoop3
   # logic is not both activated within Maven.
-  if [[ -n "${HADOOP_PROFILE}" ]] && [[ "${PATCH_BRANCH}" =~ branch-2* ]] ; then
+  if [[ -n "${HADOOP_PROFILE}" ]] && [[ "${PATCH_BRANCH}" = branch-2* ]] ; then
     maven_args+=("-Dhadoop.profile=${HADOOP_PROFILE}")
   fi
 
@@ -495,7 +495,7 @@ function hadoopcheck_filefilter
 {
   local filename=$1
 
-  if [[ ${filename} =~ \.java$ ]] || [[ ${filename} =~ pom.xml$ ]]; then
+  if [[ ${filename} =~ \.java$ ]] || [[ ${filename} =~ pom\.xml$ ]]; then
     add_test hadoopcheck
   fi
 }
@@ -643,7 +643,7 @@ function hadoopcheck_rebuild
   done
 
   hadoop_profile=""
-  if [[ "${PATCH_BRANCH}" =~ branch-2* ]]; then
+  if [[ "${PATCH_BRANCH}" = branch-2* ]]; then
     hadoop_profile="-Dhadoop.profile=3.0"
   fi
   for hadoopver in ${hbase_hadoop3_versions}; do

@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -69,8 +69,8 @@ public class TestTimeRangeMapRed {
       HBaseClassTestRule.forClass(TestTimeRangeMapRed.class);
 
   private final static Logger log = LoggerFactory.getLogger(TestTimeRangeMapRed.class);
-  private static final HBaseTestingUtility UTIL =
-    new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL =
+    new HBaseTestingUtil();
   private Admin admin;
 
   private static final byte [] KEY = Bytes.toBytes("row1");

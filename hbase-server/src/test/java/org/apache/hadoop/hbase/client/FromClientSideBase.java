@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.countRows;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.countRows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -30,11 +30,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -66,7 +66,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 @RunWith(Parameterized.class)
 class FromClientSideBase {
   private static final Logger LOG = LoggerFactory.getLogger(FromClientSideBase.class);
-  static HBaseTestingUtility TEST_UTIL;
+  static HBaseTestingUtil TEST_UTIL;
   static byte [] ROW = Bytes.toBytes("testRow");
   static byte [] FAMILY = Bytes.toBytes("testFamily");
   static final byte[] INVALID_FAMILY = Bytes.toBytes("invalidTestFamily");
@@ -96,7 +96,7 @@ class FromClientSideBase {
     Class<?> confClass = conf.getClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
       ZKConnectionRegistry.class);
     int hedgedReqConfig = conf.getInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY,
-      MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_DEFAULT);
+      AbstractRpcBasedConnectionRegistry.HEDGED_REQS_FANOUT_DEFAULT);
     return confClass.getName().equals(registryImpl.getName()) && numHedgedReqs == hedgedReqConfig;
   }
 
@@ -118,7 +118,7 @@ class FromClientSideBase {
       // We reached end of a parameterized run, clean up.
       TEST_UTIL.shutdownMiniCluster();
     }
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       Arrays.stream(cps).map(Class::getName).toArray(String[]::new));
@@ -127,7 +127,7 @@ class FromClientSideBase {
         ConnectionRegistry.class);
     Preconditions.checkArgument(numHedgedReqs > 0);
     conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
-    StartMiniClusterOption.Builder builder = StartMiniClusterOption.builder();
+    StartTestingClusterOption.Builder builder = StartTestingClusterOption.builder();
     // Multiple masters needed only when hedged reads for master registry are enabled.
     builder.numMasters(numHedgedReqs > 1 ? 3 : 1).numRegionServers(SLAVES);
     TEST_UTIL.startMiniCluster(builder.build());
@@ -200,7 +200,7 @@ class FromClientSideBase {
   protected void putRows(Table ht, int numRows, String value, String key)
     throws IOException {
     for (int i = 0; i < numRows; i++) {
-      String row = key + "_" + HBaseCommonTestingUtility.getRandomUUID().toString();
+      String row = key + "_" + HBaseCommonTestingUtil.getRandomUUID().toString();
       System.out.println(String.format("Saving row: %s, with value %s", row,
         value));
       Put put = new Put(Bytes.toBytes(row));

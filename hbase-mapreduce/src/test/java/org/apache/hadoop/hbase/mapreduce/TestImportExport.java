@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
@@ -83,6 +83,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -117,7 +118,7 @@ public class TestImportExport {
       HBaseClassTestRule.forClass(TestImportExport.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestImportExport.class);
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final byte[] ROW1 = Bytes.toBytesBinary("\\x32row1");
   private static final byte[] ROW2 = Bytes.toBytesBinary("\\x32row2");
   private static final byte[] ROW3 = Bytes.toBytesBinary("\\x32row3");
@@ -130,7 +131,7 @@ public class TestImportExport {
   private static String FQ_OUTPUT_DIR;
   private static final String EXPORT_BATCH_SIZE = "100";
 
-  private static final long now = System.currentTimeMillis();
+  private static final long now = EnvironmentEdgeManager.currentTime();
   private final TableName EXPORT_TABLE = TableName.valueOf("export_table");
   private final TableName IMPORT_TABLE = TableName.valueOf("import_table");
   public static final byte TEST_TAG_TYPE =  (byte) (Tag.CUSTOM_TAG_TYPE_RANGE + 1);
@@ -605,7 +606,7 @@ public class TestImportExport {
   @Test
   public void testExportScan() throws Exception {
     int version = 100;
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     long endTime = startTime + 1;
     String prefix = "row";
     String label_0 = "label_0";

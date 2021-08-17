@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.TableName;
@@ -154,8 +154,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   public static class TestTableSnapshotReducer
     extends Reducer<ImmutableBytesWritable, NullWritable, NullWritable, NullWritable> {
-    HBaseTestingUtility.SeenRowTracker rowTracker =
-        new HBaseTestingUtility.SeenRowTracker(bbb, yyy);
+    HBaseTestingUtil.SeenRowTracker rowTracker =
+        new HBaseTestingUtil.SeenRowTracker(bbb, yyy);
     @Override
     protected void reduce(ImmutableBytesWritable key, Iterable<NullWritable> values,
        Context context) throws IOException, InterruptedException {
@@ -208,7 +208,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   @Override
-  public void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName,
+  public void testWithMockedMapReduce(HBaseTestingUtil util, String snapshotName,
       int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean setLocalityEnabledTo)
       throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -399,7 +399,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
     Assert.assertEquals(expectedNumSplits, splits.size());
 
-    HBaseTestingUtility.SeenRowTracker rowTracker = new HBaseTestingUtility.SeenRowTracker(startRow,
+    HBaseTestingUtil.SeenRowTracker rowTracker = new HBaseTestingUtil.SeenRowTracker(startRow,
         stopRow.length > 0 ? stopRow : Bytes.toBytes("\uffff"));
 
     boolean localityEnabled =
@@ -454,7 +454,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   @Override
-  protected void testWithMapReduceImpl(HBaseTestingUtility util, TableName tableName,
+  protected void testWithMapReduceImpl(HBaseTestingUtil util, TableName tableName,
       String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion,
       int expectedNumSplits, boolean shutdownCluster) throws Exception {
     doTestWithMapReduce(util, tableName, snapshotName, getStartRow(), getEndRow(), tableDir,
@@ -462,7 +462,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   // this is also called by the IntegrationTestTableSnapshotInputFormat
-  public static void doTestWithMapReduce(HBaseTestingUtility util, TableName tableName,
+  public static void doTestWithMapReduce(HBaseTestingUtil util, TableName tableName,
       String snapshotName, byte[] startRow, byte[] endRow, Path tableDir, int numRegions,
       int numSplitsPerRegion, int expectedNumSplits, boolean shutdownCluster) throws Exception {
 

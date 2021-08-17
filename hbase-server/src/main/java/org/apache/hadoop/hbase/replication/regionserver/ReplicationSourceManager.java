@@ -34,9 +34,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -46,7 +44,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -55,7 +52,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationException;
-import org.apache.hadoop.hbase.replication.ReplicationListener;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -63,7 +59,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
@@ -111,23 +106,23 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * <li>No need synchronized on {@link #walsByIdRecoveredQueues}. There are three methods which
  * modify it, {@link #removePeer(String)} ,
  * {@link #cleanOldLogs(String, boolean, ReplicationSourceInterface)} and
- * {@link ReplicationSourceManager.NodeFailoverWorker#run()}.
+ * {@link ReplicationSourceManager#claimQueue(ServerName, String)}.
  * {@link #cleanOldLogs(String, boolean, ReplicationSourceInterface)} is called by
  * {@link ReplicationSourceInterface}. {@link #removePeer(String)} will terminate the
  * {@link ReplicationSourceInterface} firstly, then remove the wals from
- * {@link #walsByIdRecoveredQueues}. And {@link ReplicationSourceManager.NodeFailoverWorker#run()}
- * will add the wals to {@link #walsByIdRecoveredQueues} firstly, then start up a
- * {@link ReplicationSourceInterface}. So there is no race here. For
- * {@link ReplicationSourceManager.NodeFailoverWorker#run()} and {@link #removePeer(String)}, there
- * is already synchronized on {@link #oldsources}. So no need synchronized on
- * {@link #walsByIdRecoveredQueues}.</li>
+ * {@link #walsByIdRecoveredQueues}. And
+ * {@link ReplicationSourceManager#claimQueue(ServerName, String)} will add the wals to
+ * {@link #walsByIdRecoveredQueues} firstly, then start up a {@link ReplicationSourceInterface}. So
+ * there is no race here. For {@link ReplicationSourceManager#claimQueue(ServerName, String)} and
+ * {@link #removePeer(String)}, there is already synchronized on {@link #oldsources}. So no need
+ * synchronized on {@link #walsByIdRecoveredQueues}.</li>
  * <li>Need synchronized on {@link #latestPaths} to avoid the new open source miss new log.</li>
  * <li>Need synchronized on {@link #oldsources} to avoid adding recovered source for the
  * to-be-removed peer.</li>
  * </ul>
  */
 @InterfaceAudience.Private
-public class ReplicationSourceManager implements ReplicationListener {
+public class ReplicationSourceManager {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceManager.class);
   // all the sources that read this RS's logs and every peer only has one replication source
   private final ConcurrentMap<String, ReplicationSourceInterface> sources;
@@ -142,7 +137,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    */
   private final ReplicationQueueStorage queueStorage;
 
-  private final ReplicationTracker replicationTracker;
   private final ReplicationPeers replicationPeers;
   // UUID for this cluster
   private final UUID clusterId;
@@ -208,7 +202,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param oldLogDir the directory where old logs are archived
    */
   public ReplicationSourceManager(ReplicationQueueStorage queueStorage,
-      ReplicationPeers replicationPeers, ReplicationTracker replicationTracker, Configuration conf,
+      ReplicationPeers replicationPeers, Configuration conf,
       Server server, FileSystem fs, Path logDir, Path oldLogDir, UUID clusterId,
       WALFactory walFactory,
       SyncReplicationPeerMappingManager syncReplicationPeerMappingManager,
@@ -216,7 +210,6 @@ public class ReplicationSourceManager implements ReplicationListener {
     this.sources = new ConcurrentHashMap<>();
     this.queueStorage = queueStorage;
     this.replicationPeers = replicationPeers;
-    this.replicationTracker = replicationTracker;
     this.server = server;
     this.walsById = new ConcurrentHashMap<>();
     this.walsByIdRecoveredQueues = new ConcurrentHashMap<>();
@@ -230,7 +223,6 @@ public class ReplicationSourceManager implements ReplicationListener {
     this.clusterId = clusterId;
     this.walFactory = walFactory;
     this.syncReplicationPeerMappingManager = syncReplicationPeerMappingManager;
-    this.replicationTracker.registerListener(this);
     // It's preferable to failover 1 RS at a time, but with good zk servers
     // more could be processed at the same time.
     int nbWorkers = conf.getInt("replication.executor.workers", 1);
@@ -254,42 +246,15 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   /**
-   * Adds a normal source per registered peer cluster and tries to process all old region server wal
-   * queues
-   * <p>
-   * The returned future is for adoptAbandonedQueues task.
+   * Adds a normal source per registered peer cluster.
    */
-  Future<?> init() throws IOException {
+  void init() throws IOException {
     for (String id : this.replicationPeers.getAllPeerIds()) {
       addSource(id);
       if (replicationForBulkLoadDataEnabled) {
         // Check if peer exists in hfile-refs queue, if not add it. This can happen in the case
         // when a peer was added before replication for bulk loaded data was enabled.
         throwIOExceptionWhenFail(() -> this.queueStorage.addPeerToHFileRefs(id));
-      }
-    }
-    return this.executor.submit(this::adoptAbandonedQueues);
-  }
-
-  private void adoptAbandonedQueues() {
-    List<ServerName> currentReplicators = null;
-    try {
-      currentReplicators = queueStorage.getListOfReplicators();
-    } catch (ReplicationException e) {
-      server.abort("Failed to get all replicators", e);
-      return;
-    }
-    if (currentReplicators == null || currentReplicators.isEmpty()) {
-      return;
-    }
-    List<ServerName> otherRegionServers = replicationTracker.getListOfRegionServers();
-    LOG.info(
-      "Current list of replicators: " + currentReplicators + " other RSs: " + otherRegionServers);
-
-    // Look if there's anything to process after a restart
-    for (ServerName rs : currentReplicators) {
-      if (!otherRegionServers.contains(rs)) {
-        transferQueues(rs);
       }
     }
   }
@@ -830,185 +795,116 @@ public class ReplicationSourceManager implements ReplicationListener {
     }
   }
 
-  @Override
-  public void regionServerRemoved(String regionserver) {
-    transferQueues(ServerName.valueOf(regionserver));
-  }
-
-  /**
-   * Transfer all the queues of the specified to this region server. First it tries to grab a lock
-   * and if it works it will move the old queues and finally will delete the old queues.
-   * <p>
-   * It creates one old source for any type of source of the old rs.
-   */
-  private void transferQueues(ServerName deadRS) {
-    if (server.getServerName().equals(deadRS)) {
-      // it's just us, give up
+  void claimQueue(ServerName deadRS, String queue) {
+    // Wait a bit before transferring the queues, we may be shutting down.
+    // This sleep may not be enough in some cases.
+    try {
+      Thread.sleep(sleepBeforeFailover +
+        (long) (ThreadLocalRandom.current().nextFloat() * sleepBeforeFailover));
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupted while waiting before transferring a queue.");
+      Thread.currentThread().interrupt();
+    }
+    // We try to lock that rs' queue directory
+    if (server.isStopped()) {
+      LOG.info("Not transferring queue since we are shutting down");
       return;
     }
-    NodeFailoverWorker transfer = new NodeFailoverWorker(deadRS);
+    // After claim the queues from dead region server, wewill skip to start the
+    // RecoveredReplicationSource if the peer has been removed. but there's possible that remove a
+    // peer with peerId = 2 and add a peer with peerId = 2 again during failover. So we need to get
+    // a copy of the replication peer first to decide whether we should start the
+    // RecoveredReplicationSource. If the latest peer is not the old peer, we should also skip to
+    // start the RecoveredReplicationSource, Otherwise the rs will abort (See HBASE-20475).
+    String peerId = new ReplicationQueueInfo(queue).getPeerId();
+    ReplicationPeerImpl oldPeer = replicationPeers.getPeer(peerId);
+    if (oldPeer == null) {
+      LOG.info("Not transferring queue since the replication peer {} for queue {} does not exist",
+        peerId, queue);
+      return;
+    }
+    Pair<String, SortedSet<String>> claimedQueue;
     try {
-      this.executor.execute(transfer);
-    } catch (RejectedExecutionException ex) {
-      CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
-          .getGlobalSource().incrFailedRecoveryQueue();
-      LOG.info("Cancelling the transfer of " + deadRS + " because of " + ex.getMessage());
+      claimedQueue = queueStorage.claimQueue(deadRS, queue, server.getServerName());
+    } catch (ReplicationException e) {
+      LOG.error(
+        "ReplicationException: cannot claim dead region ({})'s " +
+          "replication queue. Znode : ({})" +
+          " Possible solution: check if znode size exceeds jute.maxBuffer value. " +
+          " If so, increase it for both client and server side.",
+        deadRS, queueStorage.getRsNode(deadRS), e);
+      server.abort("Failed to claim queue from dead regionserver.", e);
+      return;
     }
-  }
-
-  /**
-   * Class responsible to setup new ReplicationSources to take care of the queues from dead region
-   * servers.
-   */
-  class NodeFailoverWorker extends Thread {
-
-    private final ServerName deadRS;
-    // After claim the queues from dead region server, the NodeFailoverWorker will skip to start
-    // the RecoveredReplicationSource if the peer has been removed. but there's possible that
-    // remove a peer with peerId = 2 and add a peer with peerId = 2 again during the
-    // NodeFailoverWorker. So we need a deep copied <peerId, peer> map to decide whether we
-    // should start the RecoveredReplicationSource. If the latest peer is not the old peer when
-    // NodeFailoverWorker begin, we should skip to start the RecoveredReplicationSource, Otherwise
-    // the rs will abort (See HBASE-20475).
-    private final Map<String, ReplicationPeerImpl> peersSnapshot;
-
-    public NodeFailoverWorker(ServerName deadRS) {
-      super("Failover-for-" + deadRS);
-      this.deadRS = deadRS;
-      peersSnapshot = new HashMap<>(replicationPeers.getPeerCache());
+    if (claimedQueue.getSecond().isEmpty()) {
+      return;
     }
-
-    private boolean isOldPeer(String peerId, ReplicationPeerImpl newPeerRef) {
-      ReplicationPeerImpl oldPeerRef = peersSnapshot.get(peerId);
-      return oldPeerRef != null && oldPeerRef == newPeerRef;
+    String queueId = claimedQueue.getFirst();
+    Set<String> walsSet = claimedQueue.getSecond();
+    ReplicationPeerImpl peer = replicationPeers.getPeer(peerId);
+    if (peer == null || peer != oldPeer) {
+      LOG.warn("Skipping failover for peer {} of node {}, peer is null", peerId, deadRS);
+      abortWhenFail(() -> queueStorage.removeQueue(server.getServerName(), queueId));
+      return;
+    }
+    if (server instanceof ReplicationSyncUp.DummyServer &&
+      peer.getPeerState().equals(PeerState.DISABLED)) {
+      LOG.warn(
+        "Peer {} is disabled. ReplicationSyncUp tool will skip " + "replicating data to this peer.",
+        peerId);
+      return;
     }
 
-    @Override
-    public void run() {
-      // Wait a bit before transferring the queues, we may be shutting down.
-      // This sleep may not be enough in some cases.
-      try {
-        Thread.sleep(sleepBeforeFailover +
-          (long) (ThreadLocalRandom.current().nextFloat() * sleepBeforeFailover));
-      } catch (InterruptedException e) {
-        LOG.warn("Interrupted while waiting before transferring a queue.");
-        Thread.currentThread().interrupt();
-      }
-      // We try to lock that rs' queue directory
-      if (server.isStopped()) {
-        LOG.info("Not transferring queue since we are shutting down");
+    ReplicationSourceInterface src;
+    try {
+      src = createSource(queueId, peer);
+    } catch (IOException e) {
+      LOG.error("Can not create replication source for peer {} and queue {}", peerId, queueId, e);
+      server.abort("Failed to create replication source after claiming queue.", e);
+      return;
+    }
+    // synchronized on oldsources to avoid adding recovered source for the to-be-removed peer
+    synchronized (oldsources) {
+      peer = replicationPeers.getPeer(src.getPeerId());
+      if (peer == null || peer != oldPeer) {
+        src.terminate("Recovered queue doesn't belong to any current peer");
+        deleteQueue(queueId);
         return;
       }
-      Map<String, Set<String>> newQueues = new HashMap<>();
-      try {
-        List<String> queues = queueStorage.getAllQueues(deadRS);
-        while (!queues.isEmpty()) {
-          Pair<String, SortedSet<String>> peer = queueStorage.claimQueue(deadRS,
-            queues.get(ThreadLocalRandom.current().nextInt(queues.size())), server.getServerName());
-          long sleep = sleepBeforeFailover / 2;
-          if (!peer.getSecond().isEmpty()) {
-            newQueues.put(peer.getFirst(), peer.getSecond());
-            sleep = sleepBeforeFailover;
-          }
-          try {
-            Thread.sleep(sleep);
-          } catch (InterruptedException e) {
-            LOG.warn("Interrupted while waiting before transferring a queue.");
-            Thread.currentThread().interrupt();
-          }
-          queues = queueStorage.getAllQueues(deadRS);
-        }
-        if (queues.isEmpty()) {
-          queueStorage.removeReplicatorIfQueueIsEmpty(deadRS);
-        }
-      } catch (ReplicationException e) {
-        LOG.error(String.format("ReplicationException: cannot claim dead region (%s)'s " +
-            "replication queue. Znode : (%s)" +
-            " Possible solution: check if znode size exceeds jute.maxBuffer value. " +
-            " If so, increase it for both client and server side." + e),  deadRS,
-            queueStorage.getRsNode(deadRS));
-        server.abort("Failed to claim queue from dead regionserver.", e);
-        return;
-      }
-      // Copying over the failed queue is completed.
-      if (newQueues.isEmpty()) {
-        // We either didn't get the lock or the failed region server didn't have any outstanding
-        // WALs to replicate, so we are done.
-        return;
-      }
-
-      for (Map.Entry<String, Set<String>> entry : newQueues.entrySet()) {
-        String queueId = entry.getKey();
-        Set<String> walsSet = entry.getValue();
-        try {
-          // there is not an actual peer defined corresponding to peerId for the failover.
-          ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queueId);
-          String actualPeerId = replicationQueueInfo.getPeerId();
-
-          ReplicationPeerImpl peer = replicationPeers.getPeer(actualPeerId);
-          if (peer == null || !isOldPeer(actualPeerId, peer)) {
-            LOG.warn("Skipping failover for peer {} of node {}, peer is null", actualPeerId,
-              deadRS);
-            abortWhenFail(() -> queueStorage.removeQueue(server.getServerName(), queueId));
-            continue;
-          }
-          if (server instanceof ReplicationSyncUp.DummyServer
-              && peer.getPeerState().equals(PeerState.DISABLED)) {
-            LOG.warn("Peer {} is disabled. ReplicationSyncUp tool will skip "
-                + "replicating data to this peer.",
-              actualPeerId);
-            continue;
-          }
-
-          ReplicationSourceInterface src = createSource(queueId, peer);
-          // synchronized on oldsources to avoid adding recovered source for the to-be-removed peer
-          synchronized (oldsources) {
-            peer = replicationPeers.getPeer(src.getPeerId());
-            if (peer == null || !isOldPeer(src.getPeerId(), peer)) {
-              src.terminate("Recovered queue doesn't belong to any current peer");
-              deleteQueue(queueId);
-              continue;
-            }
-            // Do not setup recovered queue if a sync replication peer is in STANDBY state, or is
-            // transiting to STANDBY state. The only exception is we are in STANDBY state and
-            // transiting to DA, under this state we will replay the remote WAL and they need to be
-            // replicated back.
-            if (peer.getPeerConfig().isSyncReplication()) {
-              Pair<SyncReplicationState, SyncReplicationState> stateAndNewState =
-                peer.getSyncReplicationStateAndNewState();
-              if ((stateAndNewState.getFirst().equals(SyncReplicationState.STANDBY) &&
-                stateAndNewState.getSecond().equals(SyncReplicationState.NONE)) ||
-                stateAndNewState.getSecond().equals(SyncReplicationState.STANDBY)) {
-                src.terminate("Sync replication peer is in STANDBY state");
-                deleteQueue(queueId);
-                continue;
-              }
-            }
-            // track sources in walsByIdRecoveredQueues
-            Map<String, NavigableSet<String>> walsByGroup = new HashMap<>();
-            walsByIdRecoveredQueues.put(queueId, walsByGroup);
-            for (String wal : walsSet) {
-              String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal);
-              NavigableSet<String> wals = walsByGroup.get(walPrefix);
-              if (wals == null) {
-                wals = new TreeSet<>();
-                walsByGroup.put(walPrefix, wals);
-              }
-              wals.add(wal);
-            }
-            oldsources.add(src);
-            LOG.info("Added source for recovered queue {}", src.getQueueId());
-            for (String wal : walsSet) {
-              LOG.trace("Enqueueing log from recovered queue for source: " + src.getQueueId());
-              src.enqueueLog(new Path(oldLogDir, wal));
-            }
-            src.startup();
-          }
-        } catch (IOException e) {
-          // TODO manage it
-          LOG.error("Failed creating a source", e);
+      // Do not setup recovered queue if a sync replication peer is in STANDBY state, or is
+      // transiting to STANDBY state. The only exception is we are in STANDBY state and
+      // transiting to DA, under this state we will replay the remote WAL and they need to be
+      // replicated back.
+      if (peer.getPeerConfig().isSyncReplication()) {
+        Pair<SyncReplicationState, SyncReplicationState> stateAndNewState =
+          peer.getSyncReplicationStateAndNewState();
+        if ((stateAndNewState.getFirst().equals(SyncReplicationState.STANDBY) &&
+          stateAndNewState.getSecond().equals(SyncReplicationState.NONE)) ||
+          stateAndNewState.getSecond().equals(SyncReplicationState.STANDBY)) {
+          src.terminate("Sync replication peer is in STANDBY state");
+          deleteQueue(queueId);
+          return;
         }
       }
+      // track sources in walsByIdRecoveredQueues
+      Map<String, NavigableSet<String>> walsByGroup = new HashMap<>();
+      walsByIdRecoveredQueues.put(queueId, walsByGroup);
+      for (String wal : walsSet) {
+        String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal);
+        NavigableSet<String> wals = walsByGroup.get(walPrefix);
+        if (wals == null) {
+          wals = new TreeSet<>();
+          walsByGroup.put(walPrefix, wals);
+        }
+        wals.add(wal);
+      }
+      oldsources.add(src);
+      LOG.info("Added source for recovered queue {}", src.getQueueId());
+      for (String wal : walsSet) {
+        LOG.trace("Enqueueing log from recovered queue for source: " + src.getQueueId());
+        src.enqueueLog(new Path(oldLogDir, wal));
+      }
+      src.startup();
     }
   }
 
@@ -1202,7 +1098,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * This ReplicationSource is NOT created via {@link ReplicationSourceFactory}.
    * @see #addSource(String) This is a specialization of the addSource call.
    * @see #catalogReplicationSource for a note on this ReplicationSource's lifecycle (and more on
-   * why the special handling).
+   *    why the special handling).
    */
   private ReplicationSourceInterface createCatalogReplicationSource(RegionInfo regionInfo)
       throws IOException {
@@ -1240,5 +1136,9 @@ public class ReplicationSourceManager implements ReplicationListener {
       crs.enqueueLog(((AbstractFSWAL)wal).getCurrentFileName());
     }
     return crs.startup();
+  }
+
+  ReplicationQueueStorage getQueueStorage() {
+    return queueStorage;
   }
 }

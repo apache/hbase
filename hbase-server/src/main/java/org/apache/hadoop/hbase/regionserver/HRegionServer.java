@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HealthCheckChore;
+import org.apache.hadoop.hbase.MetaRegionLocationCache;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PleaseHoldException;
@@ -179,6 +180,7 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.RegionServerAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -423,6 +425,16 @@ public class HRegionServer extends Thread implements
   // master address tracker
   private final MasterAddressTracker masterAddressTracker;
 
+  /**
+   * Cache for the meta region replica's locations. Also tracks their changes to avoid stale cache
+   * entries. Used for serving ClientMetaService.
+   */
+  private final MetaRegionLocationCache metaRegionLocationCache;
+  /**
+   * Cache for all the region servers in the cluster. Used for serving ClientMetaService.
+   */
+  private final RegionServerAddressTracker regionServerAddressTracker;
+
   // Cluster Status Tracker
   protected final ClusterStatusTracker clusterStatusTracker;
 
@@ -486,15 +498,6 @@ public class HRegionServer extends Thread implements
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   final static String UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY =
     "hbase.unsafe.regionserver.hostname.disable.master.reversedns";
-
-  /**
-   * HBASE-24667: This config hbase.regionserver.hostname.disable.master.reversedns will be replaced by
-   * hbase.unsafe.regionserver.hostname.disable.master.reversedns. Keep the old config keys here for backward
-   * compatibility.
-   */
-  static {
-    Configuration.addDeprecation(RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY);
-  }
 
   /**
    * This servers startcode.
@@ -589,7 +592,7 @@ public class HRegionServer extends Thread implements
   public HRegionServer(final Configuration conf) throws IOException {
     super("RegionServer");  // thread name
     try {
-      this.startcode = System.currentTimeMillis();
+      this.startcode = EnvironmentEdgeManager.currentTime();
       this.conf = conf;
       this.dataFsOk = true;
       this.masterless = conf.getBoolean(MASTERLESS_CONFIG_NAME, false);
@@ -678,6 +681,8 @@ public class HRegionServer extends Thread implements
         clusterStatusTracker = null;
       }
       this.rpcServices.start(zooKeeper);
+      this.metaRegionLocationCache = new MetaRegionLocationCache(zooKeeper);
+      this.regionServerAddressTracker = new RegionServerAddressTracker(zooKeeper, this);
       // This violates 'no starting stuff in Constructor' but Master depends on the below chore
       // and executor being created and takes a different startup route. Lots of overlap between HRS
       // and M (An M IS A HRS now). Need to refactor so less duplication between M and its super
@@ -1068,7 +1073,7 @@ public class HRegionServer extends Thread implements
       }
 
       // We registered with the Master.  Go into run mode.
-      long lastMsg = System.currentTimeMillis();
+      long lastMsg = EnvironmentEdgeManager.currentTime();
       long oldRequestCount = -1;
       // The main run loop.
       while (!isStopped() && isHealthy()) {
@@ -1099,10 +1104,10 @@ public class HRegionServer extends Thread implements
             LOG.debug("Waiting on " + getOnlineRegionsAsPrintableString());
           }
         }
-        long now = System.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         if ((now - lastMsg) >= msgInterval) {
           tryRegionServerReport(lastMsg, now);
-          lastMsg = System.currentTimeMillis();
+          lastMsg = EnvironmentEdgeManager.currentTime();
         }
         if (!isStopped() && !isAborted()) {
           this.sleeper.sleep();
@@ -1411,6 +1416,8 @@ public class HRegionServer extends Thread implements
     serverLoad.setTotalNumberOfRequests(regionServerWrapper.getTotalRequestCount());
     serverLoad.setUsedHeapMB((int)(usedMemory / 1024 / 1024));
     serverLoad.setMaxHeapMB((int) (maxMemory / 1024 / 1024));
+    serverLoad.setReadRequestsCount(this.metricsRegionServerImpl.getReadRequestsCount());
+    serverLoad.setWriteRequestsCount(this.metricsRegionServerImpl.getWriteRequestsCount());
     Set<String> coprocessors = getWAL(null).getCoprocessorHost().getCoprocessors();
     Builder coprocessorBuilder = Coprocessor.newBuilder();
     for (String coprocessor : coprocessors) {
@@ -1502,8 +1509,8 @@ public class HRegionServer extends Thread implements
         // Only print a message if the count of regions has changed.
         if (count != lastCount) {
           // Log every second at most
-          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
-            previousLogTime = System.currentTimeMillis();
+          if (EnvironmentEdgeManager.currentTime() > (previousLogTime + 1000)) {
+            previousLogTime = EnvironmentEdgeManager.currentTime();
             lastCount = count;
             LOG.info("Waiting on " + count + " regions to close");
             // Only print out regions still closing if a small number else will
@@ -2111,6 +2118,10 @@ public class HRegionServer extends Thread implements
         conf.getInt("hbase.regionserver.executor.switch.rpc.throttle.threads", 1);
     executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
         ExecutorType.RS_SWITCH_RPC_THROTTLE).setCorePoolSize(switchRpcThrottleThreads));
+    final int claimReplicationQueueThreads =
+      conf.getInt("hbase.regionserver.executor.claim.replication.queue.threads", 1);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+        ExecutorType.RS_CLAIM_REPLICATION_QUEUE).setCorePoolSize(claimReplicationQueueThreads));
 
     Threads.setDaemonThreadRunning(this.walRoller, getName() + ".logRoller",
         uncaughtExceptionHandler);
@@ -2277,6 +2288,7 @@ public class HRegionServer extends Thread implements
         // auto bind enabled, try to use another port
         LOG.info("Failed binding http info server to port: " + port);
         port++;
+        LOG.info("Retry starting http info server with port: " + port);
       }
     }
     port = this.infoServer.getPort();
@@ -2787,9 +2799,9 @@ public class HRegionServer extends Thread implements
             LOG.debug("No master found and cluster is stopped; bailing out");
             return null;
           }
-          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+          if (EnvironmentEdgeManager.currentTime() > (previousLogTime + 1000)) {
             LOG.debug("No master found; retry");
-            previousLogTime = System.currentTimeMillis();
+            previousLogTime = EnvironmentEdgeManager.currentTime();
           }
           refresh = true; // let's try pull it from ZK directly
           if (sleepInterrupted(200)) {
@@ -2814,7 +2826,7 @@ public class HRegionServer extends Thread implements
           intLockStub = LockService.newBlockingStub(channel);
           break;
         } catch (IOException e) {
-          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+          if (EnvironmentEdgeManager.currentTime() > (previousLogTime + 1000)) {
             e = e instanceof RemoteException ?
               ((RemoteException)e).unwrapRemoteException() : e;
             if (e instanceof ServerNotRunningYetException) {
@@ -2822,7 +2834,7 @@ public class HRegionServer extends Thread implements
             } else {
               LOG.warn("Unable to connect to master. Retrying. Error was:", e);
             }
-            previousLogTime = System.currentTimeMillis();
+            previousLogTime = EnvironmentEdgeManager.currentTime();
           }
           if (sleepInterrupted(200)) {
             interrupted = true;
@@ -3993,5 +4005,13 @@ public class HRegionServer extends Thread implements
   @InterfaceAudience.Private
   public long getRetryPauseTime() {
     return this.retryPauseTime;
+  }
+
+  public MetaRegionLocationCache getMetaRegionLocationCache() {
+    return this.metaRegionLocationCache;
+  }
+
+  RegionServerAddressTracker getRegionServerAddressTracker() {
+    return regionServerAddressTracker;
   }
 }

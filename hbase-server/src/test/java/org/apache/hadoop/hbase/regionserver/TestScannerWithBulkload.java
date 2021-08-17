@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -64,7 +65,7 @@ public class TestScannerWithBulkload {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestScannerWithBulkload.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -88,7 +89,7 @@ public class TestScannerWithBulkload {
   @Test
   public void testBulkLoad() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    long l = System.currentTimeMillis();
+    long l = EnvironmentEdgeManager.currentTime();
     Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
@@ -184,7 +185,8 @@ public class TestScannerWithBulkload {
       writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(new Long(9999999)));
     }
     else {
-    writer.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(System.currentTimeMillis()));
+      writer.appendFileInfo(BULKLOAD_TIME_KEY,
+        Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
     }
     writer.close();
     return hfilePath;
@@ -223,7 +225,7 @@ public class TestScannerWithBulkload {
   @Test
   public void testBulkLoadWithParallelScan() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-      final long l = System.currentTimeMillis();
+    final long l = EnvironmentEdgeManager.currentTime();
     final Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
@@ -265,7 +267,7 @@ public class TestScannerWithBulkload {
   @Test
   public void testBulkLoadNativeHFile() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    long l = System.currentTimeMillis();
+    long l = EnvironmentEdgeManager.currentTime();
     Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();

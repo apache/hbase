@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -49,7 +49,7 @@ import org.junit.rules.TestName;
 @Category({ MediumTests.class})
 public class TestTakeSnapshotHandler {
 
-  private static HBaseTestingUtility UTIL;
+  private static HBaseTestingUtil UTIL;
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -61,7 +61,7 @@ public class TestTakeSnapshotHandler {
 
   @Before
   public void setup()  {
-    UTIL = new HBaseTestingUtility();
+    UTIL = new HBaseTestingUtil();
   }
 
   public TableDescriptor createTableInsertDataAndTakeSnapshot(Map<String, Object> snapshotProps)

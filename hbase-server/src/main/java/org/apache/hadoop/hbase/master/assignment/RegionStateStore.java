@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
@@ -64,8 +65,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -92,10 +91,14 @@ public class RegionStateStore {
 
   private final MasterServices master;
 
-  public RegionStateStore(final MasterServices master) {
+  private final MasterRegion masterRegion;
+
+  public RegionStateStore(MasterServices master, MasterRegion masterRegion) {
     this.master = master;
+    this.masterRegion = masterRegion;
   }
 
+  @FunctionalInterface
   public interface RegionStateVisitor {
     void visitRegionState(Result result, RegionInfo regionInfo, State state,
       ServerName regionLocation, ServerName lastHost, long openSeqNum);
@@ -111,11 +114,11 @@ public class RegionStateStore {
           if (r != null && !r.isEmpty()) {
             long st = 0;
             if (LOG.isTraceEnabled()) {
-              st = System.currentTimeMillis();
+              st = EnvironmentEdgeManager.currentTime();
             }
             visitMetaEntry(visitor, r);
             if (LOG.isTraceEnabled()) {
-              long et = System.currentTimeMillis();
+              long et = EnvironmentEdgeManager.currentTime();
               LOG.trace("[T] LOAD META PERF " + StringUtils.humanTimeDiff(et - st));
             }
           } else if (isDebugEnabled) {
@@ -142,8 +145,8 @@ public class RegionStateStore {
     }
   }
 
-  private void visitMetaEntry(final RegionStateVisitor visitor, final Result result)
-    throws IOException {
+  public static void visitMetaEntry(final RegionStateVisitor visitor, final Result result)
+      throws IOException {
     final RegionLocations rl = CatalogFamilyFormat.getRegionLocations(result);
     if (rl == null) return;
 
@@ -173,33 +176,14 @@ public class RegionStateStore {
   }
 
   void updateRegionLocation(RegionStateNode regionStateNode) throws IOException {
-    if (regionStateNode.getRegionInfo().isMetaRegion()) {
-      updateMetaLocation(regionStateNode.getRegionInfo(), regionStateNode.getRegionLocation(),
-        regionStateNode.getState());
-    } else {
-      long openSeqNum = regionStateNode.getState() == State.OPEN ? regionStateNode.getOpenSeqNum() :
-        HConstants.NO_SEQNUM;
-      updateUserRegionLocation(regionStateNode.getRegionInfo(), regionStateNode.getState(),
-        regionStateNode.getRegionLocation(), openSeqNum,
-        // The regionStateNode may have no procedure in a test scenario; allow for this.
-        regionStateNode.getProcedure() != null ? regionStateNode.getProcedure().getProcId() :
-          Procedure.NO_PROC_ID);
-    }
-  }
-
-  private void updateMetaLocation(RegionInfo regionInfo, ServerName serverName, State state)
-    throws IOException {
-    try {
-      MetaTableLocator.setMetaLocation(master.getZooKeeper(), serverName, regionInfo.getReplicaId(),
-        state);
-    } catch (KeeperException e) {
-      throw new IOException(e);
-    }
-  }
-
-  private void updateUserRegionLocation(RegionInfo regionInfo, State state,
-    ServerName regionLocation, long openSeqNum, long pid) throws IOException {
     long time = EnvironmentEdgeManager.currentTime();
+    long openSeqNum = regionStateNode.getState() == State.OPEN ? regionStateNode.getOpenSeqNum() :
+      HConstants.NO_SEQNUM;
+    RegionInfo regionInfo = regionStateNode.getRegionInfo();
+    State state = regionStateNode.getState();
+    ServerName regionLocation = regionStateNode.getRegionLocation();
+    TransitRegionStateProcedure rit = regionStateNode.getProcedure();
+    long pid = rit != null ? rit.getProcId() : Procedure.NO_PROC_ID;
     final int replicaId = regionInfo.getReplicaId();
     final Put put = new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), time);
     MetaTableAccessor.addRegionInfo(put, regionInfo);
@@ -234,12 +218,43 @@ public class RegionStateStore {
       .build());
     LOG.info(info.toString());
     updateRegionLocation(regionInfo, state, put);
+    if (regionInfo.isMetaRegion() && regionInfo.isFirst()) {
+      // mirror the meta location to zookeeper
+      mirrorMetaLocation(regionInfo, regionLocation, state);
+    }
+  }
+
+  private void mirrorMetaLocation(RegionInfo regionInfo, ServerName serverName, State state)
+    throws IOException {
+    try {
+      MetaTableLocator.setMetaLocation(master.getZooKeeper(), serverName, regionInfo.getReplicaId(),
+        state);
+    } catch (KeeperException e) {
+      throw new IOException(e);
+    }
+  }
+
+  private void removeMirrorMetaLocation(int oldReplicaCount, int newReplicaCount)
+    throws IOException {
+    try {
+      for (int i = newReplicaCount; i < oldReplicaCount; i++) {
+        MetaTableLocator.deleteMetaLocation(master.getZooKeeper(), i);
+      }
+    } catch (KeeperException e) {
+      throw new IOException(e);
+    }
   }
 
   private void updateRegionLocation(RegionInfo regionInfo, State state, Put put)
     throws IOException {
-    try (Table table = master.getConnection().getTable(TableName.META_TABLE_NAME)) {
-      table.put(put);
+    try {
+      if (regionInfo.isMetaRegion()) {
+        masterRegion.update(r -> r.put(put));
+      } else {
+        try (Table table = master.getConnection().getTable(TableName.META_TABLE_NAME)) {
+          table.put(put);
+        }
+      }
     } catch (IOException e) {
       // TODO: Revist!!!! Means that if a server is loaded, then we will abort our host!
       // In tests we abort the Master!
@@ -537,50 +552,68 @@ public class RegionStateStore {
   }
 
   private Scan getScanForUpdateRegionReplicas(TableName tableName) {
-    return MetaTableAccessor.getScanForTableName(master.getConfiguration(), tableName)
-      .addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+    Scan scan;
+    if (TableName.isMetaTableName(tableName)) {
+      // Notice that, we do not use MetaCellComparator for master local region, so we can not use
+      // the same logic to set start key and end key for scanning meta table when locating entries
+      // in master local region. And since there is only one table in master local region(the record
+      // for meta table), so we do not need set start key and end key.
+      scan = new Scan();
+    } else {
+      scan = MetaTableAccessor.getScanForTableName(master.getConfiguration(), tableName);
+    }
+    return scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
   }
+
+  private List<Delete> deleteRegionReplicas(ResultScanner scanner, int oldReplicaCount,
+    int newReplicaCount, long now) throws IOException {
+    List<Delete> deletes = new ArrayList<>();
+    for (;;) {
+      Result result = scanner.next();
+      if (result == null) {
+        break;
+      }
+      RegionInfo primaryRegionInfo = CatalogFamilyFormat.getRegionInfo(result);
+      if (primaryRegionInfo == null || primaryRegionInfo.isSplit()) {
+        continue;
+      }
+      Delete delete = new Delete(result.getRow());
+      for (int i = newReplicaCount; i < oldReplicaCount; i++) {
+        delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getServerColumn(i), now);
+        delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getSeqNumColumn(i), now);
+        delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getStartCodeColumn(i),
+          now);
+        delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getServerNameColumn(i),
+          now);
+        delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getRegionStateColumn(i),
+          now);
+      }
+      deletes.add(delete);
+    }
+    return deletes;
+  }
+
 
   public void removeRegionReplicas(TableName tableName, int oldReplicaCount, int newReplicaCount)
     throws IOException {
+    Scan scan = getScanForUpdateRegionReplicas(tableName);
+    long now = EnvironmentEdgeManager.currentTime();
     if (TableName.isMetaTableName(tableName)) {
-      ZKWatcher zk = master.getZooKeeper();
-      try {
-        for (int i = newReplicaCount; i < oldReplicaCount; i++) {
-          ZKUtil.deleteNode(zk, zk.getZNodePaths().getZNodeForReplica(i));
-        }
-      } catch (KeeperException e) {
-        throw new IOException(e);
+      List<Delete> deletes;
+      try (ResultScanner scanner = masterRegion.getScanner(scan)) {
+        deletes = deleteRegionReplicas(scanner, oldReplicaCount, newReplicaCount, now);
       }
-    } else {
-      Scan scan = getScanForUpdateRegionReplicas(tableName);
-      List<Delete> deletes = new ArrayList<>();
-      long now = EnvironmentEdgeManager.currentTime();
-      try (Table metaTable = getMetaTable(); ResultScanner scanner = metaTable.getScanner(scan)) {
-        for (;;) {
-          Result result = scanner.next();
-          if (result == null) {
-            break;
-          }
-          RegionInfo primaryRegionInfo = CatalogFamilyFormat.getRegionInfo(result);
-          if (primaryRegionInfo == null || primaryRegionInfo.isSplitParent()) {
-            continue;
-          }
-          Delete delete = new Delete(result.getRow());
-          for (int i = newReplicaCount; i < oldReplicaCount; i++) {
-            delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getServerColumn(i),
-              now);
-            delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getSeqNumColumn(i),
-              now);
-            delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getStartCodeColumn(i),
-              now);
-            delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getServerNameColumn(i),
-              now);
-            delete.addColumns(HConstants.CATALOG_FAMILY,
-              CatalogFamilyFormat.getRegionStateColumn(i), now);
-          }
-          deletes.add(delete);
+      debugLogMutations(deletes);
+      masterRegion.update(r -> {
+        for (Delete d : deletes) {
+          r.delete(d);
         }
+      });
+      // also delete the mirrored location on zk
+      removeMirrorMetaLocation(oldReplicaCount, newReplicaCount);
+    } else {
+      try (Table metaTable = getMetaTable(); ResultScanner scanner = metaTable.getScanner(scan)) {
+        List<Delete> deletes = deleteRegionReplicas(scanner, oldReplicaCount, newReplicaCount, now);
         debugLogMutations(deletes);
         metaTable.delete(deletes);
       }
@@ -634,7 +667,7 @@ public class RegionStateStore {
     }
   }
 
-  private static byte[] getStateColumn(int replicaId) {
+  public static byte[] getStateColumn(int replicaId) {
     return replicaId == 0 ? HConstants.STATE_QUALIFIER :
       Bytes.toBytes(HConstants.STATE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER +
         String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));

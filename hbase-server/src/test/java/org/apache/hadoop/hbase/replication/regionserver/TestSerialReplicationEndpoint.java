@@ -28,7 +28,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -63,7 +64,7 @@ public class TestSerialReplicationEndpoint {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSerialReplicationEndpoint.class);
 
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static Configuration CONF;
   private static Connection CONN;
 
@@ -109,8 +110,8 @@ public class TestSerialReplicationEndpoint {
 
     try (Table table = CONN.getTable(tableName)) {
       for (int i = 0; i < cellNum; i++) {
-        Put put = new Put(Bytes.toBytes(i)).addColumn(family, qualifier, System.currentTimeMillis(),
-          Bytes.toBytes(i));
+        Put put = new Put(Bytes.toBytes(i)).addColumn(family, qualifier,
+          EnvironmentEdgeManager.currentTime(), Bytes.toBytes(i));
         table.put(put);
       }
     }

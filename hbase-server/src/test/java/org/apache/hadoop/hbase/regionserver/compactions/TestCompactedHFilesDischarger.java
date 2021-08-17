@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -65,7 +65,7 @@ public class TestCompactedHFilesDischarger {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCompactedHFilesDischarger.class);
 
-  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
   private HRegion region;
   private final static byte[] fam = Bytes.toBytes("cf_1");
   private final static byte[] qual1 = Bytes.toBytes("qf_1");
@@ -82,7 +82,7 @@ public class TestCompactedHFilesDischarger {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     Path path = testUtil.getDataTestDir(getClass().getSimpleName());
-    region = HBaseTestingUtility.createRegionAndWAL(info, path,
+    region = HBaseTestingUtil.createRegionAndWAL(info, path,
       testUtil.getConfiguration(), tableDescriptor);
     rss = mock(RegionServerServices.class);
     List<HRegion> regions = new ArrayList<>(1);
@@ -95,7 +95,7 @@ public class TestCompactedHFilesDischarger {
     counter.set(0);
     scanCompletedCounter.set(0);
     latch = new CountDownLatch(3);
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
     testUtil.cleanupTestDir();
   }
 

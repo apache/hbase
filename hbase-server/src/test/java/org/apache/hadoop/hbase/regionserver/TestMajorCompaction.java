@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY_BYTES;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.START_KEY;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.START_KEY_BYTES;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -37,7 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeepDeletedCells;
@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPoli
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
@@ -92,7 +93,7 @@ public class TestMajorCompaction {
   @Rule
   public TestName name;
   private static final Logger LOG = LoggerFactory.getLogger(TestMajorCompaction.class.getName());
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected Configuration conf = UTIL.getConfiguration();
 
   private HRegion r = null;
@@ -248,7 +249,7 @@ public class TestMajorCompaction {
     // should result in a compacted store file that has no references to the
     // deleted row.
     LOG.debug("Adding deletes to memstore and flushing");
-    Delete delete = new Delete(secondRowBytes, System.currentTimeMillis());
+    Delete delete = new Delete(secondRowBytes, EnvironmentEdgeManager.currentTime());
     byte[][] famAndQf = { COLUMN_FAMILY, null };
     delete.addFamily(famAndQf[0]);
     r.delete(delete);

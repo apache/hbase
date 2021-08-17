@@ -32,13 +32,14 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
@@ -55,7 +56,7 @@ public class TestCellCounter {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCellCounter.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final byte[] ROW1 = Bytes.toBytesBinary("\\x01row1");
   private static final byte[] ROW2 = Bytes.toBytesBinary("\\x01row2");
   private static final String FAMILY_A_STRING = "a";
@@ -67,7 +68,7 @@ public class TestCellCounter {
   private static Path FQ_OUTPUT_DIR;
   private static final String OUTPUT_DIR = "target" + File.separator + "test-data" + File.separator
       + "output";
-  private static long now = System.currentTimeMillis();
+  private static long now = EnvironmentEdgeManager.currentTime();
 
   @Rule
   public TestName name = new TestName();

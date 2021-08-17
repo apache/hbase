@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -37,7 +37,7 @@ public class TestCreateTableProcedureMuitipleRegions {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCreateTableProcedureMuitipleRegions.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static final String F1 = "f1";
   private static final String F2 = "f2";

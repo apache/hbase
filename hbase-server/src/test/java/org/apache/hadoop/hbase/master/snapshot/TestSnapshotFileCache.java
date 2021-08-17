@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
@@ -68,7 +68,7 @@ public class TestSnapshotFileCache {
       HBaseClassTestRule.forClass(TestSnapshotFileCache.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFileCache.class);
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   // don't refresh the cache unless we tell it to
   protected static final long PERIOD = Long.MAX_VALUE;
   protected static FileSystem fs;

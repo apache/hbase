@@ -34,13 +34,14 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HBaseCluster;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseClusterInterface;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.AbstractTestUpdateConfiguration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -63,7 +64,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-public abstract class TestRSGroupsBase {
+public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsBase.class);
 
   // shared
@@ -71,9 +72,9 @@ public abstract class TestRSGroupsBase {
   protected static final String TABLE_PREFIX = "Group";
 
   // shared, cluster type specific
-  protected static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected static Admin ADMIN;
-  protected static HBaseCluster CLUSTER;
+  protected static HBaseClusterInterface CLUSTER;
   protected static HMaster MASTER;
   protected boolean INIT = false;
   protected static CPMasterObserver OBSERVER;
@@ -159,10 +160,10 @@ public abstract class TestRSGroupsBase {
     int missing = NUM_SLAVES_BASE - getNumServers();
     LOG.info("Restoring servers: " + missing);
     for (int i = 0; i < missing; i++) {
-      ((MiniHBaseCluster) CLUSTER).startRegionServer();
+      ((SingleProcessHBaseCluster) CLUSTER).startRegionServer();
     }
     ADMIN.addRSGroup("master");
-    ServerName masterServerName = ((MiniHBaseCluster) CLUSTER).getMaster().getServerName();
+    ServerName masterServerName = ((SingleProcessHBaseCluster) CLUSTER).getMaster().getServerName();
     try {
       ADMIN.moveServersToRSGroup(Sets.newHashSet(masterServerName.getAddress()), "master");
     } catch (Exception ex) {

@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Stoppable;
@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -87,7 +88,7 @@ public class TestReplicationSink {
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSink.class);
   private static final int BATCH_SIZE = 10;
 
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected static ReplicationSink SINK;
 
@@ -436,7 +437,7 @@ public class TestReplicationSink {
     } catch (InterruptedException e) {
       LOG.info("Was interrupted while sleep, meh", e);
     }
-    final long now = System.currentTimeMillis();
+    final long now = EnvironmentEdgeManager.currentTime();
     KeyValue kv = null;
     if(type.getCode() == KeyValue.Type.Put.getCode()) {
       kv = new KeyValue(rowBytes, fam, fam, now,
@@ -463,7 +464,7 @@ public class TestReplicationSink {
     uuidBuilder.setMostSigBits(HConstants.DEFAULT_CLUSTER_ID.getMostSignificantBits());
     keyBuilder.setClusterId(uuidBuilder.build());
     keyBuilder.setTableName(UnsafeByteOperations.unsafeWrap(table.getName()));
-    keyBuilder.setWriteTime(System.currentTimeMillis());
+    keyBuilder.setWriteTime(EnvironmentEdgeManager.currentTime());
     keyBuilder.setEncodedRegionName(UnsafeByteOperations.unsafeWrap(HConstants.EMPTY_BYTE_ARRAY));
     keyBuilder.setLogSequenceNumber(-1);
     builder.setKey(keyBuilder.build());

@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -69,11 +70,11 @@ public class TestAsyncRegionLocatorTracing {
     RegionInfo metaRegionInfo = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
     locs = new RegionLocations(
       new HRegionLocation(metaRegionInfo,
-        ServerName.valueOf("127.0.0.1", 12345, System.currentTimeMillis())),
+        ServerName.valueOf("127.0.0.1", 12345, EnvironmentEdgeManager.currentTime())),
       new HRegionLocation(RegionReplicaUtil.getRegionInfoForReplica(metaRegionInfo, 1),
-        ServerName.valueOf("127.0.0.2", 12345, System.currentTimeMillis())),
+        ServerName.valueOf("127.0.0.2", 12345, EnvironmentEdgeManager.currentTime())),
       new HRegionLocation(RegionReplicaUtil.getRegionInfoForReplica(metaRegionInfo, 2),
-        ServerName.valueOf("127.0.0.3", 12345, System.currentTimeMillis())));
+        ServerName.valueOf("127.0.0.3", 12345, EnvironmentEdgeManager.currentTime())));
     conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF) {
 
       @Override
@@ -103,7 +104,8 @@ public class TestAsyncRegionLocatorTracing {
 
   @Test
   public void testClearCacheServerName() {
-    ServerName sn = ServerName.valueOf("127.0.0.1", 12345, System.currentTimeMillis());
+    ServerName sn = ServerName.valueOf("127.0.0.1", 12345,
+      EnvironmentEdgeManager.currentTime());
     conn.getLocator().clearCache(sn);
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
     assertEquals(StatusCode.OK, span.getStatus().getStatusCode());

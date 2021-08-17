@@ -22,7 +22,7 @@ import java.util.Random;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -56,7 +56,7 @@ public class TestDeleteMobTable {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestDeleteMobTable.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static byte[] FAMILY = Bytes.toBytes("family");
   private final static byte[] QF = Bytes.toBytes("qualifier");
   private static Random random = new Random();

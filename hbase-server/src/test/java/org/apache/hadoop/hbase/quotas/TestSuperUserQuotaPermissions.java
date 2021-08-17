@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
@@ -66,7 +66,7 @@ public class TestSuperUserQuotaPermissions {
       HBaseClassTestRule.forClass(TestSuperUserQuotaPermissions.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSuperUserQuotaPermissions.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   // Default to the user running the tests
   private static final String SUPERUSER_NAME = System.getProperty("user.name");
   private static final UserGroupInformation SUPERUSER_UGI =

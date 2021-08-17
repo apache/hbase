@@ -25,7 +25,7 @@ import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -54,7 +54,7 @@ public class TestSeekBeforeWithReverseScan {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSeekBeforeWithReverseScan.class);
 
-  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
 
   private HRegion region;
 
@@ -69,13 +69,13 @@ public class TestSeekBeforeWithReverseScan {
         .newBuilder(cfName).setDataBlockEncoding(DataBlockEncoding.FAST_DIFF).build()).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     Path path = testUtil.getDataTestDir(getClass().getSimpleName());
-    region = HBaseTestingUtility.createRegionAndWAL(info, path, testUtil.getConfiguration(),
+    region = HBaseTestingUtil.createRegionAndWAL(info, path, testUtil.getConfiguration(),
       tableDescriptor);
   }
 
   @After
   public void tearDown() throws Exception {
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
     testUtil.cleanupTestDir();
   }
 

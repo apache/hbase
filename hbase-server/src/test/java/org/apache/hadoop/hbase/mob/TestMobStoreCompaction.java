@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.START_KEY;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BULKLOAD_TIME_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_CELLS_COUNT;
 import static org.junit.Assert.assertEquals;
@@ -38,7 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.ClassRule;
@@ -92,7 +93,7 @@ public class TestMobStoreCompaction {
   @Rule
   public TestName name = new TestName();
   static final Logger LOG = LoggerFactory.getLogger(TestMobStoreCompaction.class.getName());
-  private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private Configuration conf = null;
 
   private HRegion region = null;
@@ -109,7 +110,7 @@ public class TestMobStoreCompaction {
   private void init(Configuration conf, long mobThreshold) throws Exception {
     this.conf = conf;
     this.mobCellThreshold = mobThreshold;
-    HBaseTestingUtility UTIL = new HBaseTestingUtility(conf);
+    HBaseTestingUtil UTIL = new HBaseTestingUtil(conf);
 
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_FAMILY).setMobEnabled(true)
@@ -118,7 +119,7 @@ public class TestMobStoreCompaction {
       .modifyColumnFamily(familyDescriptor).build();
 
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
-    region = HBaseTestingUtility.createRegionAndWAL(regionInfo,
+    region = HBaseTestingUtil.createRegionAndWAL(regionInfo,
       UTIL.getDataTestDir(), conf, tableDescriptor, new MobFileCache(conf));
     fs = FileSystem.get(conf);
   }
@@ -336,13 +337,13 @@ public class TestMobStoreCompaction {
     HFileContext meta = new HFileContextBuilder().build();
     HFile.Writer writer = HFile.getWriterFactory(conf, new CacheConfig(conf)).withPath(fs, path)
         .withFileContext(meta).create();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     try {
       KeyValue kv = new KeyValue(Bytes.add(STARTROW, Bytes.toBytes(rowIdx)), COLUMN_FAMILY,
           Bytes.toBytes("colX"), now, dummyData);
       writer.append(kv);
     } finally {
-      writer.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(System.currentTimeMillis()));
+      writer.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
       writer.close();
     }
   }

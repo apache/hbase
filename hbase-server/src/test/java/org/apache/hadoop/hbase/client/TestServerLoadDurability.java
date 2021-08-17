@@ -26,7 +26,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.NettyRpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
@@ -84,7 +84,7 @@ public class TestServerLoadDurability {
     return conf;
   }
 
-  protected HBaseTestingUtility utility;
+  protected HBaseTestingUtil utility;
   protected Connection conn;
   protected Admin admin;
 
@@ -94,7 +94,7 @@ public class TestServerLoadDurability {
 
   @Before
   public void setUp() throws Exception {
-    utility = new HBaseTestingUtility(conf);
+    utility = new HBaseTestingUtil(conf);
     utility.startMiniCluster(2);
     conn = ConnectionFactory.createConnection(utility.getConfiguration());
     admin = conn.getAdmin();

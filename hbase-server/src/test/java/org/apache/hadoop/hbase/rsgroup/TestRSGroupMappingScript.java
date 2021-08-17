@@ -25,7 +25,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManagerImpl.RSGroupMappingScript;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
@@ -48,7 +48,7 @@ public class TestRSGroupMappingScript {
     HBaseClassTestRule.forClass(TestRSGroupMappingScript.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupMappingScript.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private File script;
 
   @BeforeClass

@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.junit.ClassRule;
 
 // this is deliberately not in the o.a.h.h.regionserver package
@@ -37,8 +39,6 @@ import java.util.function.Predicate;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -80,7 +80,7 @@ public class TestCoprocessorScanPolicy {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCoprocessorScanPolicy.class);
 
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] F = Bytes.toBytes("fam");
   private static final byte[] Q = Bytes.toBytes("qual");
   private static final byte[] R = Bytes.toBytes("row");
@@ -99,7 +99,7 @@ public class TestCoprocessorScanPolicy {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
+    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED;
   }
 
   public TestCoprocessorScanPolicy(boolean parallelSeekEnable) {

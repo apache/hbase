@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,8 +48,8 @@ public class SnapshotTableAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    String snapshotName = tableName + "-it-" + System.currentTimeMillis();
+    HBaseTestingUtil util = context.getHBaseIntegrationTestingUtility();
+    String snapshotName = tableName + "-it-" + EnvironmentEdgeManager.currentTime();
     Admin admin = util.getAdmin();
 
     // Don't try the snapshot if we're stopping

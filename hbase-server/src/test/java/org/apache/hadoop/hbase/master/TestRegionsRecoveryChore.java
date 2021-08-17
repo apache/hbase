@@ -29,7 +29,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -67,7 +67,7 @@ public class TestRegionsRecoveryChore {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionsRecoveryChore.class);
 
-  private static final HBaseTestingUtility HBASE_TESTING_UTILITY = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HBASE_TESTING_UTILITY = new HBaseTestingUtil();
 
   private static final String UTF_8_CHARSET = StandardCharsets.UTF_8.name();
 
@@ -312,6 +312,16 @@ public class TestRegionsRecoveryChore {
 
       @Override
       public long getRequestCount() {
+        return 0;
+      }
+
+      @Override
+      public long getReadRequestsCount() {
+        return 0;
+      }
+
+      @Override
+      public long getWriteRequestsCount() {
         return 0;
       }
 

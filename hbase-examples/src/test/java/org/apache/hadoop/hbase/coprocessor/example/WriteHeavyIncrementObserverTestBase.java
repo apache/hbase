@@ -22,8 +22,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.stream.IntStream;
-
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
@@ -37,7 +36,7 @@ import org.junit.BeforeClass;
 
 public class WriteHeavyIncrementObserverTestBase {
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   protected static TableName NAME = TableName.valueOf("TestCP");
 

@@ -24,7 +24,7 @@ import java.io.FileNotFoundException;
 import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
@@ -54,13 +54,13 @@ public class TestRegionServerCoprocessorEndpoint {
       HBaseClassTestRule.forClass(TestRegionServerCoprocessorEndpoint.class);
 
   public static final FileNotFoundException WHAT_TO_THROW = new FileNotFoundException("/file.txt");
-  private static HBaseTestingUtility TEST_UTIL = null;
+  private static HBaseTestingUtil TEST_UTIL = null;
   private static Configuration CONF = null;
   private static final String DUMMY_VALUE = "val";
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     CONF = TEST_UTIL.getConfiguration();
     CONF.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
       DummyRegionServerEndpoint.class.getName());

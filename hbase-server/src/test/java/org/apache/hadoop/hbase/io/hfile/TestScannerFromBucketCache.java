@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -67,7 +67,7 @@ public class TestScannerFromBucketCache {
   public TestName name = new TestName();
 
   HRegion region = null;
-  private HBaseTestingUtility test_util;
+  private HBaseTestingUtil test_util;
   private Configuration conf;
   private final int MAX_VERSIONS = 2;
   byte[] val = new byte[512 * 1024];
@@ -76,7 +76,7 @@ public class TestScannerFromBucketCache {
   private TableName tableName;
 
   private void setUp(boolean useBucketCache) throws IOException {
-    test_util = new HBaseTestingUtility();
+    test_util = new HBaseTestingUtil();
     conf = test_util.getConfiguration();
     if (useBucketCache) {
       conf.setInt("hbase.bucketcache.size", 400);
@@ -107,7 +107,7 @@ public class TestScannerFromBucketCache {
     byte[] qf2 = Bytes.toBytes("qualifier2");
     byte[] fam1 = Bytes.toBytes("lrucache");
 
-    long ts1 = 1; // System.currentTimeMillis();
+    long ts1 = 1;
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
 
@@ -132,7 +132,7 @@ public class TestScannerFromBucketCache {
       }
 
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -145,7 +145,7 @@ public class TestScannerFromBucketCache {
     byte[] qf2 = Bytes.toBytes("qualifier2");
     byte[] fam1 = Bytes.toBytes("famoffheap");
 
-    long ts1 = 1; // System.currentTimeMillis();
+    long ts1 = 1;
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
 
@@ -173,7 +173,7 @@ public class TestScannerFromBucketCache {
 
     } catch (InterruptedException e) {
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -186,7 +186,7 @@ public class TestScannerFromBucketCache {
     byte[] qf2 = Bytes.toBytes("qualifier2");
     byte[] fam1 = Bytes.toBytes("famoffheap");
 
-    long ts1 = 1; // System.currentTimeMillis();
+    long ts1 = 1;
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
 
@@ -223,7 +223,7 @@ public class TestScannerFromBucketCache {
 
     } catch (InterruptedException e) {
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -294,12 +294,12 @@ public class TestScannerFromBucketCache {
   }
 
   private static HRegion initHRegion(TableName tableName, String callingMethod, Configuration conf,
-      HBaseTestingUtility test_util, byte[]... families) throws IOException {
+      HBaseTestingUtil test_util, byte[]... families) throws IOException {
     return initHRegion(tableName, null, null, callingMethod, conf, test_util, false, families);
   }
 
   private static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, HBaseTestingUtility testUtil, boolean isReadOnly,
+      String callingMethod, Configuration conf, HBaseTestingUtil testUtil, boolean isReadOnly,
       byte[]... families) throws IOException {
     RegionInfo regionInfo =
         RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).setEndKey(stopKey).build();
@@ -310,7 +310,7 @@ public class TestScannerFromBucketCache {
           ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(Integer.MAX_VALUE)
               .build());
     }
-    return HBaseTestingUtility
+    return HBaseTestingUtil
         .createRegionAndWAL(regionInfo, testUtil.getDataTestDir(callingMethod), conf,
             builder.build(), BlockCacheFactory.createBlockCache(conf));
   }

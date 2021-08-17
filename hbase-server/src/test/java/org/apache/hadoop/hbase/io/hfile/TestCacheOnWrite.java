@@ -38,8 +38,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
@@ -90,7 +90,7 @@ public class TestCacheOnWrite {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWrite.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private Configuration conf;
   private CacheConfig cacheConf;
   private FileSystem fs;
@@ -206,7 +206,7 @@ public class TestCacheOnWrite {
     List<Object[]> params = new ArrayList<>();
     for (BlockCache blockCache : getBlockCaches()) {
       for (CacheOnWriteType cowType : CacheOnWriteType.values()) {
-        for (Compression.Algorithm compress : HBaseCommonTestingUtility.COMPRESSION_ALGORITHMS) {
+        for (Compression.Algorithm compress : HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS) {
           for (boolean cacheCompressedData : new boolean[] { false, true }) {
             params.add(new Object[] { cowType, compress, cacheCompressedData, blockCache });
           }

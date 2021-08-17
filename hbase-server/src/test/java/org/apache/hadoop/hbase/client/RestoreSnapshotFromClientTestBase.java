@@ -19,12 +19,13 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -36,7 +37,7 @@ import org.junit.rules.TestName;
  * Base class for testing restore snapshot
  */
 public class RestoreSnapshotFromClientTestBase {
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected final byte[] FAMILY = Bytes.toBytes("cf");
   protected final byte[] TEST_FAMILY2 = Bytes.toBytes("cf2");
@@ -81,8 +82,7 @@ public class RestoreSnapshotFromClientTestBase {
   @Before
   public void setup() throws Exception {
     this.admin = TEST_UTIL.getAdmin();
-
-    long tid = System.currentTimeMillis();
+    long tid = EnvironmentEdgeManager.currentTime();
     tableName = TableName.valueOf(getValidMethodName() + "-" + tid);
     emptySnapshot = "emptySnaptb-" + tid;
     snapshotName0 = "snaptb0-" + tid;
@@ -134,7 +134,7 @@ public class RestoreSnapshotFromClientTestBase {
     return TEST_UTIL.countRows(table, families);
   }
 
-  protected void verifyRowCount(HBaseTestingUtility util, TableName tableName, long expectedRows)
+  protected void verifyRowCount(HBaseTestingUtil util, TableName tableName, long expectedRows)
       throws IOException {
     SnapshotTestingUtils.verifyRowCount(util, tableName, expectedRows);
   }

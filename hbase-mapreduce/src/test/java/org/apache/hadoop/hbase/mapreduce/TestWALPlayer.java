@@ -34,10 +34,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -78,8 +78,8 @@ public class TestWALPlayer {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestWALPlayer.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static MiniHBaseCluster cluster;
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private static SingleProcessHBaseCluster cluster;
   private static Path rootDir;
   private static Path walRootDir;
   private static FileSystem fs;

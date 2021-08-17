@@ -21,14 +21,13 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -75,7 +74,7 @@ public class TestPartialResultsFromClientSide {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestPartialResultsFromClientSide.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static int MINICLUSTER_SIZE = 5;
   private static Table TABLE = null;
 
@@ -795,9 +794,10 @@ public class TestPartialResultsFromClientSide {
     testPartialResultsWithColumnFilter(new ColumnRangeFilter(Bytes.toBytes("testQualifer1"), true,
         Bytes.toBytes("testQualifier7"), true));
 
-    Set<byte[]> qualifiers = new LinkedHashSet<>();
-    qualifiers.add(Bytes.toBytes("testQualifier5"));
-    testPartialResultsWithColumnFilter(new FirstKeyValueMatchingQualifiersFilter(qualifiers));
+    //Throw an Exception to the old version client to remind them not to use this filter anymore
+    assertThrows("Stop using", DoNotRetryIOException.class,
+      () -> testPartialResultsWithColumnFilter(
+        new FirstKeyValueMatchingQualifiersFilter()));
   }
 
   public void testPartialResultsWithColumnFilter(Filter filter) throws Exception {

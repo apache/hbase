@@ -23,8 +23,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.CompactionState;
@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -62,7 +63,7 @@ public class TestWarmupRegion {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWarmupRegion.class);
   protected TableName TABLENAME = TableName.valueOf("testPurgeFutureDeletes");
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static byte [] ROW = Bytes.toBytes("testRow");
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
@@ -70,7 +71,7 @@ public class TestWarmupRegion {
   private static byte[] COLUMN = Bytes.toBytes("column");
   private static int numRows = 10000;
   protected static int SLAVES = 3;
-  private static MiniHBaseCluster myCluster;
+  private static SingleProcessHBaseCluster myCluster;
   private static Table table;
 
   /**
@@ -99,7 +100,7 @@ public class TestWarmupRegion {
 
     // future timestamp
     for (int i = 0; i < numRows; i++) {
-      long ts = System.currentTimeMillis() * 2;
+      long ts = EnvironmentEdgeManager.currentTime() * 2;
       Put put = new Put(ROW, ts);
       put.addColumn(FAMILY, COLUMN, VALUE);
       table.put(put);

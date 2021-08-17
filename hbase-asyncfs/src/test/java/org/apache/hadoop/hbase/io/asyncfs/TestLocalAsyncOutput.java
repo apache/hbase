@@ -22,7 +22,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -47,7 +47,7 @@ public class TestLocalAsyncOutput {
 
   private static Class<? extends Channel> CHANNEL_CLASS = NioSocketChannel.class;
 
-  private static final HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil TEST_UTIL = new HBaseCommonTestingUtil();
 
   @AfterClass
   public static void tearDownAfterClass() throws IOException {

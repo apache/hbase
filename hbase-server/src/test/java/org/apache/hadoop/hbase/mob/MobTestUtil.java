@@ -24,7 +24,7 @@ import java.util.Random;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Assert;
 
 public class MobTestUtil {
@@ -63,7 +64,7 @@ public class MobTestUtil {
    */
   private static void writeStoreFile(final StoreFileWriter writer, byte[] fam,
       byte[] qualifier) throws IOException {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     try {
       for (char d = FIRST_CHAR; d <= LAST_CHAR; d++) {
         for (char e = FIRST_CHAR; e <= LAST_CHAR; e++) {
@@ -115,6 +116,6 @@ public class MobTestUtil {
     Scan scan = new Scan();
     // Do not retrieve the mob data when scanning
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
-    return HBaseTestingUtility.countRows(table, scan);
+    return HBaseTestingUtil.countRows(table, scan);
     }
 }

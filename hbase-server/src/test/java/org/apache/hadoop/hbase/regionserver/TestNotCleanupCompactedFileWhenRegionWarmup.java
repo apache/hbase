@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -57,7 +57,7 @@ public class TestNotCleanupCompactedFileWhenRegionWarmup {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestNotCleanupCompactedFileWhenRegionWarmup.class);
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
   private static Admin admin;
   private static Table table;
 
@@ -69,7 +69,7 @@ public class TestNotCleanupCompactedFileWhenRegionWarmup {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     // Set the scanner lease to 20min, so the scanner can't be closed by RegionServer
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 1200000);
     TEST_UTIL.getConfiguration()

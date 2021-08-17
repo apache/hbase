@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.thrift.generated.TThriftServerType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -92,7 +93,7 @@ public class TestThriftServer {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestThriftServer.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestThriftServer.class);
   private static final MetricsAssertHelper metricsHelper = CompatibilityFactory
       .getInstance(MetricsAssertHelper.class);
@@ -414,13 +415,13 @@ public class TestThriftServer {
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply timestamped Mutations to rowA
-    long time1 = System.currentTimeMillis();
+    long time1 = EnvironmentEdgeManager.currentTime();
     handler.mutateRowTs(tableAname, rowAname, getMutations(), time1, null);
 
     Thread.sleep(1000);
 
     // Apply timestamped BatchMutations for rowA and rowB
-    long time2 = System.currentTimeMillis();
+    long time2 = EnvironmentEdgeManager.currentTime();
     handler.mutateRowsTs(tableAname, getBatchMutations(), time2, null);
 
     // Apply an overlapping timestamped mutation to rowB
@@ -492,7 +493,7 @@ public class TestThriftServer {
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply timestamped Mutations to rowA
-    long time1 = System.currentTimeMillis();
+    long time1 = EnvironmentEdgeManager.currentTime();
     handler.mutateRowTs(tableAname, rowAname, getMutations(), time1, null);
 
     // Sleep to assure that 'time1' and 'time2' will be different even with a
@@ -500,7 +501,7 @@ public class TestThriftServer {
     Thread.sleep(1000);
 
     // Apply timestamped BatchMutations for rowA and rowB
-    long time2 = System.currentTimeMillis();
+    long time2 = EnvironmentEdgeManager.currentTime();
     handler.mutateRowsTs(tableAname, getBatchMutations(), time2, null);
 
     time1 += 1;
@@ -742,7 +743,7 @@ public class TestThriftServer {
         .build();
 
     Table table = UTIL.createTable(tableDescriptor, null);
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     table.put(new Put(Bytes.toBytes(rowkey))
         .addColumn(Bytes.toBytes(family), Bytes.toBytes(col), now, Bytes.toBytes("val1")));
 

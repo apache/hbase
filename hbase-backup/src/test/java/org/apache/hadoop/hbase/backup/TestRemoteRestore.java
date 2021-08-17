@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.backup;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -39,10 +41,17 @@ public class TestRemoteRestore extends TestBackupBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRemoteRestore.class);
 
-  @Override
-  public void setUp() throws Exception {
+  /**
+   * Setup Cluster with appropriate configurations before running tests.
+   *
+   * @throws Exception if starting the mini cluster or setting up the tables fails
+   */
+  @BeforeClass
+  public static void setUp() throws Exception {
+    TEST_UTIL = new HBaseTestingUtil();
+    conf1 = TEST_UTIL.getConfiguration();
     useSecondCluster = true;
-    super.setUp();
+    setUpHelper();
   }
 
   /**

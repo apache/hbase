@@ -639,7 +639,7 @@ possible configurations would overwhelm and obscure the important.
     <description>Whether to merge a region as part of normalization.</description>
   </property>
   <property>
-    <name>hbase.normalizer.min.region.count</name>
+    <name>hbase.normalizer.merge.min.region.count</name>
     <value>3</value>
     <description>The minimum number of regions in a table to consider it for merge
       normalization.</description>
@@ -659,6 +659,13 @@ possible configurations would overwhelm and obscure the important.
     <value>1</value>
     <description>The minimum size for a region to be considered for a merge, in whole
       MBs.</description>
+  </property>
+  <property>
+    <name>hbase.table.normalization.enabled</name>
+    <value>false</value>
+    <description>This config is used to set default behaviour of normalizer at table level.
+      To override this at table level one can set NORMALIZATION_ENABLED at table descriptor level
+      and that property will be honored</description>
   </property>
   <property>
     <name>hbase.server.thread.wakefrequency</name>

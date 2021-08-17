@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -43,7 +43,7 @@ public class TestIntraRowPagination {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestIntraRowPagination.class);
 
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   /**
    * Test from client side for scan with maxResultPerCF set
@@ -62,7 +62,7 @@ public class TestIntraRowPagination {
     for (byte[] family : FAMILIES) {
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), builder.build());
     try {
       Put put;
@@ -103,7 +103,7 @@ public class TestIntraRowPagination {
       TestScannersFromClientSide.verifyResult(result, kvListExp, toLog,
           "Testing scan with storeOffset and storeLimit");
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      HBaseTestingUtil.closeRegionAndWAL(region);
     }
   }
 

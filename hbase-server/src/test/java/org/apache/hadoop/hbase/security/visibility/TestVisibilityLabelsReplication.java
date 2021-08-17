@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -107,8 +107,8 @@ public class TestVisibilityLabelsReplication {
   public static final String SECRET = "secret";
   public static final String UNICODE_VIS_TAG = COPYRIGHT + "\"" + ACCENT + "\\" + SECRET + "\""
       + "\u0027&\\";
-  public static HBaseTestingUtility TEST_UTIL;
-  public static HBaseTestingUtility TEST_UTIL1;
+  public static HBaseTestingUtil TEST_UTIL;
+  public static HBaseTestingUtil TEST_UTIL1;
   public static final byte[] row1 = Bytes.toBytes("row1");
   public static final byte[] row2 = Bytes.toBytes("row2");
   public static final byte[] row3 = Bytes.toBytes("row3");
@@ -164,7 +164,7 @@ public class TestVisibilityLabelsReplication {
     // User.createUserForTesting(conf, User.getCurrent().getShortName(), new
     // String[] { "supergroup" });
     USER1 = User.createUserForTesting(conf, "user1", new String[] {});
-    TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL = new HBaseTestingUtil(conf);
     TEST_UTIL.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = TEST_UTIL.getZkCluster();
     zkw1 = new ZKWatcher(conf, "cluster1", null, true);
@@ -180,7 +180,7 @@ public class TestVisibilityLabelsReplication {
         TestCoprocessorForTagsAtSink.class.getName());
     // setVisibilityLabelServiceImpl(conf1);
     USER1 = User.createUserForTesting(conf1, "user1", new String[] {});
-    TEST_UTIL1 = new HBaseTestingUtility(conf1);
+    TEST_UTIL1 = new HBaseTestingUtil(conf1);
     TEST_UTIL1.setZkCluster(miniZK);
     zkw2 = new ZKWatcher(conf1, "cluster2", null, true);
 

@@ -27,7 +27,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -49,7 +49,7 @@ public class TestMetaTableAccessorNoCluster {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMetaTableAccessorNoCluster.class);
 
-  private static final  HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final  HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @Before
   public void before() throws Exception {

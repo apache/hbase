@@ -945,6 +945,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public void updateConfiguration(String groupName) {
+    throw new NotImplementedException("updateConfiguration not supported in ThriftAdmin");
+  }
+
+  @Override
   public List<SecurityCapability> getSecurityCapabilities() {
     throw new NotImplementedException("getSecurityCapabilities not supported in ThriftAdmin");
   }

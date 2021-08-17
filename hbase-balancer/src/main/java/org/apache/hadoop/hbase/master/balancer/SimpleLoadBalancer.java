@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -298,7 +299,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
   @Override
   protected List<RegionPlan> balanceTable(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable) {
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
 
     // construct a Cluster object with clusterMap and rest of the
     // argument as defaults
@@ -482,7 +483,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
       balanceOverall(regionsToReturn, serverBalanceInfo, fetchFromTail, regionsToMove, max, min);
     }
 
-    long endTime = System.currentTimeMillis();
+    long endTime = EnvironmentEdgeManager.currentTime();
 
     if (!regionsToMove.isEmpty() || neededRegions != 0) {
       // Emit data so can diagnose how balancer went astray.

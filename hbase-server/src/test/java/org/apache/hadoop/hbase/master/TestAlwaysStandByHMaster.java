@@ -22,9 +22,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MiniClusterRule;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
@@ -38,7 +38,7 @@ public class TestAlwaysStandByHMaster {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestAlwaysStandByHMaster.class);
 
-  private static final StartMiniClusterOption OPTION = StartMiniClusterOption.builder()
+  private static final StartTestingClusterOption OPTION = StartTestingClusterOption.builder()
     .numAlwaysStandByMasters(1)
     .numMasters(1)
     .numRegionServers(1)
@@ -54,7 +54,7 @@ public class TestAlwaysStandByHMaster {
    * master exists.
    */
   @Test  public void testAlwaysStandBy() throws Exception {
-    HBaseTestingUtility testUtil = miniClusterRule.getTestingUtility();
+    HBaseTestingUtil testUtil = miniClusterRule.getTestingUtility();
     // Make sure there is an active master.
     assertNotNull(testUtil.getMiniHBaseCluster().getMaster());
     assertEquals(2, testUtil.getMiniHBaseCluster().getMasterThreads().size());

@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALFactory.Providers;
@@ -100,7 +101,7 @@ public class TestWALFactory {
 
   protected static Configuration conf;
   private static MiniDFSCluster cluster;
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected static Path hbaseDir;
   protected static Path hbaseWALDir;
 
@@ -215,10 +216,10 @@ public class TestWALFactory {
           byte [] qualifier = Bytes.toBytes(Integer.toString(j));
           byte [] column = Bytes.toBytes("column:" + Integer.toString(j));
           edit.add(new KeyValue(rowName, family, qualifier,
-              System.currentTimeMillis(), column));
+            EnvironmentEdgeManager.currentTime(), column));
           LOG.info("Region " + i + ": " + edit);
           WALKeyImpl walKey =  new WALKeyImpl(infos[i].getEncodedNameAsBytes(), tableName,
-              System.currentTimeMillis(), mvcc, scopes);
+            EnvironmentEdgeManager.currentTime(), mvcc, scopes);
           log.appendData(infos[i], walKey, edit);
           walKey.getWriteEntry();
         }
@@ -282,7 +283,7 @@ public class TestWALFactory {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
         wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis(), mvcc, scopes), kvs);
+          EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
       }
       // Now call sync and try reading.  Opening a Reader before you sync just
       // gives you EOFE.
@@ -301,7 +302,7 @@ public class TestWALFactory {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
         wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis(), mvcc, scopes), kvs);
+          EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
       }
       wal.sync();
       reader = wals.createReader(fs, walPath);
@@ -323,7 +324,7 @@ public class TestWALFactory {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), value));
         wal.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis(), mvcc, scopes), kvs);
+          EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
       }
       // Now I should have written out lots of blocks.  Sync then read.
       wal.sync();
@@ -400,7 +401,7 @@ public class TestWALFactory {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
       wal.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
-        System.currentTimeMillis(), mvcc, scopes), kvs);
+        EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
     }
     // Now call sync to send the data to HDFS datanodes
     wal.sync();
@@ -521,7 +522,7 @@ public class TestWALFactory {
 
       // Write columns named 1, 2, 3, etc. and then values of single byte
       // 1, 2, 3...
-      long timestamp = System.currentTimeMillis();
+      long timestamp = EnvironmentEdgeManager.currentTime();
       WALEdit cols = new WALEdit();
       for (int i = 0; i < colCount; i++) {
         cols.add(new KeyValue(row, Bytes.toBytes("column"),
@@ -533,7 +534,7 @@ public class TestWALFactory {
       final WAL log = wals.getWAL(info);
 
       final long txid = log.appendData(info, new WALKeyImpl(info.getEncodedNameAsBytes(),
-        htd.getTableName(), System.currentTimeMillis(), mvcc, scopes), cols);
+        htd.getTableName(), EnvironmentEdgeManager.currentTime(), mvcc, scopes), cols);
       log.sync(txid);
       log.startCacheFlush(info.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
       log.completeCacheFlush(info.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
@@ -579,7 +580,7 @@ public class TestWALFactory {
     try {
       // Write columns named 1, 2, 3, etc. and then values of single byte
       // 1, 2, 3...
-      long timestamp = System.currentTimeMillis();
+      long timestamp = EnvironmentEdgeManager.currentTime();
       WALEdit cols = new WALEdit();
       for (int i = 0; i < colCount; i++) {
         cols.add(new KeyValue(row, Bytes.toBytes("column"),
@@ -589,7 +590,7 @@ public class TestWALFactory {
       RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
       final WAL log = wals.getWAL(hri);
       final long txid = log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
-        htd.getTableName(), System.currentTimeMillis(), mvcc, scopes), cols);
+        htd.getTableName(), EnvironmentEdgeManager.currentTime(), mvcc, scopes), cols);
       log.sync(txid);
       log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
       log.completeCacheFlush(hri.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
@@ -628,7 +629,7 @@ public class TestWALFactory {
     final byte [] row = Bytes.toBytes("row");
     final DumbWALActionsListener visitor = new DumbWALActionsListener();
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
-    long timestamp = System.currentTimeMillis();
+    long timestamp = EnvironmentEdgeManager.currentTime();
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     scopes.put(Bytes.toBytes("column"), 0);
 
@@ -641,7 +642,7 @@ public class TestWALFactory {
           Bytes.toBytes(Integer.toString(i)),
           timestamp, new byte[]{(byte) (i + '0')}));
       log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName,
-        System.currentTimeMillis(), mvcc, scopes), cols);
+        EnvironmentEdgeManager.currentTime(), mvcc, scopes), cols);
     }
     log.sync();
     assertEquals(COL_COUNT, visitor.increments);
@@ -651,7 +652,7 @@ public class TestWALFactory {
         Bytes.toBytes(Integer.toString(11)),
         timestamp, new byte[]{(byte) (11 + '0')}));
     log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName,
-      System.currentTimeMillis(), mvcc, scopes), cols);
+      EnvironmentEdgeManager.currentTime(), mvcc, scopes), cols);
     log.sync();
     assertEquals(COL_COUNT, visitor.increments);
   }
@@ -815,10 +816,10 @@ public class TestWALFactory {
       // Write one column in one edit.
       WALEdit cols = new WALEdit();
       cols.add(new KeyValue(row, Bytes.toBytes("column"),
-        Bytes.toBytes("0"), System.currentTimeMillis(), new byte[] { 0 }));
+        Bytes.toBytes("0"), EnvironmentEdgeManager.currentTime(), new byte[] { 0 }));
       final WAL log = customFactory.getWAL(hri);
       final long txid = log.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
-        htd.getTableName(), System.currentTimeMillis(), mvcc, scopes), cols);
+        htd.getTableName(), EnvironmentEdgeManager.currentTime(), mvcc, scopes), cols);
       // Sync the edit to the WAL
       log.sync(txid);
       log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getColumnFamilyNames());

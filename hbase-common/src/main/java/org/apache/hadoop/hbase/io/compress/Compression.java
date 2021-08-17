@@ -102,6 +102,8 @@ public final class Compression {
       justification="We are not serializing so doesn't apply (not sure why transient though)")
   @InterfaceAudience.Public
   public static enum Algorithm {
+    // LZO is GPL and requires extra install to setup. See
+    // https://stackoverflow.com/questions/23441142/class-com-hadoop-compression-lzo-lzocodec-not-found-for-spark-on-cdh-5
     LZO("lzo") {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec lzoCodec;

@@ -24,7 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -70,7 +70,7 @@ public class TestMetaWithReplicasShutdownHandling extends MetaWithReplicasTestBa
     shutdownMetaAndDoValidations(TEST_UTIL);
   }
 
-  public static void shutdownMetaAndDoValidations(HBaseTestingUtility util) throws Exception {
+  public static void shutdownMetaAndDoValidations(HBaseTestingUtil util) throws Exception {
     // This test creates a table, flushes the meta (with 3 replicas), kills the
     // server holding the primary meta replica. Then it does a put/get into/from
     // the test table. The put/get operations would use the replicas to locate the

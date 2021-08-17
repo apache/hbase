@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
@@ -123,7 +123,7 @@ public class TestHRegionReplayEvents {
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegion.class);
   @Rule public TestName name = new TestName();
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
 
   public static Configuration CONF;
   private String dir;
@@ -149,7 +149,7 @@ public class TestHRegionReplayEvents {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.startMiniDFSCluster(1);
   }
 
@@ -175,7 +175,7 @@ public class TestHRegionReplayEvents {
     }
     htd = builder.build();
 
-    long time = System.currentTimeMillis();
+    long time = EnvironmentEdgeManager.currentTime();
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
       0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     primaryHri =
@@ -216,10 +216,10 @@ public class TestHRegionReplayEvents {
     }
 
     if (primaryRegion != null) {
-      HBaseTestingUtility.closeRegionAndWAL(primaryRegion);
+      HBaseTestingUtil.closeRegionAndWAL(primaryRegion);
     }
     if (secondaryRegion != null) {
-      HBaseTestingUtility.closeRegionAndWAL(secondaryRegion);
+      HBaseTestingUtil.closeRegionAndWAL(secondaryRegion);
     }
 
     EnvironmentEdgeManagerTestHelper.reset();

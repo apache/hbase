@@ -36,8 +36,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -76,9 +77,9 @@ public class TestMasterRegionOnTwoFileSystems {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMasterRegionOnTwoFileSystems.class);
 
-  private static final HBaseCommonTestingUtility HFILE_UTIL = new HBaseCommonTestingUtility();
+  private static final HBaseCommonTestingUtil HFILE_UTIL = new HBaseCommonTestingUtil();
 
-  private static final HBaseTestingUtility WAL_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil WAL_UTIL = new HBaseTestingUtil();
 
   private static byte[] CF = Bytes.toBytes("f");
 
@@ -135,7 +136,8 @@ public class TestMasterRegionOnTwoFileSystems {
     Path walRootDir = WAL_UTIL.getDataTestDirOnTestFS();
     FileSystem walFs = WAL_UTIL.getTestFileSystem();
     walFs.delete(walRootDir, true);
-    region = createMasterRegion(ServerName.valueOf("localhost", 12345, System.currentTimeMillis()));
+    region = createMasterRegion(ServerName.valueOf("localhost", 12345,
+      EnvironmentEdgeManager.currentTime()));
   }
 
   @After
@@ -219,8 +221,8 @@ public class TestMasterRegionOnTwoFileSystems {
       }
       region.close(true);
       region = createMasterRegion(
-        ServerName.valueOf("localhost", 12345, System.currentTimeMillis() + round + 1));
-      try (RegionScanner scanner = region.getScanner(new Scan())) {
+        ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime() + round + 1));
+      try (RegionScanner scanner = region.getRegionScanner(new Scan())) {
         List<Cell> cells = new ArrayList<>();
         boolean moreValues = true;
         for (int i = 0; i < (round + 1) * countPerRound; i++) {

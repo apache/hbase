@@ -18,6 +18,10 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -31,17 +35,21 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * In a scenario of Replication based Disaster/Recovery, when hbase Master-Cluster crashes, this
  * tool is used to sync-up the delta from Master to Slave using the info from ZooKeeper. The tool
- * will run on Master-Cluser, and assume ZK, Filesystem and NetWork still available after hbase
+ * will run on Master-Cluster, and assume ZK, Filesystem and NetWork still available after hbase
  * crashes
  *
  * <pre>
@@ -61,6 +69,29 @@ public class ReplicationSyncUp extends Configured implements Tool {
     System.exit(ret);
   }
 
+  private Set<ServerName> getLiveRegionServers(ZKWatcher zkw) throws KeeperException {
+    List<String> rsZNodes = ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode);
+    return rsZNodes == null ? Collections.emptySet() :
+      rsZNodes.stream().map(ServerName::parseServerName).collect(Collectors.toSet());
+  }
+
+  // When using this tool, usually the source cluster is unhealthy, so we should try to claim the
+  // replication queues for the dead region servers first and then replicate the data out.
+  private void claimReplicationQueues(ZKWatcher zkw, ReplicationSourceManager mgr)
+    throws ReplicationException, KeeperException {
+    List<ServerName> replicators = mgr.getQueueStorage().getListOfReplicators();
+    Set<ServerName> liveRegionServers = getLiveRegionServers(zkw);
+    for (ServerName sn : replicators) {
+      if (!liveRegionServers.contains(sn)) {
+        List<String> replicationQueues = mgr.getQueueStorage().getAllQueues(sn);
+        System.out.println(sn + " is dead, claim its replication queues: " + replicationQueues);
+        for (String queue : replicationQueues) {
+          mgr.claimQueue(sn, queue);
+        }
+      }
+    }
+  }
+
   @Override
   public int run(String[] args) throws Exception {
     Abortable abortable = new Abortable() {
@@ -74,8 +105,9 @@ public class ReplicationSyncUp extends Configured implements Tool {
       }
     };
     Configuration conf = getConf();
-    try (ZKWatcher zkw =
-      new ZKWatcher(conf, "syncupReplication" + System.currentTimeMillis(), abortable, true)) {
+    try (ZKWatcher zkw = new ZKWatcher(conf,
+        "syncupReplication" + EnvironmentEdgeManager.currentTime(),
+        abortable, true)) {
       Path walRootDir = CommonFSUtils.getWALRootDir(conf);
       FileSystem fs = CommonFSUtils.getWALFileSystem(conf);
       Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
@@ -86,7 +118,8 @@ public class ReplicationSyncUp extends Configured implements Tool {
       replication.initialize(new DummyServer(zkw), fs, logDir, oldLogDir,
         new WALFactory(conf, "test", null, false));
       ReplicationSourceManager manager = replication.getReplicationManager();
-      manager.init().get();
+      manager.init();
+      claimReplicationQueues(zkw, manager);
       while (manager.activeFailoverTaskCount() > 0) {
         Thread.sleep(SLEEP_TIME);
       }
@@ -107,7 +140,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
 
     DummyServer(ZKWatcher zkw) {
       // a unique name in case the first run fails
-      hostname = System.currentTimeMillis() + ".SyncUpTool.replication.org";
+      hostname = EnvironmentEdgeManager.currentTime() + ".SyncUpTool.replication.org";
       this.zkw = zkw;
     }
 

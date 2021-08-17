@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -66,7 +66,7 @@ public class TestHRegionFileSystem {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHRegionFileSystem.class);
 
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionFileSystem.class);
 
   public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
@@ -80,7 +80,7 @@ public class TestHRegionFileSystem {
 
   @Test
   public void testBlockStoragePolicy() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     Configuration conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniCluster();
     Table table = TEST_UTIL.createTable(TABLE_NAME, FAMILIES);

@@ -27,8 +27,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Result;
@@ -51,7 +51,7 @@ import org.slf4j.LoggerFactory;
 
 public abstract class TableSnapshotInputFormatTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(TableSnapshotInputFormatTestBase.class);
-  protected final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected static final int NUM_REGION_SERVERS = 2;
   protected static final byte[][] FAMILIES = {Bytes.toBytes("f1"), Bytes.toBytes("f2")};
 
@@ -61,7 +61,7 @@ public abstract class TableSnapshotInputFormatTestBase {
   @Before
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numRegionServers(NUM_REGION_SERVERS).numDataNodes(NUM_REGION_SERVERS)
         .createRootDir(true).build();
     UTIL.startMiniCluster(option);
@@ -79,11 +79,11 @@ public abstract class TableSnapshotInputFormatTestBase {
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
   }
 
-  protected abstract void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName,
+  protected abstract void testWithMockedMapReduce(HBaseTestingUtil util, String snapshotName,
     int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean setLocalityEnabledTo)
     throws Exception;
 
-  protected abstract void testWithMapReduceImpl(HBaseTestingUtility util, TableName tableName,
+  protected abstract void testWithMapReduceImpl(HBaseTestingUtil util, TableName tableName,
     String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion,
     int expectedNumSplits, boolean shutdownCluster) throws Exception;
 
@@ -160,7 +160,7 @@ public abstract class TableSnapshotInputFormatTestBase {
   public abstract void testRestoreSnapshotDoesNotCreateBackRefLinksInit(TableName tableName,
       String snapshotName, Path tmpTableDir) throws Exception;
 
-  protected void testWithMapReduce(HBaseTestingUtility util, String snapshotName, int numRegions,
+  protected void testWithMapReduce(HBaseTestingUtil util, String snapshotName, int numRegions,
       int numSplitsPerRegion, int expectedNumSplits, boolean shutdownCluster) throws Exception {
     Path tableDir = util.getDataTestDirOnTestFS(snapshotName);
     TableName tableName = TableName.valueOf("testWithMapReduce");
@@ -188,7 +188,7 @@ public abstract class TableSnapshotInputFormatTestBase {
     }
   }
 
-  protected static void createTableAndSnapshot(HBaseTestingUtility util, TableName tableName,
+  protected static void createTableAndSnapshot(HBaseTestingUtil util, TableName tableName,
     String snapshotName, byte[] startRow, byte[] endRow, int numRegions)
     throws Exception {
     try {

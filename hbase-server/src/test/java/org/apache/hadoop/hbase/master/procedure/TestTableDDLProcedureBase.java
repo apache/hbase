@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 public abstract class TestTableDDLProcedureBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestTableDDLProcedureBase.class);
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);

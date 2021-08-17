@@ -28,7 +28,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -59,7 +59,7 @@ public class TestZKUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKUtil.class);
 
-  private static HBaseZKTestingUtility UTIL = new HBaseZKTestingUtility();
+  private static HBaseZKTestingUtil UTIL = new HBaseZKTestingUtil();
 
   private static ZKWatcher ZKW;
 

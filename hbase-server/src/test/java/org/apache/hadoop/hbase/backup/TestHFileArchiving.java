@@ -44,7 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -92,7 +93,7 @@ public class TestHFileArchiving {
       HBaseClassTestRule.forClass(TestHFileArchiving.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileArchiving.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
 
   private static DirScanPool POOL;
@@ -486,14 +487,14 @@ public class TestHFileArchiving {
 
   private void assertArchiveFiles(FileSystem fs, List<String> storeFiles, long timeout)
           throws IOException {
-    long end = System.currentTimeMillis() + timeout;
+    long end = EnvironmentEdgeManager.currentTime() + timeout;
     Path archiveDir = HFileArchiveUtil.getArchivePath(UTIL.getConfiguration());
     List<String> archivedFiles = new ArrayList<>();
 
     // We have to ensure that the DeleteTableHandler is finished. HBaseAdmin.deleteXXX()
     // can return before all files
     // are archived. We should fix HBASE-5487 and fix synchronous operations from admin.
-    while (System.currentTimeMillis() < end) {
+    while (EnvironmentEdgeManager.currentTime() < end) {
       archivedFiles = getAllFileNames(fs, archiveDir);
       if (archivedFiles.size() >= storeFiles.size()) {
         break;
@@ -595,8 +596,8 @@ public class TestHFileArchiving {
     try {
       choreService.scheduleChore(cleaner);
       // Keep creating/archiving new files while the cleaner is running in the other thread
-      long startTime = System.currentTimeMillis();
-      for (long fid = 0; (System.currentTimeMillis() - startTime) < TEST_TIME; ++fid) {
+      long startTime = EnvironmentEdgeManager.currentTime();
+      for (long fid = 0; (EnvironmentEdgeManager.currentTime() - startTime) < TEST_TIME; ++fid) {
         Path file = new Path(familyDir,  String.valueOf(fid));
         Path sourceFile = new Path(rootDir, file);
         Path archiveFile = new Path(archiveDir, file);

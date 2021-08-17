@@ -41,7 +41,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -68,7 +68,7 @@ public class TestCanaryTool {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCanaryTool.class);
 
-  private HBaseTestingUtility testingUtility;
+  private HBaseTestingUtil testingUtility;
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] COLUMN = Bytes.toBytes("col");
 
@@ -79,7 +79,7 @@ public class TestCanaryTool {
 
   @Before
   public void setUp() throws Exception {
-    testingUtility = new HBaseTestingUtility();
+    testingUtility = new HBaseTestingUtil();
     testingUtility.startMiniCluster();
     mockAppender = mock(org.apache.logging.log4j.core.Appender.class);
     when(mockAppender.getName()).thenReturn("mockAppender");

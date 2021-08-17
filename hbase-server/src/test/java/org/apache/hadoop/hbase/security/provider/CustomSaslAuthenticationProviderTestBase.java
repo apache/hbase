@@ -51,7 +51,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -402,7 +402,7 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
     }
   }
 
-  private static void createBaseCluster(HBaseTestingUtility util, File keytabFile, MiniKdc kdc)
+  private static void createBaseCluster(HBaseTestingUtil util, File keytabFile, MiniKdc kdc)
     throws Exception {
     String servicePrincipal = "hbase/localhost";
     String spnegoPrincipal = "HTTP/localhost";
@@ -420,7 +420,7 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
     CommonFSUtils.setRootDir(util.getConfiguration(), rootdir);
   }
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final Configuration CONF = UTIL.getConfiguration();
   private static LocalHBaseCluster CLUSTER;
   private static File KEYTAB_FILE;

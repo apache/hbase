@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -50,7 +50,7 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
   private static byte[] TEST_QUALIFIER = Bytes.toBytes("cq");
   private static byte[] TEST_ROW = Bytes.toBytes(0);
 
-  protected static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   // user is table owner. will have all permissions on table
   private static User USER_OWNER;
@@ -253,9 +253,9 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
 
   @Test
   public void testDeleteSnapshot() throws Exception {
-    String testSnapshotName = HBaseCommonTestingUtility.getRandomUUID().toString();
+    String testSnapshotName = HBaseCommonTestingUtil.getRandomUUID().toString();
     verifyAllowed(new AccessSnapshotAction(testSnapshotName), USER_OWNER);
-    verifyDenied(new AccessSnapshotAction(HBaseCommonTestingUtility.getRandomUUID().toString()),
+    verifyDenied(new AccessSnapshotAction(HBaseCommonTestingUtil.getRandomUUID().toString()),
       USER_RO, USER_RW, USER_NONE);
     List<SnapshotDescription> snapshotDescriptions = TEST_UTIL.getAdmin().listSnapshots(
       Pattern.compile(testSnapshotName));

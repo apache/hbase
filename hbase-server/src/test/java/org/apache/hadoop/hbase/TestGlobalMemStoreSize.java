@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.ClassRule;
@@ -61,8 +62,8 @@ public class TestGlobalMemStoreSize {
   // total region num = region num + meta regions
   private static int totalRegionNum = regionNum + 1;
 
-  private HBaseTestingUtility TEST_UTIL;
-  private MiniHBaseCluster cluster;
+  private HBaseTestingUtil TEST_UTIL;
+  private SingleProcessHBaseCluster cluster;
 
   @Rule
   public TestName name = new TestName();
@@ -77,7 +78,7 @@ public class TestGlobalMemStoreSize {
     // Start the cluster
     LOG.info("Starting cluster");
     Configuration conf = HBaseConfiguration.create();
-    TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL = new HBaseTestingUtil(conf);
     TEST_UTIL.startMiniCluster(regionServerNum);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
@@ -117,10 +118,10 @@ public class TestGlobalMemStoreSize {
         flush(r, server);
       }
       LOG.info("Post flush on " + server.getServerName());
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       long timeout = now + 1000;
       while(server.getRegionServerAccounting().getGlobalMemStoreDataSize() != 0 &&
-          timeout < System.currentTimeMillis()) {
+          timeout < EnvironmentEdgeManager.currentTime()) {
         Threads.sleep(10);
       }
       long size = server.getRegionServerAccounting().getGlobalMemStoreDataSize();
@@ -177,7 +178,7 @@ public class TestGlobalMemStoreSize {
    */
   private void waitForAllRegionsAssigned() throws IOException {
     while (true) {
-      int regionCount = HBaseTestingUtility.getAllOnlineRegions(cluster).size();
+      int regionCount = HBaseTestingUtil.getAllOnlineRegions(cluster).size();
       if (regionCount >= totalRegionNum) break;
       LOG.debug("Waiting for there to be "+ totalRegionNum
         +" regions, but there are " + regionCount + " right now.");

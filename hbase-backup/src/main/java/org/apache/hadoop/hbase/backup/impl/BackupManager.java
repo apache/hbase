@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -295,6 +296,15 @@ public class BackupManager implements Closeable {
           .withRootDir(backup.getBackupRootDir()).withTableList(backup.getTableNames())
           .withStartTime(backup.getStartTs()).withCompleteTime(backup.getCompleteTs()).build();
 
+      // Only direct ancestors for a backup are required and not entire history of backup for this
+      // table resulting in verifying all of the previous backups which is unnecessary and backup
+      // paths need not be valid beyond the lifetime of a backup.
+      //
+      // RootDir is way of grouping a single backup including one full and many incremental backups
+      if (!image.getRootDir().equals(backupInfo.getBackupRootDir())) {
+        continue;
+      }
+
       // add the full backup image as an ancestor until the last incremental backup
       if (backup.getType().equals(BackupType.FULL)) {
         // check the backup image coverage, if previous image could be covered by the newer ones,
@@ -373,11 +383,11 @@ public class BackupManager implements Closeable {
    * @throws IOException if active session already exists
    */
   public void startBackupSession() throws IOException {
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     long timeout = conf.getInt(BACKUP_EXCLUSIVE_OPERATION_TIMEOUT_SECONDS_KEY,
       DEFAULT_BACKUP_EXCLUSIVE_OPERATION_TIMEOUT) * 1000L;
     long lastWarningOutputTime = 0;
-    while (System.currentTimeMillis() - startTime < timeout) {
+    while (EnvironmentEdgeManager.currentTime() - startTime < timeout) {
       try {
         systemTable.startBackupExclusiveOperation();
         return;
@@ -391,8 +401,8 @@ public class BackupManager implements Closeable {
             Thread.currentThread().interrupt();
           }
           if (lastWarningOutputTime == 0
-              || (System.currentTimeMillis() - lastWarningOutputTime) > 60000) {
-            lastWarningOutputTime = System.currentTimeMillis();
+              || (EnvironmentEdgeManager.currentTime() - lastWarningOutputTime) > 60000) {
+            lastWarningOutputTime = EnvironmentEdgeManager.currentTime();
             LOG.warn("Waiting to acquire backup exclusive lock for {}s",
                 +(lastWarningOutputTime - startTime) / 1000);
           }

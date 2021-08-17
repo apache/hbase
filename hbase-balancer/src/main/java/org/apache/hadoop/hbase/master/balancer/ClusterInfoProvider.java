@@ -22,13 +22,18 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalancerDecision;
+import org.apache.hadoop.hbase.client.BalancerRejection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -36,7 +41,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * want.
  */
 @InterfaceAudience.Private
-public interface ClusterInfoProvider {
+public interface ClusterInfoProvider extends ConfigurationObserver {
 
   /**
    * Get the configuration.
@@ -44,11 +49,21 @@ public interface ClusterInfoProvider {
   Configuration getConfiguration();
 
   /**
+   * Returns a reference to the cluster's connection.
+   */
+  Connection getConnection();
+
+  /**
    * Get all the regions of this cluster.
    * <p/>
    * Used to refresh region block locations on HDFS.
    */
   List<RegionInfo> getAssignedRegions();
+
+  /**
+   * Unassign the given region.
+   */
+  void unassign(RegionInfo regionInfo) throws IOException;
 
   /**
    * Get the table descriptor for the given table.
@@ -74,6 +89,11 @@ public interface ClusterInfoProvider {
   boolean hasRegionReplica(Collection<RegionInfo> regions) throws IOException;
 
   /**
+   * Returns a copy of the internal list of online servers.
+   */
+  List<ServerName> getOnlineServersList();
+
+  /**
    * Returns a copy of the internal list of online servers matched by the given {@code filter}.
    */
   List<ServerName> getOnlineServersListWithPredicator(List<ServerName> servers,
@@ -83,4 +103,26 @@ public interface ClusterInfoProvider {
    * Get a snapshot of the current assignment status.
    */
   Map<ServerName, List<RegionInfo>> getSnapShotOfAssignment(Collection<RegionInfo> regions);
+
+  /**
+   * Test whether we are in off peak hour.
+   * <p/>
+   * For peak and off peak hours we may have different cost for the same balancing operation.
+   */
+  boolean isOffPeakHour();
+
+  /**
+   * Record the given balancer decision.
+   */
+  void recordBalancerDecision(Supplier<BalancerDecision> decision);
+
+  /**
+   * Record the given balancer rejection.
+   */
+  void recordBalancerRejection(Supplier<BalancerRejection> rejection);
+
+  /**
+   * Returns server metrics of the given server if serverName is known else null
+   */
+  ServerMetrics getLoad(ServerName serverName);
 }

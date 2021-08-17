@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.TestIncrementsFromClientSide;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -65,14 +66,14 @@ public class TestRegionIncrement {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionIncrement.class);
   @Rule public TestName name = new TestName();
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
   private final static byte [] INCREMENT_BYTES = Bytes.toBytes("increment");
   private static final int THREAD_COUNT = 10;
   private static final int INCREMENT_COUNT = 10000;
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
   }
 
   @After
@@ -177,7 +178,7 @@ public class TestRegionIncrement {
   throws IOException, InterruptedException {
     final HRegion region = getRegion(TEST_UTIL.getConfiguration(),
         TestIncrementsFromClientSide.filterStringSoTableNameSafe(this.name.getMethodName()));
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     try {
       SingleCellIncrementer [] threads = new SingleCellIncrementer[THREAD_COUNT];
       for (int i = 0; i < threads.length; i++) {
@@ -202,7 +203,8 @@ public class TestRegionIncrement {
       assertEquals(INCREMENT_COUNT * THREAD_COUNT, total);
     } finally {
       closeRegion(region);
-      LOG.info(this.name.getMethodName() + " " + (System.currentTimeMillis() - startTime) + "ms");
+      LOG.info(this.name.getMethodName() + " " +
+        (EnvironmentEdgeManager.currentTime() - startTime) + "ms");
     }
   }
 
@@ -213,7 +215,7 @@ public class TestRegionIncrement {
   public void testContendedAcrossCellsIncrement() throws IOException, InterruptedException {
     final HRegion region = getRegion(TEST_UTIL.getConfiguration(),
         TestIncrementsFromClientSide.filterStringSoTableNameSafe(this.name.getMethodName()));
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     try {
       CrossRowCellIncrementer [] threads = new CrossRowCellIncrementer[THREAD_COUNT];
       for (int i = 0; i < threads.length; i++) {
@@ -235,7 +237,8 @@ public class TestRegionIncrement {
       assertEquals(INCREMENT_COUNT * THREAD_COUNT, total);
     } finally {
       closeRegion(region);
-      LOG.info(this.name.getMethodName() + " " + (System.currentTimeMillis() - startTime) + "ms");
+      LOG.info(this.name.getMethodName() + " " +
+        (EnvironmentEdgeManager.currentTime() - startTime) + "ms");
     }
   }
 }

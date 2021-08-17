@@ -18,17 +18,18 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.RegionInfo;
-
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.namequeues.BalancerRejectionDetails;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
@@ -36,7 +37,6 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Assert;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -66,11 +66,6 @@ public class TestBalancerRejection extends StochasticBalancerTestBase {
     }
 
     @Override
-    boolean isNeeded() {
-      return super.isNeeded();
-    }
-
-    @Override
     float getMultiplier() {
       return 1;
     }
@@ -82,6 +77,10 @@ public class TestBalancerRejection extends StochasticBalancerTestBase {
       //enabled balancer rejection recording
       conf.setBoolean(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED, true);
       conf.set(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY, MockCostFunction.class.getName());
+      MasterServices services = mock(MasterServices.class);
+      when(services.getConfiguration()).thenReturn(conf);
+      MasterClusterInfoProvider provider = new MasterClusterInfoProvider(services);
+      loadBalancer.setClusterInfoProvider(provider);
       loadBalancer.onConfigurationChange(conf);
       //Simulate 2 servers with 5 regions.
       Map<ServerName, List<RegionInfo>> servers = mockClusterServers(new int[] { 5, 5 });
@@ -100,11 +99,11 @@ public class TestBalancerRejection extends StochasticBalancerTestBase {
 
       //NamedQueue is an async Producer-consumer Pattern, waiting here until it completed
       int maxWaitingCount = 10;
-      while (maxWaitingCount-- > 0 && getBalancerRejectionLogEntries().size() != 2) {
+      while (maxWaitingCount-- > 0 && getBalancerRejectionLogEntries(provider).size() != 2) {
         Thread.sleep(1000);
       }
       //There are two cases, should be 2 logEntries
-      List<LogEntry> logEntries = getBalancerRejectionLogEntries();
+      List<LogEntry> logEntries = getBalancerRejectionLogEntries(provider);
       Assert.assertEquals(2, logEntries.size());
       Assert.assertTrue(
         logEntries.get(0).toJsonPrettyPrint().contains("minCostNeedBalance"));
@@ -117,19 +116,18 @@ public class TestBalancerRejection extends StochasticBalancerTestBase {
     }
   }
 
-  private List<LogEntry> getBalancerRejectionLogEntries(){
+  private List<LogEntry> getBalancerRejectionLogEntries(MasterClusterInfoProvider provider) {
     NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
     namedQueueGetRequest.setNamedQueueEvent(BalancerRejectionDetails.BALANCER_REJECTION_EVENT);
-    namedQueueGetRequest.setBalancerRejectionsRequest(MasterProtos.BalancerRejectionsRequest.getDefaultInstance());
+    namedQueueGetRequest
+      .setBalancerRejectionsRequest(MasterProtos.BalancerRejectionsRequest.getDefaultInstance());
     NamedQueueGetResponse namedQueueGetResponse =
-      loadBalancer.namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
-    List<RecentLogs.BalancerRejection> balancerRejections = namedQueueGetResponse.getBalancerRejections();
-    MasterProtos.BalancerRejectionsResponse response =
-      MasterProtos.BalancerRejectionsResponse.newBuilder()
-        .addAllBalancerRejection(balancerRejections)
-        .build();
-    List<LogEntry> balancerRejectionRecords =
-      ProtobufUtil.getBalancerRejectionEntries(response);
+      provider.getNamedQueueRecorder().getNamedQueueRecords(namedQueueGetRequest);
+    List<RecentLogs.BalancerRejection> balancerRejections =
+      namedQueueGetResponse.getBalancerRejections();
+    MasterProtos.BalancerRejectionsResponse response = MasterProtos.BalancerRejectionsResponse
+      .newBuilder().addAllBalancerRejection(balancerRejections).build();
+    List<LogEntry> balancerRejectionRecords = ProtobufUtil.getBalancerRejectionEntries(response);
     return balancerRejectionRecords;
   }
 }

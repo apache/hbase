@@ -21,14 +21,15 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -47,13 +48,13 @@ public class TestMetaAssignmentWithStopMaster {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMetaAssignmentWithStopMaster.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static final long WAIT_TIMEOUT = 120000;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numMasters(2).numRegionServers(3).numDataNodes(3).build();
     UTIL.startMiniCluster(option);
   }
@@ -71,20 +72,20 @@ public class TestMetaAssignmentWithStopMaster {
       ServerName oldMaster = UTIL.getMiniHBaseCluster().getMaster().getServerName();
 
       UTIL.getMiniHBaseCluster().getMaster().stop("Stop master for test");
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       while (UTIL.getMiniHBaseCluster().getMaster() == null ||
         UTIL.getMiniHBaseCluster().getMaster().getServerName().equals(oldMaster)) {
         LOG.info("Wait the standby master become active");
         Thread.sleep(3000);
-        if (System.currentTimeMillis() - startTime > WAIT_TIMEOUT) {
+        if (EnvironmentEdgeManager.currentTime() - startTime > WAIT_TIMEOUT) {
           fail("Wait too long for standby master become active");
         }
       }
-      startTime = System.currentTimeMillis();
+      startTime = EnvironmentEdgeManager.currentTime();
       while (!UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
         LOG.info("Wait the new active master to be initialized");
         Thread.sleep(3000);
-        if (System.currentTimeMillis() - startTime > WAIT_TIMEOUT) {
+        if (EnvironmentEdgeManager.currentTime() - startTime > WAIT_TIMEOUT) {
           fail("Wait too long for the new active master to be initialized");
         }
       }

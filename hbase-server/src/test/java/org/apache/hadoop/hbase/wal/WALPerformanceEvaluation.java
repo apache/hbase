@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MockRegionServerServices;
 import org.apache.hadoop.hbase.TableName;
@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.util.Tool;
@@ -98,7 +99,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
 
   private final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
 
-  private HBaseTestingUtility TEST_UTIL;
+  private HBaseTestingUtil TEST_UTIL;
 
   static final String TABLE_NAME = "WALPerformanceEvaluation";
   static final String QUALIFIER_PREFIX = "q";
@@ -277,7 +278,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     getConf().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, numThreads);
 
     if (rootRegionDir == null) {
-      TEST_UTIL = new HBaseTestingUtility(getConf());
+      TEST_UTIL = new HBaseTestingUtil(getConf());
       rootRegionDir = TEST_UTIL.getDataTestDirOnTestFS("WALPerformanceEvaluation");
     }
     // Run WAL Performance Evaluation
@@ -530,13 +531,13 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
 
   private long runBenchmark(Runnable[] runnable, final int numThreads) throws InterruptedException {
     Thread[] threads = new Thread[numThreads];
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < numThreads; ++i) {
       threads[i] = new Thread(runnable[i%runnable.length], "t" + i + ",r" + (i%runnable.length));
       threads[i].start();
     }
     for (Thread t : threads) t.join();
-    long endTime = System.currentTimeMillis();
+    long endTime = EnvironmentEdgeManager.currentTime();
     return(endTime - startTime);
   }
 

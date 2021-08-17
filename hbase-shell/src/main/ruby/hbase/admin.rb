@@ -1380,6 +1380,12 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Updates the configuration of all the regionservers in the rsgroup.
+    def update_rsgroup_config(groupName)
+      @admin.updateConfiguration(groupName)
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Returns namespace's structure description
     def describe_namespace(namespace_name)
       namespace = @admin.getNamespaceDescriptor(namespace_name)
@@ -1508,7 +1514,13 @@ module Hbase
       tdb.setMergeEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::MERGE_ENABLED))) if arg.include?(TableDescriptorBuilder::MERGE_ENABLED)
       tdb.setNormalizationEnabled(JBoolean.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZATION_ENABLED))) if arg.include?(TableDescriptorBuilder::NORMALIZATION_ENABLED)
       tdb.setNormalizerTargetRegionCount(JInteger.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_COUNT))) if arg.include?(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_COUNT)
-      tdb.setNormalizerTargetRegionSize(JLong.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE))) if arg.include?(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE)
+      # TODO: Keeping backward compatability for NORMALIZER_TARGET_REGION_SIZE with HBASE-25651 change. Can be removed in later version
+      if arg.include?(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE)
+        warn 'Use of NORMALIZER_TARGET_REGION_SIZE has been deprecated and will be removed in future version, please use NORMALIZER_TARGET_REGION_SIZE_MB instead'
+        tdb.setNormalizerTargetRegionSize(JLong.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE)))
+      end
+      tdb.setNormalizerTargetRegionSize(JLong.valueOf(arg.delete(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE_MB))) \
+        if arg.include?(TableDescriptorBuilder::NORMALIZER_TARGET_REGION_SIZE_MB)
       tdb.setMemStoreFlushSize(arg.delete(TableDescriptorBuilder::MEMSTORE_FLUSHSIZE)) if arg.include?(TableDescriptorBuilder::MEMSTORE_FLUSHSIZE)
       tdb.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf(arg.delete(TableDescriptorBuilder::DURABILITY))) if arg.include?(TableDescriptorBuilder::DURABILITY)
       tdb.setPriority(JInteger.valueOf(arg.delete(TableDescriptorBuilder::PRIORITY))) if arg.include?(TableDescriptorBuilder::PRIORITY)

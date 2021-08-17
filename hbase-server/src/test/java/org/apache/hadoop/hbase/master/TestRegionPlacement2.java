@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -55,7 +55,7 @@ public class TestRegionPlacement2 {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRegionPlacement2.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static int SLAVES = 7;
   private final static int PRIMARY = Position.PRIMARY.ordinal();
   private final static int SECONDARY = Position.SECONDARY.ordinal();
@@ -85,7 +85,8 @@ public class TestRegionPlacement2 {
       (FavoredNodeLoadBalancer) LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
     balancer.setClusterInfoProvider(
       new MasterClusterInfoProvider(TEST_UTIL.getMiniHBaseCluster().getMaster()));
-    balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
+    balancer
+      .setFavoredNodesManager(TEST_UTIL.getMiniHBaseCluster().getMaster().getFavoredNodesManager());
     balancer.initialize();
     List<ServerName> servers = new ArrayList<>();
     for (int i = 0; i < SLAVES; i++) {
@@ -149,7 +150,8 @@ public class TestRegionPlacement2 {
       (FavoredNodeLoadBalancer) LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
     balancer.setClusterInfoProvider(
       new MasterClusterInfoProvider(TEST_UTIL.getMiniHBaseCluster().getMaster()));
-    balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
+    balancer
+      .setFavoredNodesManager(TEST_UTIL.getMiniHBaseCluster().getMaster().getFavoredNodesManager());
     balancer.initialize();
     List<ServerName> servers = new ArrayList<>();
     for (int i = 0; i < SLAVES; i++) {

@@ -24,9 +24,9 @@ import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -60,7 +60,7 @@ public class TestRegionSplit {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionSplit.class);
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static String columnFamilyName = "cf";
 
@@ -76,8 +76,8 @@ public class TestRegionSplit {
   @BeforeClass
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
-    StartMiniClusterOption option =
-        StartMiniClusterOption.builder().numMasters(1).numRegionServers(3).numDataNodes(3).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numMasters(1).numRegionServers(3).numDataNodes(3).build();
     UTIL.startMiniCluster(option);
   }
 

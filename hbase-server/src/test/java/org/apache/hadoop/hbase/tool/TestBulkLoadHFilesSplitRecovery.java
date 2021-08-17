@@ -41,7 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -90,7 +90,7 @@ public class TestBulkLoadHFilesSplitRecovery {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionServerBulkLoad.class);
 
-  static HBaseTestingUtility util;
+  static HBaseTestingUtil util;
   // used by secure subclass
   static boolean useSecure = false;
 
@@ -227,7 +227,7 @@ public class TestBulkLoadHFilesSplitRecovery {
 
   @BeforeClass
   public static void setupCluster() throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
     util.startMiniCluster(1);
   }

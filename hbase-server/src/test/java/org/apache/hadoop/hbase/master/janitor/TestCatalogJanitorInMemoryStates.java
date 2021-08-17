@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
@@ -72,7 +73,7 @@ public class TestCatalogJanitorInMemoryStates {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCatalogJanitorInMemoryStates.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
 
@@ -179,13 +180,13 @@ public class TestCatalogJanitorInMemoryStates {
    * @return Daughter regions; caller needs to check table actually split.
    */
   private PairOfSameType<RegionInfo> waitOnDaughters(final RegionInfo r) throws IOException {
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     PairOfSameType<RegionInfo> pair = null;
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
       Table metaTable = conn.getTable(TableName.META_TABLE_NAME)) {
       Result result = null;
       RegionInfo region = null;
-      while ((System.currentTimeMillis() - start) < 60000) {
+      while ((EnvironmentEdgeManager.currentTime() - start) < 60000) {
         result = metaTable.get(new Get(r.getRegionName()));
         if (result == null) {
           break;
