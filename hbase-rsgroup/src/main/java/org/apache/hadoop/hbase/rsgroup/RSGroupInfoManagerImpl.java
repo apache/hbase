@@ -503,12 +503,13 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   }
 
   private synchronized void updateDefaultServers(
-      Set<Address> server) throws IOException {
+      Set<Address> server) {
     RSGroupInfo info = rsGroupMap.get(RSGroupInfo.DEFAULT_GROUP);
     RSGroupInfo newInfo = new RSGroupInfo(info.getName(), server, info.getTables());
     HashMap<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.put(newInfo.getName(), newInfo);
-    flushConfig(newGroupMap);
+    // do not need to persist, as we do not persist default group.
+    rsGroupMap = Collections.unmodifiableMap(newGroupMap);
   }
 
   @Override

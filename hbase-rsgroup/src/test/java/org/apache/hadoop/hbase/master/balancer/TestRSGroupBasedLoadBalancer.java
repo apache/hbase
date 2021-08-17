@@ -186,4 +186,21 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
         .roundRobinAssignment(regions, onlineServers);
     assertEquals(bogusRegion, assignments.get(LoadBalancer.BOGUS_SERVER_NAME).size());
   }
+
+  @Test
+  public void testOnConfigurationChange() {
+    // fallbackEnabled default is false
+    assertFalse(loadBalancer.isFallbackEnabled());
+
+    // change FALLBACK_GROUP_ENABLE_KEY from false to true
+    Configuration conf = loadBalancer.getConf();
+    conf.setBoolean(RSGroupBasedLoadBalancer.FALLBACK_GROUP_ENABLE_KEY, true);
+    loadBalancer.onConfigurationChange(conf);
+    assertTrue(loadBalancer.isFallbackEnabled());
+
+    // restore
+    conf.setBoolean(RSGroupBasedLoadBalancer.FALLBACK_GROUP_ENABLE_KEY, false);
+    loadBalancer.onConfigurationChange(conf);
+    assertFalse(loadBalancer.isFallbackEnabled());
+  }
 }
