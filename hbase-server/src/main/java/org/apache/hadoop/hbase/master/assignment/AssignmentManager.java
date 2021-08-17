@@ -48,6 +48,8 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
@@ -67,6 +69,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -196,18 +199,21 @@ public class AssignmentManager {
   private final int assignMaxAttempts;
   private final int assignRetryImmediatelyMaxAttempts;
 
+  private final MasterRegion masterRegion;
+
   private final Object checkIfShouldMoveSystemRegionLock = new Object();
 
   private Thread assignThread;
 
-  public AssignmentManager(final MasterServices master) {
-    this(master, new RegionStateStore(master));
+  public AssignmentManager(MasterServices master, MasterRegion masterRegion) {
+    this(master, masterRegion, new RegionStateStore(master, masterRegion));
   }
 
-  AssignmentManager(final MasterServices master, final RegionStateStore stateStore) {
+  AssignmentManager(MasterServices master, MasterRegion masterRegion, RegionStateStore stateStore) {
     this.master = master;
     this.regionStateStore = stateStore;
     this.metrics = new MetricsAssignmentManager();
+    this.masterRegion = masterRegion;
 
     final Configuration conf = master.getConfiguration();
 
@@ -240,6 +246,30 @@ public class AssignmentManager {
       DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG);
   }
 
+  private void mirrorMetaLocations() throws IOException, KeeperException {
+    // For compatibility, mirror the meta region state to zookeeper
+    // And we still need to use zookeeper to publish the meta region locations to region
+    // server, so they can serve as ClientMetaService
+    ZKWatcher zk = master.getZooKeeper();
+    if (zk == null || !zk.getRecoverableZooKeeper().getState().isAlive()) {
+      // this is possible in tests, we do not provide a zk watcher or the zk watcher has been closed
+      return;
+    }
+    Collection<RegionStateNode> metaStates = regionStates.getRegionStateNodes();
+    for (RegionStateNode metaState : metaStates) {
+      MetaTableLocator.setMetaLocation(zk, metaState.getRegionLocation(),
+        metaState.getRegionInfo().getReplicaId(), metaState.getState());
+    }
+    int replicaCount = metaStates.size();
+    // remove extra mirror locations
+    for (String znode : zk.getMetaReplicaNodes()) {
+      int replicaId = zk.getZNodePaths().getMetaReplicaIdFromZNode(znode);
+      if (replicaId >= replicaCount) {
+        MetaTableLocator.deleteMetaLocation(zk, replicaId);
+      }
+    }
+  }
+
   public void start() throws IOException, KeeperException {
     if (!running.compareAndSet(false, true)) {
       return;
@@ -249,35 +279,38 @@ public class AssignmentManager {
 
     // Start the Assignment Thread
     startAssignmentThread();
-
-    // load meta region state
-    ZKWatcher zkw = master.getZooKeeper();
-    // it could be null in some tests
-    if (zkw == null) {
-      return;
+    // load meta region states.
+    // here we are still in the early steps of active master startup. There is only one thread(us)
+    // can access AssignmentManager and create region node, so here we do not need to lock the
+    // region node.
+    try (ResultScanner scanner =
+      masterRegion.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
+      for (;;) {
+        Result result = scanner.next();
+        if (result == null) {
+          break;
+        }
+        RegionStateStore
+          .visitMetaEntry((r, regionInfo, state, regionLocation, lastHost, openSeqNum) -> {
+            RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
+            regionNode.setState(state);
+            regionNode.setLastHost(lastHost);
+            regionNode.setRegionLocation(regionLocation);
+            regionNode.setOpenSeqNum(openSeqNum);
+            if (regionNode.getProcedure() != null) {
+              regionNode.getProcedure().stateLoaded(this, regionNode);
+            }
+            if (regionLocation != null) {
+              regionStates.addRegionToServer(regionNode);
+            }
+            if (RegionReplicaUtil.isDefaultReplica(regionInfo.getReplicaId())) {
+              setMetaAssigned(regionInfo, state == State.OPEN);
+            }
+            LOG.debug("Loaded hbase:meta {}", regionNode);
+          }, result);
+      }
     }
-    List<String> metaZNodes = zkw.getMetaReplicaNodes();
-    LOG.debug("hbase:meta replica znodes: {}", metaZNodes);
-    for (String metaZNode : metaZNodes) {
-      int replicaId = zkw.getZNodePaths().getMetaReplicaIdFromZNode(metaZNode);
-      // here we are still in the early steps of active master startup. There is only one thread(us)
-      // can access AssignmentManager and create region node, so here we do not need to lock the
-      // region node.
-      RegionState regionState = MetaTableLocator.getMetaRegionState(zkw, replicaId);
-      RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionState.getRegion());
-      regionNode.setRegionLocation(regionState.getServerName());
-      regionNode.setState(regionState.getState());
-      if (regionNode.getProcedure() != null) {
-        regionNode.getProcedure().stateLoaded(this, regionNode);
-      }
-      if (regionState.getServerName() != null) {
-        regionStates.addRegionToServer(regionNode);
-      }
-      if (RegionReplicaUtil.isDefaultReplica(replicaId)) {
-        setMetaAssigned(regionState.getRegion(), regionState.getState() == State.OPEN);
-      }
-      LOG.debug("Loaded hbase:meta {}", regionNode);
-    }
+    mirrorMetaLocations();
   }
 
   /**
