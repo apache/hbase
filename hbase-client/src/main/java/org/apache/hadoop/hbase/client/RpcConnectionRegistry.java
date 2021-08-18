@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetBoots
 public class RpcConnectionRegistry extends AbstractRpcBasedConnectionRegistry {
 
   /** Configuration key that controls the fan out of requests **/
-  public static final String HEDGED_REQS_FANOUT_KEY = "hbase.client.rpc_registry.hedged.fanout";
+  public static final String HEDGED_REQS_FANOUT_KEY = "hbase.client.bootstrap.hedged.fanout";
 
   public static final String PERIODIC_REFRESH_INTERVAL_SECS =
     "hbase.client.bootstrap.refresh_interval_secs";

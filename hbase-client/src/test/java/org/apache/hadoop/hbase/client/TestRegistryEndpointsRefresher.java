@@ -52,13 +52,13 @@ public class TestRegistryEndpointsRefresher {
 
   private Configuration conf;
   private RegistryEndpointsRefresher refresher;
-  private AtomicInteger getMastersCallCounter;
+  private AtomicInteger refreshCallCounter;
   private CopyOnWriteArrayList<Long> callTimestamps;
 
   @Before
   public void setUp() {
     conf = HBaseConfiguration.create();
-    getMastersCallCounter = new AtomicInteger(0);
+    refreshCallCounter = new AtomicInteger(0);
     callTimestamps = new CopyOnWriteArrayList<>();
   }
 
@@ -70,7 +70,7 @@ public class TestRegistryEndpointsRefresher {
   }
 
   private void refresh() {
-    getMastersCallCounter.incrementAndGet();
+    refreshCallCounter.incrementAndGet();
     callTimestamps.add(EnvironmentEdgeManager.currentTime());
   }
 
@@ -86,8 +86,8 @@ public class TestRegistryEndpointsRefresher {
   public void testPeriodicMasterEndPointRefresh() throws IOException {
     // Refresh every 1 second.
     createAndStartRefresher(1, 0);
-    // Wait for > 3 seconds to see that at least 3 getMasters() RPCs have been made.
-    Waiter.waitFor(conf, 5000, () -> getMastersCallCounter.get() > 3);
+    // Wait for > 3 seconds to see that at least 3 refresh have been made.
+    Waiter.waitFor(conf, 5000, () -> refreshCallCounter.get() > 3);
   }
 
   @Test
@@ -101,10 +101,10 @@ public class TestRegistryEndpointsRefresher {
       Uninterruptibles.sleepUninterruptibly(1, TimeUnit.MILLISECONDS);
     }
     // Overall wait time is 10000 ms, so the number of requests should be <=10
-    // Actual calls to getMasters() should be much lower than the refresh count.
-    assertTrue(String.valueOf(getMastersCallCounter.get()), getMastersCallCounter.get() <= 20);
+    // Actual calls to refresh should be much lower than the refresh count.
+    assertTrue(String.valueOf(refreshCallCounter.get()), refreshCallCounter.get() <= 20);
     assertTrue(callTimestamps.size() > 0);
-    // Verify that the delta between subsequent RPCs is at least 1sec as configured.
+    // Verify that the delta between subsequent refresh is at least 1sec as configured.
     for (int i = 1; i < callTimestamps.size() - 1; i++) {
       long delta = callTimestamps.get(i) - callTimestamps.get(i - 1);
       // Few ms cushion to account for any env jitter.

@@ -2700,8 +2700,19 @@ public class HMaster extends HRegionServer implements MasterServices {
     return status;
   }
 
-  List<ServerName> getBackupMasters() {
+  @Override
+  public Optional<ServerName> getActiveMaster() {
+    return activeMasterManager.getActiveMasterServerName();
+  }
+
+  @Override
+  public List<ServerName> getBackupMasters() {
     return activeMasterManager.getBackupMasters();
+  }
+
+  @Override
+  public List<ServerName> getRegionServers() {
+    return serverManager.getOnlineServersList();
   }
 
   /**
@@ -3846,10 +3857,6 @@ public class HMaster extends HRegionServer implements MasterServices {
       return super.getClusterId();
     }
     return cachedClusterId.getFromCacheOrFetch();
-  }
-
-  public Optional<ServerName> getActiveMaster() {
-    return activeMasterManager.getActiveMasterServerName();
   }
 
   @Override
