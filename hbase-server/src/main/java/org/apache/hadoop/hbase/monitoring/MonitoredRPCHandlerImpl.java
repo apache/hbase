@@ -25,6 +25,7 @@ import java.util.Map;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
@@ -56,8 +57,8 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
   @Override
   public synchronized MonitoredRPCHandlerImpl clone() {
     MonitoredRPCHandlerImpl clone = (MonitoredRPCHandlerImpl) super.clone();
-    clone.setCallInfoMap(generateCallInfoMap());
-    clone.setSnapshot(true);
+    clone.callInfoMap = generateCallInfoMap();
+    clone.snapshot = true;
     return clone;
   }
 
@@ -239,14 +240,6 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
   @Override
   public synchronized Map<String, Object> toMap() {
     return this.snapshot ? this.callInfoMap : generateCallInfoMap();
-  }
-
-  public void setSnapshot(boolean snapshot) {
-    this.snapshot = snapshot;
-  }
-
-  public void setCallInfoMap(Map<String, Object> callInfoMap) {
-    this.callInfoMap = callInfoMap;
   }
 
   private Map<String, Object> generateCallInfoMap() {
