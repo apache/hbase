@@ -21,6 +21,8 @@ import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY_BYTES;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
+import static org.apache.hadoop.hbase.regionserver.compactions.CloseChecker.SIZE_LIMIT_KEY;
+import static org.apache.hadoop.hbase.regionserver.compactions.CloseChecker.TIME_LIMIT_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
@@ -156,12 +158,11 @@ public class TestCompaction {
    * @throws Exception
    */
   @Test
-  public void testInterruptCompaction() throws Exception {
+  public void testInterruptCompactionBySize() throws Exception {
     assertEquals(0, count());
 
     // lower the polling interval for this test
-    int origWI = HStore.closeCheckInterval;
-    HStore.closeCheckInterval = 10*1000; // 10 KB
+    conf.setInt(SIZE_LIMIT_KEY, 10 * 1000 /* 10 KB */);
 
     try {
       // Create a couple store files w/ 15KB (over 10KB interval)
@@ -206,7 +207,84 @@ public class TestCompaction {
     } finally {
       // don't mess up future tests
       r.writestate.writesEnabled = true;
-      HStore.closeCheckInterval = origWI;
+      conf.setInt(SIZE_LIMIT_KEY, 10 * 1000 * 1000 /* 10 MB */);
+
+      // Delete all Store information once done using
+      for (int i = 0; i < compactionThreshold; i++) {
+        Delete delete = new Delete(Bytes.add(STARTROW, Bytes.toBytes(i)));
+        byte [][] famAndQf = {COLUMN_FAMILY, null};
+        delete.addFamily(famAndQf[0]);
+        r.delete(delete);
+      }
+      r.flush(true);
+
+      // Multiple versions allowed for an entry, so the delete isn't enough
+      // Lower TTL and expire to ensure that all our entries have been wiped
+      final int ttl = 1000;
+      for (HStore store : this.r.stores.values()) {
+        ScanInfo old = store.getScanInfo();
+        ScanInfo si = old.customize(old.getMaxVersions(), ttl, old.getKeepDeletedCells());
+        store.setScanInfo(si);
+      }
+      Thread.sleep(ttl);
+
+      r.compact(true);
+      assertEquals(0, count());
+    }
+  }
+
+  @Test
+  public void testInterruptCompactionByTime() throws Exception {
+    assertEquals(0, count());
+
+    // lower the polling interval for this test
+    conf.setLong(TIME_LIMIT_KEY, 1 /* 1ms */);
+
+    try {
+      // Create a couple store files w/ 15KB (over 10KB interval)
+      int jmax = (int) Math.ceil(15.0/compactionThreshold);
+      byte [] pad = new byte[1000]; // 1 KB chunk
+      for (int i = 0; i < compactionThreshold; i++) {
+        Table loader = new RegionAsTable(r);
+        Put p = new Put(Bytes.add(STARTROW, Bytes.toBytes(i)));
+        p.setDurability(Durability.SKIP_WAL);
+        for (int j = 0; j < jmax; j++) {
+          p.addColumn(COLUMN_FAMILY, Bytes.toBytes(j), pad);
+        }
+        HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY));
+        loader.put(p);
+        r.flush(true);
+      }
+
+      HRegion spyR = spy(r);
+      doAnswer(new Answer() {
+        @Override
+        public Object answer(InvocationOnMock invocation) throws Throwable {
+          r.writestate.writesEnabled = false;
+          return invocation.callRealMethod();
+        }
+      }).when(spyR).doRegionCompactionPrep();
+
+      // force a minor compaction, but not before requesting a stop
+      spyR.compactStores();
+
+      // ensure that the compaction stopped, all old files are intact,
+      HStore s = r.getStore(COLUMN_FAMILY);
+      assertEquals(compactionThreshold, s.getStorefilesCount());
+      assertTrue(s.getStorefilesSize() > 15*1000);
+      // and no new store files persisted past compactStores()
+      // only one empty dir exists in temp dir
+      FileStatus[] ls = r.getFilesystem().listStatus(r.getRegionFileSystem().getTempDir());
+      assertEquals(1, ls.length);
+      Path storeTempDir =
+          new Path(r.getRegionFileSystem().getTempDir(), Bytes.toString(COLUMN_FAMILY));
+      assertTrue(r.getFilesystem().exists(storeTempDir));
+      ls = r.getFilesystem().listStatus(storeTempDir);
+      assertEquals(0, ls.length);
+    } finally {
+      // don't mess up future tests
+      r.writestate.writesEnabled = true;
+      conf.setLong(TIME_LIMIT_KEY, 10 * 1000L /* 10 s */);
 
       // Delete all Store information once done using
       for (int i = 0; i < compactionThreshold; i++) {

@@ -162,8 +162,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   protected Configuration conf;
   private long lastCompactSize = 0;
   volatile boolean forceMajor = false;
-  /* how many bytes to write between status checks */
-  static int closeCheckInterval = 0;
   private AtomicLong storeSize = new AtomicLong();
   private AtomicLong totalUncompressedBytes = new AtomicLong();
   private LongAdder memstoreOnlyRowReadsCount = new LongAdder();
@@ -474,13 +472,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
   /* End implementation of StoreConfigInformation */
 
-
-  /**
-   * @return how many bytes to write between status checks
-   */
-  public static int getCloseCheckInterval() {
-    return closeCheckInterval;
-  }
 
   @Override
   public ColumnFamilyDescriptor getColumnFamilyDescriptor() {

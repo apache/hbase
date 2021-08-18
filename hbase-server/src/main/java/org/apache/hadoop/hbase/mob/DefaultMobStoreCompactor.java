@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
+import org.apache.hadoop.hbase.regionserver.compactions.CloseChecker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
@@ -319,11 +320,12 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     // we have to use a do/while loop.
     List<Cell> cells = new ArrayList<>();
     // Limit to "hbase.hstore.compaction.kv.max" (default 10) to avoid OOME
-    int closeCheckSizeLimit = HStore.getCloseCheckInterval();
+    long currentTime = EnvironmentEdgeManager.currentTime();
     long lastMillis = 0;
     if (LOG.isDebugEnabled()) {
-      lastMillis = EnvironmentEdgeManager.currentTime();
+      lastMillis = currentTime;
     }
+    CloseChecker closeChecker = new CloseChecker(conf, currentTime);
     String compactionName = ThroughputControlUtil.getNameForThrottling(store, "compaction");
     long now = 0;
     boolean hasMore;
@@ -352,7 +354,14 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
 
       do {
         hasMore = scanner.next(cells, scannerContext);
-        now = EnvironmentEdgeManager.currentTime();
+        currentTime = EnvironmentEdgeManager.currentTime();
+        if (LOG.isDebugEnabled()) {
+          now = currentTime;
+        }
+        if (closeChecker.isTimeLimit(store, currentTime)) {
+          progress.cancel();
+          return false;
+        }
         for (Cell c : cells) {
           if (compactMOBs) {
             if (MobUtils.isMobReferenceCell(c)) {
@@ -530,16 +539,9 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
             bytesWrittenProgressForLog += len;
           }
           throughputController.control(compactionName, len);
-          // check periodically to see if a system stop is requested
-          if (closeCheckSizeLimit > 0) {
-            bytesWrittenProgressForCloseCheck += len;
-            if (bytesWrittenProgressForCloseCheck > closeCheckSizeLimit) {
-              bytesWrittenProgressForCloseCheck = 0;
-              if (!store.areWritesEnabled()) {
-                progress.cancel();
-                return false;
-              }
-            }
+          if (closeChecker.isSizeLimit(store, len)) {
+            progress.cancel();
+            return false;
           }
           if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
             ((ShipperListener) writer).beforeShipped();
