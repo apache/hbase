@@ -461,8 +461,6 @@ public class TestTableSnapshotScanner {
     } catch (Exception e) {
       LOG.error("scan snapshot error", e);
       Assert.fail("Should not throw Exception: " + e.getMessage());
-      Assert.assertTrue(e.getCause() != null);
-      Assert.assertTrue(e.getCause().getCause() instanceof FileNotFoundException);
     } finally {
       tearDownCluster();
     }
