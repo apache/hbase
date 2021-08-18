@@ -157,8 +157,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   protected Configuration conf;
   private long lastCompactSize = 0;
   volatile boolean forceMajor = false;
-  /* how many bytes to write between status checks */
-  static int closeCheckInterval = 0;
   private AtomicLong storeSize = new AtomicLong();
   private AtomicLong totalUncompressedBytes = new AtomicLong();
   private LongAdder memstoreOnlyRowReadsCount = new LongAdder();
@@ -289,11 +287,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       LOG.error("Compaction check period multiplier must be positive, setting default: {}",
           DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER);
       this.compactionCheckMultiplier = DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER;
-    }
-
-    if (HStore.closeCheckInterval == 0) {
-      HStore.closeCheckInterval = conf.getInt(
-          "hbase.hstore.close.check.interval", 10*1000*1000 /* 10 MB */);
     }
 
     this.storeEngine = createStoreEngine(this, this.conf, region.getCellComparator());
@@ -489,13 +482,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
   /* End implementation of StoreConfigInformation */
 
-
-  /**
-   * @return how many bytes to write between status checks
-   */
-  public static int getCloseCheckInterval() {
-    return closeCheckInterval;
-  }
 
   @Override
   public ColumnFamilyDescriptor getColumnFamilyDescriptor() {
