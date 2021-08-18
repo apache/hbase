@@ -740,6 +740,40 @@ public class VerifyReplication extends Configured implements Tool {
     System.err.println(" $ hbase " +
         "org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication" +
         " --starttime=1265875194289 --endtime=1265878794289 5 TestTable ");
+    System.err.println();
+    System.err.println(" To verify the data in TestTable between the cluster runs VerifyReplication and cluster-b");
+    System.err.println(" Assume quorum address for cluster-b is cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:2181:/cluster-b");
+    System.err.println(
+      " $ hbase org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication \\\n" +
+        "     cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:2181:/cluster-b \\\n" +
+        "     TestTable");
+    System.err.println();
+    System.err.println(" To verify the data in TestTable between the secured cluster runs VerifyReplication and insecure cluster-b");
+    System.err.println(
+      " $ hbase org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication \\\n" +
+        "     -D verifyrep.peer.hbase.security.authentication=simple \\\n" +
+        "     cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:2181:/cluster-b \\\n" +
+        "     TestTable");
+    System.err.println();
+    System.err.println(" To verify the data in TestTable between" +
+      " the secured cluster runs VerifyReplication and secured cluster-b");
+    System.err.println(" Assume cluster-b uses different kerberos principal, cluster-b/_HOST@E" +
+      ", for master and regionserver kerberos principal from another cluster");
+    System.err.println(
+      " $ hbase org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication \\\n" +
+        "     -D verifyrep.peer.hbase.regionserver.kerberos.principal=cluster-b/_HOST@EXAMPLE.COM \\\n" +
+        "     -D verifyrep.peer.hbase.master.kerberos.principal=cluster-b/_HOST@EXAMPLE.COM \\\n" +
+        "     cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:2181:/cluster-b \\\n" +
+        "     TestTable");
+    System.err.println();
+    System.err.println(" To verify the data in TestTable between the insecure cluster runs VerifyReplication and secured cluster-b");
+    System.err.println(
+      " $ hbase org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication \\\n" +
+        "     -D verifyrep.peer.hbase.security.authentication=kerberos \\\n" +
+        "     -D verifyrep.peer.hbase.regionserver.kerberos.principal=cluster-b/_HOST@EXAMPLE.COM \\\n" +
+        "     -D verifyrep.peer.hbase.master.kerberos.principal=cluster-b/_HOST@EXAMPLE.COM \\\n" +
+        "     cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:2181:/cluster-b \\\n" +
+        "     TestTable");
   }
 
   @Override
@@ -759,7 +793,8 @@ public class VerifyReplication extends Configured implements Tool {
    * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
-    int res = ToolRunner.run(HBaseConfiguration.create(), new VerifyReplication(), args);
-    System.exit(res);
+//    int res = ToolRunner.run(HBaseConfiguration.create(), new VerifyReplication(), args);
+//    System.exit(res);
+    printUsage(null);
   }
 }
