@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -30,6 +31,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -98,6 +101,7 @@ public class TestDirectStoreSplitsMerges {
     TEST_UTIL.createTable(table, FAMILY_NAME);
     //splitting the table first
     TEST_UTIL.getAdmin().split(table, Bytes.toBytes("002"));
+    waitForSplitProcComplete(1000, 10);
     //Add data and flush to create files in the two different regions
     putThreeRowsAndFlush(table);
     List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(table);
@@ -176,6 +180,7 @@ public class TestDirectStoreSplitsMerges {
     TEST_UTIL.createTable(table, FAMILY_NAME);
     //splitting the table first
     TEST_UTIL.getAdmin().split(table, Bytes.toBytes("002"));
+    waitForSplitProcComplete(1000, 10);
     //Add data and flush to create files in the two different regions
     putThreeRowsAndFlush(table);
     List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(table);
@@ -200,6 +205,22 @@ public class TestDirectStoreSplitsMerges {
     file = (HStoreFile) second.getStore(FAMILY_NAME).getStorefiles().toArray()[0];
     mergeFileFromRegion(mergeRegionFs, second, file);
     mergeRegionFs.commitMergedRegion();
+  }
+
+  private void waitForSplitProcComplete(int attempts, int waitTime) throws Exception {
+    List<Procedure<?>> procedures = TEST_UTIL.getHBaseCluster().getMaster().getProcedures();
+    if(procedures.size()>0) {
+      Procedure splitProc = procedures.stream().
+        filter(p -> p instanceof SplitTableRegionProcedure).findFirst().get();
+      int count = 0;
+      while ((splitProc.isWaiting() || splitProc.isRunnable()) && count < attempts) {
+        synchronized (splitProc) {
+          splitProc.wait(waitTime);
+        }
+        count++;
+      }
+      assertTrue(splitProc.isSuccess());
+    }
   }
 
   private void mergeFileFromRegion(HRegionFileSystem regionFS, HRegion regionToMerge,
