@@ -208,17 +208,19 @@ public class TestDirectStoreSplitsMerges {
   }
 
   private void waitForSplitProcComplete(int attempts, int waitTime) throws Exception {
-    Procedure
-      splitProc = TEST_UTIL.getHBaseCluster().getMaster().getProcedures().stream().findFirst().
-        filter( p -> p instanceof SplitTableRegionProcedure).get();
-    int count = 0;
-    while((splitProc.isWaiting()||splitProc.isRunnable())&&count<attempts){
-      synchronized (splitProc) {
-        splitProc.wait(waitTime);
+    List<Procedure<?>> procedures = TEST_UTIL.getHBaseCluster().getMaster().getProcedures();
+    if(procedures.size()>0) {
+      Procedure splitProc = procedures.stream().
+        filter(p -> p instanceof SplitTableRegionProcedure).findFirst().get();
+      int count = 0;
+      while ((splitProc.isWaiting() || splitProc.isRunnable()) && count < attempts) {
+        synchronized (splitProc) {
+          splitProc.wait(waitTime);
+        }
+        count++;
       }
-      count++;
+      assertTrue(splitProc.isSuccess());
     }
-    assertTrue(splitProc.isSuccess());
   }
 
   private void mergeFileFromRegion(HRegionFileSystem regionFS, HRegion regionToMerge,
