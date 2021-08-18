@@ -54,6 +54,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
 @Category({ ReplicationTests.class, LargeTests.class })
 @RunWith(Parameterized.class)
@@ -66,7 +68,8 @@ public class TestVerifyReplicationSecureClusterCredentials {
   private static final HBaseTestingUtil UTIL1 = new HBaseTestingUtil();
   private static final HBaseTestingUtil UTIL2 = new HBaseTestingUtil();
 
-  private static final File KEYTAB_FILE = new File(UTIL1.getDataTestDir("keytab").toUri().getPath());
+  private static final File KEYTAB_FILE =
+    new File(UTIL1.getDataTestDir("keytab").toUri().getPath());
 
   private static final String LOCALHOST = "localhost";
   private static String CLUSTER_PRINCIPAL;
@@ -111,8 +114,10 @@ public class TestVerifyReplicationSecureClusterCredentials {
     try (Admin admin = UTIL1.getAdmin()) {
       admin.addReplicationPeer("1", ReplicationPeerConfig.newBuilder()
         .setClusterKey(ZKConfig.getZooKeeperClusterKey(UTIL2.getConfiguration()))
-        .putConfiguration(HBaseKerberosUtils.KRB_PRINCIPAL, UTIL2.getConfiguration().get(HBaseKerberosUtils.KRB_PRINCIPAL))
-        .putConfiguration(HBaseKerberosUtils.MASTER_KRB_PRINCIPAL, UTIL2.getConfiguration().get(HBaseKerberosUtils.MASTER_KRB_PRINCIPAL))
+        .putConfiguration(HBaseKerberosUtils.KRB_PRINCIPAL,
+          UTIL2.getConfiguration().get(HBaseKerberosUtils.KRB_PRINCIPAL))
+        .putConfiguration(HBaseKerberosUtils.MASTER_KRB_PRINCIPAL,
+          UTIL2.getConfiguration().get(HBaseKerberosUtils.MASTER_KRB_PRINCIPAL))
         .build());
     }
   }
@@ -123,7 +128,7 @@ public class TestVerifyReplicationSecureClusterCredentials {
     UTIL2.shutdownMiniCluster();
   }
 
-  @Parameterized.Parameters
+  @Parameters
   public static Collection<Supplier<String>> peer() {
     return Arrays.asList(
       () -> "1",
@@ -131,10 +136,11 @@ public class TestVerifyReplicationSecureClusterCredentials {
     );
   }
 
-  @Parameterized.Parameter
+  @Parameter
   public Supplier<String> peer;
 
   @Test
+  @SuppressWarnings("unchecked")
   public void testJobCredentials() throws Exception {
     Job job = new VerifyReplication().createSubmittableJob(
       new Configuration(UTIL1.getConfiguration()),
