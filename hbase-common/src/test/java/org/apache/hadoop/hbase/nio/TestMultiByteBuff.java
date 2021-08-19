@@ -500,6 +500,7 @@ public class TestMultiByteBuff {
     for (int i = 0; i < 25; i++) {
       srcSingleByteBuff.putLong(i * 8L);
     }
+    // Test SingleByteBuff To MultiByteBuff
     doTestPositionalPutByteBuff(srcSingleByteBuff);
   }
 
