@@ -33,7 +33,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
@@ -343,15 +342,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ClientMetaService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetActiveMasterRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetActiveMasterResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetBootstrapNodesRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetBootstrapNodesResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClusterIdRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClusterIdResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMastersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMastersResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMastersResponseEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
@@ -376,8 +366,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 @SuppressWarnings("deprecation")
 public class MasterRpcServices extends RSRpcServices implements
     MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface,
-    LockService.BlockingInterface, HbckService.BlockingInterface,
-    ClientMetaService.BlockingInterface {
+    LockService.BlockingInterface, HbckService.BlockingInterface {
+
   private static final Logger LOG = LoggerFactory.getLogger(MasterRpcServices.class.getName());
   private static final Logger AUDITLOG =
       LoggerFactory.getLogger("SecurityLogger."+MasterRpcServices.class.getName());
@@ -2984,57 +2974,6 @@ public class MasterRpcServices extends RSRpcServices implements
     return true;
   }
 
-  // Override this method since for backup master we will not set the clusterId field, which means
-  // we need to find another way to get cluster id for backup masters.
-  @Override
-  public GetClusterIdResponse getClusterId(RpcController rpcController, GetClusterIdRequest request)
-    throws ServiceException {
-    GetClusterIdResponse.Builder resp = GetClusterIdResponse.newBuilder();
-    String clusterId = master.getClusterId();
-    if (clusterId != null) {
-      resp.setClusterId(clusterId);
-    }
-    return resp.build();
-  }
-
-  // Override this method since we use ActiveMasterManager to get active master on HMaster while in
-  // HRegionServer we use MasterAddressTracker
-  @Override
-  public GetActiveMasterResponse getActiveMaster(RpcController rpcController,
-    GetActiveMasterRequest request) throws ServiceException {
-    GetActiveMasterResponse.Builder resp = GetActiveMasterResponse.newBuilder();
-    Optional<ServerName> serverName = master.getActiveMaster();
-    serverName.ifPresent(name -> resp.setServerName(ProtobufUtil.toServerName(name)));
-    return resp.build();
-  }
-
-  // Override this method since we use ActiveMasterManager to get backup masters on HMaster while in
-  // HRegionServer we use MasterAddressTracker
-  @Override
-  public GetMastersResponse getMasters(RpcController rpcController, GetMastersRequest request)
-    throws ServiceException {
-    GetMastersResponse.Builder resp = GetMastersResponse.newBuilder();
-    // Active master
-    Optional<ServerName> serverName = master.getActiveMaster();
-    serverName.ifPresent(name -> resp.addMasterServers(GetMastersResponseEntry.newBuilder()
-      .setServerName(ProtobufUtil.toServerName(name)).setIsActive(true).build()));
-    // Backup masters
-    for (ServerName backupMaster : master.getBackupMasters()) {
-      resp.addMasterServers(GetMastersResponseEntry.newBuilder()
-        .setServerName(ProtobufUtil.toServerName(backupMaster)).setIsActive(false).build());
-    }
-    return resp.build();
-  }
-
-  @Override
-  public GetBootstrapNodesResponse getBootstrapNodes(RpcController controller,
-    GetBootstrapNodesRequest request) throws ServiceException {
-    GetBootstrapNodesResponse.Builder builder = GetBootstrapNodesResponse.newBuilder();
-    for (ServerName sn : master.getServerManager().getOnlineServers().keySet()) {
-      builder.addServerName(ProtobufUtil.toServerName(sn));
-    }
-    return builder.build();
-  }
   @Override
   public HBaseProtos.LogEntry getLogEntries(RpcController controller,
       HBaseProtos.LogRequest request) throws ServiceException {

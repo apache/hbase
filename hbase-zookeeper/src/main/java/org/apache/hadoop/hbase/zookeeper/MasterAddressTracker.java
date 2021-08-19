@@ -307,7 +307,7 @@ public class MasterAddressTracker extends ZKNodeTracker {
     return false;
   }
 
-  public List<ServerName> getBackupMasters() throws InterruptedIOException {
+  public List<ServerName> getBackupMasters() {
     return backupMasters;
   }
 

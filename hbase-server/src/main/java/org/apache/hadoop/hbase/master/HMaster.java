@@ -2692,8 +2692,19 @@ public class HMaster extends HRegionServer implements MasterServices {
     return status;
   }
 
-  List<ServerName> getBackupMasters() {
+  @Override
+  public Optional<ServerName> getActiveMaster() {
+    return activeMasterManager.getActiveMasterServerName();
+  }
+
+  @Override
+  public List<ServerName> getBackupMasters() {
     return activeMasterManager.getBackupMasters();
+  }
+
+  @Override
+  public List<ServerName> getRegionServers() {
+    return serverManager.getOnlineServersList();
   }
 
   /**
@@ -3821,10 +3832,15 @@ public class HMaster extends HRegionServer implements MasterServices {
     return this.hbckChore;
   }
 
-  public Optional<ServerName> getActiveMaster() {
-    return activeMasterManager.getActiveMasterServerName();
+  @Override
+  public String getClusterId() {
+    if (activeMaster) {
+      return super.getClusterId();
+    }
+    return cachedClusterId.getFromCacheOrFetch();
   }
 
+  @Override
   public void runReplicationBarrierCleaner() {
     ReplicationBarrierCleaner rbc = this.replicationBarrierCleaner;
     if (rbc != null) {
@@ -3834,13 +3850,6 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   public SnapshotQuotaObserverChore getSnapshotQuotaObserverChore() {
     return this.snapshotQuotaChore;
-  }
-
-  public String getClusterId() {
-    if (activeMaster) {
-      return super.getClusterId();
-    }
-    return cachedClusterId.getFromCacheOrFetch();
   }
 
   /**
