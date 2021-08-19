@@ -4007,11 +4007,19 @@ public class HRegionServer extends Thread implements
     return this.retryPauseTime;
   }
 
-  public MetaRegionLocationCache getMetaRegionLocationCache() {
-    return this.metaRegionLocationCache;
+  public Optional<ServerName> getActiveMaster() {
+    return Optional.ofNullable(masterAddressTracker.getMasterAddress());
   }
 
-  RegionServerAddressTracker getRegionServerAddressTracker() {
-    return regionServerAddressTracker;
+  public List<ServerName> getBackupMasters() {
+    return masterAddressTracker.getBackupMasters();
+  }
+
+  public List<ServerName> getRegionServers() {
+    return regionServerAddressTracker.getRegionServers();
+  }
+
+  public MetaRegionLocationCache getMetaRegionLocationCache() {
+    return this.metaRegionLocationCache;
   }
 }

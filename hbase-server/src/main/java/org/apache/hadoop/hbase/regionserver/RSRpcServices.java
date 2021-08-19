@@ -308,14 +308,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   private static final long DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA = 10;
 
-  /*
+  /**
    * Whether to reject rows with size > threshold defined by
    * {@link RSRpcServices#BATCH_ROWS_THRESHOLD_NAME}
    */
   private static final String REJECT_BATCH_ROWS_OVER_THRESHOLD =
     "hbase.rpc.rows.size.threshold.reject";
 
-  /*
+  /**
    * Default value of config {@link RSRpcServices#REJECT_BATCH_ROWS_OVER_THRESHOLD}
    */
   private static final boolean DEFAULT_REJECT_BATCH_ROWS_OVER_THRESHOLD = false;
@@ -4092,31 +4092,22 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   public GetActiveMasterResponse getActiveMaster(RpcController controller,
     GetActiveMasterRequest request) throws ServiceException {
     GetActiveMasterResponse.Builder builder = GetActiveMasterResponse.newBuilder();
-    ServerName activeMaster = regionServer.getMasterAddressTracker().getMasterAddress();
-    if (activeMaster != null) {
-      builder.setServerName(ProtobufUtil.toServerName(activeMaster));
-    }
+    regionServer.getActiveMaster()
+      .ifPresent(name -> builder.setServerName(ProtobufUtil.toServerName(name)));
     return builder.build();
   }
 
   @Override
   public GetMastersResponse getMasters(RpcController controller, GetMastersRequest request)
     throws ServiceException {
-    try {
-      GetMastersResponse.Builder builder = GetMastersResponse.newBuilder();
-      ServerName activeMaster = regionServer.getMasterAddressTracker().getMasterAddress();
-      if (activeMaster != null) {
-        builder.addMasterServers(GetMastersResponseEntry.newBuilder()
-          .setServerName(ProtobufUtil.toServerName(activeMaster)).setIsActive(true));
-      }
-      for (ServerName backupMaster : regionServer.getMasterAddressTracker().getBackupMasters()) {
-        builder.addMasterServers(GetMastersResponseEntry.newBuilder()
-          .setServerName(ProtobufUtil.toServerName(backupMaster)).setIsActive(false));
-      }
-      return builder.build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
+    GetMastersResponse.Builder builder = GetMastersResponse.newBuilder();
+    regionServer.getActiveMaster()
+      .ifPresent(activeMaster -> builder.addMasterServers(GetMastersResponseEntry.newBuilder()
+        .setServerName(ProtobufUtil.toServerName(activeMaster)).setIsActive(true)));
+    regionServer.getBackupMasters()
+      .forEach(backupMaster -> builder.addMasterServers(GetMastersResponseEntry.newBuilder()
+        .setServerName(ProtobufUtil.toServerName(backupMaster)).setIsActive(false)));
+    return builder.build();
   }
 
   @Override
@@ -4131,11 +4122,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   @Override
-  public GetBootstrapNodesResponse getBootstrapNodes(RpcController controller,
+  public final GetBootstrapNodesResponse getBootstrapNodes(RpcController controller,
     GetBootstrapNodesRequest request) throws ServiceException {
     GetBootstrapNodesResponse.Builder builder = GetBootstrapNodesResponse.newBuilder();
-    regionServer.getRegionServerAddressTracker().getRegionServers().stream()
-      .map(ProtobufUtil::toServerName).forEach(builder::addServerName);
+    regionServer.getRegionServers().stream().map(ProtobufUtil::toServerName)
+      .forEach(builder::addServerName);
     return builder.build();
   }
 }
