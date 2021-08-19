@@ -142,6 +142,7 @@ public class TestTaskMonitor {
     }
     assertEquals("RPC Tasks have been purged!", RPCTaskNums, remainRPCTask);
     tm.shutdown();
+    tm.purgeAllTasks();
   }
 
   @Test
