@@ -793,8 +793,7 @@ public class VerifyReplication extends Configured implements Tool {
    * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
-//    int res = ToolRunner.run(HBaseConfiguration.create(), new VerifyReplication(), args);
-//    System.exit(res);
-    printUsage(null);
+    int res = ToolRunner.run(HBaseConfiguration.create(), new VerifyReplication(), args);
+    System.exit(res);
   }
 }
