@@ -99,11 +99,21 @@ module Hbase
             # Namespace should exist first.
             namespace_name = table_name[1...table_name.length]
             raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless namespace_exists?(namespace_name)
-
-            tablebytes = table_name.to_java_bytes
-            org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
-              @connection, namespace_name, user
-            )
+            if (!family.nil? and isPermissionType?(family))
+              permission = family[1...family.length-1]
+              perm = org.apache.hadoop.hbase.security.access.Permission.new(
+                permission.to_java_bytes
+               )
+              puts "revoke #{permission} permission"
+              org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
+                @connection, namespace_name, user, perm.getActions
+              )
+            else
+              tablebytes = table_name.to_java_bytes
+              org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
+                @connection, namespace_name, user
+              )
+            end
           else
             # Table should exist
             raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
@@ -180,6 +190,11 @@ module Hbase
     def isNamespace?(table_name)
       table_name.start_with?('@')
     end
+
+    def isPermissionType?(permission_type)
+      permission_type.start_with?('{')
+    end
+
 
     def isTablePermission?(permission)
       permission.java_kind_of?(org.apache.hadoop.hbase.security.access.TablePermission)
