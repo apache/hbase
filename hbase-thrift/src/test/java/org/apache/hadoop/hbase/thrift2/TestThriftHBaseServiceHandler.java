@@ -76,6 +76,9 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -84,6 +87,7 @@ import org.apache.hadoop.hbase.thrift.HBaseThriftTestingUtility;
 import org.apache.hadoop.hbase.thrift.HbaseHandlerMetricsProxy;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics.ThriftServerType;
+import org.apache.hadoop.hbase.thrift2.generated.TAccessControlEntity;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
@@ -105,6 +109,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TLogQueryFilter;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TOnlineLogRecord;
+import org.apache.hadoop.hbase.thrift2.generated.TPermissionScope;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TReadType;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
@@ -201,6 +206,20 @@ public class TestThriftHBaseServiceHandler {
   public static void beforeClass() throws Exception {
     UTIL.getConfiguration().set("hbase.client.retries.number", "3");
     UTIL.getConfiguration().setBoolean("hbase.regionserver.slowlog.buffer.enabled", true);
+
+    UTIL.getConfiguration().set("hbase.client.retries.number", "3");
+    UTIL.getConfiguration().setBoolean("hbase.security.authorization", true);
+    UTIL.getConfiguration().set("hbase.coprocessor.master.classes",
+      "org.apache.hadoop.hbase.security.access.AccessController");
+    UTIL.getConfiguration().set("hbase.coprocessor.region.classes",
+      "org.apache.hadoop.hbase.security.access.AccessController");
+    UTIL.getConfiguration().set("hbase.coprocessor.regionserver.classes",
+      "org.apache.hadoop.hbase.security.access.AccessController");
+
+    // as we opened access control, we need to start as a superuser. Otherwise, we will not have
+    // sufficient permission to do operations.
+    UTIL.getConfiguration().set("hbase.superuser", System.getProperty("user.name"));
+
     UTIL.startMiniCluster();
     TableDescriptor tableDescriptor = TableDescriptorBuilder
       .newBuilder(TableName.valueOf(tableAname)).setColumnFamilies(Arrays.asList(families)).build();
@@ -1772,6 +1791,71 @@ public class TestThriftHBaseServiceHandler {
     List<TOnlineLogRecord> tLogRecords =
       thriftHBaseServiceHandler.getSlowLogResponses(tServerNames, tLogQueryFilter);
     assertEquals(tLogRecords.size(), 0);
+  }
+
+  @Test
+  public void testPerformTablePermissions() throws Throwable {
+    // initialize fake objects.
+    String fakeUser = "user";
+    TAccessControlEntity tce = new TAccessControlEntity();
+    tce.setActions("R");
+    tce.setTableName(Bytes.toString(tableAname));
+    tce.setScope(TPermissionScope.TABLE);
+    tce.setUsername(fakeUser);
+
+    ThriftHBaseServiceHandler handler = createHandler();
+    handler.grant(tce);
+
+    List<UserPermission> permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
+        Bytes.toString(tableAname), fakeUser);
+    // we only grant one R permission
+    assertEquals(permissionList.size(), 1);
+
+    Permission.Action[] actions = permissionList.get(0).getPermission().getActions();
+    assertEquals(actions.length, 1);
+    assertEquals(actions[0], Permission.Action.READ);
+
+    // than revoke the permission
+    handler.revoke(tce);
+    permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
+      Bytes.toString(tableAname), fakeUser);
+
+    // it should return an empty list
+    assertEquals(0, permissionList.size());
+  }
+
+
+  @Test
+  public void testPerformNamespacePermissions() throws Throwable {
+    // initialize fake objects. We test the permission grant and revoke on default NS.
+    String fakeUser = "user";
+    String defaultNameSpace = "default";
+    TAccessControlEntity tce = new TAccessControlEntity();
+    tce.setActions("R");
+    tce.setNsName(defaultNameSpace);
+    tce.setScope(TPermissionScope.NAMESPACE);
+    tce.setUsername(fakeUser);
+
+    ThriftHBaseServiceHandler handler = createHandler();
+    handler.grant(tce);
+
+    List<UserPermission> permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
+      "@" + defaultNameSpace, fakeUser);
+
+    // we only grant one R permission
+    assertEquals(permissionList.size(), 1);
+
+    Permission.Action[] actions = permissionList.get(0).getPermission().getActions();
+    assertEquals(actions.length, 1);
+    assertEquals(actions[0], Permission.Action.READ);
+
+    // revoke the permission
+    handler.revoke(tce);
+    permissionList = AccessControlClient.getUserPermissions(UTIL.getConnection(),
+      "@" + defaultNameSpace, fakeUser);
+
+    // it should return an empty list
+    assertEquals(0, permissionList.size());
   }
 
   public static class DelayingRegionObserver implements RegionCoprocessor, RegionObserver {

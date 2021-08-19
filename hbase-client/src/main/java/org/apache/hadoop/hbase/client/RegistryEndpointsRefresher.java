@@ -39,12 +39,8 @@ class RegistryEndpointsRefresher {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegistryEndpointsRefresher.class);
 
-  public static final String PERIODIC_REFRESH_INTERVAL_SECS =
-    "hbase.client.rpc_registry.refresh_interval_secs";
   private static final int PERIODIC_REFRESH_INTERVAL_SECS_DEFAULT = 300;
 
-  public static final String MIN_SECS_BETWEEN_REFRESHES =
-    "hbase.client.rpc_registry.min_secs_between_refreshes";
   private static final int MIN_SECS_BETWEEN_REFRESHES_DEFAULT = 60;
 
   private final Thread thread;
