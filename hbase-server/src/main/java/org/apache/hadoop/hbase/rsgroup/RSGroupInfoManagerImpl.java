@@ -32,7 +32,9 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -661,13 +663,13 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       return;
     }
 
-    /* For online mode, persist to hbase:rsgroup and Zookeeper */
-    flushConfigTable(newGroupMap);
-
-    // Make changes visible after having been persisted to the source of truth
+    // Make changes visible
     resetRSGroupMap(newGroupMap);
     saveRSGroupMapToZK(newGroupMap);
     updateCacheOfRSGroups(newGroupMap.keySet());
+
+    /* For online mode, persist to hbase:rsgroup and Zookeeper */
+    flushConfigTable(newGroupMap);
   }
 
   private void saveRSGroupMapToZK(Map<String, RSGroupInfo> newGroupMap) throws IOException {
@@ -825,6 +827,20 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
 
     public boolean isOnline() {
+      if (isMasterRunning(masterServices)) {
+        try {
+          // try reading from the table
+          CompletableFuture<Result> read = conn.getTable(RSGROUP_TABLE_NAME).get(new Get(ROW_KEY));
+          if (read.get(10000, TimeUnit.MILLISECONDS) != null) {
+            online = true;
+          }
+        } catch (Exception e) {
+          LOG.warn("Failed to read from " + RSGROUP_TABLE_NAME+ "; setting online = false");
+          online = false;
+        }
+      } else {
+        online = false;
+      }
       return online;
     }
   }

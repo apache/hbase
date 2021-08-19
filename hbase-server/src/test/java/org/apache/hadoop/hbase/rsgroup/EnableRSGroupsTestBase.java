@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import static java.lang.Thread.sleep;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -25,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -72,7 +74,25 @@ public abstract class EnableRSGroupsTestBase {
       (RSGroupBasedLoadBalancer) TEST_UTIL.getMiniHBaseCluster().getMaster().getLoadBalancer();
     long start = EnvironmentEdgeManager.currentTime();
     while (EnvironmentEdgeManager.currentTime() - start <= 60000 && !loadBalancer.isOnline()) {
-      LOG.info("waiting for rsgroup load balancer onLine...");
+      LOG.info("Waiting for rsgroup load balancer online...");
+      sleep(200);
+    }
+
+    assertTrue(loadBalancer.isOnline());
+
+    // kill all RS, RSGroupBasedLoadBalancer should now be offline since rsgroup table unavailable
+    for (JVMClusterUtil.RegionServerThread t:
+      TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads()) {
+      TEST_UTIL.getMiniHBaseCluster().killRegionServer(
+        t.getRegionServer().getServerName());
+    }
+
+    assertFalse(loadBalancer.isOnline());
+
+    TEST_UTIL.getMiniHBaseCluster().startRegionServer();
+    start = EnvironmentEdgeManager.currentTime();
+    while (EnvironmentEdgeManager.currentTime() - start <= 60000 && !loadBalancer.isOnline()) {
+      LOG.info("Waiting for rsgroup load balancer online...");
       sleep(200);
     }
 
