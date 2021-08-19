@@ -2029,7 +2029,7 @@ public class HFileBlock implements Cacheable {
    * @return This HFileBlocks fileContext which will a derivative of the
    *   fileContext for the file from which this block's data was originally read.
    */
-  HFileContext getHFileContext() {
+  public HFileContext getHFileContext() {
     return this.fileContext;
   }
 
