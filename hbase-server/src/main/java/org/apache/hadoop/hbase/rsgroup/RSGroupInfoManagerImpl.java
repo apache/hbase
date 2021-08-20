@@ -665,11 +665,13 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
     // Make changes visible
     resetRSGroupMap(newGroupMap);
-    saveRSGroupMapToZK(newGroupMap);
-    updateCacheOfRSGroups(newGroupMap.keySet());
 
     /* For online mode, persist to hbase:rsgroup and Zookeeper */
     flushConfigTable(newGroupMap);
+    saveRSGroupMapToZK(newGroupMap);
+
+    // Update previous map
+    updateCacheOfRSGroups(newGroupMap.keySet());
   }
 
   private void saveRSGroupMapToZK(Map<String, RSGroupInfo> newGroupMap) throws IOException {
