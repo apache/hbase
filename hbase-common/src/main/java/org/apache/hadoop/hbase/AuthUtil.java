@@ -87,11 +87,33 @@ public final class AuthUtil {
   /** Client keytab file */
   public static final String HBASE_CLIENT_KEYTAB_FILE = "hbase.client.keytab.file";
 
-  /** Client principal */
+  /**
+    * Client principal
+    * @deprecated Replaced by {@link #HBASE_CLIENT_KERBEROS_PRINCIPAL_VALUE}.
+    * This constant incorrectly defined the value as "hbase.client.keytab.principal"
+    * which does not match the value used before version 2.2.0.
+    */
+  @Deprecated
   public static final String HBASE_CLIENT_KERBEROS_PRINCIPAL = "hbase.client.keytab.principal";
+
+  /** Client principal: "hbase.client.kerberos.principal" */
+  public static final String HBASE_CLIENT_KERBEROS_PRINCIPAL_VALUE =
+    "hbase.client.kerberos.principal";
 
   private AuthUtil() {
     super();
+  }
+
+  private static Configuration adjustConf(Configuration conf) {
+    if (conf != null) {
+      String principal = conf.get(HBASE_CLIENT_KERBEROS_PRINCIPAL);
+      if (principal != null) {
+        // replace deprecated principal key
+        conf.set(HBASE_CLIENT_KERBEROS_PRINCIPAL_VALUE, principal);
+        conf.unset(HBASE_CLIENT_KERBEROS_PRINCIPAL);
+      }
+    }
+    return conf;
   }
 
   /**
@@ -103,7 +125,7 @@ public final class AuthUtil {
    */
   @InterfaceAudience.Private
   public static User loginClient(Configuration conf) throws IOException {
-    UserProvider provider = UserProvider.instantiate(conf);
+    UserProvider provider = UserProvider.instantiate(adjustConf(conf));
     User user = provider.getCurrent();
     boolean securityOn = provider.isHBaseSecurityEnabled() && provider.isHadoopSecurityEnabled();
 
@@ -131,7 +153,7 @@ public final class AuthUtil {
   }
 
   private static boolean checkPrincipalMatch(Configuration conf, String loginUserName) {
-    String configuredUserName = conf.get(HBASE_CLIENT_KERBEROS_PRINCIPAL);
+    String configuredUserName = conf.get(HBASE_CLIENT_KERBEROS_PRINCIPAL_VALUE);
     boolean match = configuredUserName.equals(loginUserName);
     if (!match) {
       LOG.warn("Trying to login with a different user: {}, existed user is {}.",
@@ -142,10 +164,10 @@ public final class AuthUtil {
 
   private static User loginFromKeytabAndReturnUser(UserProvider provider) throws IOException {
     try {
-      provider.login(HBASE_CLIENT_KEYTAB_FILE, HBASE_CLIENT_KERBEROS_PRINCIPAL);
+      provider.login(HBASE_CLIENT_KEYTAB_FILE, HBASE_CLIENT_KERBEROS_PRINCIPAL_VALUE);
     } catch (IOException ioe) {
       LOG.error("Error while trying to login as user {} through {}, with message: {}.",
-        HBASE_CLIENT_KERBEROS_PRINCIPAL, HBASE_CLIENT_KEYTAB_FILE,
+        HBASE_CLIENT_KERBEROS_PRINCIPAL_VALUE, HBASE_CLIENT_KEYTAB_FILE,
         ioe.getMessage());
       throw ioe;
     }
@@ -164,14 +186,14 @@ public final class AuthUtil {
    * @throws IOException login exception
    */
   private static User loginClientAsService(Configuration conf) throws IOException {
-    UserProvider provider = UserProvider.instantiate(conf);
+    UserProvider provider = UserProvider.instantiate(adjustConf(conf));
     if (provider.isHBaseSecurityEnabled() && provider.isHadoopSecurityEnabled()) {
       try {
         if (provider.shouldLoginFromKeytab()) {
           String host = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
             conf.get("hbase.client.dns.interface", "default"),
             conf.get("hbase.client.dns.nameserver", "default")));
-          provider.login(HBASE_CLIENT_KEYTAB_FILE, HBASE_CLIENT_KERBEROS_PRINCIPAL, host);
+          provider.login(HBASE_CLIENT_KEYTAB_FILE, HBASE_CLIENT_KERBEROS_PRINCIPAL_VALUE, host);
         }
       } catch (UnknownHostException e) {
         LOG.error("Error resolving host name: " + e.getMessage(), e);
