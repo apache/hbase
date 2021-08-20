@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -129,6 +131,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
     try {
       // For each rsgroup
       for (RSGroupInfo rsgroup : rsGroupInfoManager.listRSGroups()) {
+        LOG.debug("Balancing RSGroup={}", rsgroup.getName());
         Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfTablesInGroup = new HashMap<>();
         for (Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> entry : correctedLoadOfAllTable
             .entrySet()) {
@@ -234,6 +237,9 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
       if (!fallbackRegions.isEmpty()) {
         List<ServerName> candidates = null;
         if (isFallbackEnabled()) {
+          LOG.debug("Falling back {} regions to servers outside their RSGroup. Regions: {}",
+            fallbackRegions.size(), fallbackRegions.stream().map(RegionInfo::getRegionNameAsString)
+              .collect(Collectors.toSet()));
           candidates = getFallBackCandidates(servers);
         }
         candidates = (candidates == null || candidates.isEmpty()) ?
