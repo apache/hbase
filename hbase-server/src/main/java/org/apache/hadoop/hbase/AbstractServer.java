@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.apache.hadoop.hbase.compactionserver.HCompactionServer.COMPACTIONSERVER;
+import static org.apache.hadoop.hbase.master.HMaster.MASTER;
+import static org.apache.hadoop.hbase.regionserver.HRegionServer.REGIONSERVER;
+
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -431,4 +435,18 @@ public abstract class AbstractServer extends Thread implements Server {
   protected abstract AbstractRpcServices getRpcService();
 
   protected abstract String getProcessName();
+
+  public ServerType getServerType(){
+    String processName = getProcessName();
+    if(processName.equals(MASTER)){
+      return ServerType.Master;
+    }
+    if(processName.equals(REGIONSERVER)){
+      return ServerType.RegionServer;
+    }
+    if(processName.equals(COMPACTIONSERVER)){
+      return ServerType.CompactionServer;
+    }
+    return ServerType.ReplicationServer;
+  }
 }

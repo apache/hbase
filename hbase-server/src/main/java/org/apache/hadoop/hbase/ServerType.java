@@ -15,19 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.coprocessor;
 
-import org.apache.hadoop.hbase.AbstractServer;
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerType;
-import org.apache.hadoop.hbase.regionserver.OnlineRegions;
+package org.apache.hadoop.hbase;
+
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.Private
-public interface RegionCoprocessorService extends Server, OnlineRegions {
-  /**
-   * The method is used by {@link RegionCoprocessorEnvironment#getServerType()}. HRegionServer and
-   * HCompactionServer extends {@link AbstractServer#getServerType()} to implement this method.
-   */
-  ServerType getServerType();
+/**
+ * Enum describing Server Type
+ */
+@InterfaceAudience.Public
+public enum ServerType {
+  Master,
+  RegionServer,
+  CompactionServer,
+  ReplicationServer
 }

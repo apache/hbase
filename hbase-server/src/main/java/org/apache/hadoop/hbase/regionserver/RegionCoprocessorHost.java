@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RawCellBuilder;
 import org.apache.hadoop.hbase.RawCellBuilderFactory;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ServerType;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
@@ -187,6 +188,11 @@ public class RegionCoprocessorHost
     public RawCellBuilder getCellBuilder() {
       // We always do a DEEP_COPY only
       return RawCellBuilderFactory.create();
+    }
+
+    @Override
+    public ServerType getServerType(){
+      return services.getServerType();
     }
   }
 

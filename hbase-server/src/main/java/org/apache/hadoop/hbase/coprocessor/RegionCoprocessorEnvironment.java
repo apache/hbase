@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.RawCellBuilder;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ServerType;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
@@ -130,4 +131,13 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment<Reg
    * @return the RawCellBuilder
    */
   RawCellBuilder getCellBuilder();
+
+  /**
+   * Provide server type to let users know the current context, it is on region server or compaction
+   * server or replication server, then user could choose different implementations.
+   * 1. through rpc call: {@link #getConnection()}
+   * 2. through Region operation: {@link #getRegion}, {@link #getOnlineRegions})
+   */
+  ServerType getServerType();
+
 }

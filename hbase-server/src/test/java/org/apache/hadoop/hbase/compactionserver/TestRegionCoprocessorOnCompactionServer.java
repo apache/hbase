@@ -29,6 +29,7 @@ import java.util.Set;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.ServerType;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -98,7 +99,12 @@ public class TestRegionCoprocessorOnCompactionServer extends TestCompactionServe
         : RS.getBytes();
     Put put = new Put(methodName.getBytes());
     put.addColumn(FAMILY.getBytes(), col, Bytes.toBytes(1));
-    c.getEnvironment().getConnection().getTable(VERIFY_TABLE_NAME).put(put);
+    // Here user could choose different implementations for different context
+    if (c.getEnvironment().getServerType() == ServerType.CompactionServer) {
+      c.getEnvironment().getConnection().getTable(VERIFY_TABLE_NAME).put(put);
+    } else if (c.getEnvironment().getServerType() == ServerType.RegionServer) {
+      c.getEnvironment().getOnlineRegions().getRegions(VERIFY_TABLE_NAME).get(0).put(put);
+    }
   }
 
   private void verifyRecord(byte[] row, byte[] col, boolean exist) throws Exception {
