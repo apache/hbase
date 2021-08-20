@@ -3339,7 +3339,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     WALEdit walEdit = null;
     MultiVersionConcurrencyControl.WriteEntry writeEntry = null;
     long txid = 0;
-    boolean doRollBackMemstore = false;
+    boolean walSyncSuccess = true;
     boolean locked = false;
     int cellCount = 0;
     /** Keep track of the locks we hold so we can release them in finally clause */
@@ -3705,7 +3705,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (updateSeqId) {
           updateSequenceId(familyMaps[i].values(), mvccNum);
         }
-        doRollBackMemstore = true; // If we have a failure, we need to clean what we wrote
         addedSize += applyFamilyMapToMemstore(familyMaps[i]);
       }
 
@@ -3721,11 +3720,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // -------------------------
       // STEP 7. Sync wal.
       // -------------------------
+      walSyncSuccess = false;
       if (txid != 0) {
         syncOrDefer(txid, durability);
       }
+      walSyncSuccess = true;
 
-      doRollBackMemstore = false;
       // update memstore size
       this.addAndGetGlobalMemstoreSize(addedSize);
 
@@ -3776,14 +3776,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       success = true;
       return addedSize;
+    } catch (Throwable t) {
+      // If wal sync fails, then abort the Region server
+      if (!walSyncSuccess) {
+        rsServices.abort("Wal sync failed", t);
+      }
+      // Rethrow the exception.
+      throw t;
     } finally {
-      // if the wal sync was unsuccessful, remove keys from memstore
-      if (doRollBackMemstore) {
-        for (int j = 0; j < familyMaps.length; j++) {
-          for(List<Cell> cells:familyMaps[j].values()) {
-            rollbackMemstore(cells);
-          }
-        }
+      // if the wal sync was unsuccessful, complete the mvcc
+      if (!walSyncSuccess) {
         if (writeEntry != null) mvcc.complete(writeEntry);
       } else {
         if (writeEntry != null) {
@@ -4255,32 +4257,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Store store = getStore(family);
       size += store.add(cells);
     }
-
      return size;
    }
-
-  /**
-   * Remove all the keys listed in the map from the memstore. This method is
-   * called when a Put/Delete has updated memstore but subsequently fails to update
-   * the wal. This method is then invoked to rollback the memstore.
-   */
-  private void rollbackMemstore(List<Cell> memstoreCells) {
-    rollbackMemstore(null, memstoreCells);
-  }
-
-  private void rollbackMemstore(final Store defaultStore, List<Cell> memstoreCells) {
-    int kvsRolledback = 0;
-    for (Cell cell : memstoreCells) {
-      Store store = defaultStore;
-      if (store == null) {
-        byte[] family = CellUtil.cloneFamily(cell);
-        store = getStore(family);
-      }
-      store.rollback(cell);
-      kvsRolledback++;
-    }
-    LOG.debug("rollbackMemstore rolled back " + kvsRolledback);
-  }
 
   @Override
   public void checkFamilies(Collection<byte[]> families) throws NoSuchColumnFamilyException {
@@ -7964,7 +7942,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.writeRequestsCount.increment();
     RowLock rowLock = null;
     WALKey walKey = null;
-    boolean doRollBackMemstore = false;
+    boolean walSyncSuccess = true;
     try {
       rowLock = getRowLockInternal(row);
       assert rowLock != null;
@@ -8092,7 +8070,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
 
           // Actually write to Memstore now
-          doRollBackMemstore = !tempMemstore.isEmpty();
           for (Map.Entry<Store, List<Cell>> entry : tempMemstore.entrySet()) {
             Store store = entry.getKey();
             if (store.getFamily().getMaxVersions() == 1) {
@@ -8120,27 +8097,30 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         rowLock = null;
       }
       // sync the transaction log outside the rowlock
+      walSyncSuccess = false;
       if(txid != 0){
         syncOrDefer(txid, durability);
       }
+      walSyncSuccess = true;
       if (rsServices != null && rsServices.getMetrics() != null) {
         rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
           getTableName());
       }
-      doRollBackMemstore = false;
+    } catch (Throwable t) {
+      LOG.info("RSS throwable ", t);
+      // If wal sync fails, then abort the Region server
+      if (!walSyncSuccess) {
+        rsServices.abort("Wal sync failed", t);
+      }
+      // Rethrow the exception.
+      throw t;
     } finally {
       if (rowLock != null) {
         rowLock.release();
       }
       // if the wal sync was unsuccessful, remove keys from memstore
       WriteEntry we = walKey != null? walKey.getWriteEntry(): null;
-      if (doRollBackMemstore) {
-        for (Map.Entry<Store, List<Cell>> entry: tempMemstore.entrySet()) {
-          rollbackMemstore(entry.getKey(), entry.getValue());
-        }
-        for (Map.Entry<Store, List<Cell>> entry: removedCellsForMemStore.entrySet()) {
-          entry.getKey().add(entry.getValue());
-        }
+      if (!walSyncSuccess) {
         if (we != null) {
           mvcc.complete(we);
         }
@@ -8270,7 +8250,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private Result doIncrement(Increment increment, long nonceGroup, long nonce) throws IOException {
     RowLock rowLock = null;
     WALKey walKey = null;
-    boolean doRollBackMemstore = false;
+    boolean walSyncSuccess = true;
     long accumulatedResultSize = 0;
     List<Cell> allKVs = new ArrayList<Cell>(increment.size());
     Map<Store, List<Cell>> removedCellsForMemStore = new HashMap<>();
@@ -8351,7 +8331,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
 
           // Now write to memstore, a family at a time.
-          doRollBackMemstore = !forMemStore.isEmpty();
           for (Map.Entry<Store, List<Cell>> entry: forMemStore.entrySet()) {
             Store store = entry.getKey();
             List<Cell> results = entry.getValue();
@@ -8375,24 +8354,26 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         rowLock.release();
         rowLock = null;
       }
+      walSyncSuccess = false;
       // sync the transaction log outside the rowlock
       if(txid != 0) {
         syncOrDefer(txid, effectiveDurability);
       }
-      doRollBackMemstore = false;
+      walSyncSuccess = true;
+    } catch (Throwable t) {
+      // If wal sync fails, then abort the Region server
+      if (!walSyncSuccess) {
+        rsServices.abort("Wal sync failed", t);
+      }
+      // Rethrow the exception.
+      throw t;
     } finally {
       if (rowLock != null) {
         rowLock.release();
       }
       // if the wal sync was unsuccessful, remove keys from memstore
       WriteEntry we = walKey != null ? walKey.getWriteEntry() : null;
-      if (doRollBackMemstore) {
-        for (Map.Entry<Store, List<Cell>> entry: forMemStore.entrySet()) {
-          rollbackMemstore(entry.getKey(), entry.getValue());
-        }
-        for (Map.Entry<Store, List<Cell>> entry: removedCellsForMemStore.entrySet()) {
-          entry.getKey().add(entry.getValue());
-        }
+      if (!walSyncSuccess) {
         if (we != null) {
           mvcc.complete(we);
         }
@@ -9341,5 +9322,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public RegionSplitPolicy getSplitPolicy() {
     return this.splitPolicy;
+  }
+
+  public void setRegionServerServices(RegionServerServices services) {
+    this.rsServices = services;
   }
 }
