@@ -90,6 +90,10 @@ public final class AuthUtil {
   /** Client principal */
   public static final String HBASE_CLIENT_KERBEROS_PRINCIPAL = "hbase.client.keytab.principal";
 
+  /** Configuration to automatically try to renew keytab-based logins */
+  public static final String HBASE_CLIENT_AUTOMATIC_KEYTAB_RENEWAL_KEY = "hbase.client.keytab.automatic.renewal";
+  public static final boolean HBASE_CLIENT_AUTOMATIC_KEYTAB_RENEWAL_DEFAULT = true;
+
   private AuthUtil() {
     super();
   }
@@ -189,8 +193,8 @@ public final class AuthUtil {
    * @return a ScheduledChore for renewals.
    */
   @InterfaceAudience.Private
-  public static ScheduledChore getAuthRenewalChore(final UserGroupInformation user) {
-    if (!user.hasKerberosCredentials()) {
+  public static ScheduledChore getAuthRenewalChore(final UserGroupInformation user, Configuration conf) {
+    if (!user.hasKerberosCredentials() || !isAuthRenewalChoreEnabled(conf)) {
       return null;
     }
 
@@ -221,8 +225,11 @@ public final class AuthUtil {
    */
   @Deprecated
   public static ScheduledChore getAuthChore(Configuration conf) throws IOException {
+    if (!isAuthRenewalChoreEnabled(conf)) {
+      return null;
+    }
     User user = loginClientAsService(conf);
-    return getAuthRenewalChore(user.getUGI());
+    return getAuthRenewalChore(user.getUGI(), conf);
   }
 
   private static Stoppable createDummyStoppable() {
@@ -270,5 +277,14 @@ public final class AuthUtil {
   @InterfaceAudience.Private
   public static String toGroupEntry(String name) {
     return GROUP_PREFIX + name;
+  }
+
+  /**
+   * Returns true if the chore to automatically renew Kerberos tickets (from
+   * keytabs) should be started. The default is true.
+   */
+  static boolean isAuthRenewalChoreEnabled(Configuration conf) {
+    return conf.getBoolean(HBASE_CLIENT_AUTOMATIC_KEYTAB_RENEWAL_KEY,
+        HBASE_CLIENT_AUTOMATIC_KEYTAB_RENEWAL_DEFAULT);
   }
 }

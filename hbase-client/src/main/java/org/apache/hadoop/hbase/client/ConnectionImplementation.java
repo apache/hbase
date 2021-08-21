@@ -374,7 +374,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   private void spawnRenewalChore(final UserGroupInformation user) {
     ChoreService service = getChoreService();
-    service.scheduleChore(AuthUtil.getAuthRenewalChore(user));
+    service.scheduleChore(AuthUtil.getAuthRenewalChore(user, conf));
   }
 
   /**
