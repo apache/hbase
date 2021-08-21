@@ -134,9 +134,11 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment<Reg
 
   /**
    * Provide server type to let users know the current context, it is on region server or compaction
-   * server or replication server, then user could choose different implementations.
-   * 1. through rpc call: {@link #getConnection()}
-   * 2. through Region operation: {@link #getRegion}, {@link #getOnlineRegions})
+   * server or replication server, then user could choose different implementations.For example, on
+   * compaction server, you can not get the region instance, so if you want to get something from a
+   * region, maybe you should go with getConnection(), to communicate with the actual region
+   * instance through rpc. But if you are on region server, then you can just use getRegion or
+   * getOnlineRegions to get the region instance directly
    */
   ServerType getServerType();
 

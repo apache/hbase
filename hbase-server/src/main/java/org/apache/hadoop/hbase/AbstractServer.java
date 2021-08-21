@@ -436,15 +436,15 @@ public abstract class AbstractServer extends Thread implements Server {
 
   protected abstract String getProcessName();
 
-  public ServerType getServerType(){
+  public ServerType getServerType() {
     String processName = getProcessName();
-    if(processName.equals(MASTER)){
+    if (processName.equals(MASTER)) {
       return ServerType.Master;
     }
-    if(processName.equals(REGIONSERVER)){
+    if (processName.equals(REGIONSERVER)) {
       return ServerType.RegionServer;
     }
-    if(processName.equals(COMPACTIONSERVER)){
+    if (processName.equals(COMPACTIONSERVER)) {
       return ServerType.CompactionServer;
     }
     return ServerType.ReplicationServer;

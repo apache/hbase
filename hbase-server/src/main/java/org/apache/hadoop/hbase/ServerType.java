@@ -23,10 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Enum describing Server Type
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public enum ServerType {
-  Master,
-  RegionServer,
-  CompactionServer,
-  ReplicationServer
+  Master, RegionServer, CompactionServer, ReplicationServer
 }
