@@ -397,4 +397,9 @@ public class MockRegionServerServices implements RegionServerServices {
     boolean major, int priority) {
     return false;
   }
+
+  @Override
+  public ServerType getServerType() {
+    return ServerType.RegionServer;
+  }
 }

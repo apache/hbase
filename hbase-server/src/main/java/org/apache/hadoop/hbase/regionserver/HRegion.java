@@ -115,6 +115,8 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.compactionserver.HCompactionServer;
+import org.apache.hadoop.hbase.compactionserver.RegionCompactionCoprocessorHost;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -418,7 +420,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final CellComparator cellComparator;
 
   /**
-   * @return The smallest mvcc readPoint across all the scanners in this
+   * Get the smallest mvcc readPoint across all the scanners in this
    * region. Writes older than this readPoint, are included in every
    * read operation.
    */
@@ -731,10 +733,53 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   @Deprecated
   public HRegion(final Path tableDir, final WAL wal, final FileSystem fs,
-      final Configuration confParam, final RegionInfo regionInfo,
-      final TableDescriptor htd, final RegionServerServices rsServices) {
-    this(new HRegionFileSystem(confParam, fs, tableDir, regionInfo),
-      wal, confParam, htd, rsServices);
+      final Configuration confParam, final RegionInfo regionInfo, final TableDescriptor htd,
+      final RegionServerServices rsServices) {
+    this(new HRegionFileSystem(confParam, fs, tableDir, regionInfo), wal, confParam, htd,
+        rsServices);
+  }
+
+  /**
+   * HRegion constructor. This constructor should only be used for compaction offload.
+   * {@link org.apache.hadoop.hbase.compactionserver.CompactionThreadManager#getStore }
+   */
+  public HRegion(final HRegionFileSystem fs, final Configuration confParam,
+      final TableDescriptor htd, final HCompactionServer csServices) {
+    if (htd == null) {
+      throw new IllegalArgumentException("Need table descriptor");
+    }
+    if (confParam instanceof CompoundConfiguration) {
+      throw new IllegalArgumentException("Need original base configuration");
+    }
+    this.fs = fs;
+    this.baseConf = confParam;
+    this.conf = new CompoundConfiguration().add(confParam).addBytesMap(htd.getValues());
+    this.cellComparator = htd.isMetaTable()
+        || conf.getBoolean(USE_META_CELL_COMPARATOR, DEFAULT_USE_META_CELL_COMPARATOR)
+            ? MetaCellComparator.META_COMPARATOR
+            : CellComparatorImpl.COMPARATOR;
+    this.regionServicesForStores = new RegionServicesForStores(this, null);
+    this.htableDescriptor = htd;
+    this.scannerReadPoints = new ConcurrentHashMap<>();
+    this.mvcc = new MultiVersionConcurrencyControl(getRegionInfo().getShortNameToLog());
+    this.coprocessorHost = new RegionCompactionCoprocessorHost(this, csServices, conf);
+    // we must initialize these final variable below
+    this.isLoadingCfsOnDemandDefault = true;
+    this.wal = null;
+    this.timestampSlop = HConstants.LATEST_TIMESTAMP;
+    this.lock = null;
+    this.regionLockHolders = null;
+    this.metricsRegion = null;
+    this.metricsRegionWrapper = null;
+    this.regionDurability = null;
+    this.regionStatsEnabled = false;
+    this.storeHotnessProtector = null;
+    this.rowLockWaitDuration = DEFAULT_ROWLOCK_WAIT_DURATION;
+    this.busyWaitDuration = DEFAULT_BUSY_WAIT_DURATION;
+    this.maxCellSize = DEFAULT_MAX_CELL_SIZE;
+    this.miniBatchSize = DEFAULT_HBASE_REGIONSERVER_MINIBATCH_SIZE;
+    this.maxBusyWaitMultiplier = 2;
+    this.maxBusyWaitDuration = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
   }
 
   /**
@@ -5149,9 +5194,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * Check the collection of families for valid timestamps
-   * @param familyMap
    * @param now current timestamp
-   * @throws FailedSanityCheckException
    */
   public void checkTimestamps(final Map<byte[], List<Cell>> familyMap, long now)
       throws FailedSanityCheckException {

@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ServerType;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -777,4 +778,10 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
       boolean major, int priority) {
     return false;
   }
+
+  @Override
+  public ServerType getServerType() {
+    return ServerType.RegionServer;
+  }
+
 }

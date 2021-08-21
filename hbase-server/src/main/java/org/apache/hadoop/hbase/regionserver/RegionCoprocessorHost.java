@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RawCellBuilder;
 import org.apache.hadoop.hbase.RawCellBuilderFactory;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ServerType;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.CheckAndMutateResult;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
@@ -111,12 +113,12 @@ public class RegionCoprocessorHost
    *
    * Encapsulation of the environment of each coprocessor
    */
-  private static class RegionEnvironment extends BaseEnvironment<RegionCoprocessor>
+  public static class RegionEnvironment extends BaseEnvironment<RegionCoprocessor>
       implements RegionCoprocessorEnvironment {
-    private Region region;
+    protected Region region;
     ConcurrentMap<String, Object> sharedData;
-    private final MetricRegistry metricRegistry;
-    private final RegionServerServices services;
+    protected final MetricRegistry metricRegistry;
+    protected final RegionCoprocessorService services;
 
     /**
      * Constructor
@@ -125,7 +127,7 @@ public class RegionCoprocessorHost
      */
     public RegionEnvironment(final RegionCoprocessor impl, final int priority,
         final int seq, final Configuration conf, final Region region,
-        final RegionServerServices services, final ConcurrentMap<String, Object> sharedData) {
+        final RegionCoprocessorService services, final ConcurrentMap<String, Object> sharedData) {
       super(impl, priority, seq, conf);
       this.region = region;
       this.sharedData = sharedData;
@@ -187,6 +189,11 @@ public class RegionCoprocessorHost
       // We always do a DEEP_COPY only
       return RawCellBuilderFactory.create();
     }
+
+    @Override
+    public ServerType getServerType(){
+      return services.getServerType();
+    }
   }
 
   /**
@@ -246,9 +253,9 @@ public class RegionCoprocessorHost
   }
 
   /** The region server services */
-  RegionServerServices rsServices;
+  protected RegionCoprocessorService rsServices;
   /** The region */
-  HRegion region;
+  protected HRegion region;
 
   /**
    * Constructor
@@ -257,7 +264,7 @@ public class RegionCoprocessorHost
    * @param conf the configuration
    */
   public RegionCoprocessorHost(final HRegion region,
-      final RegionServerServices rsServices, final Configuration conf) {
+      final RegionCoprocessorService rsServices, final Configuration conf) {
     super(rsServices);
     this.conf = conf;
     this.rsServices = rsServices;
@@ -425,7 +432,7 @@ public class RegionCoprocessorHost
     // If a CoreCoprocessor, return a 'richer' environment, one laden with RegionServerServices.
     return instance.getClass().isAnnotationPresent(CoreCoprocessor.class)?
         new RegionEnvironmentForCoreCoprocessors(instance, priority, seq, conf, region,
-            rsServices, classData):
+          (RegionServerServices) rsServices, classData):
         new RegionEnvironment(instance, priority, seq, conf, region, rsServices, classData);
   }
 

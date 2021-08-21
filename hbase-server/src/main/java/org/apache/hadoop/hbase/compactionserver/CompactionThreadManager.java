@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.compactionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -240,7 +239,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
     excludeFiles.addAll(compactedFiles);
     // Convert files names to store files
     status.setStatus("Convert current compacting and compacted files to store files");
-    List<HStoreFile> excludeStoreFiles = getExcludedStoreFiles(store, excludeFiles);
+    List<HStoreFile> excludeStoreFiles = store.getStoreFilesBaseOnFileNames(excludeFiles);
     LOG.info(
       "Start select store: {}, excludeFileNames: {}, excluded: {}, compacting: {}, compacted: {}",
       logStr, excludeFiles.size(), excludeStoreFiles.size(), compactingFiles.size(),
@@ -354,23 +353,11 @@ public class CompactionThreadManager implements ThroughputControllerService {
     }
   }
 
-  private List<HStoreFile> getExcludedStoreFiles(HStore store, Set<String> excludeFileNames) {
-    Collection<HStoreFile> storefiles = store.getStorefiles();
-    List<HStoreFile> storeFiles = new ArrayList<>();
-    for (HStoreFile storefile : storefiles) {
-      String name = storefile.getPath().getName();
-      if (excludeFileNames.contains(name)) {
-        storeFiles.add(storefile);
-      }
-    }
-    return storeFiles;
-  }
-
   private HStore getStore(final Configuration conf, final FileSystem fs, final Path rootDir,
       final TableDescriptor htd, final RegionInfo hri, final String familyName) throws IOException {
     HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs,
         CommonFSUtils.getTableDir(rootDir, htd.getTableName()), hri);
-    HRegion region = new HRegion(regionFs, null, conf, htd, null);
+    HRegion region = new HRegion(regionFs, conf, htd, server);
     ColumnFamilyDescriptor columnFamilyDescriptor = htd.getColumnFamily(Bytes.toBytes(familyName));
     HStore store;
     if (columnFamilyDescriptor.isMobEnabled()) {
