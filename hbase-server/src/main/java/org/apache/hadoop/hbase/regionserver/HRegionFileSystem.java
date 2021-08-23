@@ -41,10 +41,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -600,9 +603,33 @@ public class HRegionFileSystem {
       Path regionInfoFile = new Path(regionDir, REGION_INFO_FILE);
       byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
+      loadRegionFilesIntoStoreTracker(regionDir);
     }
-
     return regionDir;
+  }
+
+  private void loadRegionFilesIntoStoreTracker(Path regionDir) throws IOException {
+    for(FileStatus f : fs.listStatus(regionDir)) {
+      if(f.isDirectory()){
+        String dirName = f.getPath().getName();
+        if(dirName.equals(REGION_MERGES_DIR) ||
+          dirName.equals(REGION_SPLITS_DIR) ||
+          dirName.equals(REGION_TEMP_DIR)){
+          continue;
+        }
+        ColumnFamilyDescriptorBuilder fDescBuilder =
+          ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(dirName));
+        StoreFileTracker tracker = StoreFileTrackerFactory.
+          create(conf, regionInfo.getTable(), true,
+            StoreContext.getBuilder().withColumnFamilyDescriptor(fDescBuilder.build()).build());
+        List<StoreFileInfo> fileInfos = new ArrayList<>();
+        for(FileStatus hfile : fs.listStatus(f.getPath())){
+          StoreFileInfo sfInfo = new StoreFileInfo(conf, fs, hfile);
+          fileInfos.add(sfInfo);
+        }
+        tracker.add(fileInfos);
+      }
+    }
   }
 
   /**
@@ -762,6 +789,7 @@ public class HRegionFileSystem {
       Path regionInfoFile = new Path(regionDir, REGION_INFO_FILE);
       byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
+      loadRegionFilesIntoStoreTracker(regionDir);
     }
   }
 

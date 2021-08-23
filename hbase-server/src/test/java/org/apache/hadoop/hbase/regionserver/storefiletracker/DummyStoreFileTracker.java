@@ -17,45 +17,29 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * The default implementation for store file tracker, where we do not persist the store file list,
- * and use listing when loading store files.
- */
-@InterfaceAudience.Private
-class DefaultStoreFileTracker extends StoreFileTrackerBase {
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
-  public DefaultStoreFileTracker(Configuration conf, TableName tableName, Boolean isPrimaryReplica,
+public class DummyStoreFileTracker  extends DefaultStoreFileTracker {
+
+  public static List<Path> trackedFiles = new ArrayList<>();
+
+  public DummyStoreFileTracker(Configuration conf, TableName tableName, Boolean isPrimaryReplica,
     StoreContext ctx) {
     super(conf, tableName, isPrimaryReplica, ctx);
   }
 
   @Override
-  public List<StoreFileInfo> load() throws IOException {
-    return ctx.getRegionFileSystem().getStoreFiles(ctx.getFamily().getNameAsString());
-  }
-
-  @Override
-  public boolean requireWritingToTmpDirFirst() {
-    return true;
-  }
-
-  @Override
   protected void doAddNewStoreFiles(Collection<StoreFileInfo> newFiles) throws IOException {
-    // NOOP
+    newFiles.stream().forEach( s -> trackedFiles.add(s.getPath()));
   }
 
-  @Override
-  protected void doAddCompactionResults(Collection<StoreFileInfo> compactedFiles,
-    Collection<StoreFileInfo> newFiles) throws IOException {
-    // NOOP
-  }
 }

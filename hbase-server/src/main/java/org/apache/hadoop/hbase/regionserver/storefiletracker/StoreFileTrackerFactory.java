@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker.STORE_FILE_TRACKER;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Factory method for creating store file tracker.
@@ -28,8 +32,19 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public final class StoreFileTrackerFactory {
 
+  private static final Logger LOG = LoggerFactory.getLogger(StoreFileTrackerFactory.class);
+
   public static StoreFileTracker create(Configuration conf, TableName tableName,
-    boolean isPrimaryReplica, StoreContext ctx) {
-    return new DefaultStoreFileTracker(conf, tableName, isPrimaryReplica, ctx);
+      boolean isPrimaryReplica, StoreContext ctx) {
+    String className = conf.get(STORE_FILE_TRACKER, DefaultStoreFileTracker.class.getName());
+    try {
+      LOG.info("instantiating StoreFileTracker impl {}", className);
+      return ReflectionUtils.instantiateWithCustomCtor(className,
+        new Class[] { Configuration.class, TableName.class, Boolean.class, StoreContext.class},
+        new Object[] { conf, tableName, isPrimaryReplica, ctx });
+    } catch (Exception e) {
+      LOG.error("Unable to create StoreFileTracker impl : {}", className, e);
+      throw new RuntimeException(e);
+    }
   }
 }

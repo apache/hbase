@@ -49,6 +49,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface StoreFileTracker {
 
+  static final String STORE_FILE_TRACKER = "hbase.storefile.tracker.impl";
+
   /**
    * Load the store files list when opening a region.
    */
