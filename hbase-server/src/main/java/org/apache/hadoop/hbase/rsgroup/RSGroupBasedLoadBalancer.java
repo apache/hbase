@@ -237,9 +237,11 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
       if (!fallbackRegions.isEmpty()) {
         List<ServerName> candidates = null;
         if (isFallbackEnabled()) {
-          LOG.debug("Falling back {} regions to servers outside their RSGroup. Regions: {}",
-            fallbackRegions.size(), fallbackRegions.stream().map(RegionInfo::getRegionNameAsString)
-              .collect(Collectors.toSet()));
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Falling back {} regions to servers outside their RSGroup. Regions: {}",
+              fallbackRegions.size(), fallbackRegions.stream()
+                .map(RegionInfo::getRegionNameAsString).collect(Collectors.toSet()));
+          }
           candidates = getFallBackCandidates(servers);
         }
         candidates = (candidates == null || candidates.isEmpty()) ?

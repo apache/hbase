@@ -256,9 +256,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     newGroupMap.put(RSGroupInfo.DEFAULT_GROUP, newDefaultGroupInfo);
     // do not need to persist, as we do not persist default group.
     resetRSGroupMap(newGroupMap);
-    LOG.info("Updated default servers, now {} servers online: {}",
-      newDefaultGroupInfo.getServers().size(),
-      newDefaultGroupInfo.getServers().stream().map(Address::toString).collect(Collectors.toSet()));
+    LOG.info("Updated default servers, {} servers", newDefaultGroupInfo.getServers().size());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("New default servers list: {}", newDefaultGroupInfo.getServers().stream()
+        .map(Address::toString).collect(Collectors.toSet()));
+    }
   }
 
   private synchronized void init() throws IOException {
@@ -661,7 +663,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       // according to the inputted newGroupMap (an updated copy of rsGroupMap)
       this.holder = new RSGroupInfoHolder(newGroupMap);
 
-      LOG.info("New RSGroup map: {}", newGroupMap.toString());
+      LOG.debug("New RSGroup map: {}", newGroupMap.toString());
 
       // Do not need to update tableMap
       // because only the update on servers in default group is allowed above,
