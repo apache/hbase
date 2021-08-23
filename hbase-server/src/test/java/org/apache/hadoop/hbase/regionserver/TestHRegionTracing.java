@@ -23,6 +23,7 @@ import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -48,7 +49,6 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -79,18 +79,12 @@ public class TestHRegionTracing {
   @Rule
   public final TableNameTestRule tableNameRule = new TableNameTestRule();
 
-  private static WAL WAL;
+  private WAL wal;
 
   private HRegion region;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws IOException {
-    WAL = HBaseTestingUtility.createWal(UTIL.getConfiguration(), UTIL.getDataTestDir(), null);
-  }
-
   @AfterClass
   public static void tearDownAfterClass() throws IOException {
-    Closeables.close(WAL, true);
     UTIL.cleanupTestDir();
   }
 
@@ -102,7 +96,9 @@ public class TestHRegionTracing {
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
-    region = HRegion.createHRegion(info, UTIL.getDataTestDir(), UTIL.getConfiguration(), desc, WAL);
+    wal = HBaseTestingUtility.createWal(UTIL.getConfiguration(),
+      new Path(UTIL.getDataTestDir(), tableName.getNameAsString()), null);
+    region = HRegion.createHRegion(info, UTIL.getDataTestDir(), UTIL.getConfiguration(), desc, wal);
     region = UTIL.createLocalHRegion(info, desc);
   }
 
@@ -111,6 +107,7 @@ public class TestHRegionTracing {
     if (region != null) {
       region.close();
     }
+    Closeables.close(wal, true);
   }
 
   private void assertSpan(String spanName) {
