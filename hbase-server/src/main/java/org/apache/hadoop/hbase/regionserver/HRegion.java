@@ -8107,7 +8107,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           getTableName());
       }
     } catch (Throwable t) {
-      LOG.info("RSS throwable ", t);
       // If wal sync fails, then abort the Region server
       if (!walSyncSuccess) {
         rsServices.abort("Wal sync failed", t);

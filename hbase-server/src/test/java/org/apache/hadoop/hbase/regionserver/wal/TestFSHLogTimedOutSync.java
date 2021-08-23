@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -32,15 +33,17 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
-import java.io.IOException;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -49,6 +52,7 @@ import static org.mockito.Mockito.mock;
 /*
   Testing RS abort in case if sync fails/times out.
  */
+@Category({MediumTests.class, RegionServerTests.class})
 public class TestFSHLogTimedOutSync {
   private static final Log LOG = LogFactory.getLog(TestFSHLogTimedOutSync.class);
 
@@ -59,7 +63,7 @@ public class TestFSHLogTimedOutSync {
   private static final String COLUMN_QUALIFIER = "MyCQ";
   private static final byte [] COLUMN_QUALIFIER_BYTES = Bytes.toBytes(COLUMN_QUALIFIER);
   private static HBaseTestingUtility TEST_UTIL;
-  public static Configuration CONF ;
+  private static Configuration CONF ;
   private String dir;
 
   // Test names
@@ -82,7 +86,7 @@ public class TestFSHLogTimedOutSync {
   }
 
   // Test that RS aborts in case of put, append and increment when sync fails or times out.
-  @Test(timeout=300000)
+  @Test(timeout=30000)
   public void testRSAbortWhenSyncTimedOut() throws IOException {
     // Dodgy WAL. Will throw exceptions when flags set.
     class DodgyFSLog extends FSHLog {
