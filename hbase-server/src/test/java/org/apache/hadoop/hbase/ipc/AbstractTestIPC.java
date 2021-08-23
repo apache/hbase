@@ -34,7 +34,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
-import io.opentelemetry.api.trace.Span.Kind;
+import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
 import io.opentelemetry.sdk.trace.data.SpanData;
@@ -457,7 +457,7 @@ public abstract class AbstractTestIPC {
   }
 
   private void assertRpcAttribute(SpanData data, String methodName, InetSocketAddress addr,
-    Kind kind) {
+    SpanKind kind) {
     assertEquals(SERVICE.getDescriptorForType().getName(),
       data.getAttributes().get(TraceUtil.RPC_SERVICE_KEY));
     assertEquals(methodName, data.getAttributes().get(TraceUtil.RPC_METHOD_KEY));
@@ -471,7 +471,7 @@ public abstract class AbstractTestIPC {
   private void assertRemoteSpan() {
     SpanData data = waitSpan("RpcServer.process");
     assertTrue(data.getParentSpanContext().isRemote());
-    assertEquals(Kind.SERVER, data.getKind());
+    assertEquals(SpanKind.SERVER, data.getKind());
   }
 
   @Test
@@ -484,8 +484,8 @@ public abstract class AbstractTestIPC {
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       stub.pause(null, PauseRequestProto.newBuilder().setMs(100).build());
       assertRpcAttribute(waitSpan("RpcClient.callMethod"), "pause", rpcServer.getListenerAddress(),
-        Kind.CLIENT);
-      assertRpcAttribute(waitSpan("RpcServer.callMethod"), "pause", null, Kind.INTERNAL);
+        SpanKind.CLIENT);
+      assertRpcAttribute(waitSpan("RpcServer.callMethod"), "pause", null, SpanKind.INTERNAL);
       assertRemoteSpan();
       assertSameTraceId();
       for (SpanData data : traceRule.getSpans()) {
@@ -499,8 +499,8 @@ public abstract class AbstractTestIPC {
       assertThrows(ServiceException.class,
         () -> stub.error(null, EmptyRequestProto.getDefaultInstance()));
       assertRpcAttribute(waitSpan("RpcClient.callMethod"), "error", rpcServer.getListenerAddress(),
-        Kind.CLIENT);
-      assertRpcAttribute(waitSpan("RpcServer.callMethod"), "error", null, Kind.INTERNAL);
+        SpanKind.CLIENT);
+      assertRpcAttribute(waitSpan("RpcServer.callMethod"), "error", null, SpanKind.INTERNAL);
       assertRemoteSpan();
       assertSameTraceId();
       for (SpanData data : traceRule.getSpans()) {

@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.trace;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.Span.Kind;
+import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.api.trace.attributes.SemanticAttributes;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
+import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -72,14 +72,14 @@ public final class TraceUtil {
   }
 
   /**
-   * Create a {@link Kind#INTERNAL} span.
+   * Create a {@link SpanKind#INTERNAL} span.
    */
   public static Span createSpan(String name) {
-    return createSpan(name, Kind.INTERNAL);
+    return createSpan(name, SpanKind.INTERNAL);
   }
 
   /**
-   * Create a {@link Kind#INTERNAL} span and set table related attributes.
+   * Create a {@link SpanKind#INTERNAL} span and set table related attributes.
    */
   public static Span createTableSpan(String spanName, TableName tableName) {
     return createSpan(spanName).setAttribute(NAMESPACE_KEY, tableName.getNamespaceAsString())
@@ -88,28 +88,29 @@ public final class TraceUtil {
 
   /**
    * Create a span with the given {@code kind}. Notice that, OpenTelemetry only expects one
-   * {@link Kind#CLIENT} span and one {@link Kind#SERVER} span for a traced request, so use this
-   * with caution when you want to create spans with kind other than {@link Kind#INTERNAL}.
+   * {@link SpanKind#CLIENT} span and one {@link SpanKind#SERVER} span for a traced request, so use
+   * this with caution when you want to create spans with kind other than {@link SpanKind#INTERNAL}.
    */
-  private static Span createSpan(String name, Kind kind) {
+  private static Span createSpan(String name, SpanKind kind) {
     return getGlobalTracer().spanBuilder(name).setSpanKind(kind).startSpan();
   }
 
   /**
    * Create a span which parent is from remote, i.e, passed through rpc.
    * </p>
-   * We will set the kind of the returned span to {@link Kind#SERVER}, as this should be the top
+   * We will set the kind of the returned span to {@link SpanKind#SERVER}, as this should be the top
    * most span at server side.
    */
   public static Span createRemoteSpan(String name, Context ctx) {
-    return getGlobalTracer().spanBuilder(name).setParent(ctx).setSpanKind(Kind.SERVER).startSpan();
+    return getGlobalTracer().spanBuilder(name).setParent(ctx).setSpanKind(SpanKind.SERVER)
+      .startSpan();
   }
 
   /**
-   * Create a span with {@link Kind#CLIENT}.
+   * Create a span with {@link SpanKind#CLIENT}.
    */
   public static Span createClientSpan(String name) {
-    return createSpan(name, Kind.CLIENT);
+    return createSpan(name, SpanKind.CLIENT);
   }
 
   /**
