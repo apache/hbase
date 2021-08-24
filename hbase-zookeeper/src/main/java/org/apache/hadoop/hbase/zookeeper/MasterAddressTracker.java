@@ -230,7 +230,7 @@ public class MasterAddressTracker extends ZKNodeTracker {
    * @param zkw ZKWatcher to use
    * @param sn  ServerName of the backup master
    * @return backup master info port in the the master address znode or 0 if no
-   * znode present.
+   *         znode present.
    * @throws KeeperException if a ZooKeeper operation fails
    * @throws IOException     if the address of the ZooKeeper master cannot be retrieved
    */
