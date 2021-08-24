@@ -35,7 +35,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * {@code minIntervalSecsConfigName} seconds apart.
  */
 @InterfaceAudience.Private
-class RegistryEndpointsRefresher {
+final class RegistryEndpointsRefresher {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegistryEndpointsRefresher.class);
 
@@ -51,11 +51,7 @@ class RegistryEndpointsRefresher {
   private boolean refreshNow = false;
   private boolean stopped = false;
 
-  public void start() {
-    thread.start();
-  }
-
-  public synchronized void stop() {
+  synchronized void stop() {
     stopped = true;
     notifyAll();
   }
@@ -108,18 +104,15 @@ class RegistryEndpointsRefresher {
     void refresh() throws IOException;
   }
 
-  RegistryEndpointsRefresher(Configuration conf, String intervalSecsConfigName,
-    String minIntervalSecsConfigName, Refresher refresher) {
-    periodicRefreshMs = TimeUnit.SECONDS
-      .toMillis(conf.getLong(intervalSecsConfigName, PERIODIC_REFRESH_INTERVAL_SECS_DEFAULT));
-    minTimeBetweenRefreshesMs = TimeUnit.SECONDS
-      .toMillis(conf.getLong(minIntervalSecsConfigName, MIN_SECS_BETWEEN_REFRESHES_DEFAULT));
-    Preconditions.checkArgument(periodicRefreshMs > 0);
-    Preconditions.checkArgument(minTimeBetweenRefreshesMs < periodicRefreshMs);
+  private RegistryEndpointsRefresher(long periodicRefreshMs, long minTimeBetweenRefreshesMs,
+    Refresher refresher) {
+    this.periodicRefreshMs = periodicRefreshMs;
+    this.minTimeBetweenRefreshesMs = minTimeBetweenRefreshesMs;
+    this.refresher = refresher;
     thread = new Thread(this::mainLoop);
     thread.setName("Registry-endpoints-refresh-end-points");
     thread.setDaemon(true);
-    this.refresher = refresher;
+    thread.start();
   }
 
   /**
@@ -129,5 +122,23 @@ class RegistryEndpointsRefresher {
   synchronized void refreshNow() {
     refreshNow = true;
     notifyAll();
+  }
+
+  /**
+   * Create a {@link RegistryEndpointsRefresher}. If the interval secs configured via
+   * {@code intervalSecsConfigName} is less than zero, will return null here, which means disable
+   * refreshing of endpoints.
+   */
+  static RegistryEndpointsRefresher create(Configuration conf, String intervalSecsConfigName,
+    String minIntervalSecsConfigName, Refresher refresher) {
+    long periodicRefreshMs = TimeUnit.SECONDS
+      .toMillis(conf.getLong(intervalSecsConfigName, PERIODIC_REFRESH_INTERVAL_SECS_DEFAULT));
+    if (periodicRefreshMs <= 0) {
+      return null;
+    }
+    long minTimeBetweenRefreshesMs = TimeUnit.SECONDS
+      .toMillis(conf.getLong(minIntervalSecsConfigName, MIN_SECS_BETWEEN_REFRESHES_DEFAULT));
+    Preconditions.checkArgument(minTimeBetweenRefreshesMs < periodicRefreshMs);
+    return new RegistryEndpointsRefresher(periodicRefreshMs, minTimeBetweenRefreshesMs, refresher);
   }
 }
