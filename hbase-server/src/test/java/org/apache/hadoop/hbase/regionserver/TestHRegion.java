@@ -38,6 +38,8 @@ import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -162,7 +164,6 @@ import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
-import org.apache.hadoop.hbase.wal.FaultyFSLog;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -178,6 +179,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
+import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -309,57 +311,6 @@ public class TestHRegion {
     HBaseTestingUtility.closeRegionAndWAL(region);
     assertEquals(0, region.getMemstoreSize());
     region = null;
-  }
-
-  /*
-   * This test is for verifying memstore snapshot size is correctly updated in case of rollback
-   * See HBASE-10845
-   */
-  @Test (timeout=60000)
-  public void testMemstoreSnapshotSize() throws IOException {
-    class MyFaultyFSLog extends FaultyFSLog {
-      StoreFlushContext storeFlushCtx;
-      public MyFaultyFSLog(FileSystem fs, Path rootDir, String logName, Configuration conf)
-          throws IOException {
-        super(fs, rootDir, logName, conf);
-      }
-
-      void setStoreFlushCtx(StoreFlushContext storeFlushCtx) {
-        this.storeFlushCtx = storeFlushCtx;
-      }
-
-      @Override
-      public void sync(long txid, boolean forceSync) throws IOException {
-        storeFlushCtx.prepare();
-        super.sync(txid, forceSync);
-      }
-    }
-
-    FileSystem fs = FileSystem.get(CONF);
-    Path rootDir = new Path(dir + "testMemstoreSnapshotSize");
-    MyFaultyFSLog faultyLog = new MyFaultyFSLog(fs, rootDir, "testMemstoreSnapshotSize", CONF);
-    region = initHRegion(tableName, null, null, name.getMethodName(),
-        CONF, false, Durability.SYNC_WAL, faultyLog, COLUMN_FAMILY_BYTES);
-
-    Store store = region.getStore(COLUMN_FAMILY_BYTES);
-    // Get some random bytes.
-    byte [] value = Bytes.toBytes(name.getMethodName());
-    faultyLog.setStoreFlushCtx(store.createFlushContext(12345));
-
-    Put put = new Put(value);
-    put.add(COLUMN_FAMILY_BYTES, Bytes.toBytes("abc"), value);
-    faultyLog.setFailureType(FaultyFSLog.FailureType.SYNC);
-
-    boolean threwIOE = false;
-    try {
-      region.put(put);
-    } catch (IOException ioe) {
-      threwIOE = true;
-    } finally {
-      assertTrue("The regionserver should have thrown an exception", threwIOE);
-    }
-    long sz = store.getFlushableSize();
-    assertTrue("flushable size should be zero, but it is " + sz, sz == 0);
   }
 
   /**
@@ -551,6 +502,11 @@ public class TestHRegion {
         try {
           // Initialize region
           region = initHRegion(tableName, name.getMethodName(), conf, COLUMN_FAMILY_BYTES);
+          RegionServerServices services = mock(RegionServerServices.class);
+          doNothing().when(services).abort(anyString(), Matchers.<Throwable>any());
+          doReturn(ServerName.valueOf("fake-server", 0, 0l)). when(services).getServerName();
+          region.setRegionServerServices(services);
+
           long size = region.getMemstoreSize();
           Assert.assertEquals(0, size);
           // Put one item into memstore.  Measure the size of one item in memstore.
@@ -572,7 +528,7 @@ public class TestHRegion {
           fail();
         } catch (IOException dse) {
           // Expected
-          LOG.info("Expected DroppedSnapshotException");
+          LOG.info("Expected DroppedSnapshotException", dse);
         } finally {
           // Make it so all writes succeed from here on out so can close clean
           ffs.fault.set(false);
