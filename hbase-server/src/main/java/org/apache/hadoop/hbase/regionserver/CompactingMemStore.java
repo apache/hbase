@@ -449,10 +449,11 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   /**
-   * Try to flush the currActive in memory and submit the in memory compact task to
+   * Try to flush the currActive in memory and submit the background
+   * {@link InMemoryCompactionRunnable} to
    * {@link RegionServicesForStores#getInMemoryCompactionPool()}. Just one thread can do the actual
    * flushing in memory.
-   * @param currActive
+   * @param currActive current Active Segment to be flush in memory.
    */
   private void tryFlushInMemoryAndCompactingAsync(MutableSegment currActive) {
     if (currActive.setInMemoryFlushed()) {

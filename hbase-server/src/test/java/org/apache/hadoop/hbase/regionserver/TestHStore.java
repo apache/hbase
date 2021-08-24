@@ -1809,16 +1809,19 @@ public class TestHStore {
     assertTrue(memStoreSizing.getDataSize() == cellByteSize);
   }
 
+  // This test is for HBASE-26210 also, test write large cell and small cell concurrently when
+  // InmemoryFlushSize is smaller,equal with and larger than cell size.
   @Test
   public void testCompactingMemStoreWriteLargeCellAndSmallCellConcurrently()
       throws IOException, InterruptedException {
-    doTestLargeCellAndSmallCellConcurrently(-1);
-    doTestLargeCellAndSmallCellConcurrently(0);
-    doTestLargeCellAndSmallCellConcurrently(1);
-
+    doWriteTestLargeCellAndSmallCellConcurrently(-1);
+    doWriteTestLargeCellAndSmallCellConcurrently(0);
+    doWriteTestLargeCellAndSmallCellConcurrently(1);
+    doWriteTestLargeCellAndSmallCellConcurrently(2);
+    doWriteTestLargeCellAndSmallCellConcurrently(3);
   }
 
-  private void doTestLargeCellAndSmallCellConcurrently(int flag)
+  private void doWriteTestLargeCellAndSmallCellConcurrently(int flag)
       throws IOException, InterruptedException {
 
     Configuration conf = HBaseConfiguration.create();
@@ -1832,6 +1835,7 @@ public class TestHStore {
     int smallCellByteSize = MutableSegment.getCellLength(smallCell);
     int largeCellByteSize = MutableSegment.getCellLength(largeCell);
     int flushByteSize = 0;
+    boolean flushByteSizeLessThanSmallAndLargeCellSize = true;
     switch (flag) {
       case -1:
         flushByteSize = largeCellByteSize - 1;
@@ -1841,6 +1845,14 @@ public class TestHStore {
         break;
       case 1:
         flushByteSize = smallCellByteSize + largeCellByteSize - 1;
+        break;
+      case 2:
+        flushByteSize = smallCellByteSize + largeCellByteSize;
+        flushByteSizeLessThanSmallAndLargeCellSize = false;
+        break;
+      case 3:
+        flushByteSize = smallCellByteSize + largeCellByteSize + 1;
+        flushByteSizeLessThanSmallAndLargeCellSize = false;
         break;
       default:
         throw new IllegalArgumentException();
@@ -1858,6 +1870,12 @@ public class TestHStore {
     MyCompactingMemStore3 myCompactingMemStore = ((MyCompactingMemStore3) store.memstore);
     assertTrue((int) (myCompactingMemStore.getInmemoryFlushSize()) == flushByteSize);
     myCompactingMemStore.disableCompaction();
+    if (flushByteSizeLessThanSmallAndLargeCellSize) {
+      myCompactingMemStore.flushByteSizeLessThanSmallAndLargeCellSize = true;
+    } else {
+      myCompactingMemStore.flushByteSizeLessThanSmallAndLargeCellSize = false;
+    }
+
 
     final ThreadSafeMemStoreSizing memStoreSizing = new ThreadSafeMemStoreSizing();
     final AtomicLong totalCellByteSize = new AtomicLong(0);
@@ -1881,12 +1899,18 @@ public class TestHStore {
     String oldThreadName = Thread.currentThread().getName();
     try {
       /**
+       * When flushByteSizeLessThanSmallAndLargeCellSize is true:
+       * </p>
        * 1.smallCellThread enters MyCompactingMemStore3.checkAndAddToActiveSize first, then
        * largeCellThread enters MyCompactingMemStore3.checkAndAddToActiveSize, and then
        * largeCellThread invokes flushInMemory.
        * <p/>
        * 2. After largeCellThread finished CompactingMemStore.flushInMemory method, smallCellThread
        * can run into MyCompactingMemStore3.checkAndAddToActiveSize again.
+       * <p/>
+       * When flushByteSizeLessThanSmallAndLargeCellSize is false: smallCellThread and
+       * largeCellThread concurrently write one cell and wait each other, and then write another
+       * cell etc.
        */
       Thread.currentThread().setName(MyCompactingMemStore3.LARGE_CELL_THREAD_NAME);
       for (int i = 1; i <= MyCompactingMemStore3.CELL_COUNT; i++) {
@@ -1897,15 +1921,18 @@ public class TestHStore {
       }
       smallCellThread.join();
 
+      assertTrue(exceptionRef.get() == null);
+      assertTrue(memStoreSizing.getCellsCount() == (MyCompactingMemStore3.CELL_COUNT * 2));
+      assertTrue(memStoreSizing.getDataSize() == totalCellByteSize.get());
+      if (flushByteSizeLessThanSmallAndLargeCellSize) {
+        assertTrue(myCompactingMemStore.flushCounter.get() == MyCompactingMemStore3.CELL_COUNT);
+      } else {
+        assertTrue(
+          myCompactingMemStore.flushCounter.get() <= (MyCompactingMemStore3.CELL_COUNT - 1));
+      }
     } finally {
       Thread.currentThread().setName(oldThreadName);
     }
-
-    assertTrue(exceptionRef.get() == null);
-    assertTrue(memStoreSizing.getCellsCount() == (MyCompactingMemStore3.CELL_COUNT * 2));
-    assertTrue(memStoreSizing.getDataSize() == totalCellByteSize.get());
-    assertTrue(myCompactingMemStore.flushCounter.get() == MyCompactingMemStore3.CELL_COUNT);
-
   }
 
   private HStoreFile mockStoreFileWithLength(long length) {
@@ -2193,6 +2220,7 @@ public class TestHStore {
     private final CyclicBarrier postCyclicBarrier = new CyclicBarrier(2);
     private final AtomicInteger flushCounter = new AtomicInteger(0);
     private static final int CELL_COUNT = 5;
+    private boolean flushByteSizeLessThanSmallAndLargeCellSize = true;
 
     public MyCompactingMemStore3(Configuration conf, CellComparatorImpl cellComparator,
         HStore store, RegionServicesForStores regionServices,
@@ -2203,6 +2231,9 @@ public class TestHStore {
     @Override
     protected boolean checkAndAddToActiveSize(MutableSegment currActive, Cell cellToAdd,
         MemStoreSizing memstoreSizing) {
+      if (!flushByteSizeLessThanSmallAndLargeCellSize) {
+        return super.checkAndAddToActiveSize(currActive, cellToAdd, memstoreSizing);
+      }
       if (Thread.currentThread().getName().equals(LARGE_CELL_THREAD_NAME)) {
           try {
             preCyclicBarrier.await();
@@ -2213,11 +2244,12 @@ public class TestHStore {
 
       boolean returnValue = super.checkAndAddToActiveSize(currActive, cellToAdd, memstoreSizing);
       if (Thread.currentThread().getName().equals(SMALL_CELL_THREAD_NAME)) {
-        try {
-          preCyclicBarrier.await();
-        } catch (Throwable e) {
-          throw new RuntimeException(e);
-        }
+          try {
+            preCyclicBarrier.await();
+          } catch (Throwable e) {
+            throw new RuntimeException(e);
+          }
+
       }
       return returnValue;
     }
@@ -2225,6 +2257,15 @@ public class TestHStore {
     @Override
     protected void postUpdate(MutableSegment currentActiveMutableSegment) {
       super.postUpdate(currentActiveMutableSegment);
+      if (!flushByteSizeLessThanSmallAndLargeCellSize) {
+        try {
+          postCyclicBarrier.await();
+        } catch (Throwable e) {
+          throw new RuntimeException(e);
+        }
+        return;
+      }
+
       if (Thread.currentThread().getName().equals(SMALL_CELL_THREAD_NAME)) {
         try {
           postCyclicBarrier.await();
@@ -2237,15 +2278,18 @@ public class TestHStore {
     @Override
     protected void flushInMemory(MutableSegment currentActiveMutableSegment) {
       super.flushInMemory(currentActiveMutableSegment);
-      assertTrue(Thread.currentThread().getName().equals(LARGE_CELL_THREAD_NAME));
       flushCounter.incrementAndGet();
-      if (Thread.currentThread().getName().equals(LARGE_CELL_THREAD_NAME)) {
-        try {
-          postCyclicBarrier.await();
-        } catch (Throwable e) {
-          throw new RuntimeException(e);
-        }
+      if (!flushByteSizeLessThanSmallAndLargeCellSize) {
+        return;
       }
+
+      assertTrue(Thread.currentThread().getName().equals(LARGE_CELL_THREAD_NAME));
+      try {
+        postCyclicBarrier.await();
+      } catch (Throwable e) {
+        throw new RuntimeException(e);
+      }
+
     }
 
     void disableCompaction() {
