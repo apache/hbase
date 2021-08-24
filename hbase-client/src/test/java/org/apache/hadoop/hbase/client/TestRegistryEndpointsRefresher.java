@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -74,18 +75,24 @@ public class TestRegistryEndpointsRefresher {
     callTimestamps.add(EnvironmentEdgeManager.currentTime());
   }
 
-  private void createAndStartRefresher(long intervalSecs, long minIntervalSecs) {
+  private void createRefresher(long intervalSecs, long minIntervalSecs) {
     conf.setLong(INTERVAL_SECS_CONFIG_NAME, intervalSecs);
     conf.setLong(MIN_INTERVAL_SECS_CONFIG_NAME, minIntervalSecs);
-    refresher = new RegistryEndpointsRefresher(conf, INTERVAL_SECS_CONFIG_NAME,
+    refresher = RegistryEndpointsRefresher.create(conf, INTERVAL_SECS_CONFIG_NAME,
       MIN_INTERVAL_SECS_CONFIG_NAME, this::refresh);
-    refresher.start();
   }
 
   @Test
-  public void testPeriodicMasterEndPointRefresh() throws IOException {
+  public void testDisableRefresh() {
+    conf.setLong(INTERVAL_SECS_CONFIG_NAME, -1);
+    assertNull(RegistryEndpointsRefresher.create(conf, INTERVAL_SECS_CONFIG_NAME,
+      MIN_INTERVAL_SECS_CONFIG_NAME, this::refresh));
+  }
+
+  @Test
+  public void testPeriodicEndpointRefresh() throws IOException {
     // Refresh every 1 second.
-    createAndStartRefresher(1, 0);
+    createRefresher(1, 0);
     // Wait for > 3 seconds to see that at least 3 refresh have been made.
     Waiter.waitFor(conf, 5000, () -> refreshCallCounter.get() > 3);
   }
@@ -94,7 +101,7 @@ public class TestRegistryEndpointsRefresher {
   public void testDurationBetweenRefreshes() throws IOException {
     // Disable periodic refresh
     // A minimum duration of 1s between refreshes
-    createAndStartRefresher(Integer.MAX_VALUE, 1);
+    createRefresher(Integer.MAX_VALUE, 1);
     // Issue a ton of manual refreshes.
     for (int i = 0; i < 10000; i++) {
       refresher.refreshNow();
