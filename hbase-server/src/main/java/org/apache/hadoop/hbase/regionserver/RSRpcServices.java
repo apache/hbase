@@ -41,6 +41,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -315,6 +316,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * Default value of config {@link RSRpcServices#REJECT_BATCH_ROWS_OVER_THRESHOLD}
    */
   private static final boolean DEFAULT_REJECT_BATCH_ROWS_OVER_THRESHOLD = false;
+
+  public static final String CLIENT_BOOTSTRAP_NODE_LIMIT = "hbase.client.bootstrap.node.limit";
+
+  public static final int DEFAULT_CLIENT_BOOTSTRAP_NODE_LIMIT = 10;
 
   // Request counter. (Includes requests that are not serviced by regions.)
   // Count only once for requests with multiple actions like multi/caching-scan/replayBatch
@@ -4068,8 +4073,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   public final GetBootstrapNodesResponse getBootstrapNodes(RpcController controller,
     GetBootstrapNodesRequest request) throws ServiceException {
+    List<ServerName> bootstrapNodes = new ArrayList<>(regionServer.getRegionServers());
+    Collections.shuffle(bootstrapNodes, ThreadLocalRandom.current());
+    int maxNodeCount = regionServer.getConfiguration().getInt(CLIENT_BOOTSTRAP_NODE_LIMIT,
+      DEFAULT_CLIENT_BOOTSTRAP_NODE_LIMIT);
     GetBootstrapNodesResponse.Builder builder = GetBootstrapNodesResponse.newBuilder();
-    regionServer.getRegionServers().stream().map(ProtobufUtil::toServerName)
+    bootstrapNodes.stream().limit(maxNodeCount).map(ProtobufUtil::toServerName)
       .forEach(builder::addServerName);
     return builder.build();
   }

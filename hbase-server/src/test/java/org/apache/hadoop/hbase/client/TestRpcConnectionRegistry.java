@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
@@ -78,6 +79,15 @@ public class TestRpcConnectionRegistry {
     Closeables.close(registry, true);
   }
 
+  private void setMaxNodeCount(int count) {
+    UTIL.getMiniHBaseCluster().getMasterThreads().stream()
+      .map(t -> t.getMaster().getConfiguration())
+      .forEach(conf -> conf.setInt(RSRpcServices.CLIENT_BOOTSTRAP_NODE_LIMIT, count));
+    UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
+      .map(t -> t.getRegionServer().getConfiguration())
+      .forEach(conf -> conf.setInt(RSRpcServices.CLIENT_BOOTSTRAP_NODE_LIMIT, count));
+  }
+
   @Test
   public void testRegistryRPCs() throws Exception {
     HMaster activeMaster = UTIL.getHBaseCluster().getMaster();
@@ -99,5 +109,9 @@ public class TestRpcConnectionRegistry {
     Collections.sort(metaLocations);
     Collections.sort(actualMetaLocations);
     assertEquals(actualMetaLocations, metaLocations);
+
+    // test that the node count config works
+    setMaxNodeCount(1);
+    UTIL.waitFor(10000, () -> registry.getParsedServers().size() == 1);
   }
 }
