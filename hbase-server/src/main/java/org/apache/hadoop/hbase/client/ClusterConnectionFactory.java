@@ -18,9 +18,11 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -38,18 +40,8 @@ public final class ClusterConnectionFactory {
   private ClusterConnectionFactory() {
   }
 
-  /**
-   * Create a new {@link AsyncClusterConnection} instance.
-   * <p/>
-   * Unlike what we have done in {@link ConnectionFactory}, here we just return an
-   * {@link AsyncClusterConnection} instead of a {@link java.util.concurrent.CompletableFuture},
-   * which means this method could block on fetching the cluster id. This is just used to simplify
-   * the implementation, as when starting new region servers, we do not need to be event-driven. Can
-   * change later if we want a {@link java.util.concurrent.CompletableFuture} here.
-   */
-  public static AsyncClusterConnection createAsyncClusterConnection(Configuration conf,
-      SocketAddress localAddress, User user) throws IOException {
-    ConnectionRegistry registry = ConnectionRegistryFactory.getRegistry(conf);
+  private static AsyncClusterConnection createAsyncClusterConnection(Configuration conf,
+    ConnectionRegistry registry, SocketAddress localAddress, User user) throws IOException {
     String clusterId = FutureUtils.get(registry.getClusterId());
     Class<? extends AsyncClusterConnection> clazz =
       conf.getClass(HBASE_SERVER_CLUSTER_CONNECTION_IMPL, AsyncClusterConnectionImpl.class,
@@ -61,5 +53,33 @@ public final class ClusterConnectionFactory {
     } catch (Exception e) {
       throw new IOException(e);
     }
+  }
+
+  /**
+   * Create a new {@link AsyncClusterConnection} instance.
+   * <p/>
+   * Unlike what we have done in {@link ConnectionFactory}, here we just return an
+   * {@link AsyncClusterConnection} instead of a {@link java.util.concurrent.CompletableFuture},
+   * which means this method could block on fetching the cluster id. This is just used to simplify
+   * the implementation, as when starting new region servers, we do not need to be event-driven. Can
+   * change later if we want a {@link java.util.concurrent.CompletableFuture} here.
+   */
+  public static AsyncClusterConnection createAsyncClusterConnection(Configuration conf,
+    SocketAddress localAddress, User user) throws IOException {
+    return createAsyncClusterConnection(conf, ConnectionRegistryFactory.getRegistry(conf),
+      localAddress, user);
+  }
+
+  /**
+   * Create a new {@link AsyncClusterConnection} instance for a region server.
+   */
+  public static AsyncClusterConnection createAsyncClusterConnection(HRegionServer regionServer)
+    throws IOException {
+    RegionServerRegistry registry = new RegionServerRegistry(regionServer);
+    Configuration conf = regionServer.getConfiguration();
+    InetSocketAddress localAddress =
+      new InetSocketAddress(regionServer.getRSRpcServices().getSocketAddress().getAddress(), 0);
+    User user = regionServer.getUserProvider().getCurrent();
+    return createAsyncClusterConnection(conf, registry, localAddress, user);
   }
 }

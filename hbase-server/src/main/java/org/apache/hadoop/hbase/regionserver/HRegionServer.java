@@ -863,26 +863,6 @@ public class HRegionServer extends Thread implements
     return true;
   }
 
-  private Configuration cleanupConfiguration() {
-    Configuration conf = this.conf;
-    // We use ZKConnectionRegistry for all the internal communication, primarily for these reasons:
-    // - Decouples RS and master life cycles. RegionServers can continue be up independent of
-    //   masters' availability.
-    // - Configuration management for region servers (cluster internal) is much simpler when adding
-    //   new masters or removing existing masters, since only clients' config needs to be updated.
-    // - We need to retain ZKConnectionRegistry for replication use anyway, so we just extend it for
-    //   other internal connections too.
-    conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
-        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
-    if (conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM) != null) {
-      // Use server ZK cluster for server-issued connections, so we clone
-      // the conf and unset the client ZK related properties
-      conf = new Configuration(this.conf);
-      conf.unset(HConstants.CLIENT_ZOOKEEPER_QUORUM);
-    }
-    return conf;
-  }
-
   /**
    * Run test on configured codecs to make sure supporting libs are in place.
    */
@@ -907,11 +887,7 @@ public class HRegionServer extends Thread implements
    */
   protected final synchronized void setupClusterConnection() throws IOException {
     if (asyncClusterConnection == null) {
-      Configuration conf = cleanupConfiguration();
-      InetSocketAddress localAddress = new InetSocketAddress(this.rpcServices.isa.getAddress(), 0);
-      User user = userProvider.getCurrent();
-      asyncClusterConnection =
-        ClusterConnectionFactory.createAsyncClusterConnection(conf, localAddress, user);
+      asyncClusterConnection = ClusterConnectionFactory.createAsyncClusterConnection(this);
     }
   }
 
@@ -4007,11 +3983,23 @@ public class HRegionServer extends Thread implements
     return this.retryPauseTime;
   }
 
+  public Optional<ServerName> getActiveMaster() {
+    return Optional.ofNullable(masterAddressTracker.getMasterAddress());
+  }
+
+  public List<ServerName> getBackupMasters() {
+    return masterAddressTracker.getBackupMasters();
+  }
+
+  public List<ServerName> getRegionServers() {
+    return regionServerAddressTracker.getRegionServers();
+  }
+
   public MetaRegionLocationCache getMetaRegionLocationCache() {
     return this.metaRegionLocationCache;
   }
 
-  RegionServerAddressTracker getRegionServerAddressTracker() {
-    return regionServerAddressTracker;
+  public UserProvider getUserProvider() {
+    return userProvider;
   }
 }

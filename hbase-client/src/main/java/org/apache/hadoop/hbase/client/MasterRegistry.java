@@ -49,8 +49,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMaste
  * {@link #MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY} to a value greater than {@code 1} will enable
  * it(the default value is {@link AbstractRpcBasedConnectionRegistry#HEDGED_REQS_FANOUT_DEFAULT}).
  * <p/>
- * TODO: Handle changes to the configuration dynamically without having to restart the client.
+ * @deprecated Since 2.5.0, will be removed in 4.0.0. Use {@link RpcConnectionRegistry} instead.
  */
+@Deprecated
 @InterfaceAudience.Private
 public class MasterRegistry extends AbstractRpcBasedConnectionRegistry {
 
