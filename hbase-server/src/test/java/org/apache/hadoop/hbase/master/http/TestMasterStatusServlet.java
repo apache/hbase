@@ -27,9 +27,14 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -46,6 +51,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -164,4 +170,39 @@ public class TestMasterStatusServlet {
       .setDeadServers(deadServers)
       .render(new StringWriter(), master);
   }
+
+
+  @Test
+  public void test() throws Exception{
+
+    Configuration conf = new Configuration();
+//    conf.set(HConstants.MASTER_INFO_PORT, "18010");
+    conf.setBoolean("hbase.snapshot.enabled",true);
+    conf.setBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, true);
+    conf.setInt("hbase.ipc.warn.response.time",50);
+    conf.setInt("hbase.ipc.warn.response.size",7000);
+    conf.set("hbase.namedqueue.provider.classes",
+      "org.apache.hadoop.hbase.namequeues.impl.SlowLogQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerDecisionQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerRejectionQueueService");
+    HBaseTestingUtil hBaseTestingUtil = new HBaseTestingUtil(conf);
+    hBaseTestingUtil.startMiniCluster(StartTestingClusterOption.builder().numRegionServers(2).numAlwaysStandByMasters(1)
+      .build());
+    List<JVMClusterUtil.MasterThread> a = hBaseTestingUtil.getHBaseCluster().getMasterThreads();
+    System.out.println(a.toString());
+    hBaseTestingUtil.getAdmin()
+      .createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf("test1")).setColumnFamily(
+        ColumnFamilyDescriptorBuilder.of("CF".getBytes())).build(), "0".getBytes(),"999999".getBytes(), 3);
+    hBaseTestingUtil.getAdmin()
+      .createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf("test2")).setColumnFamily(
+        ColumnFamilyDescriptorBuilder.of("CF".getBytes())).build(), "0".getBytes(),"999999".getBytes(), 3);
+    ServerName theFirstRS = hBaseTestingUtil.getAdmin().getRegionServers().iterator().next();
+    List<RegionInfo> regions = hBaseTestingUtil.getAdmin().getRegions(TableName.valueOf("test2"));
+    for (RegionInfo ri:regions){
+      hBaseTestingUtil.getAdmin().move(ri.getEncodedNameAsBytes(), theFirstRS);
+    }
+    hBaseTestingUtil.getAdmin().balance(true);
+    hBaseTestingUtil.getConnection().getTable(TableName.valueOf("test1"))
+      .put(new Put("11".getBytes()).addColumn("CF".getBytes(), "q".getBytes(), "value".getBytes()));
+    while(true){}
+  }
+
 }
