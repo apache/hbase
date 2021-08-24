@@ -226,12 +226,13 @@ public class MasterAddressTracker extends ZKNodeTracker {
    * Get backup master info port.
    * Use this instead of {@link #getBackupMasterInfoPort(ServerName)} if you do not have an
    * instance of this tracker in your context.
+   *
    * @param zkw ZKWatcher to use
-   * @param sn ServerName of the backup master
+   * @param sn  ServerName of the backup master
    * @return backup master info port in the the master address znode or 0 if no
-   *         znode present.
+   * znode present.
    * @throws KeeperException if a ZooKeeper operation fails
-   * @throws IOException if the address of the ZooKeeper master cannot be retrieved
+   * @throws IOException     if the address of the ZooKeeper master cannot be retrieved
    */
   public static int getBackupMasterInfoPort(ZKWatcher zkw, final ServerName sn)
     throws KeeperException, IOException {

@@ -158,20 +158,19 @@ public class ActiveMasterManager extends ZKListener {
     return Optional.ofNullable(activeMasterServerName);
   }
 
-
-  public int getActiveMasterInfoPort(){
+  public int getActiveMasterInfoPort() {
     try {
       return MasterAddressTracker.getMasterInfoPort(watcher);
-    }catch (Exception e){
+    } catch (Exception e) {
       LOG.warn("Failed to get active master's info port.", e);
       return 0;
     }
   }
 
-  public int getBackupMasterInfoPort(final ServerName sn){
+  public int getBackupMasterInfoPort(final ServerName sn) {
     try {
       return MasterAddressTracker.getBackupMasterInfoPort(watcher, sn);
-    }catch (Exception e){
+    } catch (Exception e) {
       LOG.warn("Failed to get backup master: " + sn + "'s info port.", e);
       return 0;
     }
