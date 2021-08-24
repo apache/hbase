@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -4114,10 +4113,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   public GetMetaRegionLocationsResponse getMetaRegionLocations(RpcController controller,
     GetMetaRegionLocationsRequest request) throws ServiceException {
     GetMetaRegionLocationsResponse.Builder builder = GetMetaRegionLocationsResponse.newBuilder();
-    Optional<List<HRegionLocation>> metaLocations =
-      regionServer.getMetaRegionLocationCache().getMetaRegionLocations();
-    metaLocations.ifPresent(hRegionLocations -> hRegionLocations
-      .forEach(location -> builder.addMetaLocations(ProtobufUtil.toRegionLocation(location))));
+    regionServer.getMetaLocations()
+      .forEach(location -> builder.addMetaLocations(ProtobufUtil.toRegionLocation(location)));
     return builder.build();
   }
 

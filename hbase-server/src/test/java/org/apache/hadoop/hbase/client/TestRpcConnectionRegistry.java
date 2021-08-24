@@ -94,8 +94,7 @@ public class TestRpcConnectionRegistry {
     assertEquals(registry.getActiveMaster().get(), activeMaster.getServerName());
     List<HRegionLocation> metaLocations =
       Arrays.asList(registry.getMetaRegionLocations().get().getRegionLocations());
-    List<HRegionLocation> actualMetaLocations =
-      activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get();
+    List<HRegionLocation> actualMetaLocations = activeMaster.getMetaLocations();
     Collections.sort(metaLocations);
     Collections.sort(actualMetaLocations);
     assertEquals(actualMetaLocations, metaLocations);

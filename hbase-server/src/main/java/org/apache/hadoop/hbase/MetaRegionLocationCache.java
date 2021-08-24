@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ThreadFactory;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -203,19 +203,19 @@ public class MetaRegionLocationCache extends ZKListener {
    * @return Optional list of HRegionLocations for meta replica(s), null if the cache is empty.
    *
    */
-  public Optional<List<HRegionLocation>> getMetaRegionLocations() {
+  public List<HRegionLocation> getMetaRegionLocations() {
     ConcurrentNavigableMap<Integer, HRegionLocation> snapshot =
         cachedMetaLocations.tailMap(cachedMetaLocations.firstKey());
     if (snapshot.isEmpty()) {
       // This could be possible if the master has not successfully initialized yet or meta region
       // is stuck in some weird state.
-      return Optional.empty();
+      return Collections.emptyList();
     }
     List<HRegionLocation> result = new ArrayList<>();
     // Explicitly iterate instead of new ArrayList<>(snapshot.values()) because the underlying
     // ArrayValueCollection does not implement toArray().
     snapshot.values().forEach(location -> result.add(location));
-    return Optional.of(result);
+    return result;
   }
 
   /**
