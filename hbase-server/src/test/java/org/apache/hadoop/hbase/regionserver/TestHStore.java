@@ -1749,7 +1749,7 @@ public class TestHStore {
     final AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>();
     Thread smallCellThread = new Thread(() -> {
       try {
-      store.add(smallCell, new NonThreadSafeMemStoreSizing());
+        store.add(smallCell, new NonThreadSafeMemStoreSizing());
       } catch (Throwable exception) {
         exceptionRef.set(exception);
       }
@@ -2235,21 +2235,20 @@ public class TestHStore {
         return super.checkAndAddToActiveSize(currActive, cellToAdd, memstoreSizing);
       }
       if (Thread.currentThread().getName().equals(LARGE_CELL_THREAD_NAME)) {
-          try {
-            preCyclicBarrier.await();
-          } catch (Throwable e) {
-            throw new RuntimeException(e);
-          }
+        try {
+          preCyclicBarrier.await();
+        } catch (Throwable e) {
+          throw new RuntimeException(e);
+        }
       }
 
       boolean returnValue = super.checkAndAddToActiveSize(currActive, cellToAdd, memstoreSizing);
       if (Thread.currentThread().getName().equals(SMALL_CELL_THREAD_NAME)) {
-          try {
-            preCyclicBarrier.await();
-          } catch (Throwable e) {
-            throw new RuntimeException(e);
-          }
-
+        try {
+          preCyclicBarrier.await();
+        } catch (Throwable e) {
+          throw new RuntimeException(e);
+        }
       }
       return returnValue;
     }
