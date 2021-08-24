@@ -102,9 +102,9 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
     rpcClient = RpcClientFactory.createClient(conf, null);
     rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     populateStubs(getBootstrapNodes(conf));
-    registryEndpointRefresher = new RegistryEndpointsRefresher(conf, refreshIntervalSecsConfigName,
-      minRefreshIntervalSecsConfigName, this::refreshStubs);
-    registryEndpointRefresher.start();
+    // could return null here is refresh interval is less than zero
+    registryEndpointRefresher = RegistryEndpointsRefresher.create(conf,
+      refreshIntervalSecsConfigName, minRefreshIntervalSecsConfigName, this::refreshStubs);
   }
 
   protected abstract Set<ServerName> getBootstrapNodes(Configuration conf) throws IOException;
