@@ -663,7 +663,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       // according to the inputted newGroupMap (an updated copy of rsGroupMap)
       this.holder = new RSGroupInfoHolder(newGroupMap);
 
-      LOG.debug("New RSGroup map: {}", newGroupMap.toString());
+      LOG.debug("New RSGroup map: {}", newGroupMap);
 
       // Do not need to update tableMap
       // because only the update on servers in default group is allowed above,
@@ -679,7 +679,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     resetRSGroupMap(newGroupMap);
     saveRSGroupMapToZK(newGroupMap);
     updateCacheOfRSGroups(newGroupMap.keySet());
-    LOG.info("Flush config done, new RSGroup map: {}", newGroupMap.toString());
+    LOG.info("Flush config done, new RSGroup map: {}", newGroupMap);
   }
 
   private void saveRSGroupMapToZK(Map<String, RSGroupInfo> newGroupMap) throws IOException {
