@@ -528,7 +528,7 @@ public class TestHRegion {
           fail();
         } catch (IOException dse) {
           // Expected
-          LOG.info("Expected DroppedSnapshotException", dse);
+          LOG.info("Expected DroppedSnapshotException");
         } finally {
           // Make it so all writes succeed from here on out so can close clean
           ffs.fault.set(false);

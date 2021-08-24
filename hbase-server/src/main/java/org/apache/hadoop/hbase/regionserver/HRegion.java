@@ -3777,8 +3777,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       success = true;
       return addedSize;
     } catch (Throwable t) {
-      LOG.info("RSS throwable ", t);
-      // If wal sync fails, then abort the Region server
+      // WAL sync failed. Aborting to avoid a mismatch between the memstore, WAL,
+      // and any replicated clusters.
       if (!walSyncSuccess) {
         rsServices.abort("Wal sync failed", t);
       }
@@ -8108,7 +8108,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           getTableName());
       }
     } catch (Throwable t) {
-      // If wal sync fails, then abort the Region server
+      // WAL sync failed. Aborting to avoid a mismatch between the memstore, WAL,
+      // and any replicated clusters.
       if (!walSyncSuccess) {
         rsServices.abort("Wal sync failed", t);
       }
@@ -8361,7 +8362,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       walSyncSuccess = true;
     } catch (Throwable t) {
-      // If wal sync fails, then abort the Region server
+      // WAL sync failed. Aborting to avoid a mismatch between the memstore, WAL,
+      // and any replicated clusters.
       if (!walSyncSuccess) {
         rsServices.abort("Wal sync failed", t);
       }
