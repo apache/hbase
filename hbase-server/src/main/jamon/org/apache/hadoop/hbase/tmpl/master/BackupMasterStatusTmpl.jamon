@@ -27,9 +27,9 @@ org.apache.hadoop.hbase.master.HMaster;
 </%import>
 <%if (!master.isActiveMaster()) %>
     <%java>
-    ServerName active_master = master.getActiveMaster().isPresent() ? master.getActiveMaster().get() : null;
+    ServerName active_master = master.getActiveMaster().orElse(null);
     assert active_master != null : "Failed to retrieve active master's ServerName!";
-    int activeInfoPort = master.getActiveMaster().isPresent() ? master.getActiveMasterInfoPort() : 0;
+    int activeInfoPort = active_master == null ? 0 : master.getActiveMasterInfoPort();
     </%java>
     <div class="row inner_header">
         <div class="page-header">
