@@ -58,6 +58,7 @@ public class TestRpcConnectionRegistry {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // allow refresh immediately so we will switch to use region servers soon.
+    UTIL.getConfiguration().setLong(RpcConnectionRegistry.INITIAL_REFRESH_DELAY_SECS, 1);
     UTIL.getConfiguration().setLong(RpcConnectionRegistry.PERIODIC_REFRESH_INTERVAL_SECS, 1);
     UTIL.getConfiguration().setLong(RpcConnectionRegistry.MIN_SECS_BETWEEN_REFRESHES, 0);
     UTIL.startMiniCluster(3);
@@ -91,8 +92,8 @@ public class TestRpcConnectionRegistry {
   @Test
   public void testRegistryRPCs() throws Exception {
     HMaster activeMaster = UTIL.getHBaseCluster().getMaster();
-    // wait until we switch to use region servers
-    UTIL.waitFor(10000, () -> registry.getParsedServers().size() == 3);
+    // sleep 3 seconds, since our initial delay is 1 second, we should have refreshed the endpoints
+    Thread.sleep(3000);
     assertThat(registry.getParsedServers(),
       hasItems(activeMaster.getServerManager().getOnlineServersList().toArray(new ServerName[0])));
 
