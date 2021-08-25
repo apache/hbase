@@ -96,7 +96,7 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
   protected void complete(MasterProcedureEnv env, Throwable error) {
     if (error == null) {
       try {
-        env.getMasterServices().getSplitWALManager().deleteSplitWAL(walPath);
+        env.getMasterServices().getSplitWALManager().archive(walPath);
       } catch (IOException e) {
         LOG.warn("Failed split of {}; ignore...", walPath, e);
       }

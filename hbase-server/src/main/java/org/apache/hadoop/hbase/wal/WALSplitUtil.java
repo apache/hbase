@@ -160,6 +160,20 @@ public final class WALSplitUtil {
   }
 
   /**
+   * Move WAL. Used to move processed WALs to archive or bad WALs to corrupt WAL dir.
+   * WAL may have already been moved; makes allowance.
+   */
+  public static void moveWAL(FileSystem fs, Path p, Path targetDir) throws IOException {
+    if (fs.exists(p)) {
+      if (!CommonFSUtils.renameAndSetModifyTime(fs, p, targetDir)) {
+        LOG.warn("Failed move of {} to {}", p, targetDir);
+      } else {
+        LOG.info("Moved {} to {}", p, targetDir);
+      }
+    }
+  }
+
+  /**
    * Path to a file under RECOVERED_EDITS_DIR directory of the region found in <code>logEntry</code>
    * named for the sequenceid in the passed <code>logEntry</code>: e.g.
    * /hbase/some_table/2323432434/recovered.edits/2332. This method also ensures existence of
