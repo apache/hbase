@@ -158,6 +158,24 @@ public class ActiveMasterManager extends ZKListener {
     return Optional.ofNullable(activeMasterServerName);
   }
 
+  public int getActiveMasterInfoPort() {
+    try {
+      return MasterAddressTracker.getMasterInfoPort(watcher);
+    } catch (Exception e) {
+      LOG.warn("Failed to get active master's info port.", e);
+      return 0;
+    }
+  }
+
+  public int getBackupMasterInfoPort(final ServerName sn) {
+    try {
+      return MasterAddressTracker.getBackupMasterInfoPort(watcher, sn);
+    } catch (Exception e) {
+      LOG.warn("Failed to get backup master: " + sn + "'s info port.", e);
+      return 0;
+    }
+  }
+
   /**
    * Handle a change in the master node.  Doesn't matter whether this was called
    * from a nodeCreated or nodeDeleted event because there are no guarantees

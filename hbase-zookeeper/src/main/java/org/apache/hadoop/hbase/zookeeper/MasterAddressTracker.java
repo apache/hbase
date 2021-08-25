@@ -223,6 +223,43 @@ public class MasterAddressTracker extends ZKNodeTracker {
   }
 
   /**
+   * Get backup master info port.
+   * Use this instead of {@link #getBackupMasterInfoPort(ServerName)} if you do not have an
+   * instance of this tracker in your context.
+   *
+   * @param zkw ZKWatcher to use
+   * @param sn  ServerName of the backup master
+   * @return backup master info port in the the master address znode or 0 if no
+   *         znode present.
+   * @throws KeeperException if a ZooKeeper operation fails
+   * @throws IOException     if the address of the ZooKeeper master cannot be retrieved
+   */
+  public static int getBackupMasterInfoPort(ZKWatcher zkw, final ServerName sn)
+    throws KeeperException, IOException {
+    byte[] data;
+    try {
+      data = ZKUtil.getData(zkw,
+        ZNodePaths.joinZNode(zkw.getZNodePaths().backupMasterAddressesZNode, sn.toString()));
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException();
+    }
+    if (data == null) {
+      throw new IOException("Can't get backup master address from ZooKeeper; znode data == null");
+    }
+    try {
+      final ZooKeeperProtos.Master backup = parse(data);
+      if (backup == null) {
+        return 0;
+      }
+      return backup.getInfoPort();
+    } catch (DeserializationException e) {
+      KeeperException ke = new KeeperException.DataInconsistencyException();
+      ke.initCause(e);
+      throw ke;
+    }
+  }
+
+  /**
    * Set master address into the <code>master</code> znode or into the backup
    * subdirectory of backup masters; switch off the passed in <code>znode</code>
    * path.
