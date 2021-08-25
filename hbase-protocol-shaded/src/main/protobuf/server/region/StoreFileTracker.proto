@@ -15,25 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.storefiletracker;
+syntax = "proto2";
+// This file contains protocol buffers that are used for store file tracker.
+package hbase.pb;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.regionserver.StoreContext;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.yetus.audience.InterfaceAudience;
+option java_package = "org.apache.hadoop.hbase.shaded.protobuf.generated";
+option java_outer_classname = "StoreFileTrackerProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
 
-/**
- * Factory method for creating store file tracker.
- */
-@InterfaceAudience.Private
-public final class StoreFileTrackerFactory {
+message StoreFileEntry {
+  required string name = 1;
+  required uint64 size = 2;
+}
 
-  public static final String TRACK_IMPL = "hbase.store.file-tracker.impl";
-
-  public static StoreFileTracker create(Configuration conf, boolean isPrimaryReplica,
-    StoreContext ctx) {
-    Class<? extends StoreFileTracker> tracker =
-      conf.getClass(TRACK_IMPL, DefaultStoreFileTracker.class, StoreFileTracker.class);
-    return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
-  }
+message StoreFileList {
+  required uint64 timestamp = 1;
+  repeated StoreFileEntry store_file = 2;
 }

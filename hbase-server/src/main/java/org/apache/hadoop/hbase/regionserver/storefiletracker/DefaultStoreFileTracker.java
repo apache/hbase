@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -33,9 +32,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class DefaultStoreFileTracker extends StoreFileTrackerBase {
 
-  public DefaultStoreFileTracker(Configuration conf, TableName tableName, boolean isPrimaryReplica,
+  public DefaultStoreFileTracker(Configuration conf, boolean isPrimaryReplica,
     StoreContext ctx) {
-    super(conf, tableName, isPrimaryReplica, ctx);
+    super(conf, isPrimaryReplica, ctx);
   }
 
   @Override
