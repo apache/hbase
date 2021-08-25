@@ -88,8 +88,9 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   private final RegistryEndpointsRefresher registryEndpointRefresher;
 
   protected AbstractRpcBasedConnectionRegistry(Configuration conf,
-    String hedgedReqsFanoutConfigName, String refreshIntervalSecsConfigName,
-    String minRefreshIntervalSecsConfigName) throws IOException {
+    String hedgedReqsFanoutConfigName, String initialRefreshDelaySecsConfigName,
+    String refreshIntervalSecsConfigName, String minRefreshIntervalSecsConfigName)
+    throws IOException {
     this.hedgedReadFanOut =
       Math.max(1, conf.getInt(hedgedReqsFanoutConfigName, HEDGED_REQS_FANOUT_DEFAULT));
     rpcTimeoutMs = (int) Math.min(Integer.MAX_VALUE,
@@ -101,8 +102,9 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
     rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     populateStubs(getBootstrapNodes(conf));
     // could return null here is refresh interval is less than zero
-    registryEndpointRefresher = RegistryEndpointsRefresher.create(conf,
-      refreshIntervalSecsConfigName, minRefreshIntervalSecsConfigName, this::refreshStubs);
+    registryEndpointRefresher =
+      RegistryEndpointsRefresher.create(conf, initialRefreshDelaySecsConfigName,
+        refreshIntervalSecsConfigName, minRefreshIntervalSecsConfigName, this::refreshStubs);
   }
 
   protected abstract Set<ServerName> getBootstrapNodes(Configuration conf) throws IOException;

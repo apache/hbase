@@ -69,6 +69,8 @@ public class TestRpcBasedRegistryHedgedReads {
   private static final Logger LOG = LoggerFactory.getLogger(TestRpcBasedRegistryHedgedReads.class);
 
   private static final String HEDGED_REQS_FANOUT_CONFIG_NAME = "hbase.test.hedged.reqs.fanout";
+  private static final String INITIAL_DELAY_SECS_CONFIG_NAME =
+    "hbase.test.refresh.initial.delay.secs";
   private static final String REFRESH_INTERVAL_SECS_CONFIG_NAME =
     "hbase.test.refresh.interval.secs";
   private static final String MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME =
@@ -153,7 +155,8 @@ public class TestRpcBasedRegistryHedgedReads {
     Configuration conf = UTIL.getConfiguration();
     conf.setInt(HEDGED_REQS_FANOUT_CONFIG_NAME, hedged);
     return new AbstractRpcBasedConnectionRegistry(conf, HEDGED_REQS_FANOUT_CONFIG_NAME,
-      REFRESH_INTERVAL_SECS_CONFIG_NAME, MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME) {
+      INITIAL_DELAY_SECS_CONFIG_NAME, REFRESH_INTERVAL_SECS_CONFIG_NAME,
+      MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME) {
 
       @Override
       protected Set<ServerName> getBootstrapNodes(Configuration conf) throws IOException {
@@ -173,6 +176,7 @@ public class TestRpcBasedRegistryHedgedReads {
     conf.setClass(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, RpcClientImpl.class,
       RpcClient.class);
     // disable refresh, we do not need to refresh in this test
+    conf.setLong(INITIAL_DELAY_SECS_CONFIG_NAME, Integer.MAX_VALUE);
     conf.setLong(REFRESH_INTERVAL_SECS_CONFIG_NAME, Integer.MAX_VALUE);
     conf.setLong(MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME, Integer.MAX_VALUE - 1);
     BOOTSTRAP_NODES = IntStream.range(0, 10)

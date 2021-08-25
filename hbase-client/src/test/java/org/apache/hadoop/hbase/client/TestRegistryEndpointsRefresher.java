@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -46,6 +46,8 @@ public class TestRegistryEndpointsRefresher {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegistryEndpointsRefresher.class);
 
+  private static final String INITIAL_DELAY_SECS_CONFIG_NAME =
+    "hbase.test.registry.initial.delay.secs";
   private static final String INTERVAL_SECS_CONFIG_NAME =
     "hbase.test.registry.refresh.interval.secs";
   private static final String MIN_INTERVAL_SECS_CONFIG_NAME =
@@ -75,33 +77,45 @@ public class TestRegistryEndpointsRefresher {
     callTimestamps.add(EnvironmentEdgeManager.currentTime());
   }
 
-  private void createRefresher(long intervalSecs, long minIntervalSecs) {
+  private void createRefresher(long initialDelaySecs, long intervalSecs, long minIntervalSecs) {
+    conf.setLong(INITIAL_DELAY_SECS_CONFIG_NAME, initialDelaySecs);
     conf.setLong(INTERVAL_SECS_CONFIG_NAME, intervalSecs);
     conf.setLong(MIN_INTERVAL_SECS_CONFIG_NAME, minIntervalSecs);
-    refresher = RegistryEndpointsRefresher.create(conf, INTERVAL_SECS_CONFIG_NAME,
-      MIN_INTERVAL_SECS_CONFIG_NAME, this::refresh);
+    refresher = RegistryEndpointsRefresher.create(conf, INITIAL_DELAY_SECS_CONFIG_NAME,
+      INTERVAL_SECS_CONFIG_NAME, MIN_INTERVAL_SECS_CONFIG_NAME, this::refresh);
   }
 
   @Test
   public void testDisableRefresh() {
     conf.setLong(INTERVAL_SECS_CONFIG_NAME, -1);
     assertNull(RegistryEndpointsRefresher.create(conf, INTERVAL_SECS_CONFIG_NAME,
-      MIN_INTERVAL_SECS_CONFIG_NAME, this::refresh));
+      INTERVAL_SECS_CONFIG_NAME, MIN_INTERVAL_SECS_CONFIG_NAME, this::refresh));
   }
 
   @Test
-  public void testPeriodicEndpointRefresh() throws IOException {
+  public void testInitialDelay() throws InterruptedException {
+    createRefresher(1, 10, 0);
+    // Wait for 2 seconds to see that at least 1 refresh have been made since the initial delay is 1
+    // seconds
+    Waiter.waitFor(conf, 2000, () -> refreshCallCounter.get() == 1);
+    // Sleep more 5 seconds to make sure we have not made new calls since the interval is 10 seconds
+    Thread.sleep(5000);
+    assertEquals(1, refreshCallCounter.get());
+  }
+
+  @Test
+  public void testPeriodicMasterEndPointRefresh() {
     // Refresh every 1 second.
-    createRefresher(1, 0);
+    createRefresher(1, 1, 0);
     // Wait for > 3 seconds to see that at least 3 refresh have been made.
     Waiter.waitFor(conf, 5000, () -> refreshCallCounter.get() > 3);
   }
 
   @Test
-  public void testDurationBetweenRefreshes() throws IOException {
+  public void testDurationBetweenRefreshes() {
     // Disable periodic refresh
     // A minimum duration of 1s between refreshes
-    createRefresher(Integer.MAX_VALUE, 1);
+    createRefresher(Integer.MAX_VALUE, Integer.MAX_VALUE, 1);
     // Issue a ton of manual refreshes.
     for (int i = 0; i < 10000; i++) {
       refresher.refreshNow();
