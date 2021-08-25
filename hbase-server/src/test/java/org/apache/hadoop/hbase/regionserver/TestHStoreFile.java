@@ -1055,7 +1055,9 @@ public class TestHStoreFile {
     if (null == path) {
       return null;
     }
-    Path regionDir = regionFs.commitDaughterRegion(hri);
+    List<Path> splitFiles = new ArrayList<>();
+    splitFiles.add(path);
+    Path regionDir = regionFs.commitDaughterRegion(hri, splitFiles);
     return new Path(new Path(regionDir, family), path.getName());
   }
 

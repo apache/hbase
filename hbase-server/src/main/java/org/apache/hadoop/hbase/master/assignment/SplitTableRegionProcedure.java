@@ -618,21 +618,20 @@ public class SplitTableRegionProcedure
     final FileSystem fs = mfs.getFileSystem();
     HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
       env.getMasterConfiguration(), fs, tabledir, getParentRegion(), false);
-
     regionFs.createSplitsDir(daughterOneRI, daughterTwoRI);
 
-    Pair<Integer, Integer> expectedReferences = splitStoreFiles(env, regionFs);
+    Pair<List<Path>, List<Path>> expectedReferences = splitStoreFiles(env, regionFs);
 
-    assertReferenceFileCount(fs, expectedReferences.getFirst(),
+    assertReferenceFileCount(fs, expectedReferences.getFirst().size(),
       regionFs.getSplitsDir(daughterOneRI));
-    regionFs.commitDaughterRegion(daughterOneRI);
-    assertReferenceFileCount(fs, expectedReferences.getFirst(),
+    regionFs.commitDaughterRegion(daughterOneRI, expectedReferences.getFirst());
+    assertReferenceFileCount(fs, expectedReferences.getFirst().size(),
       new Path(tabledir, daughterOneRI.getEncodedName()));
 
-    assertReferenceFileCount(fs, expectedReferences.getSecond(),
+    assertReferenceFileCount(fs, expectedReferences.getSecond().size(),
       regionFs.getSplitsDir(daughterTwoRI));
-    regionFs.commitDaughterRegion(daughterTwoRI);
-    assertReferenceFileCount(fs, expectedReferences.getSecond(),
+    regionFs.commitDaughterRegion(daughterTwoRI, expectedReferences.getSecond());
+    assertReferenceFileCount(fs, expectedReferences.getSecond().size(),
       new Path(tabledir, daughterTwoRI.getEncodedName()));
   }
 
@@ -649,7 +648,7 @@ public class SplitTableRegionProcedure
    * Create Split directory
    * @param env MasterProcedureEnv
    */
-  private Pair<Integer, Integer> splitStoreFiles(final MasterProcedureEnv env,
+  private Pair<List<Path>, List<Path>> splitStoreFiles(final MasterProcedureEnv env,
       final HRegionFileSystem regionFs) throws IOException {
     final Configuration conf = env.getMasterConfiguration();
     TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
@@ -691,7 +690,7 @@ public class SplitTableRegionProcedure
     }
     if (nbFiles == 0) {
       // no file needs to be splitted.
-      return new Pair<Integer, Integer>(0, 0);
+      return new Pair<>(Collections.EMPTY_LIST, Collections.EMPTY_LIST);
     }
     // Max #threads is the smaller of the number of storefiles or the default max determined above.
     int maxThreads = Math.min(
@@ -744,14 +743,18 @@ public class SplitTableRegionProcedure
       throw (InterruptedIOException) new InterruptedIOException().initCause(e);
     }
 
-    int daughterA = 0;
-    int daughterB = 0;
+    List<Path> daughterA = new ArrayList<>();
+    List<Path> daughterB = new ArrayList<>();
     // Look for any exception
     for (Future<Pair<Path, Path>> future : futures) {
       try {
         Pair<Path, Path> p = future.get();
-        daughterA += p.getFirst() != null ? 1 : 0;
-        daughterB += p.getSecond() != null ? 1 : 0;
+        if(p.getFirst()!=null){
+          daughterA.add(p.getFirst());
+        }
+        if(p.getSecond()!=null){
+          daughterB.add(p.getSecond());
+        }
       } catch (InterruptedException e) {
         throw (InterruptedIOException) new InterruptedIOException().initCause(e);
       } catch (ExecutionException e) {
@@ -764,7 +767,7 @@ public class SplitTableRegionProcedure
           getParentRegion().getShortNameToLog() + " Daughter A: " + daughterA +
           " storefiles, Daughter B: " + daughterB + " storefiles.");
     }
-    return new Pair<Integer, Integer>(daughterA, daughterB);
+    return new Pair<List<Path>, List<Path>>(daughterA, daughterB);
   }
 
   private void assertReferenceFileCount(final FileSystem fs, final int expectedReferenceFileCount,

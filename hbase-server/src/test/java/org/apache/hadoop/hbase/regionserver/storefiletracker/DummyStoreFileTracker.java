@@ -32,7 +32,7 @@ public class DummyStoreFileTracker  extends DefaultStoreFileTracker {
 
   public static List<Path> trackedFiles = new ArrayList<>();
 
-  public DummyStoreFileTracker(Configuration conf, TableName tableName, Boolean isPrimaryReplica,
+  public DummyStoreFileTracker(Configuration conf, TableName tableName, boolean isPrimaryReplica,
     StoreContext ctx) {
     super(conf, tableName, isPrimaryReplica, ctx);
   }

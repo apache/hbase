@@ -59,7 +59,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   private volatile boolean cacheOnWriteLogged;
 
-  protected StoreFileTrackerBase(Configuration conf, TableName tableName, Boolean isPrimaryReplica,
+  protected StoreFileTrackerBase(Configuration conf, TableName tableName, boolean isPrimaryReplica,
     StoreContext ctx) {
     this.conf = conf;
     this.tableName = tableName;

@@ -39,9 +39,8 @@ public final class StoreFileTrackerFactory {
     String className = conf.get(STORE_FILE_TRACKER, DefaultStoreFileTracker.class.getName());
     try {
       LOG.info("instantiating StoreFileTracker impl {}", className);
-      return ReflectionUtils.instantiateWithCustomCtor(className,
-        new Class[] { Configuration.class, TableName.class, Boolean.class, StoreContext.class},
-        new Object[] { conf, tableName, isPrimaryReplica, ctx });
+      return ReflectionUtils.newInstance(
+        (Class<? extends StoreFileTracker>) Class.forName(className), conf, tableName, isPrimaryReplica, ctx);
     } catch (Exception e) {
       LOG.error("Unable to create StoreFileTracker impl : {}", className, e);
       throw new RuntimeException(e);

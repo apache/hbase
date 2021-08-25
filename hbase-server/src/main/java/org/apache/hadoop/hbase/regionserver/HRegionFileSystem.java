@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -595,7 +597,7 @@ public class HRegionFileSystem {
    * @param regionInfo daughter {@link org.apache.hadoop.hbase.client.RegionInfo}
    * @throws IOException
    */
-  public Path commitDaughterRegion(final RegionInfo regionInfo)
+  public Path commitDaughterRegion(final RegionInfo regionInfo, List<Path> allRegionFiles)
       throws IOException {
     Path regionDir = this.getSplitsDir(regionInfo);
     if (fs.exists(regionDir)) {
@@ -603,33 +605,31 @@ public class HRegionFileSystem {
       Path regionInfoFile = new Path(regionDir, REGION_INFO_FILE);
       byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
-      loadRegionFilesIntoStoreTracker(regionDir);
+      loadRegionFilesIntoStoreTracker(allRegionFiles);
     }
     return regionDir;
   }
 
-  private void loadRegionFilesIntoStoreTracker(Path regionDir) throws IOException {
-    for(FileStatus f : fs.listStatus(regionDir)) {
-      if(f.isDirectory()){
-        String dirName = f.getPath().getName();
-        if(dirName.equals(REGION_MERGES_DIR) ||
-          dirName.equals(REGION_SPLITS_DIR) ||
-          dirName.equals(REGION_TEMP_DIR)){
-          continue;
-        }
-        ColumnFamilyDescriptorBuilder fDescBuilder =
-          ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(dirName));
-        StoreFileTracker tracker = StoreFileTrackerFactory.
-          create(conf, regionInfo.getTable(), true,
-            StoreContext.getBuilder().withColumnFamilyDescriptor(fDescBuilder.build()).build());
-        List<StoreFileInfo> fileInfos = new ArrayList<>();
-        for(FileStatus hfile : fs.listStatus(f.getPath())){
-          StoreFileInfo sfInfo = new StoreFileInfo(conf, fs, hfile);
-          fileInfos.add(sfInfo);
-        }
-        tracker.add(fileInfos);
-      }
-    }
+  private void loadRegionFilesIntoStoreTracker(List<Path> allFiles) throws IOException {
+     //we need to map trackers per store
+     Map<String, StoreFileTracker> trackerMap = new HashMap<>();
+     //we need to map store files per store
+     Map<String, List<StoreFileInfo>> fileInfoMap = new HashMap<>();
+     for(Path file : allFiles) {
+       String familyName = file.getParent().getName();
+       trackerMap.computeIfAbsent(familyName, t -> {
+         ColumnFamilyDescriptorBuilder fDescBuilder =
+           ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(familyName));
+         return StoreFileTrackerFactory.create(conf, regionInfo.getTable(), true,
+           StoreContext.getBuilder().withColumnFamilyDescriptor(fDescBuilder.build()).build());
+       });
+       fileInfoMap.computeIfAbsent(familyName, l -> new ArrayList<>());
+       List<StoreFileInfo> infos = fileInfoMap.get(familyName);
+       infos.add(new StoreFileInfo(conf, fs, file, true));
+     }
+     for(String family : trackerMap.keySet()){
+       trackerMap.get(family).add(fileInfoMap.get(family));
+     }
   }
 
   /**
@@ -782,14 +782,14 @@ public class HRegionFileSystem {
    * Commit a merged region, making it ready for use.
    * @throws IOException
    */
-  public void commitMergedRegion() throws IOException {
+  public void commitMergedRegion(List<Path> allMergedFiles) throws IOException {
     Path regionDir = getMergesDir(regionInfoForFs);
     if (regionDir != null && fs.exists(regionDir)) {
       // Write HRI to a file in case we need to recover hbase:meta
       Path regionInfoFile = new Path(regionDir, REGION_INFO_FILE);
       byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
-      loadRegionFilesIntoStoreTracker(regionDir);
+      loadRegionFilesIntoStoreTracker(allMergedFiles);
     }
   }
 

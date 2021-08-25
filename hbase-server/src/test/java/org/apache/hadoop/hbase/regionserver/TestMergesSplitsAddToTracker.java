@@ -93,14 +93,16 @@ public class TestMergesSplitsAddToTracker {
       .setEndKey(region.getRegionInfo().getEndKey()).setSplit(false)
       .setRegionId(region.getRegionInfo().getRegionId()).build();
     HStoreFile file = (HStoreFile) region.getStore(FAMILY_NAME).getStorefiles().toArray()[0];
-    regionFS
+    List<Path> splitFilesA = new ArrayList<>();
+    splitFilesA.add(regionFS
       .splitStoreFile(daughterA, Bytes.toString(FAMILY_NAME), file,
-        Bytes.toBytes("002"), false, region.getSplitPolicy());
-    regionFS
+        Bytes.toBytes("002"), false, region.getSplitPolicy()));
+    List<Path> splitFilesB = new ArrayList<>();
+    splitFilesB.add(regionFS
       .splitStoreFile(daughterB, Bytes.toString(FAMILY_NAME), file,
-        Bytes.toBytes("002"), true, region.getSplitPolicy());
-    Path resultA = regionFS.commitDaughterRegion(daughterA);
-    Path resultB = regionFS.commitDaughterRegion(daughterB);
+        Bytes.toBytes("002"), true, region.getSplitPolicy()));
+    Path resultA = regionFS.commitDaughterRegion(daughterA, splitFilesA);
+    Path resultB = regionFS.commitDaughterRegion(daughterB, splitFilesB);
     FileSystem fs = regionFS.getFileSystem();
     verifyFilesAreTracked(resultA, fs);
     verifyFilesAreTracked(resultB, fs);
@@ -118,9 +120,6 @@ public class TestMergesSplitsAddToTracker {
     HRegion first = regions.get(0);
     HRegion second = regions.get(1);
     HRegionFileSystem regionFS = first.getRegionFileSystem();
-    //creates merges dir on first region.
-    regionFS.createMergesDir();
-    Path mergeDir = regionFS.getMergesDir();
 
     RegionInfo mergeResult =
       RegionInfoBuilder.newBuilder(table).setStartKey(first.getRegionInfo().getStartKey())
@@ -128,11 +127,18 @@ public class TestMergesSplitsAddToTracker {
         .setRegionId(first.getRegionInfo().getRegionId() +
           EnvironmentEdgeManager.currentTime()).build();
 
+    HRegionFileSystem mergeFS = HRegionFileSystem.createRegionOnFileSystem(
+      TEST_UTIL.getHBaseCluster().getMaster().getConfiguration(),
+      regionFS.getFileSystem(), regionFS.getTableDir(), mergeResult);
+
+    Path mergeDir = regionFS.getMergesDir(mergeResult);
+
+    List<Path> mergedFiles = new ArrayList<>();
     //merge file from first region
-    mergeFileFromRegion(first, mergeResult, mergeDir);
+    mergedFiles.add(mergeFileFromRegion(first, mergeFS));
     //merge file from second region
-    mergeFileFromRegion(second, mergeResult, mergeDir);
-    first.getRegionFileSystem().commitMergedRegion(mergeResult);
+    mergedFiles.add(mergeFileFromRegion(second, mergeFS));
+    first.getRegionFileSystem().commitMergedRegion(mergedFiles);
     //validate
     FileSystem fs = first.getRegionFileSystem().getFileSystem();
     Path finalMergeDir = new Path(first.getRegionFileSystem().getTableDir(),
@@ -146,11 +152,10 @@ public class TestMergesSplitsAddToTracker {
     }
   }
 
-  private void mergeFileFromRegion(HRegion regionToMerge, RegionInfo mergeResult, Path mergeDir)
+  private Path mergeFileFromRegion(HRegion regionToMerge, HRegionFileSystem mergeFS)
       throws IOException {
     HStoreFile file = (HStoreFile) regionToMerge.getStore(FAMILY_NAME).getStorefiles().toArray()[0];
-    regionToMerge.getRegionFileSystem().
-      mergeStoreFile(mergeResult, Bytes.toString(FAMILY_NAME), file, mergeDir);
+    return mergeFS.mergeStoreFile(regionToMerge.getRegionInfo(), Bytes.toString(FAMILY_NAME), file);
   }
 
   private void putThreeRowsAndFlush(TableName table) throws IOException {
