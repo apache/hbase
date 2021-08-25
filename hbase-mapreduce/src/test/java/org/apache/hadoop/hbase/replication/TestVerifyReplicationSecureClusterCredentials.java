@@ -26,7 +26,7 @@ import java.util.Collection;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
@@ -65,8 +65,8 @@ public class TestVerifyReplicationSecureClusterCredentials {
     HBaseClassTestRule.forClass(TestVerifyReplicationSecureClusterCredentials.class);
 
   private static MiniKdc KDC;
-  private static final HBaseTestingUtil UTIL1 = new HBaseTestingUtil();
-  private static final HBaseTestingUtil UTIL2 = new HBaseTestingUtil();
+  private static final HBaseTestingUtility UTIL1 = new HBaseTestingUtility();
+  private static final HBaseTestingUtility UTIL2 = new HBaseTestingUtility();
 
   private static final File KEYTAB_FILE =
     new File(UTIL1.getDataTestDir("keytab").toUri().getPath());
@@ -86,7 +86,7 @@ public class TestVerifyReplicationSecureClusterCredentials {
     KDC.createPrincipal(KEYTAB_FILE, CLUSTER_PRINCIPAL, HTTP_PRINCIPAL);
   }
 
-  private static void setupCluster(HBaseTestingUtil util) throws Exception {
+  private static void setupCluster(HBaseTestingUtility util) throws Exception {
     Configuration conf = util.getConfiguration();
 
     SecureTestUtil.enableSecurity(conf);
