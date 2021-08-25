@@ -59,6 +59,9 @@ public class MasterRegistry extends AbstractRpcBasedConnectionRegistry {
   public static final String MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY =
     "hbase.client.master_registry.hedged.fanout";
 
+  public static final String MASTER_REGISTRY_INITIAL_REFRESH_DELAY_SECS =
+    "hbase.client.master_registry.initial_refresh_delay_secs";
+
   public static final String MASTER_REGISTRY_PERIODIC_REFRESH_INTERVAL_SECS =
     "hbase.client.master_registry.refresh_interval_secs";
 
@@ -85,7 +88,7 @@ public class MasterRegistry extends AbstractRpcBasedConnectionRegistry {
   }
 
   MasterRegistry(Configuration conf) throws IOException {
-    super(conf, MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY,
+    super(conf, MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, MASTER_REGISTRY_INITIAL_REFRESH_DELAY_SECS,
       MASTER_REGISTRY_PERIODIC_REFRESH_INTERVAL_SECS, MASTER_REGISTRY_MIN_SECS_BETWEEN_REFRESHES);
   }
 
