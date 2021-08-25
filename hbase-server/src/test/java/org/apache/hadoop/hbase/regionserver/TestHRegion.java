@@ -504,7 +504,7 @@ public class TestHRegion {
           region = initHRegion(tableName, name.getMethodName(), conf, COLUMN_FAMILY_BYTES);
           RegionServerServices services = mock(RegionServerServices.class);
           doNothing().when(services).abort(anyString(), Matchers.<Throwable>any());
-          doReturn(ServerName.valueOf("fake-server", 0, 0l)). when(services).getServerName();
+          doReturn(ServerName.valueOf("fake-server", 0, 0L)). when(services).getServerName();
           region.setRegionServerServices(services);
 
           long size = region.getMemstoreSize();
