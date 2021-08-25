@@ -24,48 +24,42 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Connection registry implementation for region server.
+ * A {@link ConnectionRegistry} implementation used at server side, where we could use the
+ * {@link ConnectionRegistryEndpoint} directly, without any rpcs.
  */
 @InterfaceAudience.Private
-public class RegionServerRegistry implements ConnectionRegistry {
+class ShortCircuitConnectionRegistry implements ConnectionRegistry {
 
-  private final HRegionServer regionServer;
+  private final ConnectionRegistryEndpoint endpoint;
 
-  public RegionServerRegistry(HRegionServer regionServer) {
-    this.regionServer = regionServer;
+  public ShortCircuitConnectionRegistry(ConnectionRegistryEndpoint endpoint) {
+    this.endpoint = endpoint;
   }
 
   @Override
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
     CompletableFuture<RegionLocations> future = new CompletableFuture<>();
-    Optional<List<HRegionLocation>> locs =
-      regionServer.getMetaRegionLocationCache().getMetaRegionLocations();
-    if (locs.isPresent()) {
-      List<HRegionLocation> list = locs.get();
-      if (list.isEmpty()) {
-        future.completeExceptionally(new IOException("no meta location available"));
-      } else {
-        future.complete(new RegionLocations(list));
-      }
-    } else {
+    List<HRegionLocation> locs = endpoint.getMetaLocations();
+    if (locs.isEmpty()) {
       future.completeExceptionally(new IOException("no meta location available"));
+    } else {
+      future.complete(new RegionLocations(locs));
     }
     return future;
   }
 
   @Override
   public CompletableFuture<String> getClusterId() {
-    return CompletableFuture.completedFuture(regionServer.getClusterId());
+    return CompletableFuture.completedFuture(endpoint.getClusterId());
   }
 
   @Override
   public CompletableFuture<ServerName> getActiveMaster() {
     CompletableFuture<ServerName> future = new CompletableFuture<>();
-    Optional<ServerName> activeMaster = regionServer.getActiveMaster();
+    Optional<ServerName> activeMaster = endpoint.getActiveMaster();
     if (activeMaster.isPresent()) {
       future.complete(activeMaster.get());
     } else {

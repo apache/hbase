@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -88,7 +89,7 @@ public class TestMetaRegionLocationCache {
   private void verifyCachedMetaLocations(HMaster master) throws Exception {
     // Wait until initial meta locations are loaded.
     int retries = 0;
-    while (!master.getMetaRegionLocationCache().getMetaRegionLocations().isPresent()) {
+    while (master.getMetaRegionLocationCache().getMetaRegionLocations().isEmpty()) {
       Thread.sleep(1000);
       if (++retries == 10) {
         break;
@@ -98,15 +99,14 @@ public class TestMetaRegionLocationCache {
     List<String> metaZnodes = zk.getMetaReplicaNodes();
     // Wait till all replicas available.
     retries = 0;
-    while (master.getMetaRegionLocationCache().getMetaRegionLocations().get().size() != metaZnodes
+    while (master.getMetaRegionLocationCache().getMetaRegionLocations().size() != metaZnodes
       .size()) {
       Thread.sleep(1000);
       if (++retries == 10) {
         break;
       }
     }
-    List<HRegionLocation> metaHRLs =
-      master.getMetaRegionLocationCache().getMetaRegionLocations().get();
+    List<HRegionLocation> metaHRLs = master.getMetaRegionLocationCache().getMetaRegionLocations();
     assertFalse(metaHRLs.isEmpty());
     assertEquals(metaZnodes.size(), metaHRLs.size());
     List<HRegionLocation> actualHRLs = getCurrentMetaLocations(zk);
@@ -167,7 +167,7 @@ public class TestMetaRegionLocationCache {
       try {
         MetaRegionLocationCache metaCache = new MetaRegionLocationCache(zkWatcher);
         // meta znodes do not exist at this point, cache should be empty.
-        assertFalse(metaCache.getMetaRegionLocations().isPresent());
+        assertTrue(metaCache.getMetaRegionLocations().isEmpty());
         // Set the meta locations for a random meta replicas, simulating an active hmaster meta
         // assignment.
         for (int i = 0; i < 3; i++) {
@@ -177,13 +177,12 @@ public class TestMetaRegionLocationCache {
         // Wait until the meta cache is populated.
         int iters = 0;
         while (iters++ < 10) {
-          if (metaCache.getMetaRegionLocations().isPresent()
-            && metaCache.getMetaRegionLocations().get().size() == 3) {
+          if (metaCache.getMetaRegionLocations().size() == 3) {
             break;
           }
           Thread.sleep(1000);
         }
-        List<HRegionLocation> metaLocations = metaCache.getMetaRegionLocations().get();
+        List<HRegionLocation> metaLocations = metaCache.getMetaRegionLocations();
         assertEquals(3, metaLocations.size());
         for (HRegionLocation location : metaLocations) {
           assertEquals(sn, location.getServerName());

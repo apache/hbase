@@ -112,8 +112,7 @@ public class TestMasterRegistry {
   public void testRegistryRPCs() throws Exception {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     HMaster activeMaster = TEST_UTIL.getHBaseCluster().getMaster();
-    final int size =
-      activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get().size();
+    final int size = activeMaster.getMetaLocations().size();
     for (int numHedgedReqs = 1; numHedgedReqs <= size; numHedgedReqs++) {
       conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
       try (MasterRegistry registry = new MasterRegistry(conf)) {
@@ -124,8 +123,7 @@ public class TestMasterRegistry {
         assertEquals(registry.getActiveMaster().get(), activeMaster.getServerName());
         List<HRegionLocation> metaLocations =
           Arrays.asList(registry.getMetaRegionLocations().get().getRegionLocations());
-        List<HRegionLocation> actualMetaLocations =
-          activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get();
+        List<HRegionLocation> actualMetaLocations = activeMaster.getMetaLocations();
         Collections.sort(metaLocations);
         Collections.sort(actualMetaLocations);
         assertEquals(actualMetaLocations, metaLocations);
