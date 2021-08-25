@@ -561,12 +561,14 @@ public class TestMultiByteBuff {
       destMultiByteBuff.put(0, srcByteBuff, 0, 300);
       fail();
     } catch (BufferUnderflowException e) {
+      assertTrue(e != null);
     }
 
     try {
       destMultiByteBuff.put(95, srcByteBuff, 132, 89);
       fail();
     } catch (BufferUnderflowException e) {
+      assertTrue(e != null);
     }
 
     // Test dest BufferOverflowException
@@ -574,12 +576,14 @@ public class TestMultiByteBuff {
       destMultiByteBuff.put(100, srcByteBuff, 0, 101);
       fail();
     } catch (BufferOverflowException e) {
+      assertTrue(e != null);
     }
 
     try {
       destMultiByteBuff.put(151, srcByteBuff, 132, 68);
       fail();
     } catch (BufferOverflowException e) {
+      assertTrue(e != null);
     }
 
     destMultiByteBuff = new MultiByteBuff(bb3, bb4);
@@ -587,6 +591,7 @@ public class TestMultiByteBuff {
       destMultiByteBuff.put(0, srcByteBuff, 0, 101);
       fail();
     } catch (BufferOverflowException e) {
+      assertTrue(e != null);
     }
   }
 }

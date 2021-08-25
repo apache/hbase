@@ -808,14 +808,16 @@ public class MultiByteBuff extends ByteBuff {
   private static ByteBuffer getItemByteBuffer(ByteBuff buf, int byteBufferIndex) {
     if (buf instanceof SingleByteBuff) {
       if (byteBufferIndex != 0) {
-        throw new IndexOutOfBoundsException("index:[" + byteBufferIndex + "],but only index 0 is valid.");
+        throw new IndexOutOfBoundsException(
+            "index:[" + byteBufferIndex + "],but only index 0 is valid.");
       }
       return buf.nioByteBuffers()[0];
     }
     MultiByteBuff multiByteBuff = (MultiByteBuff) buf;
     if (byteBufferIndex < 0 || byteBufferIndex >= multiByteBuff.items.length) {
       throw new IndexOutOfBoundsException(
-          "index:[" + byteBufferIndex + "],but only index [0-" + multiByteBuff.items.length + ") is valid.");
+          "index:[" + byteBufferIndex + "],but only index [0-" + multiByteBuff.items.length
+              + ") is valid.");
     }
     return multiByteBuff.items[byteBufferIndex];
   }
