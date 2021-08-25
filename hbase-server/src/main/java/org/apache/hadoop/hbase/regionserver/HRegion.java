@@ -3780,7 +3780,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // WAL sync failed. Aborting to avoid a mismatch between the memstore, WAL,
       // and any replicated clusters.
       if (!walSyncSuccess) {
-        rsServices.abort("Wal sync failed", t);
+        rsServices.abort("WAL sync failed, aborting to preserve WAL as source of truth", t);
       }
       // Rethrow the exception.
       throw t;
@@ -8111,7 +8111,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // WAL sync failed. Aborting to avoid a mismatch between the memstore, WAL,
       // and any replicated clusters.
       if (!walSyncSuccess) {
-        rsServices.abort("Wal sync failed", t);
+        rsServices.abort("WAL sync failed, aborting to preserve WAL as source of truth", t);
       }
       // Rethrow the exception.
       throw t;
@@ -8365,7 +8365,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // WAL sync failed. Aborting to avoid a mismatch between the memstore, WAL,
       // and any replicated clusters.
       if (!walSyncSuccess) {
-        rsServices.abort("Wal sync failed", t);
+        rsServices.abort("WAL sync failed, aborting to preserve WAL as source of truth", t);
       }
       // Rethrow the exception.
       throw t;
