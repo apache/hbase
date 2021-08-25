@@ -23,7 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.QosTestHelper;
+import org.apache.hadoop.hbase.ipc.QosTestBase;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.junit.Before;
@@ -39,21 +39,21 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiReque
  * over in pb doesn't break it.
  */
 @Category({RegionServerTests.class, MediumTests.class})
-public class TestQosFunction extends QosTestHelper {
+public class TestRSQosFunction extends QosTestBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestQosFunction.class);
+      HBaseClassTestRule.forClass(TestRSQosFunction.class);
 
   private Configuration conf;
   private RSRpcServices rpcServices;
-  private AnnotationReadingPriorityFunction qosFunction;
+  private RSAnnotationReadingPriorityFunction qosFunction;
 
   @Before
   public void setUp() {
     conf = HBaseConfiguration.create();
     rpcServices = Mockito.mock(RSRpcServices.class);
     when(rpcServices.getConfiguration()).thenReturn(conf);
-    qosFunction = new AnnotationReadingPriorityFunction(rpcServices, RSRpcServices.class);
+    qosFunction = new RSAnnotationReadingPriorityFunction(rpcServices);
   }
 
   @Test

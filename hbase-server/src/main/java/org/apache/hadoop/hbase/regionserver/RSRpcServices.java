@@ -1331,7 +1331,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   protected PriorityFunction createPriority() {
-    return new AnnotationReadingPriorityFunction(this);
+    return new RSAnnotationReadingPriorityFunction(this);
   }
 
   protected void requirePermission(String request, Permission.Action perm) throws IOException {
