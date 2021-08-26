@@ -173,9 +173,9 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     return this.storeFlusher;
   }
 
-  private StoreFileTracker createStoreFileTracker(HStore store) {
-    return StoreFileTrackerFactory.create(store.conf, store.getRegionInfo().getTable(),
-      store.isPrimaryReplicaStore(), store.getStoreContext());
+  private StoreFileTracker createStoreFileTracker(Configuration conf, HStore store) {
+    return StoreFileTrackerFactory.create(conf, store.isPrimaryReplicaStore(),
+      store.getStoreContext());
   }
 
   /**
@@ -206,7 +206,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     this.ctx = store.getStoreContext();
     this.coprocessorHost = store.getHRegion().getCoprocessorHost();
     this.openStoreFileThreadPoolCreator = store.getHRegion()::getStoreFileOpenAndCloseThreadPool;
-    this.storeFileTracker = createStoreFileTracker(store);
+    this.storeFileTracker = createStoreFileTracker(conf, store);
     assert compactor != null && compactionPolicy != null && storeFileManager != null &&
       storeFlusher != null && storeFileTracker != null;
   }
