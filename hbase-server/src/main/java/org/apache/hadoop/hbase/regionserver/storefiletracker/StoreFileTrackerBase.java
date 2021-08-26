@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -51,18 +50,14 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   protected final Configuration conf;
 
-  protected final TableName tableName;
-
   protected final boolean isPrimaryReplica;
 
   protected final StoreContext ctx;
 
   private volatile boolean cacheOnWriteLogged;
 
-  protected StoreFileTrackerBase(Configuration conf, TableName tableName, boolean isPrimaryReplica,
-    StoreContext ctx) {
+  protected StoreFileTrackerBase(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
     this.conf = conf;
-    this.tableName = tableName;
     this.isPrimaryReplica = isPrimaryReplica;
     this.ctx = ctx;
   }
@@ -95,7 +90,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
       .withBlockSize(family.getBlocksize()).withHBaseCheckSum(true)
       .withDataBlockEncoding(family.getDataBlockEncoding()).withEncryptionContext(encryptionContext)
       .withCreateTime(EnvironmentEdgeManager.currentTime()).withColumnFamily(family.getName())
-      .withTableName(tableName.getName()).withCellComparator(ctx.getComparator()).build();
+      .withTableName(ctx.getTableName().getName()).withCellComparator(ctx.getComparator()).build();
     return hFileContext;
   }
 
@@ -153,7 +148,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
       outputDir =
         new Path(ctx.getRegionFileSystem().getTempDir(), ctx.getFamily().getNameAsString());
     } else {
-      throw new UnsupportedOperationException("not supported yet");
+      outputDir = ctx.getFamilyStoreDirectoryPath();
     }
     StoreFileWriter.Builder builder =
       new StoreFileWriter.Builder(conf, writerCacheConf, ctx.getRegionFileSystem().getFileSystem())
