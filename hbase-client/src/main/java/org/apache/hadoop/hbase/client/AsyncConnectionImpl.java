@@ -28,7 +28,6 @@ import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLE
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -37,6 +36,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -370,6 +370,15 @@ class AsyncConnectionImpl implements AsyncConnection {
       RETRY_TIMER);
   }
 
+  private Hbck getHbckInternal(ServerName masterServer) {
+    Span.current().setAttribute(TraceUtil.SERVER_NAME_KEY, masterServer.getServerName());
+    // we will not create a new connection when creating a new protobuf stub, and for hbck there
+    // will be no performance consideration, so for simplification we will create a new stub every
+    // time instead of caching the stub here.
+    return new HBaseHbck(MasterProtos.HbckService.newBlockingStub(
+      rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout)), rpcControllerFactory);
+  }
+
   @Override
   public CompletableFuture<Hbck> getHbck() {
     return TraceUtil.tracedFuture(() -> {
@@ -378,11 +387,7 @@ class AsyncConnectionImpl implements AsyncConnection {
         if (error != null) {
           future.completeExceptionally(error);
         } else {
-          try {
-            future.complete(getHbck(sn));
-          } catch (IOException e) {
-            future.completeExceptionally(e);
-          }
+          future.complete(getHbckInternal(sn));
         }
       });
       return future;
@@ -390,18 +395,14 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   @Override
-  public Hbck getHbck(ServerName masterServer) throws IOException {
-    Span span = TraceUtil.createSpan("AsyncConnection.getHbck")
-      .setAttribute(TraceUtil.SERVER_NAME_KEY, masterServer.getServerName());
-    try (Scope scope = span.makeCurrent()) {
-      // we will not create a new connection when creating a new protobuf stub, and for hbck there
-      // will be no performance consideration, so for simplification we will create a new stub every
-      // time instead of caching the stub here.
-      return new HBaseHbck(
-        MasterProtos.HbckService
-          .newBlockingStub(rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout)),
-        rpcControllerFactory);
-    }
+  public Hbck getHbck(ServerName masterServer) {
+    return TraceUtil.trace(new Supplier<Hbck>() {
+
+      @Override
+      public Hbck get() {
+        return getHbckInternal(masterServer);
+      }
+    }, "AsyncConnection.getHbck");
   }
 
   @Override
