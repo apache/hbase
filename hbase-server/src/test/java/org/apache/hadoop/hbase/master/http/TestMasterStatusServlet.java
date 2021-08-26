@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -115,6 +116,9 @@ public class TestMasterStatusServlet {
     MasterAddressTracker tracker = Mockito.mock(MasterAddressTracker.class);
     Mockito.doReturn(tracker).when(master).getMasterAddressTracker();
     Mockito.doReturn(FAKE_HOST).when(tracker).getMasterAddress();
+
+    // Fake ActiveMaster
+    Mockito.doReturn(Optional.of(FAKE_HOST)).when(master).getActiveMaster();
 
     MetricsRegionServer rms = Mockito.mock(MetricsRegionServer.class);
     Mockito.doReturn(new MetricsRegionServerWrapperStub()).when(rms).getRegionServerWrapper();

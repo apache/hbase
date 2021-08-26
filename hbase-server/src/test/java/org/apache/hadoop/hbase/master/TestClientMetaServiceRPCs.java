@@ -144,8 +144,8 @@ public class TestClientMetaServiceRPCs {
    */
   @Test public void TestMetaLocations() throws Exception {
     HBaseRpcController rpcController = getRpcController();
-    List<HRegionLocation> metaLocations = TEST_UTIL.getMiniHBaseCluster().getMaster()
-        .getMetaRegionLocationCache().getMetaRegionLocations().get();
+    List<HRegionLocation> metaLocations =
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getMetaLocations();
     Collections.sort(metaLocations);
     int rpcCount = 0;
     for (JVMClusterUtil.MasterThread masterThread:
