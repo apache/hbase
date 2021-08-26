@@ -258,8 +258,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     resetRSGroupMap(newGroupMap);
     LOG.info("Updated default servers, {} servers", newDefaultGroupInfo.getServers().size());
     if (LOG.isDebugEnabled()) {
-      LOG.debug("New default servers list: {}", newDefaultGroupInfo.getServers().stream()
-        .map(Address::toString).collect(Collectors.toSet()));
+      LOG.debug("New default servers list: {}", newDefaultGroupInfo.getServers());
     }
   }
 
@@ -1222,8 +1221,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       ProcedureSyncWait.waitForProcedureToCompleteIOE(masterServices.getMasterProcedureExecutor(),
           proc, Long.MAX_VALUE);
     }
-    LOG.info("Move tables done. Moved {} tables to {}: {}", tables.size(), targetGroup,
-      tables.stream().map(TableName::getNameAsString).collect(Collectors.toSet()));
+    LOG.info("Move tables done. Moved {} tables to {}: {}", tables.size(), targetGroup, tables);
   }
 
   @Override
@@ -1289,9 +1287,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       Set<Address> movedServers = moveServers(servers, srcGrp.getName(),
           targetGroupName);
       moveServerRegionsFromGroup(movedServers, srcGrp.getServers(), targetGroupName, srcGrp.getName());
-      LOG.info("Move servers done. Moved {} servers {} => {}: {}", movedServers.size(),
-        srcGrp.getName(), targetGroupName,
-        movedServers.stream().map(Address::toString).collect(Collectors.toSet()));
+      LOG.info("Move servers done. Moved {} servers from {} => {}: {}", movedServers.size(),
+        srcGrp.getName(), targetGroupName, movedServers);
     }
   }
 
