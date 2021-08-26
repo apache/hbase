@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.SplitWALProcedure;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +80,7 @@ public class SplitWALManager {
   private final Path rootDir;
   private final FileSystem fs;
   private final Configuration conf;
+  private final Path walArchiveDir;
 
   public SplitWALManager(MasterServices master) {
     this.master = master;
@@ -86,6 +89,7 @@ public class SplitWALManager {
         conf.getInt(HBASE_SPLIT_WAL_MAX_SPLITTER, DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER));
     this.rootDir = master.getMasterFileSystem().getWALRootDir();
     this.fs = master.getMasterFileSystem().getWALFileSystem();
+    this.walArchiveDir = new Path(this.rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
   }
 
   public List<Procedure> splitWALs(ServerName crashedServer, boolean splitMeta)
@@ -116,8 +120,11 @@ public class SplitWALManager {
     return logDir.suffix(AbstractFSWALProvider.SPLITTING_EXT);
   }
 
-  public void deleteSplitWAL(String wal) throws IOException {
-    fs.delete(new Path(wal), false);
+  /**
+   * Archive processed WAL
+   */
+  public void archive(String wal) throws IOException {
+    WALSplitUtil.moveWAL(this.fs, new Path(wal), this.walArchiveDir);
   }
 
   public void deleteWALDir(ServerName serverName) throws IOException {
