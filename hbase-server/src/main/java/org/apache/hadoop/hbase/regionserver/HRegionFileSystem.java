@@ -611,25 +611,25 @@ public class HRegionFileSystem {
   }
 
   private void loadRegionFilesIntoStoreTracker(List<Path> allFiles) throws IOException {
-     //we need to map trackers per store
-     Map<String, StoreFileTracker> trackerMap = new HashMap<>();
-     //we need to map store files per store
-     Map<String, List<StoreFileInfo>> fileInfoMap = new HashMap<>();
-     for(Path file : allFiles) {
-       String familyName = file.getParent().getName();
-       trackerMap.computeIfAbsent(familyName, t -> {
-         ColumnFamilyDescriptorBuilder fDescBuilder =
-           ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(familyName));
-         return StoreFileTrackerFactory.create(conf, regionInfo.getTable(), true,
-           StoreContext.getBuilder().withColumnFamilyDescriptor(fDescBuilder.build()).build());
-       });
-       fileInfoMap.computeIfAbsent(familyName, l -> new ArrayList<>());
-       List<StoreFileInfo> infos = fileInfoMap.get(familyName);
-       infos.add(new StoreFileInfo(conf, fs, file, true));
-     }
-     for(String family : trackerMap.keySet()){
-       trackerMap.get(family).add(fileInfoMap.get(family));
-     }
+    //we need to map trackers per store
+    Map<String, StoreFileTracker> trackerMap = new HashMap<>();
+    //we need to map store files per store
+    Map<String, List<StoreFileInfo>> fileInfoMap = new HashMap<>();
+    for(Path file : allFiles) {
+      String familyName = file.getParent().getName();
+      trackerMap.computeIfAbsent(familyName, t -> {
+        ColumnFamilyDescriptorBuilder fDescBuilder =
+          ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(familyName));
+        return StoreFileTrackerFactory.create(conf, regionInfo.getTable(), true,
+          StoreContext.getBuilder().withColumnFamilyDescriptor(fDescBuilder.build()).build());
+      });
+      fileInfoMap.computeIfAbsent(familyName, l -> new ArrayList<>());
+      List<StoreFileInfo> infos = fileInfoMap.get(familyName);
+      infos.add(new StoreFileInfo(conf, fs, file, true));
+    }
+    for(Map.Entry<String, StoreFileTracker> entry : trackerMap.entrySet()) {
+      entry.getValue().add(fileInfoMap.get(entry.getKey()));
+    }
   }
 
   /**

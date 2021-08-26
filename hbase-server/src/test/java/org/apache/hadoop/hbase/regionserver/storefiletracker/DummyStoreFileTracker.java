@@ -17,16 +17,17 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 public class DummyStoreFileTracker  extends DefaultStoreFileTracker {
 
@@ -39,7 +40,7 @@ public class DummyStoreFileTracker  extends DefaultStoreFileTracker {
 
   @Override
   protected void doAddNewStoreFiles(Collection<StoreFileInfo> newFiles) throws IOException {
-    newFiles.stream().forEach( s -> trackedFiles.add(s.getPath()));
+    newFiles.stream().forEach(s -> trackedFiles.add(s.getPath()));
   }
 
 }

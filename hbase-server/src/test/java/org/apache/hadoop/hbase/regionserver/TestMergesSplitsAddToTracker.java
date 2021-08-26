@@ -17,38 +17,35 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-  import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker.STORE_FILE_TRACKER;
-  import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker.STORE_FILE_TRACKER;
+import static org.junit.Assert.assertTrue;
 
-  import java.io.IOException;
-  import java.util.ArrayList;
-  import java.util.Collection;
-  import java.util.List;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
-  import org.apache.hadoop.conf.Configuration;
-  import org.apache.hadoop.fs.FileStatus;
-  import org.apache.hadoop.fs.FileSystem;
-  import org.apache.hadoop.fs.Path;
-  import org.apache.hadoop.hbase.HBaseClassTestRule;
-  import org.apache.hadoop.hbase.HBaseTestingUtil;
-  import org.apache.hadoop.hbase.TableName;
-  import org.apache.hadoop.hbase.client.Put;
-  import org.apache.hadoop.hbase.client.RegionInfo;
-  import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-  import org.apache.hadoop.hbase.client.Table;
-  import org.apache.hadoop.hbase.regionserver.storefiletracker.DummyStoreFileTracker;
-  import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
-  import org.apache.hadoop.hbase.testclassification.LargeTests;
-  import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-  import org.apache.hadoop.hbase.util.Bytes;
-  import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-  import org.junit.AfterClass;
-  import org.junit.BeforeClass;
-  import org.junit.ClassRule;
-  import org.junit.Rule;
-  import org.junit.Test;
-  import org.junit.experimental.categories.Category;
-  import org.junit.rules.TestName;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.DummyStoreFileTracker;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 
 @Category({RegionServerTests.class, LargeTests.class})

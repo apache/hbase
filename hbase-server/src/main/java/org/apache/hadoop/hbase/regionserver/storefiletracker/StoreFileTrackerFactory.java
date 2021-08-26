@@ -40,7 +40,8 @@ public final class StoreFileTrackerFactory {
     try {
       LOG.info("instantiating StoreFileTracker impl {}", className);
       return ReflectionUtils.newInstance(
-        (Class<? extends StoreFileTracker>) Class.forName(className), conf, tableName, isPrimaryReplica, ctx);
+        (Class<? extends StoreFileTracker>) Class.forName(className), conf, tableName,
+        isPrimaryReplica, ctx);
     } catch (Exception e) {
       LOG.error("Unable to create StoreFileTracker impl : {}", className, e);
       throw new RuntimeException(e);
