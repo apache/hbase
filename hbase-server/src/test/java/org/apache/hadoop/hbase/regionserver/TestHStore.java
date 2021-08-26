@@ -52,6 +52,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.IntBinaryOperator;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -1814,14 +1815,20 @@ public class TestHStore {
   @Test
   public void testCompactingMemStoreWriteLargeCellAndSmallCellConcurrently()
       throws IOException, InterruptedException {
-    doWriteTestLargeCellAndSmallCellConcurrently(-1);
-    doWriteTestLargeCellAndSmallCellConcurrently(0);
-    doWriteTestLargeCellAndSmallCellConcurrently(1);
-    doWriteTestLargeCellAndSmallCellConcurrently(2);
-    doWriteTestLargeCellAndSmallCellConcurrently(3);
+    doWriteTestLargeCellAndSmallCellConcurrently(
+      (smallCellByteSize, largeCellByteSize) -> largeCellByteSize - 1);
+    doWriteTestLargeCellAndSmallCellConcurrently(
+      (smallCellByteSize, largeCellByteSize) -> largeCellByteSize);
+    doWriteTestLargeCellAndSmallCellConcurrently(
+      (smallCellByteSize, largeCellByteSize) -> smallCellByteSize + largeCellByteSize - 1);
+    doWriteTestLargeCellAndSmallCellConcurrently(
+      (smallCellByteSize, largeCellByteSize) -> smallCellByteSize + largeCellByteSize);
+    doWriteTestLargeCellAndSmallCellConcurrently(
+      (smallCellByteSize, largeCellByteSize) -> smallCellByteSize + largeCellByteSize + 1);
   }
 
-  private void doWriteTestLargeCellAndSmallCellConcurrently(int flag)
+  private void doWriteTestLargeCellAndSmallCellConcurrently(
+      IntBinaryOperator getFlushByteSize)
       throws IOException, InterruptedException {
 
     Configuration conf = HBaseConfiguration.create();
@@ -1834,30 +1841,9 @@ public class TestHStore {
     final Cell largeCell = createCell(qf2, timestamp, seqId, largeValue);
     int smallCellByteSize = MutableSegment.getCellLength(smallCell);
     int largeCellByteSize = MutableSegment.getCellLength(largeCell);
-    int flushByteSize = 0;
-    boolean flushByteSizeLessThanSmallAndLargeCellSize = true;
-    switch (flag) {
-      case -1:
-        flushByteSize = largeCellByteSize - 1;
-        break;
-      case 0:
-        flushByteSize = largeCellByteSize;
-        break;
-      case 1:
-        flushByteSize = smallCellByteSize + largeCellByteSize - 1;
-        break;
-      case 2:
-        flushByteSize = smallCellByteSize + largeCellByteSize;
-        flushByteSizeLessThanSmallAndLargeCellSize = false;
-        break;
-      case 3:
-        flushByteSize = smallCellByteSize + largeCellByteSize + 1;
-        flushByteSizeLessThanSmallAndLargeCellSize = false;
-        break;
-      default:
-        throw new IllegalArgumentException();
-
-    }
+    int flushByteSize = getFlushByteSize.applyAsInt(smallCellByteSize, largeCellByteSize);
+    boolean flushByteSizeLessThanSmallAndLargeCellSize =
+        flushByteSize < (smallCellByteSize + largeCellByteSize);
 
     conf.set(HStore.MEMSTORE_CLASS_NAME, MyCompactingMemStore3.class.getName());
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.005);
