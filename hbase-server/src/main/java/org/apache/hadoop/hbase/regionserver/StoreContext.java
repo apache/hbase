@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.function.Supplier;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -107,6 +108,10 @@ public final class StoreContext implements HeapSize {
 
   public RegionCoprocessorHost getCoprocessorHost() {
     return coprocessorHost;
+  }
+
+  public TableName getTableName() {
+    return getRegionInfo().getTable();
   }
 
   public RegionInfo getRegionInfo() {
