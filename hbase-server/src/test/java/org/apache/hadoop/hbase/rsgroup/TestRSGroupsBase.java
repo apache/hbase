@@ -340,6 +340,8 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     boolean postGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
     boolean preRenameRSGroup = false;
     boolean postRenameRSGroup = false;
+    boolean preUpdateRSGroupConfig = false;
+    boolean postUpdateRSGroupConfig = false;
 
     public void resetFlags() {
       preBalanceRSGroupCalled = false;
@@ -372,6 +374,8 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
       postGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
       preRenameRSGroup = false;
       postRenameRSGroup = false;
+      preUpdateRSGroupConfig = false;
+      postUpdateRSGroupConfig = false;
     }
 
     @Override
@@ -545,6 +549,18 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     public void postRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String oldName,
       String newName) throws IOException {
       postRenameRSGroup = true;
+    }
+
+    @Override
+    public void preUpdateRSGroupConfig(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String groupName, final Map<String, String> configuration) throws IOException {
+      preUpdateRSGroupConfig = true;
+    }
+
+    @Override
+    public void postUpdateRSGroupConfig(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String groupName, final Map<String, String> configuration) throws IOException {
+      postUpdateRSGroupConfig = true;
     }
   }
 }
