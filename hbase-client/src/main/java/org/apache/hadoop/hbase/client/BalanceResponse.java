@@ -19,20 +19,17 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Response returned from a balancer invocation
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class BalanceResponse {
 
   /**
    * Builds a {@link BalanceResponse} for returning results of a balance invocation to callers
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Evolving
   public final static class Builder {
     private boolean balancerRan;
     private int movesCalculated;

@@ -19,13 +19,11 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Encapsulates options for executing a run of the Balancer.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class BalanceRequest {
   private static final BalanceRequest DEFAULT = BalanceRequest.newBuilder().build();
 
@@ -33,7 +31,6 @@ public final class BalanceRequest {
    * Builder for constructing a {@link BalanceRequest}
    */
   @InterfaceAudience.Public
-  @InterfaceStability.Evolving
   public final static class Builder {
     private boolean dryRun = false;
     private boolean ignoreRegionsInTransition = false;
