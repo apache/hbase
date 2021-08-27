@@ -1221,7 +1221,10 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       ProcedureSyncWait.waitForProcedureToCompleteIOE(masterServices.getMasterProcedureExecutor(),
           proc, Long.MAX_VALUE);
     }
-    LOG.info("Move tables done. Moved {} tables to {}: {}", tables.size(), targetGroup, tables);
+    LOG.info("Move tables done: moved {} tables to {}", tables.size(), targetGroup);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Tables moved to {}: {}", targetGroup, tables);
+    }
   }
 
   @Override
@@ -1287,8 +1290,12 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       Set<Address> movedServers = moveServers(servers, srcGrp.getName(),
           targetGroupName);
       moveServerRegionsFromGroup(movedServers, srcGrp.getServers(), targetGroupName, srcGrp.getName());
-      LOG.info("Move servers done. Moved {} servers from {} => {}: {}", movedServers.size(),
-        srcGrp.getName(), targetGroupName, movedServers);
+      LOG.info("Move servers done: moved {} servers from {} to {}", movedServers.size(),
+        srcGrp.getName(), targetGroupName);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Servers moved from {} to {}: {}", srcGrp.getName(), targetGroupName,
+          movedServers);
+      }
     }
   }
 
