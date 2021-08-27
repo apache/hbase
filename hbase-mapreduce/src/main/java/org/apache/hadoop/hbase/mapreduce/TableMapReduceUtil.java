@@ -832,7 +832,9 @@ public class TableMapReduceUtil {
       org.apache.zookeeper.ZooKeeper.class,                          // zookeeper
       com.google.protobuf.Message.class,                             // protobuf
       com.codahale.metrics.MetricRegistry.class,                     // metrics-core
-      org.apache.commons.lang3.ArrayUtils.class);                    // commons-lang
+      org.apache.commons.lang3.ArrayUtils.class,                     // commons-lang
+      io.opentelemetry.api.trace.Span.class,                         // opentelemetry-api
+      io.opentelemetry.semconv.trace.attributes.SemanticAttributes.class); // opentelemetry-semconv
   }
 
   /**
