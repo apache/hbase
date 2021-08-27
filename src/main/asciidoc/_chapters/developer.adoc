@@ -436,14 +436,14 @@ git checkout branch-1
 mvn -Dhadoop-two.version=2.10.0 ...
 ----
 
-.Example 2, Building HBase 2.3 against Hadoop 3.3.0-SNAPSHOT
+.Example 2, Building HBase 2.3 or 2.4 against Hadoop 3.3.0-SNAPSHOT
 
-This is how a developer might check the compatibility of HBase 2.3 against an unreleased Hadoop
+This is how a developer might check the compatibility of HBase 2.3 or 2.4 against an unreleased Hadoop
 version (currently 3.3). Both the Hadoop3 profile and version must be specified:
 
 [source,bourne]
 ----
-git checkout branch-2.3
+git checkout branch-2.4
 mvn -Dhadoop.profile=3.0 -Dhadoop-three.version=3.3.0-SNAPSHOT ...
 ----
 
@@ -472,13 +472,13 @@ For details on Hadoop profile activation by HBase branch, see
 <<maven.build.hadoop,Building against various Hadoop versions>>. See <<java,java>> for a complete
 support matrix of Java version by HBase version.
 
-.Example 1, Building HBase 2.3 with JDK11
+.Example 1, Building HBase 2.3 or 2.4 with JDK11
 
-To build HBase 2.3 with JDK11, the Hadoop3 profile must be activated explicitly.
+To build HBase 2.3 or 2.4 with JDK11, the Hadoop3 profile must be activated explicitly.
 
 [source,bourne]
 ----
-git checkout branch-2.3
+git checkout branch-2.4
 JAVA_HOME=/usr/lib/jvm/java-11 mvn -Dhadoop.profile=3.0 ...
 ----
 

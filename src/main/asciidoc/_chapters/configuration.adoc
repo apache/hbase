@@ -291,7 +291,7 @@ link:https://hadoop.apache.org/cve_list.html[CVEs] so we drop the support in new
 
 [cols="1,4*^.^", options="header"]
 |===
-| | HBase-1.4.x | HBase-1.6.x | HBase-1.7.x | HBase-2.3.x
+| | HBase-1.4.x | HBase-1.6.x | HBase-1.7.x | HBase-2.3.x and HBase-2.4.x
 |Hadoop-2.7.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
 |Hadoop-2.7.1+ | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
 |Hadoop-2.8.[0-2] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
