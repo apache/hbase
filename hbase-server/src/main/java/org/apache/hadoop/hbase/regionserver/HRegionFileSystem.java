@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -597,20 +599,25 @@ public class HRegionFileSystem {
    * @param regionInfo daughter {@link org.apache.hadoop.hbase.client.RegionInfo}
    * @throws IOException
    */
-  public Path commitDaughterRegion(final RegionInfo regionInfo, List<Path> allRegionFiles)
-      throws IOException {
+  public Path commitDaughterRegion(final RegionInfo regionInfo, List<Path> allRegionFiles,
+      MasterProcedureEnv env) throws IOException {
     Path regionDir = this.getSplitsDir(regionInfo);
     if (fs.exists(regionDir)) {
       // Write HRI to a file in case we need to recover hbase:meta
       Path regionInfoFile = new Path(regionDir, REGION_INFO_FILE);
       byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
-      loadRegionFilesIntoStoreTracker(allRegionFiles);
+      HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
+        env.getMasterConfiguration(), fs, getTableDir(), regionInfo, false);
+      loadRegionFilesIntoStoreTracker(allRegionFiles, env, regionFs);
     }
     return regionDir;
   }
 
-  private void loadRegionFilesIntoStoreTracker(List<Path> allFiles) throws IOException {
+  private void loadRegionFilesIntoStoreTracker(List<Path> allFiles, MasterProcedureEnv env,
+      HRegionFileSystem regionFs) throws IOException {
+    TableDescriptor tblDesc = env.getMasterServices().getTableDescriptors().
+      get(regionInfo.getTable());
     //we need to map trackers per store
     Map<String, StoreFileTracker> trackerMap = new HashMap<>();
     //we need to map store files per store
@@ -618,10 +625,10 @@ public class HRegionFileSystem {
     for(Path file : allFiles) {
       String familyName = file.getParent().getName();
       trackerMap.computeIfAbsent(familyName, t -> {
-        ColumnFamilyDescriptorBuilder fDescBuilder =
-          ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(familyName));
-        return StoreFileTrackerFactory.create(conf, regionInfo.getTable(), true,
-          StoreContext.getBuilder().withColumnFamilyDescriptor(fDescBuilder.build()).build());
+        Configuration config = StoreFileTrackerFactory.mergeConfigurations(conf, tblDesc,
+          tblDesc.getColumnFamily(Bytes.toBytes(familyName)));
+        return StoreFileTrackerFactory.
+          create(config, regionInfo.getTable(), true, familyName, regionFs);
       });
       fileInfoMap.computeIfAbsent(familyName, l -> new ArrayList<>());
       List<StoreFileInfo> infos = fileInfoMap.get(familyName);
@@ -782,14 +789,16 @@ public class HRegionFileSystem {
    * Commit a merged region, making it ready for use.
    * @throws IOException
    */
-  public void commitMergedRegion(List<Path> allMergedFiles) throws IOException {
+  public void commitMergedRegion(List<Path> allMergedFiles, MasterProcedureEnv env)
+      throws IOException {
     Path regionDir = getMergesDir(regionInfoForFs);
+    TableName tableName = TableName.valueOf(regionDir.getParent().getName());
     if (regionDir != null && fs.exists(regionDir)) {
       // Write HRI to a file in case we need to recover hbase:meta
       Path regionInfoFile = new Path(regionDir, REGION_INFO_FILE);
       byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
-      loadRegionFilesIntoStoreTracker(allMergedFiles);
+      loadRegionFilesIntoStoreTracker(allMergedFiles, env, this);
     }
   }
 

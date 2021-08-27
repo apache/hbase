@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -140,7 +141,9 @@ public class TestDirectStoreSplitsMerges {
         setRegionId(region.getRegionInfo().getRegionId() +
           EnvironmentEdgeManager.currentTime()).build();
     Path splitDir = regionFS.getSplitsDir(daughterA);
-    Path result = regionFS.commitDaughterRegion(daughterA, new ArrayList<>());
+    MasterProcedureEnv env = TEST_UTIL.getMiniHBaseCluster().getMaster().
+      getMasterProcedureExecutor().getEnvironment();
+    Path result = regionFS.commitDaughterRegion(daughterA, new ArrayList<>(), env);
     assertEquals(splitDir, result);
   }
 
@@ -171,8 +174,10 @@ public class TestDirectStoreSplitsMerges {
     filesB.add(regionFS
       .splitStoreFile(daughterB, Bytes.toString(FAMILY_NAME), file,
         Bytes.toBytes("002"), true, region.getSplitPolicy()));
-    Path resultA = regionFS.commitDaughterRegion(daughterA, filesA);
-    Path resultB = regionFS.commitDaughterRegion(daughterB, filesB);
+    MasterProcedureEnv env = TEST_UTIL.getMiniHBaseCluster().getMaster().
+      getMasterProcedureExecutor().getEnvironment();
+    Path resultA = regionFS.commitDaughterRegion(daughterA, filesA, env);
+    Path resultB = regionFS.commitDaughterRegion(daughterB, filesB, env);
     assertEquals(splitDirA, resultA);
     assertEquals(splitDirB, resultB);
   }
@@ -208,7 +213,9 @@ public class TestDirectStoreSplitsMerges {
     file = (HStoreFile) second.getStore(FAMILY_NAME).getStorefiles().toArray()[0];
     List<Path> mergedFiles = new ArrayList<>();
     mergedFiles.add(mergeFileFromRegion(mergeRegionFs, second, file));
-    mergeRegionFs.commitMergedRegion(mergedFiles);
+    MasterProcedureEnv env = TEST_UTIL.getMiniHBaseCluster().getMaster().
+      getMasterProcedureExecutor().getEnvironment();
+    mergeRegionFs.commitMergedRegion(mergedFiles, env);
   }
 
   private void waitForSplitProcComplete(int attempts, int waitTime) throws Exception {

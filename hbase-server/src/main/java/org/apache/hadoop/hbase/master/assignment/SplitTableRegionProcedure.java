@@ -64,6 +64,8 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.RegionSplitRestriction;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -624,13 +626,13 @@ public class SplitTableRegionProcedure
 
     assertReferenceFileCount(fs, expectedReferences.getFirst().size(),
       regionFs.getSplitsDir(daughterOneRI));
-    regionFs.commitDaughterRegion(daughterOneRI, expectedReferences.getFirst());
+    regionFs.commitDaughterRegion(daughterOneRI, expectedReferences.getFirst(), env);
     assertReferenceFileCount(fs, expectedReferences.getFirst().size(),
       new Path(tabledir, daughterOneRI.getEncodedName()));
 
     assertReferenceFileCount(fs, expectedReferences.getSecond().size(),
       regionFs.getSplitsDir(daughterTwoRI));
-    regionFs.commitDaughterRegion(daughterTwoRI, expectedReferences.getSecond());
+    regionFs.commitDaughterRegion(daughterTwoRI, expectedReferences.getSecond(), env);
     assertReferenceFileCount(fs, expectedReferences.getSecond().size(),
       new Path(tabledir, daughterTwoRI.getEncodedName()));
   }
@@ -664,7 +666,11 @@ public class SplitTableRegionProcedure
         new HashMap<String, Collection<StoreFileInfo>>(htd.getColumnFamilyCount());
     for (ColumnFamilyDescriptor cfd : htd.getColumnFamilies()) {
       String family = cfd.getNameAsString();
-      Collection<StoreFileInfo> sfis = regionFs.getStoreFiles(family);
+      Configuration trackerConfig = StoreFileTrackerFactory.
+        mergeConfigurations(env.getMasterConfiguration(), htd, htd.getColumnFamily(cfd.getName()));
+      StoreFileTracker tracker = StoreFileTrackerFactory.create(trackerConfig, htd.getTableName(),
+        true, family, regionFs);
+      Collection<StoreFileInfo> sfis = tracker.load();
       if (sfis == null) {
         continue;
       }

@@ -17,10 +17,18 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
-import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker.STORE_FILE_TRACKER;
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker.
+  STORE_FILE_TRACKER;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -46,5 +54,26 @@ public final class StoreFileTrackerFactory {
       LOG.error("Unable to create StoreFileTracker impl : {}", className, e);
       throw new RuntimeException(e);
     }
+  }
+
+  public static StoreFileTracker create(Configuration conf, TableName tableName,
+    boolean isPrimaryReplica, String family, HRegionFileSystem regionFs) {
+    ColumnFamilyDescriptorBuilder fDescBuilder =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family));
+    StoreContext ctx = StoreContext.getBuilder().
+      withColumnFamilyDescriptor(fDescBuilder.build()).
+      withRegionFileSystem(regionFs).
+      build();
+    return StoreFileTrackerFactory.create(conf, tableName, isPrimaryReplica, ctx);
+  }
+
+  public static Configuration mergeConfigurations(Configuration global,
+    TableDescriptor table, ColumnFamilyDescriptor family) {
+    if(!StringUtils.isEmpty(family.getConfigurationValue(STORE_FILE_TRACKER))){
+      global.set(STORE_FILE_TRACKER, family.getConfigurationValue(STORE_FILE_TRACKER));
+    } else if(!StringUtils.isEmpty(table.getValue(STORE_FILE_TRACKER))) {
+      global.set(STORE_FILE_TRACKER, table.getValue(STORE_FILE_TRACKER));
+    }
+    return global;
   }
 }

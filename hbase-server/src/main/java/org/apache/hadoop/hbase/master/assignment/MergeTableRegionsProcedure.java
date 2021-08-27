@@ -24,6 +24,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
@@ -31,6 +33,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -52,7 +55,10 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
@@ -594,7 +600,7 @@ public class MergeTableRegionsProcedure
       mergedFiles.addAll(mergeStoreFiles(env, regionFs, mergeRegionFs, mergedRegion));
     }
     assert mergeRegionFs != null;
-    mergeRegionFs.commitMergedRegion(mergedFiles);
+    mergeRegionFs.commitMergedRegion(mergedFiles, env);
 
     // Prepare to create merged regions
     env.getAssignmentManager().getRegionStates().
@@ -608,7 +614,11 @@ public class MergeTableRegionsProcedure
     List<Path> mergedFiles = new ArrayList<>();
     for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
       String family = hcd.getNameAsString();
-      final Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family);
+      Configuration trackerConfig =
+        StoreFileTrackerFactory.mergeConfigurations(env.getMasterConfiguration(), htd, hcd);
+      StoreFileTracker tracker = StoreFileTrackerFactory.create(trackerConfig,
+        mergedRegion.getTable(), true, family, regionFs);
+      final Collection<StoreFileInfo> storeFiles = tracker.load();
       if (storeFiles != null && storeFiles.size() > 0) {
         for (StoreFileInfo storeFileInfo : storeFiles) {
           // Create reference file(s) to parent region file here in mergedDir.

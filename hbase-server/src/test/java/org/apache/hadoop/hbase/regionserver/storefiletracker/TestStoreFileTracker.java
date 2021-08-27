@@ -20,27 +20,39 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+public class TestStoreFileTracker extends DefaultStoreFileTracker {
 
-public class DummyStoreFileTracker  extends DefaultStoreFileTracker {
+  private static final Logger LOG = LoggerFactory.getLogger(TestStoreFileTracker.class);
+  public static Map<String, List<StoreFileInfo>> trackedFiles = new HashMap<>();
+  private String storeId;
 
-  public static List<Path> trackedFiles = new ArrayList<>();
-
-  public DummyStoreFileTracker(Configuration conf, TableName tableName, boolean isPrimaryReplica,
+  public TestStoreFileTracker(Configuration conf, TableName tableName, boolean isPrimaryReplica,
     StoreContext ctx) {
     super(conf, tableName, isPrimaryReplica, ctx);
+    this.storeId = ctx.getRegionInfo().getEncodedName() + "-" + ctx.getFamily().getNameAsString();
+    LOG.info("created storeId: {}", storeId);
+    trackedFiles.computeIfAbsent(storeId, v -> new ArrayList<>());
   }
 
   @Override
   protected void doAddNewStoreFiles(Collection<StoreFileInfo> newFiles) throws IOException {
-    newFiles.stream().forEach(s -> trackedFiles.add(s.getPath()));
+    LOG.info("adding to storeId: {}", storeId);
+    trackedFiles.get(storeId).addAll(newFiles);
   }
 
+  @Override
+  public List<StoreFileInfo> load() throws IOException {
+    return trackedFiles.get(storeId);
+  }
 }
