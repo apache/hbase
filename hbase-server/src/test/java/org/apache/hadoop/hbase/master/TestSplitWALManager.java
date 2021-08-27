@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -233,11 +234,20 @@ public class TestSplitWALManager {
     ProcedureTestingUtility.submitAndWait(masterPE, procedures.get(0));
     Assert.assertEquals(0, splitWALManager.getWALsToSplit(testServer, false).size());
 
+    // Validate the old WAL file archive dir
+    Path walRootDir = hmaster.getMasterFileSystem().getWALRootDir();
+    Path walArchivePath = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    FileSystem walFS = hmaster.getMasterFileSystem().getWALFileSystem();
+    int archiveFileCount = walFS.listStatus(walArchivePath).length;
+
     procedures = splitWALManager.splitWALs(metaServer, true);
     Assert.assertEquals(1, procedures.size());
     ProcedureTestingUtility.submitAndWait(masterPE, procedures.get(0));
     Assert.assertEquals(0, splitWALManager.getWALsToSplit(metaServer, true).size());
     Assert.assertEquals(1, splitWALManager.getWALsToSplit(metaServer, false).size());
+    // There should be archiveFileCount + 1 WALs after SplitWALProcedure finish
+    Assert.assertEquals("Splitted WAL files should be archived", archiveFileCount + 1,
+      walFS.listStatus(walArchivePath).length);
   }
 
   @Test
