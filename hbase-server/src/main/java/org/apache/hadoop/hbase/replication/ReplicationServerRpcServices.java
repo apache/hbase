@@ -90,7 +90,7 @@ public class ReplicationServerRpcServices implements HBaseRPCErrorHandler,
   public static final int DEFAULT_REPLICATION_SERVER_INFOPORT = 16050;
 
   // Request counter.
-  final LongAdder requestCount = new LongAdder();
+  public final LongAdder requestCount = new LongAdder();
 
   // Server to handle client requests.
   final RpcServerInterface rpcServer;

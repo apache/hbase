@@ -221,14 +221,13 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.abortOnError = this.conf.getBoolean("replication.source.regionserver.abort",
       true);
 
-    if (conf.getBoolean(HConstants.REPLICATION_OFFLOAD_ENABLE_KEY,
-      HConstants.REPLICATION_OFFLOAD_ENABLE_DEFAULT)) {
+    if (ReplicationUtils.isReplicationOffloadEnabled(conf)) {
       if (queueStorage instanceof ZKReplicationQueueStorage) {
         ZKReplicationQueueStorage zkQueueStorage = (ZKReplicationQueueStorage) queueStorage;
         zkQueueStorage.getZookeeper().registerListener(
           new ReplicationQueueListener(this, zkQueueStorage, queueInfo, walDir));
         LOG.info("Register a ZKListener to track the WALs from {}'s replication queue, queueId={}",
-          queueInfo.getOwner(), queueInfo.getQueueId());
+          getQueueOwner(), queueInfo.getQueueId());
       } else {
         throw new UnsupportedOperationException(
           "hbase.replication.offload.enabled=true only support ZKReplicationQueueStorage");

@@ -142,8 +142,8 @@ public class ReplicationServerSourceManager implements ReplicationSourceControll
     return this.sources.get(queueInfo);
   }
 
-  public ReplicationPeers getReplicationPeers() {
-    return this.replicationPeers;
+  public ZKReplicationQueueStorage getZkQueueStorage() {
+    return this.zkQueueStorage;
   }
 
   public void startReplicationSource(ServerName owner, String queueId) throws IOException,

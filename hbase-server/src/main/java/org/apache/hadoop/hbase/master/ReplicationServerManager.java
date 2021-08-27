@@ -25,8 +25,8 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ReplicationServerMetrics;
 import org.apache.hadoop.hbase.ScheduledChore;
-import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -49,14 +49,14 @@ public class ReplicationServerManager {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationServerManager.class);
 
-  public static final String ONLINE_SERVER_REFRESH_INTERVAL =
+  public static final String REPLICATION_SERVER_REFRESH_PERIOD =
       "hbase.master.replication.server.refresh.interval";
-  public static final int ONLINE_SERVER_REFRESH_INTERVAL_DEFAULT = 60 * 1000; // 1 mins
+  public static final int REPLICATION_SERVER_REFRESH_PERIOD_DEFAULT = 60 * 1000; // 1 mins
 
   private final MasterServices master;
 
   /** Map of registered servers to their current load */
-  private final ConcurrentNavigableMap<ServerName, ServerMetrics> onlineServers =
+  private final ConcurrentNavigableMap<ServerName, ReplicationServerMetrics> onlineServers =
     new ConcurrentSkipListMap<>();
 
   private OnlineServerRefresher onlineServerRefresher;
@@ -74,8 +74,8 @@ public class ReplicationServerManager {
    */
   public void startChore() {
     Configuration conf = master.getConfiguration();
-    refreshPeriod = conf.getInt(ONLINE_SERVER_REFRESH_INTERVAL,
-        ONLINE_SERVER_REFRESH_INTERVAL_DEFAULT);
+    refreshPeriod = conf.getInt(REPLICATION_SERVER_REFRESH_PERIOD,
+      REPLICATION_SERVER_REFRESH_PERIOD_DEFAULT);
     onlineServerRefresher = new OnlineServerRefresher("ReplicationServerRefresher", refreshPeriod);
     master.getChoreService().scheduleChore(onlineServerRefresher);
   }
@@ -89,7 +89,7 @@ public class ReplicationServerManager {
     }
   }
 
-  public void serverReport(ServerName sn, ServerMetrics sl) {
+  public void serverReport(ServerName sn, ReplicationServerMetrics sl) {
     if (null == this.onlineServers.replace(sn, sl)) {
       if (!checkAndRecordNewServer(sn, sl)) {
         LOG.info("ReplicationServerReport ignored, could not record the server: {}", sn);
@@ -105,7 +105,8 @@ public class ReplicationServerManager {
    * @param sl the server load on the server
    * @return true if the server is recorded, otherwise, false
    */
-  private boolean checkAndRecordNewServer(final ServerName serverName, final ServerMetrics sl) {
+  private boolean checkAndRecordNewServer(final ServerName serverName,
+    final ReplicationServerMetrics sl) {
     ServerName existingServer = null;
     synchronized (this.onlineServers) {
       existingServer = findServerWithSameHostnamePort(serverName);
@@ -143,7 +144,7 @@ public class ReplicationServerManager {
   /**
    * Assumes onlineServers is locked.
    */
-  private void recordNewServer(final ServerName serverName, final ServerMetrics sl) {
+  private void recordNewServer(final ServerName serverName, final ReplicationServerMetrics sl) {
     LOG.info("Registering ReplicationServer={}", serverName);
     this.onlineServers.put(serverName, sl);
   }
@@ -160,7 +161,7 @@ public class ReplicationServerManager {
   /**
    * @return Read-only map of servers to serverinfo
    */
-  public Map<ServerName, ServerMetrics> getOnlineServers() {
+  public Map<ServerName, ReplicationServerMetrics> getOnlineServers() {
     // Presumption is that iterating the returned Map is OK.
     synchronized (this.onlineServers) {
       return Collections.unmodifiableMap(this.onlineServers);
@@ -178,7 +179,7 @@ public class ReplicationServerManager {
    * @param serverName server name
    * @return ServerMetrics if serverName is known else null
    */
-  public ServerMetrics getServerMetrics(final ServerName serverName) {
+  public ReplicationServerMetrics getServerMetrics(final ServerName serverName) {
     return this.onlineServers.get(serverName);
   }
 
@@ -193,7 +194,7 @@ public class ReplicationServerManager {
       synchronized (onlineServers) {
         List<ServerName> servers = getOnlineServersList();
         servers.forEach(s -> {
-          ServerMetrics metrics = onlineServers.get(s);
+          ReplicationServerMetrics metrics = onlineServers.get(s);
           if (metrics.getReportTimestamp() + refreshPeriod < System.currentTimeMillis()) {
             expireServer(s);
           }

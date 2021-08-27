@@ -230,4 +230,9 @@ public final class ReplicationUtils {
     }
     return false;
   }
+
+  public static boolean isReplicationOffloadEnabled(Configuration conf) {
+    return conf.getBoolean(HConstants.REPLICATION_OFFLOAD_ENABLE_KEY,
+      HConstants.REPLICATION_OFFLOAD_ENABLE_DEFAULT);
+  }
 }

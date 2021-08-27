@@ -18,9 +18,8 @@
 package org.apache.hadoop.hbase.replication;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_OPERATION_TIMEOUT;
-import static org.apache.hadoop.hbase.master.ReplicationServerManager.ONLINE_SERVER_REFRESH_INTERVAL;
+import static org.apache.hadoop.hbase.master.ReplicationServerManager.REPLICATION_SERVER_REFRESH_PERIOD;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -93,7 +92,7 @@ public class TestReplicationServerSink {
   @BeforeClass
   public static void beforeClass() throws Exception {
     CONF.setLong(HBASE_CLIENT_OPERATION_TIMEOUT, 1000);
-    CONF.setLong(ONLINE_SERVER_REFRESH_INTERVAL, 10000);
+    CONF.setLong(REPLICATION_SERVER_REFRESH_PERIOD, 10000);
     CONF.setBoolean(HConstants.REPLICATION_OFFLOAD_ENABLE_KEY, true);
     TEST_UTIL.startMiniCluster(StartMiniClusterOption.builder().numReplicationServers(1).build());
     MASTER = TEST_UTIL.getMiniHBaseCluster().getMaster();
@@ -178,24 +177,5 @@ public class TestReplicationServerSink {
     TEST_UTIL.waitFor(60000, () -> REPLICATION_SERVER.rpcServices.requestCount.sum() > 0
         && REPLICATION_SERVER.rpcServices.requestCount.sum() == replicationServerManager
         .getServerMetrics(REPLICATION_SERVER_NAME).getRequestCount());
-  }
-
-  @Test
-  public void testReplicationServerExpire() throws Exception {
-    int initialNum = TEST_UTIL.getMiniHBaseCluster().getNumLiveReplicationServers();
-    HReplicationServer replicationServer = new HReplicationServer(CONF);
-    replicationServer.start();
-    ServerName replicationServerName = replicationServer.getServerName();
-
-    ReplicationServerManager replicationServerManager = MASTER.getReplicationServerManager();
-    TEST_UTIL.waitFor(60000, () ->
-        initialNum + 1 == replicationServerManager.getOnlineServers().size()
-        && null != replicationServerManager.getServerMetrics(replicationServerName));
-
-    replicationServer.stop("test");
-
-    TEST_UTIL.waitFor(180000, 1000, () ->
-        initialNum == replicationServerManager.getOnlineServers().size());
-    assertNull(replicationServerManager.getServerMetrics(replicationServerName));
   }
 }
