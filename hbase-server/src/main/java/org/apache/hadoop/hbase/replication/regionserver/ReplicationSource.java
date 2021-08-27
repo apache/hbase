@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.findArchivedLog;
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getArchivedLogPath;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -396,8 +397,11 @@ public class ReplicationSource implements ReplicationSourceInterface {
     try {
       fileSize = fs.getContentSummary(currentPath).getLength();
     } catch (FileNotFoundException e) {
-      currentPath = getArchivedLogPath(currentPath, conf);
-      fileSize = fs.getContentSummary(currentPath).getLength();
+      Path archivedLogPath = findArchivedLog(currentPath, conf);
+      if (archivedLogPath == null) {
+        throw new FileNotFoundException("Couldn't find path: " + currentPath);
+      }
+      fileSize = fs.getContentSummary(archivedLogPath).getLength();
     }
     return fileSize;
   }
