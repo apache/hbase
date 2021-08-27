@@ -144,6 +144,10 @@ public class BufferedMutatorParams implements Cloneable {
     return this;
   }
 
+  /**
+   *  @deprecated Since 3.0.0-alpha-2, will be removed in 4.0.0. You can not set it anymore.
+   *              BufferedMutator will use Connection's ExecutorService.
+   */
   public ExecutorService getPool() {
     return pool;
   }
@@ -151,6 +155,8 @@ public class BufferedMutatorParams implements Cloneable {
   /**
    * Override the default executor pool defined by the {@code hbase.htable.threads.*}
    * configuration values.
+   * @deprecated Since 3.0.0-alpha-2, will be removed in 4.0.0. You can not set it anymore.
+   *             BufferedMutator will use Connection's ExecutorService.
    */
   public BufferedMutatorParams pool(ExecutorService pool) {
     this.pool = pool;
