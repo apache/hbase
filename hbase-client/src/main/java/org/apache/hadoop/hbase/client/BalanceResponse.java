@@ -19,17 +19,17 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Response returned from a balancer invocation
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class BalanceResponse {
 
+  /**
+   * Builds a {@link BalanceResponse} for returning results of a balance invocation to callers
+   */
   @InterfaceAudience.Public
-  @InterfaceStability.Evolving
   public final static class Builder {
     private boolean balancerRan;
     private int movesCalculated;
@@ -37,26 +37,52 @@ public final class BalanceResponse {
 
     private Builder() {}
 
+    /**
+     * Set true if the balancer ran, otherwise false. The balancer may not run in some
+     * circumstances, such as if a balance is already running or there are regions already
+     * in transition.
+     *
+     * @param balancerRan true if balancer ran, false otherwise
+     */
     public Builder setBalancerRan(boolean balancerRan) {
       this.balancerRan = balancerRan;
       return this;
     }
 
+    /**
+     * Set how many moves were calculated by the balancer. This will be zero if the cluster is
+     * already balanced.
+     *
+     * @param movesCalculated moves calculated by the balance run
+     */
     public Builder setMovesCalculated(int movesCalculated) {
       this.movesCalculated = movesCalculated;
       return this;
     }
 
+    /**
+     * Set how many of the calculated moves were actually executed by the balancer. This should be
+     * zero if the balancer is run with {@link BalanceRequest#isDryRun()}. It may also not equal
+     * movesCalculated if the balancer ran out of time while executing the moves.
+     *
+     * @param movesExecuted moves executed by the balance run
+     */
     public Builder setMovesExecuted(int movesExecuted) {
       this.movesExecuted = movesExecuted;
       return this;
     }
 
+    /**
+     * Build the {@link BalanceResponse}
+     */
     public BalanceResponse build() {
       return new BalanceResponse(balancerRan, movesCalculated, movesExecuted);
     }
   }
 
+  /**
+   * Creates a new {@link BalanceResponse.Builder}
+   */
   public static Builder newBuilder() {
     return new Builder();
   }
@@ -72,17 +98,17 @@ public final class BalanceResponse {
   }
 
   /**
-   * Determines whether the balancer ran or not. The balancer may not run for a variety of reasons,
-   * such as: another balance is running, there are regions in transition, the cluster is in
-   * maintenance mode, etc.
+   * Returns true if the balancer ran, otherwise false. The balancer may not run for a
+   * variety of reasons, such as: another balance is running, there are regions in
+   * transition, the cluster is in maintenance mode, etc.
    */
   public boolean isBalancerRan() {
     return balancerRan;
   }
 
   /**
-   * The number of moves calculated by the balancer if it ran. This may be zero if
-   * no better balance could be found.
+   * The number of moves calculated by the balancer if {@link #isBalancerRan()} is true. This will
+   * be zero if no better balance could be found.
    */
   public int getMovesCalculated() {
     return movesCalculated;
@@ -92,7 +118,7 @@ public final class BalanceResponse {
    * The number of moves actually executed by the balancer if it ran. This will be
    * zero if {@link #getMovesCalculated()} is zero or if {@link BalanceRequest#isDryRun()}
    * was true. It may also not be equal to {@link #getMovesCalculated()} if the balancer
-   * was interrupted midway through executing  the moves due to max run time.
+   * was interrupted midway through executing the moves due to max run time.
    */
   public int getMovesExecuted() {
     return movesExecuted;

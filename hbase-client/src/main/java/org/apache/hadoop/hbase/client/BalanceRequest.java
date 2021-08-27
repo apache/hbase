@@ -19,18 +19,18 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Encapsulates options for executing a run of the Balancer.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public final class BalanceRequest {
   private static final BalanceRequest DEFAULT = BalanceRequest.newBuilder().build();
 
+  /**
+   * Builder for constructing a {@link BalanceRequest}
+   */
   @InterfaceAudience.Public
-  @InterfaceStability.Evolving
   public final static class Builder {
     private boolean dryRun = false;
     private boolean ignoreRegionsInTransition = false;
@@ -65,15 +65,25 @@ public final class BalanceRequest {
       return this;
     }
 
+    /**
+     * Build the {@link BalanceRequest}
+     */
     public BalanceRequest build() {
       return new BalanceRequest(dryRun, ignoreRegionsInTransition);
     }
   }
 
+  /**
+   * Create a builder to construct a custom {@link BalanceRequest}.
+   */
   public static Builder newBuilder() {
     return new Builder();
   }
 
+  /**
+   * Get a BalanceRequest for a default run of the balancer. The default mode executes
+   * any moves calculated and will not run if regions are already in transition.
+   */
   public static BalanceRequest defaultInstance() {
     return DEFAULT;
   }
@@ -86,10 +96,18 @@ public final class BalanceRequest {
     this.ignoreRegionsInTransition = ignoreRegionsInTransition;
   }
 
+  /**
+   * Returns true if the balancer should run in dry run mode, otherwise false. In
+   * dry run mode, moves will be calculated but not executed.
+   */
   public boolean isDryRun() {
     return dryRun;
   }
 
+  /**
+   * Returns true if the balancer should execute even if regions are in transition, otherwise
+   * false. This is an advanced usage feature, as it can cause more issues than it fixes.
+   */
   public boolean isIgnoreRegionsInTransition() {
     return ignoreRegionsInTransition;
   }
