@@ -148,6 +148,7 @@ public class BufferedMutatorParams implements Cloneable {
    *  @deprecated Since 3.0.0-alpha-2, will be removed in 4.0.0. You can not set it anymore.
    *              BufferedMutator will use Connection's ExecutorService.
    */
+  @Deprecated
   public ExecutorService getPool() {
     return pool;
   }
@@ -158,6 +159,7 @@ public class BufferedMutatorParams implements Cloneable {
    * @deprecated Since 3.0.0-alpha-2, will be removed in 4.0.0. You can not set it anymore.
    *             BufferedMutator will use Connection's ExecutorService.
    */
+  @Deprecated
   public BufferedMutatorParams pool(ExecutorService pool) {
     this.pool = pool;
     return this;
