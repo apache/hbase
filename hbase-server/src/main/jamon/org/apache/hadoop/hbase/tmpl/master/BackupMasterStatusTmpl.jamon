@@ -24,25 +24,19 @@ java.util.*;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.ClusterMetrics;
 org.apache.hadoop.hbase.master.HMaster;
-org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 </%import>
-<%java>
-MasterAddressTracker masterAddressTracker = master.getMasterAddressTracker();
-</%java>
-
 <%if (!master.isActiveMaster()) %>
     <%java>
-    ServerName active_master =
-        (masterAddressTracker == null) ? null : masterAddressTracker.getMasterAddress();
-    assert active_master != null : "Failed to retrieve master's ServerName!";
-    int infoPort = (masterAddressTracker == null) ? 0 : masterAddressTracker.getMasterInfoPort();
+    ServerName active_master = master.getActiveMaster().orElse(null);
+    assert active_master != null : "Failed to retrieve active master's ServerName!";
+    int activeInfoPort = active_master == null ? 0 : master.getActiveMasterInfoPort();
     </%java>
     <div class="row inner_header">
         <div class="page-header">
             <h1>Backup Master <small><% master.getServerName().getHostname() %></small></h1>
         </div>
     </div>
-    <h4>Current Active Master: <a href="//<% active_master.getHostname() %>:<% infoPort %>/master-status"
+    <h4>Current Active Master: <a href="//<% active_master.getHostname() %>:<% activeInfoPort %>/master-status"
         target="_blank"><% active_master.getHostname() %></a><h4>
 <%else>
     <h2>Backup Masters</h2>
@@ -54,13 +48,11 @@ MasterAddressTracker masterAddressTracker = master.getMasterAddressTracker();
         <th>Start Time</th>
     </tr>
     <%java>
-    Collection<ServerName> backup_masters = master.getClusterMetricsWithoutCoprocessor(
-        EnumSet.of(ClusterMetrics.Option.BACKUP_MASTERS)).getBackupMasterNames();
+    Collection<ServerName> backup_masters = master.getBackupMasters();
     ServerName [] backupServerNames = backup_masters.toArray(new ServerName[backup_masters.size()]);
     Arrays.sort(backupServerNames);
     for (ServerName serverName : backupServerNames) {
-      int infoPort = (masterAddressTracker == null) ? 0 : masterAddressTracker
-          .getBackupMasterInfoPort(serverName);
+      int infoPort = master.getBackupMasterInfoPort(serverName);
     </%java>
     <tr>
         <td><a href="//<% serverName.getHostname() %>:<% infoPort %>/master-status"

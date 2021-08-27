@@ -18,11 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -71,15 +69,13 @@ public final class ClusterConnectionFactory {
   }
 
   /**
-   * Create a new {@link AsyncClusterConnection} instance for a region server.
+   * Create a new {@link AsyncClusterConnection} instance to be used at server side where we have a
+   * {@link ConnectionRegistryEndpoint}.
    */
-  public static AsyncClusterConnection createAsyncClusterConnection(HRegionServer regionServer)
+  public static AsyncClusterConnection createAsyncClusterConnection(
+    ConnectionRegistryEndpoint endpoint, Configuration conf, SocketAddress localAddress, User user)
     throws IOException {
-    RegionServerRegistry registry = new RegionServerRegistry(regionServer);
-    Configuration conf = regionServer.getConfiguration();
-    InetSocketAddress localAddress =
-      new InetSocketAddress(regionServer.getRSRpcServices().getSocketAddress().getAddress(), 0);
-    User user = regionServer.getUserProvider().getCurrent();
+    ShortCircuitConnectionRegistry registry = new ShortCircuitConnectionRegistry(endpoint);
     return createAsyncClusterConnection(conf, registry, localAddress, user);
   }
 }

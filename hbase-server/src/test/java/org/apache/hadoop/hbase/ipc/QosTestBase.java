@@ -15,27 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
-
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
-import org.apache.hadoop.hbase.regionserver.AnnotationReadingPriorityFunction;
-import org.apache.hadoop.hbase.security.User;
+package org.apache.hadoop.hbase.ipc;
 
 import static org.junit.Assert.assertEquals;
 
-public class QosTestHelper {
-  protected void checkMethod(Configuration conf, final String methodName, final int expected,
-                             final AnnotationReadingPriorityFunction qosf) {
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.security.User;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
+
+public class QosTestBase {
+
+  protected final void checkMethod(Configuration conf, final String methodName, final int expected,
+    final AnnotationReadingPriorityFunction<?> qosf) {
     checkMethod(conf, methodName, expected, qosf, null);
   }
 
-  protected void checkMethod(Configuration conf, final String methodName, final int expected,
-                             final AnnotationReadingPriorityFunction qosf, final Message param) {
+  protected final void checkMethod(Configuration conf, final String methodName, final int expected,
+    final AnnotationReadingPriorityFunction<?> qosf, final Message param) {
     RPCProtos.RequestHeader.Builder builder = RPCProtos.RequestHeader.newBuilder();
     builder.setMethodName(methodName);
     assertEquals(methodName, expected, qosf.getPriority(builder.build(), param,
-      User.createUserForTesting(conf, "someuser", new String[]{"somegroup"})));
+      User.createUserForTesting(conf, "someuser", new String[] { "somegroup" })));
   }
 }

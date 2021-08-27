@@ -51,6 +51,17 @@ public class RpcConnectionRegistry extends AbstractRpcBasedConnectionRegistry {
   /** Configuration key that controls the fan out of requests **/
   public static final String HEDGED_REQS_FANOUT_KEY = "hbase.client.bootstrap.hedged.fanout";
 
+  /**
+   * As end users could configure any nodes in a cluster as the initial bootstrap nodes, it is
+   * possible that different end users will configure the same machine which makes the machine over
+   * load. So we should have a shorter delay for the initial refresh, to let users quickly switch to
+   * the bootstrap nodes we want them to connect to.
+   * <p/>
+   * The default value for initial refresh delay is 1/10 of periodic refresh interval.
+   */
+  public static final String INITIAL_REFRESH_DELAY_SECS =
+    "hbase.client.bootstrap.initial_refresh_delay_secs";
+
   public static final String PERIODIC_REFRESH_INTERVAL_SECS =
     "hbase.client.bootstrap.refresh_interval_secs";
 
@@ -62,7 +73,8 @@ public class RpcConnectionRegistry extends AbstractRpcBasedConnectionRegistry {
   private static final char ADDRS_CONF_SEPARATOR = ',';
 
   RpcConnectionRegistry(Configuration conf) throws IOException {
-    super(conf, HEDGED_REQS_FANOUT_KEY, PERIODIC_REFRESH_INTERVAL_SECS, MIN_SECS_BETWEEN_REFRESHES);
+    super(conf, HEDGED_REQS_FANOUT_KEY, INITIAL_REFRESH_DELAY_SECS, PERIODIC_REFRESH_INTERVAL_SECS,
+      MIN_SECS_BETWEEN_REFRESHES);
   }
 
   @Override

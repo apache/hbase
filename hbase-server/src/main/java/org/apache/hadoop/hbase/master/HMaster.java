@@ -2710,6 +2710,21 @@ public class HMaster extends HRegionServer implements MasterServices {
     return activeMasterManager.getBackupMasters();
   }
 
+  /**
+   * @return info port of active master or 0 if any exception occurs.
+   */
+  public int getActiveMasterInfoPort() {
+    return activeMasterManager.getActiveMasterInfoPort();
+  }
+
+  /**
+   * @param sn is ServerName of the backup master
+   * @return info port of backup master or 0 if any exception occurs.
+   */
+  public int getBackupMasterInfoPort(final ServerName sn) {
+    return activeMasterManager.getBackupMasterInfoPort(sn);
+  }
+
   @Override
   public List<ServerName> getRegionServers() {
     return serverManager.getOnlineServersList();

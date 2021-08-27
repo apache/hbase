@@ -39,12 +39,14 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public final class StoreFileTrackerFactory {
-
+  
+  public static final String TRACK_IMPL = "hbase.store.file-tracker.impl";
+  
   private static final Logger LOG = LoggerFactory.getLogger(StoreFileTrackerFactory.class);
 
   public static StoreFileTracker create(Configuration conf, TableName tableName,
       boolean isPrimaryReplica, StoreContext ctx) {
-    String className = conf.get(STORE_FILE_TRACKER, DefaultStoreFileTracker.class.getName());
+    String className = conf.get(TRACK_IMPL, DefaultStoreFileTracker.class.getName());
     try {
       LOG.info("instantiating StoreFileTracker impl {}", className);
       return ReflectionUtils.newInstance(
@@ -69,10 +71,10 @@ public final class StoreFileTrackerFactory {
 
   public static Configuration mergeConfigurations(Configuration global,
     TableDescriptor table, ColumnFamilyDescriptor family) {
-    if(!StringUtils.isEmpty(family.getConfigurationValue(STORE_FILE_TRACKER))){
-      global.set(STORE_FILE_TRACKER, family.getConfigurationValue(STORE_FILE_TRACKER));
-    } else if(!StringUtils.isEmpty(table.getValue(STORE_FILE_TRACKER))) {
-      global.set(STORE_FILE_TRACKER, table.getValue(STORE_FILE_TRACKER));
+    if(!StringUtils.isEmpty(family.getConfigurationValue(TRACK_IMPL))){
+      global.set(TRACK_IMPL, family.getConfigurationValue(TRACK_IMPL));
+    } else if(!StringUtils.isEmpty(table.getValue(TRACK_IMPL))) {
+      global.set(TRACK_IMPL, table.getValue(TRACK_IMPL));
     }
     return global;
   }

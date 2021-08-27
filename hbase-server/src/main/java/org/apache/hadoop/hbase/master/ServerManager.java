@@ -798,8 +798,9 @@ public class ServerManager {
         lastLogTime = now;
         String msg =
             "Waiting on regionserver count=" + count + "; waited="+
-                slept + "ms, expecting min=" + minToStart + " server(s), max="+ getStrForMax(maxToStart) +
-                " server(s), " + "timeout=" + timeout + "ms, lastChange=" + (lastCountChange - now) + "ms";
+                slept + "ms, expecting min=" + minToStart + " server(s), max="
+                + getStrForMax(maxToStart) + " server(s), " + "timeout=" + timeout
+                + "ms, lastChange=" + (now - lastCountChange) + "ms";
         LOG.info(msg);
         status.setStatus(msg);
       }

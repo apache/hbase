@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.util.DNS.UNSAFE_RS_HOSTNAME_KEY;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.management.MemoryType;
@@ -75,6 +76,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HealthCheckChore;
 import org.apache.hadoop.hbase.MetaRegionLocationCache;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -91,6 +93,7 @@ import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.ConnectionRegistryEndpoint;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -247,8 +250,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings({ "deprecation"})
-public class HRegionServer extends Thread implements
-    RegionServerServices, LastSequenceId, ConfigurationObserver {
+public class HRegionServer extends Thread implements RegionServerServices, LastSequenceId,
+  ConnectionRegistryEndpoint, ConfigurationObserver {
+
   private static final Logger LOG = LoggerFactory.getLogger(HRegionServer.class);
 
   /**
@@ -887,7 +891,11 @@ public class HRegionServer extends Thread implements
    */
   protected final synchronized void setupClusterConnection() throws IOException {
     if (asyncClusterConnection == null) {
-      asyncClusterConnection = ClusterConnectionFactory.createAsyncClusterConnection(this);
+      InetSocketAddress localAddress =
+        new InetSocketAddress(rpcServices.getSocketAddress().getAddress(), 0);
+      User user = userProvider.getCurrent();
+      asyncClusterConnection =
+        ClusterConnectionFactory.createAsyncClusterConnection(this, conf, localAddress, user);
     }
   }
 
@@ -3983,23 +3991,29 @@ public class HRegionServer extends Thread implements
     return this.retryPauseTime;
   }
 
+  @Override
   public Optional<ServerName> getActiveMaster() {
     return Optional.ofNullable(masterAddressTracker.getMasterAddress());
   }
 
+  @Override
   public List<ServerName> getBackupMasters() {
     return masterAddressTracker.getBackupMasters();
   }
 
+  @Override
   public List<ServerName> getRegionServers() {
     return regionServerAddressTracker.getRegionServers();
   }
 
-  public MetaRegionLocationCache getMetaRegionLocationCache() {
-    return this.metaRegionLocationCache;
+  @Override
+  public List<HRegionLocation> getMetaLocations() {
+    return metaRegionLocationCache.getMetaRegionLocations();
   }
 
-  public UserProvider getUserProvider() {
-    return userProvider;
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  public MetaRegionLocationCache getMetaRegionLocationCache() {
+    return metaRegionLocationCache;
   }
 }
