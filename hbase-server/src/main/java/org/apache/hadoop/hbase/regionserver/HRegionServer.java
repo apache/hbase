@@ -2647,13 +2647,6 @@ public class HRegionServer extends Thread implements
     return abortRequested.compareAndSet(false, true);
   }
 
-  /**
-   * @see HRegionServer#abort(String, Throwable)
-   */
-  public void abort(String reason) {
-    abort(reason, null);
-  }
-
   @Override
   public boolean isAborted() {
     return abortRequested.get();

@@ -38,6 +38,16 @@ public interface Abortable {
   void abort(String why, Throwable e);
 
   /**
+   * It just call another abort method and the Throwable
+   * parameter is null.
+   * @param why Why we're aborting.
+   * @see Abortable#abort(String, Throwable)
+   */
+  default void abort(String why) {
+    abort(why, null);
+  }
+
+  /**
    * Check if the server or client was aborted.
    * @return true if the server or client was aborted, false otherwise
    */
