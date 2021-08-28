@@ -37,6 +37,10 @@ public interface Abortable {
    */
   void abort(String why, Throwable e);
 
+  default void abort(String why) {
+    abort(why, null);
+  }
+
   /**
    * Check if the server or client was aborted.
    * @return true if the server or client was aborted, false otherwise
