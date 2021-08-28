@@ -60,9 +60,6 @@ import org.junit.rules.TestName;
 
   @Rule public TestName name = new TestName();
 
-  /**
-   * @throws java.lang.Exception
-   */
   @BeforeClass public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt("hbase.client.scanner.caching", 1000);
@@ -84,9 +81,6 @@ import org.junit.rules.TestName;
     TEST_UTIL.flush();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterClass public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

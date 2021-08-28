@@ -737,9 +737,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
           case SEEK_NEXT_USING_HINT:
             Cell nextKV = matcher.getNextKeyHint(cell);
+            int difference = comparator.compare(nextKV, cell);
             if (nextKV != null &&
-              ((!scan.isReversed() && comparator.compare(nextKV, cell) > 0)
-              || (scan.isReversed() && comparator.compare(nextKV, cell) < 0))
+              ((!scan.isReversed() && difference > 0)
+              || (scan.isReversed() && difference < 0))
             ) {
               seekAsDirection(nextKV);
               NextState stateAfterSeekByHint = needToReturn(outResult);
