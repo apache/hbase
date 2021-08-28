@@ -52,7 +52,7 @@ public class TestTestingHBaseClusterImplForCPs {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTestingHBaseCluster.class);
+    HBaseClassTestRule.forClass(TestTestingHBaseClusterImplForCPs.class);
 
   private static TestingHBaseCluster CLUSTER;
 
