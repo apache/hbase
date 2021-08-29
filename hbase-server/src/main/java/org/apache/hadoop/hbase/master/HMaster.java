@@ -275,7 +275,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   // Manager and zk listener for master election
   private final ActiveMasterManager activeMasterManager;
   // Region server tracker
-  private RegionServerTracker regionServerTracker;
+  private final RegionServerTracker regionServerTracker;
   // Draining region server tracker
   private DrainingServerTracker drainingServerTracker;
   // Tracker for load balancer state
@@ -489,6 +489,8 @@ public class HMaster extends HRegionServer implements MasterServices {
       this.activeMasterManager = createActiveMasterManager(zooKeeper, serverName, this);
 
       cachedClusterId = new CachedClusterId(this, conf);
+
+      this.regionServerTracker = new RegionServerTracker(zooKeeper, this); 
     } catch (Throwable t) {
       // Make sure we log the exception. HMaster is often started via reflection and the
       // cause of failed startup is lost.
@@ -928,8 +930,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // filesystem that COULD BE 'alive' (we'll schedule SCPs for each and let SCP figure it out).
     // We also pass dirs that are already 'splitting'... so we can do some checks down in tracker.
     // TODO: Generate the splitting and live Set in one pass instead of two as we currently do.
-    this.regionServerTracker = new RegionServerTracker(zooKeeper, this, this.serverManager);
-    this.regionServerTracker.start(
+    this.regionServerTracker.upgrade(
       procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
         .map(p -> (ServerCrashProcedure) p).map(p -> p.getServerName()).collect(Collectors.toSet()),
       walManager.getLiveServersFromWALDir(), walManager.getSplittingServersFromWALDir());
@@ -2726,8 +2727,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public List<ServerName> getRegionServers() {
-    return serverManager.getOnlineServersList();
+  public Collection<ServerName> getRegionServers() {
+    return regionServerTracker.getRegionServers();
   }
 
   /**

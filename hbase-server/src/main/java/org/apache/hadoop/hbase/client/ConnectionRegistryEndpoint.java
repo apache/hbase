@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -47,7 +48,7 @@ public interface ConnectionRegistryEndpoint {
   /**
    * Get all the region servers address.
    */
-  List<ServerName> getRegionServers();
+  Collection<ServerName> getRegionServers();
 
   /**
    * Get the location of meta regions.
