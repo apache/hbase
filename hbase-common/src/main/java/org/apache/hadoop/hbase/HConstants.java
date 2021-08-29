@@ -133,6 +133,9 @@ public final class HConstants {
   /** Cluster is in distributed mode or not */
   public static final String CLUSTER_DISTRIBUTED = "hbase.cluster.distributed";
 
+  /** Config for balancing the cluster parallel*/
+  public static final String BALANCE_PARALLEL_REGIONS = "hbase.master.balance.parallel.regions";
+
   /** Config for pluggable load balancers */
   public static final String HBASE_MASTER_LOADBALANCER_CLASS = "hbase.master.loadbalancer.class";
 
