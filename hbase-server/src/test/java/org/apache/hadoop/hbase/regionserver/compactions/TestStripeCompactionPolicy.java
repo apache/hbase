@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import static org.apache.hadoop.hbase.regionserver.StripeStoreConfig.MAX_FILES_KEY;
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
+import static org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.AdditionalMatchers.aryEq;
@@ -36,7 +39,6 @@ import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -88,7 +90,6 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentMatcher;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -266,6 +267,41 @@ public class TestStripeCompactionPolicy {
     verifyCompaction(policy, si, si.getStorefiles(), true, 3, 10L, OPEN_KEY, OPEN_KEY, true);
     policy = createPolicy(conf, defaultSplitSize, defaultSplitCount, 6, false);
     verifyCompaction(policy, si, si.getStorefiles(), true, 6, 5L, OPEN_KEY, OPEN_KEY, true);
+  }
+
+  @Test
+  public void testSelectL0Compaction() throws Exception {
+    //test select ALL L0 files when L0 files count > MIN_FILES_L0_KEY
+    Configuration conf = HBaseConfiguration.create();
+    conf.setInt(StripeStoreConfig.MIN_FILES_L0_KEY, 4);
+    StripeCompactionPolicy policy = createPolicy(conf);
+    StripeCompactionPolicy.StripeInformationProvider si = createStripesWithSizes(10, 10L,
+      new Long[] { 5L, 1L, 1L }, new Long[] { 3L, 2L, 2L }, new Long[] { 3L, 2L, 2L });
+    StripeCompactionPolicy.StripeCompactionRequest cr = policy.selectCompaction(si, al(), false);
+    assertNotNull(cr);
+    assertEquals(10, cr.getRequest().getFiles().size());
+    verifyCollectionsEqual(si.getLevel0Files(), cr.getRequest().getFiles());
+
+    // test select partial L0 files when size of L0 files > HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY
+    conf.setLong(HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY, 100L);
+    policy = createPolicy(conf);
+    si = createStripesWithSizes(5, 50L,
+        new Long[] { 5L, 1L, 1L }, new Long[] { 3L, 2L, 2L }, new Long[] { 3L, 2L, 2L });
+    cr = policy.selectCompaction(si, al(), false);
+    assertNotNull(cr);
+    assertEquals(2, cr.getRequest().getFiles().size());
+    verifyCollectionsEqual(si.getLevel0Files().subList(0, 2), cr.getRequest().getFiles());
+
+    // test select partial L0 files when count of L0 files > MAX_FILES_KEY
+    conf.setInt(MAX_FILES_KEY, 6);
+    conf.setLong(HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY, 1000L);
+    policy = createPolicy(conf);
+    si = createStripesWithSizes(10, 10L,
+      new Long[] { 5L, 1L, 1L }, new Long[] { 3L, 2L, 2L }, new Long[] { 3L, 2L, 2L });
+    cr = policy.selectCompaction(si, al(), false);
+    assertNotNull(cr);
+    assertEquals(6, cr.getRequest().getFiles().size());
+    verifyCollectionsEqual(si.getLevel0Files().subList(0, 6), cr.getRequest().getFiles());
   }
 
   @Test
