@@ -236,7 +236,7 @@ public class VerifyReplication extends Configured implements Tool {
         if (rowCmpRet == 0) {
           // rowkey is same, need to compare the content of the row
           try {
-            Result.compareResults(value, currentCompareRowInPeerTable);
+            Result.compareResults(value, currentCompareRowInPeerTable, false);
             context.getCounter(Counters.GOODROWS).increment(1);
             if (verbose) {
               LOG.info("Good row key: " + delimiter
@@ -266,7 +266,7 @@ public class VerifyReplication extends Configured implements Tool {
         try {
           Result sourceResult = sourceTable.get(new Get(row.getRow()));
           Result replicatedResult = replicatedTable.get(new Get(row.getRow()));
-          Result.compareResults(sourceResult, replicatedResult);
+          Result.compareResults(sourceResult, replicatedResult, false);
           if (!sourceResult.isEmpty()) {
             context.getCounter(Counters.GOODROWS).increment(1);
             if (verbose) {
