@@ -95,7 +95,7 @@ public class TestWALRecordReader {
     return "TestWALRecordReader";
   }
 
-    private static String getServerName() {
+  private static String getServerName() {
     ServerName serverName = ServerName.valueOf("TestWALRecordReader", 1, 1);
     return serverName.toString();
   }
