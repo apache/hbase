@@ -188,7 +188,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -686,7 +685,12 @@ public class HRegionServer extends Thread implements RegionServerServices, LastS
       }
       this.rpcServices.start(zooKeeper);
       this.metaRegionLocationCache = new MetaRegionLocationCache(zooKeeper);
-      this.regionServerAddressTracker = new RegionServerAddressTracker(zooKeeper, this);
+      if (!(this instanceof HMaster)) {
+        // do not create this field for HMaster, we have another region server tracker for HMaster.
+        this.regionServerAddressTracker = new RegionServerAddressTracker(zooKeeper, this);
+      } else {
+        this.regionServerAddressTracker = null;
+      }
       // This violates 'no starting stuff in Constructor' but Master depends on the below chore
       // and executor being created and takes a different startup route. Lots of overlap between HRS
       // and M (An M IS A HRS now). Need to refactor so less duplication between M and its super
@@ -2636,13 +2640,6 @@ public class HRegionServer extends Thread implements RegionServerServices, LastS
     return abortRequested.compareAndSet(false, true);
   }
 
-  /**
-   * @see HRegionServer#abort(String, Throwable)
-   */
-  public void abort(String reason) {
-    abort(reason, null);
-  }
-
   @Override
   public boolean isAborted() {
     return abortRequested.get();
@@ -3615,7 +3612,7 @@ public class HRegionServer extends Thread implements RegionServerServices, LastS
   }
 
   private String getMyEphemeralNodePath() {
-    return ZNodePaths.joinZNode(this.zooKeeper.getZNodePaths().rsZNode, getServerName().toString());
+    return zooKeeper.getZNodePaths().getRsPath(serverName);
   }
 
   private boolean isHealthCheckerConfigured() {
@@ -4002,7 +3999,7 @@ public class HRegionServer extends Thread implements RegionServerServices, LastS
   }
 
   @Override
-  public List<ServerName> getRegionServers() {
+  public Collection<ServerName> getRegionServers() {
     return regionServerAddressTracker.getRegionServers();
   }
 
