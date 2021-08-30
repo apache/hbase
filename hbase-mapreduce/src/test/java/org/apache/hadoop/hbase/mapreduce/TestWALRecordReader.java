@@ -337,7 +337,7 @@ public class TestWALRecordReader {
     WALInputFormat.WALSplit split_ = (WALInputFormat.WALSplit) split;
 
     Path logFile = new Path(split_.getLogFileName());
-    Path archivedLog = AbstractFSWALProvider.getArchivedLogPath(logFile, conf);
+    Path archivedLog = AbstractFSWALProvider.findArchivedLog(logFile, conf);
     boolean result = fs.rename(logFile, archivedLog);
     assertTrue(result);
     result = fs.exists(archivedLog);

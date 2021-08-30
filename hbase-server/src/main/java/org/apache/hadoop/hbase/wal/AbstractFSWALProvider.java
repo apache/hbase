@@ -536,6 +536,74 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     return null;
   }
 
+  /**
+   * Opens WAL reader with retries and additional exception handling
+   * @param path path to WAL file
+   * @param conf configuration
+   * @return WAL Reader instance
+   */
+  public static org.apache.hadoop.hbase.wal.WAL.Reader openReader(Path path, Configuration conf)
+    throws IOException {
+    long retryInterval = 2000; // 2 sec
+    int maxAttempts = 30;
+    int attempt = 0;
+    Exception ee = null;
+    org.apache.hadoop.hbase.wal.WAL.Reader reader = null;
+    while (reader == null && attempt++ < maxAttempts) {
+      try {
+        // Detect if this is a new file, if so get a new reader else
+        // reset the current reader so that we see the new data
+        reader = WALFactory.createReader(path.getFileSystem(conf), path, conf);
+        return reader;
+      } catch (FileNotFoundException fnfe) {
+        // If the log was archived, continue reading from there
+        Path archivedLog = AbstractFSWALProvider.findArchivedLog(path, conf);
+        if (archivedLog != null && !Objects.equals(path, archivedLog)) {
+          return openReader(archivedLog, conf);
+        } else {
+          throw fnfe;
+        }
+      } catch (LeaseNotRecoveredException lnre) {
+        // HBASE-15019 the WAL was not closed due to some hiccup.
+        LOG.warn("Try to recover the WAL lease " + path, lnre);
+        recoverLease(conf, path);
+        reader = null;
+        ee = lnre;
+      } catch (NullPointerException npe) {
+        // Workaround for race condition in HDFS-4380
+        // which throws a NPE if we open a file before any data node has the most recent block
+        // Just sleep and retry. Will require re-reading compressed WALs for compressionContext.
+        LOG.warn("Got NPE opening reader, will retry.");
+        reader = null;
+        ee = npe;
+      }
+      if (reader == null) {
+        // sleep before next attempt
+        try {
+          Thread.sleep(retryInterval);
+        } catch (InterruptedException e) {
+        }
+      }
+    }
+    throw new IOException("Could not open reader", ee);
+  }
+
+  // For HBASE-15019
+  private static void recoverLease(final Configuration conf, final Path path) {
+    try {
+      final FileSystem dfs = CommonFSUtils.getCurrentFileSystem(conf);
+      RecoverLeaseFSUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
+        @Override
+        public boolean progress() {
+          LOG.debug("Still trying to recover WAL lease: " + path);
+          return true;
+        }
+      });
+    } catch (IOException e) {
+      LOG.warn("unable to recover lease for WAL: " + path, e);
+    }
+  }
+
   @Override
   public void addWALActionsListener(WALActionsListener listener) {
     listeners.add(listener);
