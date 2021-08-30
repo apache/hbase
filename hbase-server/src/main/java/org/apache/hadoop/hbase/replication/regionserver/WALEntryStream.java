@@ -319,6 +319,7 @@ class WALEntryStream implements Closeable {
   private void handleFileNotFound(Path path, FileNotFoundException fnfe) throws IOException {
     // If the log was archived, continue reading from there
     Path archivedLog = AbstractFSWALProvider.findArchivedLog(path, conf);
+    // archivedLog can be null if unable to locate in archiveDir.
     if (archivedLog != null) {
       openReader(archivedLog);
     } else {
@@ -384,6 +385,7 @@ class WALEntryStream implements Closeable {
     } catch (FileNotFoundException fnfe) {
       // If the log was archived, continue reading from there
       Path archivedLog = AbstractFSWALProvider.findArchivedLog(currentPath, conf);
+      // archivedLog can be null if unable to locate in archiveDir.
       if (archivedLog != null) {
         openReader(archivedLog);
       } else {

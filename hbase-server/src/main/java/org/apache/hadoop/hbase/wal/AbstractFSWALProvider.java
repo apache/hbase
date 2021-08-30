@@ -470,36 +470,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   /**
-   * Get the archived WAL file path
-   * @param path - active WAL file path
-   * @param conf - configuration
-   * @return archived path if exists, path - otherwise
-   * @throws IOException exception
-   */
-  public static Path getArchivedLogPath(Path path, Configuration conf) throws IOException {
-    Path rootDir = CommonFSUtils.getWALRootDir(conf);
-    Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    if (conf.getBoolean(SEPARATE_OLDLOGDIR, DEFAULT_SEPARATE_OLDLOGDIR)) {
-      ServerName serverName = getServerNameFromWALDirectoryName(path);
-      if (serverName == null) {
-        LOG.error("Couldn't locate log: " + path);
-        return path;
-      }
-      oldLogDir = new Path(oldLogDir, serverName.getServerName());
-    }
-    Path archivedLogLocation = new Path(oldLogDir, path.getName());
-    final FileSystem fs = CommonFSUtils.getWALFileSystem(conf);
-
-    if (fs.exists(archivedLogLocation)) {
-      LOG.info("Log " + path + " was moved to " + archivedLogLocation);
-      return archivedLogLocation;
-    } else {
-      LOG.error("Couldn't locate log: " + path);
-      return path;
-    }
-  }
-
-  /**
    * Find the archived WAL file path if it is not able to locate in WALs dir.
    * @param path - active WAL file path
    * @param conf - configuration
@@ -543,7 +513,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @return WAL Reader instance
    */
   public static org.apache.hadoop.hbase.wal.WAL.Reader openReader(Path path, Configuration conf)
-    throws IOException {
+      throws IOException {
     long retryInterval = 2000; // 2 sec
     int maxAttempts = 30;
     int attempt = 0;
@@ -558,6 +528,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       } catch (FileNotFoundException fnfe) {
         // If the log was archived, continue reading from there
         Path archivedLog = AbstractFSWALProvider.findArchivedLog(path, conf);
+        // archivedLog can be null if unable to locate in archiveDir.
         if (archivedLog != null && !Objects.equals(path, archivedLog)) {
           return openReader(archivedLog, conf);
         } else {

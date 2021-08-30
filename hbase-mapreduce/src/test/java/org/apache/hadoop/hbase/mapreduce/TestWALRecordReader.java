@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import java.io.IOException;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
@@ -31,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -90,6 +93,11 @@ public class TestWALRecordReader {
 
   private static String getName() {
     return "TestWALRecordReader";
+  }
+
+    private static String getServerName() {
+    ServerName serverName = ServerName.valueOf("TestWALRecordReader", 1, 1);
+    return serverName.toString();
   }
 
   @Before
@@ -282,7 +290,6 @@ public class TestWALRecordReader {
     LOG.debug("log="+logDir+" file="+ split.getLogFileName());
 
     testSplitWithMovingWAL(splits.get(0), Bytes.toBytes("1"), Bytes.toBytes("2"));
-
   }
 
   protected WALKeyImpl getWalKeyImpl(final long time, NavigableMap<byte[], Integer> scopes) {
@@ -335,13 +342,16 @@ public class TestWALRecordReader {
     // Move log file to archive directory
     // While WAL record reader is open
     WALInputFormat.WALSplit split_ = (WALInputFormat.WALSplit) split;
-
     Path logFile = new Path(split_.getLogFileName());
-    Path archivedLog = AbstractFSWALProvider.findArchivedLog(logFile, conf);
-    boolean result = fs.rename(logFile, archivedLog);
-    assertTrue(result);
-    result = fs.exists(archivedLog);
-    assertTrue(result);
+    Path archivedLogDir = getWALArchiveDir(conf);
+    Path archivedLogLocation = new Path(archivedLogDir, logFile.getName());
+    assertNotEquals(split_.getLogFileName(), archivedLogLocation.toString());
+
+    assertTrue(fs.rename(logFile, archivedLogLocation));
+    assertTrue(fs.exists(archivedLogDir));
+    assertFalse(fs.exists(logFile));
+    // TODO: This is not behaving as expected. WALInputFormat#WALKeyRecordReader doesn't open
+    // TODO: the archivedLogLocation to read next key value.
     assertTrue(reader.nextKeyValue());
     cell = reader.getCurrentValue().getCells().get(0);
     if (!Bytes.equals(col2, 0, col2.length, cell.getQualifierArray(), cell.getQualifierOffset(),
@@ -352,5 +362,11 @@ public class TestWALRecordReader {
         false);
     }
     reader.close();
+  }
+
+  private Path getWALArchiveDir(Configuration conf) throws IOException {
+    Path rootDir = CommonFSUtils.getWALRootDir(conf);
+    String archiveDir = AbstractFSWALProvider.getWALArchiveDirectoryName(conf, getServerName());
+    return new Path(rootDir, archiveDir);
   }
 }

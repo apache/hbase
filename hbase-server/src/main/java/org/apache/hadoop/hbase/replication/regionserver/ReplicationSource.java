@@ -397,7 +397,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       fileSize = fs.getContentSummary(currentPath).getLength();
     } catch (FileNotFoundException e) {
       Path archivedLogPath = findArchivedLog(currentPath, conf);
-      // archivedLogPath can be null if unable to locate in ArchiveDir.
+      // archivedLogPath can be null if unable to locate in archiveDir.
       if (archivedLogPath == null) {
         throw new FileNotFoundException("Couldn't find path: " + currentPath);
       }
