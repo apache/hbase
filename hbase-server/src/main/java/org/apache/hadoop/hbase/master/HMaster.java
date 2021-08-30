@@ -490,7 +490,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
       cachedClusterId = new CachedClusterId(this, conf);
 
-      this.regionServerTracker = new RegionServerTracker(zooKeeper, this); 
+      this.regionServerTracker = new RegionServerTracker(zooKeeper, this);
     } catch (Throwable t) {
       // Make sure we log the exception. HMaster is often started via reflection and the
       // cause of failed startup is lost.

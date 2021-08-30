@@ -188,7 +188,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -690,7 +689,7 @@ public class HRegionServer extends Thread implements RegionServerServices, LastS
         // do not create this field for HMaster, we have another region server tracker for HMaster.
         this.regionServerAddressTracker = new RegionServerAddressTracker(zooKeeper, this);
       } else {
-        this.regionServerAddressTracker = null; 
+        this.regionServerAddressTracker = null;
       }
       // This violates 'no starting stuff in Constructor' but Master depends on the below chore
       // and executor being created and takes a different startup route. Lots of overlap between HRS
