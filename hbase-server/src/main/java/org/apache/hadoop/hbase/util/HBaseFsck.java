@@ -2076,7 +2076,7 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
-   * Check consistency of all regions using mulitple threads concurrently.
+   * Check consistency of all regions using multiple threads concurrently.
    */
   private void checkRegionConsistencyConcurrently(
     final List<CheckRegionConsistencyWorkItem> workItems)
@@ -3027,7 +3027,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
       /**
        * This is a special case hole -- when the first region of a table is
-       * missing from META, HBase doesn't acknowledge the existance of the
+       * missing from META, HBase doesn't acknowledge the existence of the
        * table.
        */
       @Override
@@ -4880,7 +4880,7 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("NOTE: Following options are NOT supported as of HBase version 2.0+.");
     out.println("");
     out.println("  UNSUPPORTED Metadata Repair options: (expert features, use with caution!)");
-    out.println("   -fix              Try to fix region assignments.  This is for backwards compatiblity");
+    out.println("   -fix              Try to fix region assignments.  This is for backwards compatibility");
     out.println("   -fixAssignments   Try to fix region assignments.  Replaces the old -fix");
     out.println("   -fixMeta          Try to fix meta problems.  This assumes HDFS region info is good.");
     out.println("   -fixHdfsHoles     Try to fix region holes in hdfs.");
@@ -5182,7 +5182,7 @@ public class HBaseFsck extends Configured implements Closeable {
       for (String arg : args) {
         if (unsupportedOptionsInV2.contains(arg)) {
           errors.reportError(ERROR_CODE.UNSUPPORTED_OPTION,
-              "option '" + arg + "' is not " + "supportted!");
+              "option '" + arg + "' is not " + "supported!");
           result = false;
           break;
         }
