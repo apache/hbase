@@ -668,8 +668,7 @@ public class SplitTableRegionProcedure
       String family = cfd.getNameAsString();
       Configuration trackerConfig = StoreFileTrackerFactory.
         mergeConfigurations(env.getMasterConfiguration(), htd, htd.getColumnFamily(cfd.getName()));
-      StoreFileTracker tracker = StoreFileTrackerFactory.create(trackerConfig, htd.getTableName(),
-        true, family, regionFs);
+      StoreFileTracker tracker = StoreFileTrackerFactory.create(trackerConfig, true, family, regionFs);
       Collection<StoreFileInfo> sfis = tracker.load();
       if (sfis == null) {
         continue;

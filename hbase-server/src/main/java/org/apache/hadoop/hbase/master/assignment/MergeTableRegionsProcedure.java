@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -55,7 +54,6 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
@@ -616,8 +614,7 @@ public class MergeTableRegionsProcedure
       String family = hcd.getNameAsString();
       Configuration trackerConfig =
         StoreFileTrackerFactory.mergeConfigurations(env.getMasterConfiguration(), htd, hcd);
-      StoreFileTracker tracker = StoreFileTrackerFactory.create(trackerConfig,
-        mergedRegion.getTable(), true, family, regionFs);
+      StoreFileTracker tracker = StoreFileTrackerFactory.create(trackerConfig, true, family, regionFs);
       final Collection<StoreFileInfo> storeFiles = tracker.load();
       if (storeFiles != null && storeFiles.size() > 0) {
         for (StoreFileInfo storeFileInfo : storeFiles) {

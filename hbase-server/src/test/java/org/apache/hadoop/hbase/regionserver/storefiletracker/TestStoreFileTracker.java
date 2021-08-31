@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.slf4j.Logger;
@@ -37,9 +36,8 @@ public class TestStoreFileTracker extends DefaultStoreFileTracker {
   public static Map<String, List<StoreFileInfo>> trackedFiles = new HashMap<>();
   private String storeId;
 
-  public TestStoreFileTracker(Configuration conf, TableName tableName, boolean isPrimaryReplica,
-    StoreContext ctx) {
-    super(conf, tableName, isPrimaryReplica, ctx);
+  public TestStoreFileTracker(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
+    super(conf, isPrimaryReplica, ctx);
     this.storeId = ctx.getRegionInfo().getEncodedName() + "-" + ctx.getFamily().getNameAsString();
     LOG.info("created storeId: {}", storeId);
     trackedFiles.computeIfAbsent(storeId, v -> new ArrayList<>());

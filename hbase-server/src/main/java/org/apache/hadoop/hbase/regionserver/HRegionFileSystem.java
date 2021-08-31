@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -628,7 +627,7 @@ public class HRegionFileSystem {
         Configuration config = StoreFileTrackerFactory.mergeConfigurations(conf, tblDesc,
           tblDesc.getColumnFamily(Bytes.toBytes(familyName)));
         return StoreFileTrackerFactory.
-          create(config, regionInfo.getTable(), true, familyName, regionFs);
+          create(config, true, familyName, regionFs);
       });
       fileInfoMap.computeIfAbsent(familyName, l -> new ArrayList<>());
       List<StoreFileInfo> infos = fileInfoMap.get(familyName);

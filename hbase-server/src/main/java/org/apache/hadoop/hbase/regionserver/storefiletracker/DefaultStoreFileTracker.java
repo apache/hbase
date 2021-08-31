@@ -33,8 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class DefaultStoreFileTracker extends StoreFileTrackerBase {
 
-  public DefaultStoreFileTracker(Configuration conf, boolean isPrimaryReplica,
-    StoreContext ctx) {
+  public DefaultStoreFileTracker(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
     super(conf, isPrimaryReplica, ctx);
   }
 

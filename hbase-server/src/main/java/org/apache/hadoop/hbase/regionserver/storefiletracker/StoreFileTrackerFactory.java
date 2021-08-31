@@ -17,14 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
-import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker.
-  STORE_FILE_TRACKER;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
@@ -44,13 +40,13 @@ public final class StoreFileTrackerFactory {
   
   private static final Logger LOG = LoggerFactory.getLogger(StoreFileTrackerFactory.class);
 
-  public static StoreFileTracker create(Configuration conf, TableName tableName,
-      boolean isPrimaryReplica, StoreContext ctx) {
+  public static StoreFileTracker create(Configuration conf, boolean isPrimaryReplica,
+      StoreContext ctx) {
     String className = conf.get(TRACK_IMPL, DefaultStoreFileTracker.class.getName());
     try {
       LOG.info("instantiating StoreFileTracker impl {}", className);
       return ReflectionUtils.newInstance(
-        (Class<? extends StoreFileTracker>) Class.forName(className), conf, tableName,
+        (Class<? extends StoreFileTracker>) Class.forName(className), conf,
         isPrimaryReplica, ctx);
     } catch (Exception e) {
       LOG.error("Unable to create StoreFileTracker impl : {}", className, e);
@@ -58,15 +54,15 @@ public final class StoreFileTrackerFactory {
     }
   }
 
-  public static StoreFileTracker create(Configuration conf, TableName tableName,
-    boolean isPrimaryReplica, String family, HRegionFileSystem regionFs) {
+  public static StoreFileTracker create(Configuration conf, boolean isPrimaryReplica, String family,
+      HRegionFileSystem regionFs) {
     ColumnFamilyDescriptorBuilder fDescBuilder =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family));
     StoreContext ctx = StoreContext.getBuilder().
       withColumnFamilyDescriptor(fDescBuilder.build()).
       withRegionFileSystem(regionFs).
       build();
-    return StoreFileTrackerFactory.create(conf, tableName, isPrimaryReplica, ctx);
+    return StoreFileTrackerFactory.create(conf, isPrimaryReplica, ctx);
   }
 
   public static Configuration mergeConfigurations(Configuration global,
