@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,13 +17,12 @@
  */
 
 package org.apache.hadoop.hbase.regionserver;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,7 +43,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Describe a StoreFile (hfile, reference, link)
+ * StoreFile info.
+ * The info could be for a plain storefile/hfile or it could be a reference or link to a storefile.
  */
 @InterfaceAudience.Private
 public class StoreFileInfo {
@@ -122,6 +121,16 @@ public class StoreFileInfo {
   final AtomicInteger refCount = new AtomicInteger(0);
 
   /**
+   * Cached fileStatus.
+   * Used selectively. Cache the FileStatus if this StoreFileInfo is for a plain StoreFile.
+   * Save on having to go to the filesystem every time (costly). We cannot cache FileStatus if this
+   * StoreFileInfo is for a link or for a reference that might in turn be to a link. The file behind
+   * a link can move during the lifetime of this StoreFileInfo invalidating what we might have
+   * cached here; do a lookup of FileStatus every time when a link to be safe.
+   */
+  private FileStatus cachedFileStatus = null;
+
+  /**
    * Create a Store File Info
    * @param conf the {@link Configuration} to use
    * @param fs The current file system to use.
@@ -135,47 +144,38 @@ public class StoreFileInfo {
 
   private StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
       final Path initialPath, final boolean primaryReplica) throws IOException {
-    assert fs != null;
-    assert initialPath != null;
-    assert conf != null;
-
-    this.fs = fs;
-    this.conf = conf;
-    this.initialPath = initialPath;
+    this.fs = Objects.requireNonNull(fs);
+    this.conf = Objects.requireNonNull(conf);
+    this.initialPath = Objects.requireNonNull(initialPath);
     this.primaryReplica = primaryReplica;
     this.noReadahead = this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD,
         DEFAULT_STORE_FILE_READER_NO_READAHEAD);
-    Path p = initialPath;
-    if (HFileLink.isHFileLink(p)) {
-      // HFileLink
+    if (HFileLink.isHFileLink(initialPath)) {
       this.reference = null;
-      this.link = HFileLink.buildFromHFileLinkPattern(conf, p);
-      LOG.trace("{} is a link", p);
-    } else if (isReference(p)) {
-      this.reference = Reference.read(fs, p);
-      Path referencePath = getReferredToFile(p);
-      if (HFileLink.isHFileLink(referencePath)) {
-        // HFileLink Reference
-        this.link = HFileLink.buildFromHFileLinkPattern(conf, referencePath);
-      } else {
-        // Reference
-        this.link = null;
-      }
-      LOG.trace("{} is a {} reference to {}", p, reference.getFileRegion(), referencePath);
-    } else if (isHFile(p)) {
-      // HFile
-      if (fileStatus != null) {
-        this.createdTimestamp = fileStatus.getModificationTime();
-        this.size = fileStatus.getLen();
-      } else {
-        FileStatus fStatus = fs.getFileStatus(initialPath);
-        this.createdTimestamp = fStatus.getModificationTime();
-        this.size = fStatus.getLen();
-      }
+      this.link = HFileLink.buildFromHFileLinkPattern(conf, initialPath);
+      LOG.trace("{} is a link", initialPath);
+    } else if (isReference(initialPath)) {
+      this.reference = Reference.read(fs, initialPath);
+      Path referencedPath = getReferredToFile(initialPath);
+      // Check if the referenced file is a link.
+      this.link = HFileLink.isHFileLink(referencedPath)?
+        HFileLink.buildFromHFileLinkPattern(conf, referencedPath): null;
+      LOG.trace("{} is a {} reference to {} (link={})",
+        initialPath, reference.getFileRegion(), referencedPath, link == null);
+    } else if (isHFile(initialPath)) {
+      // Safe to cache passed filestatus when NOT a link or reference; i.e. when it filestatus on
+      // a plain storefile/hfile.
+      assert fileStatus == null || fileStatus.getPath().equals(initialPath);
+      this.cachedFileStatus = fileStatus != null?
+        fileStatus: this.fs.getFileStatus(this.initialPath);
+      this.createdTimestamp = this.cachedFileStatus.getModificationTime();
+      this.size = this.cachedFileStatus.getLen();
       this.reference = null;
       this.link = null;
+      LOG.trace("{}", initialPath);
     } else {
-      throw new IOException("path=" + p + " doesn't look like a valid StoreFile");
+      throw new IOException("Path=" + initialPath + " doesn't look like a valid StoreFile; " +
+        "it is not a link, a reference or an hfile.");
     }
   }
 
@@ -223,8 +223,8 @@ public class StoreFileInfo {
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
       final Reference reference, final HFileLink link) {
-    this.fs = fs;
-    this.conf = conf;
+    this.fs = Objects.requireNonNull(fs);
+    this.conf = Objects.requireNonNull(conf);
     this.primaryReplica = false;
     this.initialPath = (fileStatus == null) ? null : fileStatus.getPath();
     this.createdTimestamp = (fileStatus == null) ? 0 :fileStatus.getModificationTime();
@@ -232,6 +232,17 @@ public class StoreFileInfo {
     this.link = link;
     this.noReadahead = this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD,
         DEFAULT_STORE_FILE_READER_NO_READAHEAD);
+  }
+
+  public StoreFileInfo(StoreFileInfo other, FileSystem fileSystem) {
+    this.fs = fileSystem;
+    this.conf = other.conf;
+    this.primaryReplica = other.primaryReplica;
+    this.initialPath = other.initialPath;
+    this.createdTimestamp = other.createdTimestamp;
+    this.link = other.link;
+    this.reference = other.reference;
+    this.noReadahead = other.noReadahead;
   }
 
   /**
@@ -244,7 +255,6 @@ public class StoreFileInfo {
 
   /**
    * Sets the region coprocessor env.
-   * @param coprocessorHost
    */
   public void setRegionCoprocessorHost(RegionCoprocessorHost coprocessorHost) {
     this.coprocessorHost = coprocessorHost;
@@ -278,15 +288,10 @@ public class StoreFileInfo {
     return this.hdfsBlocksDistribution;
   }
 
-  StoreFileReader createReader(ReaderContext context, CacheConfig cacheConf)
-      throws IOException {
-    StoreFileReader reader = null;
-    if (this.reference != null) {
-      reader = new HalfStoreFileReader(context, hfileInfo, cacheConf, reference, refCount, conf);
-    } else {
-      reader = new StoreFileReader(context, hfileInfo, cacheConf, refCount, conf);
-    }
-    return reader;
+  StoreFileReader createReader(ReaderContext context, CacheConfig cacheConf) throws IOException {
+    return this.reference != null?
+      new HalfStoreFileReader(context, hfileInfo, cacheConf, reference, refCount, conf):
+      new StoreFileReader(context, hfileInfo, cacheConf, refCount, conf);
   }
 
   ReaderContext createReaderContext(boolean doDropBehind, long readahead, ReaderType type)
@@ -303,17 +308,16 @@ public class StoreFileInfo {
       try {
         in = new FSDataInputStreamWrapper(fs, referencePath, doDropBehind, readahead);
       } catch (FileNotFoundException fnfe) {
-        // Intercept the exception so can insert more info about the Reference; otherwise
-        // exception just complains about some random file -- operator doesn't realize it
-        // other end of a Reference
-        FileNotFoundException newFnfe = new FileNotFoundException(toString());
-        newFnfe.initCause(fnfe);
-        throw newFnfe;
+        throw decorateFileNotFoundException(fnfe);
       }
       status = fs.getFileStatus(referencePath);
     } else {
       in = new FSDataInputStreamWrapper(fs, this.getPath(), doDropBehind, readahead);
-      status = fs.getFileStatus(initialPath);
+      if (this.cachedFileStatus == null) {
+        // Safe to cache filestatus for a plain storefile/hfile.
+        this.cachedFileStatus = this.fs.getFileStatus(this.initialPath);
+      }
+      status = this.cachedFileStatus;
     }
     long length = status.getLen();
     ReaderContextBuilder contextBuilder = new ReaderContextBuilder()
@@ -333,76 +337,70 @@ public class StoreFileInfo {
   /**
    * Compute the HDFS Block Distribution for this StoreFile
    */
-  public HDFSBlocksDistribution computeHDFSBlocksDistribution(final FileSystem fs)
-      throws IOException {
-    // guard against the case where we get the FileStatus from link, but by the time we
-    // call compute the file is moved again
+  public HDFSBlocksDistribution computeHDFSBlocksDistribution() throws IOException {
     if (this.link != null) {
+      // Guard against case where file behind link has moved when we go to calculate distribution;
+      // e.g. from data dir to archive dir. Retry up to number of locations under the link.
       FileNotFoundException exToThrow = null;
       for (int i = 0; i < this.link.getLocations().length; i++) {
         try {
-          return computeHDFSBlocksDistributionInternal(fs);
-        } catch (FileNotFoundException ex) {
-          // try the other location
-          exToThrow = ex;
+          return computeHDFSBlocksDistributionInternal();
+        } catch (FileNotFoundException fnfe) {
+          // Try the other locations -- file behind link may have moved.
+          exToThrow = fnfe;
         }
       }
-      throw exToThrow;
+      throw decorateFileNotFoundException(exToThrow);
     } else {
-      return computeHDFSBlocksDistributionInternal(fs);
+      return computeHDFSBlocksDistributionInternal();
     }
   }
 
-  private HDFSBlocksDistribution computeHDFSBlocksDistributionInternal(final FileSystem fs)
-      throws IOException {
-    FileStatus status = getReferencedFileStatus(fs);
+  private HDFSBlocksDistribution computeHDFSBlocksDistributionInternal() throws IOException {
+    FileStatus status = getFileStatus();
     if (this.reference != null) {
-      return computeRefFileHDFSBlockDistribution(fs, reference, status);
+      return computeRefFileHDFSBlockDistribution(status);
     } else {
-      return FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
+      return FSUtils.computeHDFSBlocksDistribution(this.fs, status, 0, status.getLen());
     }
   }
 
   /**
-   * Get the {@link FileStatus} of the file referenced by this StoreFileInfo
-   * @param fs The current file system to use.
+   * Get the {@link FileStatus} of the file referenced by this StoreFileInfo.
+   * This {@link StoreFileInfo} could be for a link or a reference or a plain hfile/storefile; get
+   * the filestatus for whatever the link or reference points to (or just the plain hfile/storefile
+   * if not a link/reference). Info}. If a link, when you go to use the passed FileStatus, the file
+   * may have moved; e.g. from data to archive... be aware.
    * @return The {@link FileStatus} of the file referenced by this StoreFileInfo
    */
-  public FileStatus getReferencedFileStatus(final FileSystem fs) throws IOException {
+  private FileStatus getReferencedFileStatus() throws IOException {
+    if (this.cachedFileStatus != null) {
+      return this.cachedFileStatus;
+    }
     FileStatus status;
     if (this.reference != null) {
       if (this.link != null) {
-        FileNotFoundException exToThrow = null;
-        for (int i = 0; i < this.link.getLocations().length; i++) {
-          // HFileLink Reference
-          try {
-            return link.getFileStatus(fs);
-          } catch (FileNotFoundException ex) {
-            // try the other location
-            exToThrow = ex;
-          }
-        }
-        throw exToThrow;
+        status = this.link.getFileStatus(this.fs);
       } else {
-        // HFile Reference
-        Path referencePath = getReferredToFile(this.getPath());
-        status = fs.getFileStatus(referencePath);
+        try {
+          Path referencePath = getReferredToFile(this.getPath());
+          status = this.fs.getFileStatus(referencePath);
+        } catch (FileNotFoundException ex) {
+          throw decorateFileNotFoundException(ex);
+        }
       }
     } else {
-      if (this.link != null) {
-        FileNotFoundException exToThrow = null;
-        for (int i = 0; i < this.link.getLocations().length; i++) {
-          // HFileLink
-          try {
-            return link.getFileStatus(fs);
-          } catch (FileNotFoundException ex) {
-            // try the other location
-            exToThrow = ex;
-          }
+      try {
+        if (this.link != null) {
+          status = this.link.getFileStatus(this.fs);
+        } else {
+          status = this.fs.getFileStatus(this.initialPath);
+          // Take this opportunity to cache the filestatus. It is safe to cache filestatus when NOT
+          // a link or reference; i.e. when it filestatus on a plain storefile/hfile.
+          this.cachedFileStatus = status;
         }
-        throw exToThrow;
-      } else {
-        status = fs.getFileStatus(initialPath);
+      } catch (FileNotFoundException fnfe) {
+        throw decorateFileNotFoundException(fnfe);
       }
     }
     return status;
@@ -413,9 +411,22 @@ public class StoreFileInfo {
     return initialPath;
   }
 
-  /** @return The {@link FileStatus} of the file */
+  /**
+   * @return A new FNFE with <param>fnfe</param> as cause but including info if reference or link.
+   */
+  private FileNotFoundException decorateFileNotFoundException(FileNotFoundException fnfe) {
+    FileNotFoundException newFnfe = new FileNotFoundException(toString());
+    newFnfe.initCause(fnfe);
+    return newFnfe;
+  }
+
+  /**
+   * @return {@link FileStatus} for the linked or referenced file or if not a link/reference, then
+   *   the FileStatus for the plain storefile (Be aware, if a link, the file may have moved
+   *   by the time you go to use the FileStatus).
+   */
   public FileStatus getFileStatus() throws IOException {
-    return getReferencedFileStatus(fs);
+    return getReferencedFileStatus();
   }
 
   /** @return Get the modification time of the file. */
@@ -425,8 +436,8 @@ public class StoreFileInfo {
 
   @Override
   public String toString() {
-    return this.getPath() +
-      (isReference() ? "->" + getReferredToFile(this.getPath()) + "-" + reference : "");
+    return isLink()? this.link.toString(): this.getPath() +
+      (isReference()? "->" + getReferredToFile(this.getPath()) + "-" + reference: "");
   }
 
   /**
@@ -517,9 +528,7 @@ public class StoreFileInfo {
    * @return <tt>true</tt> if the file could be a valid store file, <tt>false</tt> otherwise
    */
   public static boolean validateStoreFileName(final String fileName) {
-    if (HFileLink.isHFileLink(fileName) || isReference(fileName))
-      return(true);
-    return !fileName.contains("-");
+    return (HFileLink.isHFileLink(fileName) || isReference(fileName)) || !fileName.contains("-");
   }
 
   /**
@@ -531,8 +540,9 @@ public class StoreFileInfo {
       throws IOException {
     final Path p = fileStatus.getPath();
 
-    if (fileStatus.isDirectory())
+    if (fileStatus.isDirectory()) {
       return false;
+    }
 
     // Check for empty hfile. Should never be the case but can happen
     // after data loss in hdfs for whatever reason (upgrade, etc.): HBASE-646
@@ -547,28 +557,25 @@ public class StoreFileInfo {
 
   /**
    * helper function to compute HDFS blocks distribution of a given reference
-   * file.For reference file, we don't compute the exact value. We use some
-   * estimate instead given it might be good enough. we assume bottom part
-   * takes the first half of reference file, top part takes the second half
+   * file. For reference file, we don't compute the exact value. We use an
+   * estimate instead presuming it good enough. We assume bottom part
+   * takes the first half of a reference file, top part takes the second half
    * of the reference file. This is just estimate, given
    * midkey ofregion != midkey of HFile, also the number and size of keys vary.
    * If this estimate isn't good enough, we can improve it later.
-   * @param fs  The FileSystem
-   * @param reference  The reference
    * @param status  The reference FileStatus
    * @return HDFS blocks distribution
    */
-  private static HDFSBlocksDistribution computeRefFileHDFSBlockDistribution(
-      final FileSystem fs, final Reference reference, final FileStatus status)
+  private HDFSBlocksDistribution computeRefFileHDFSBlockDistribution(final FileStatus status)
       throws IOException {
     if (status == null) {
       return null;
     }
 
-    long start = 0;
-    long length = 0;
+    long start;
+    long length;
 
-    if (Reference.isTopFileRegion(reference.getFileRegion())) {
+    if (Reference.isTopFileRegion(this.reference.getFileRegion())) {
       start = status.getLen()/2;
       length = status.getLen() - status.getLen()/2;
     } else {
@@ -580,29 +587,50 @@ public class StoreFileInfo {
 
   @Override
   public boolean equals(Object that) {
-    if (this == that) return true;
-    if (that == null) return false;
+    if (this == that) {
+      return true;
+    }
+    if (that == null) {
+      return false;
+    }
 
-    if (!(that instanceof StoreFileInfo)) return false;
+    if (!(that instanceof StoreFileInfo)) {
+      return false;
+    }
 
     StoreFileInfo o = (StoreFileInfo)that;
-    if (initialPath != null && o.initialPath == null) return false;
-    if (initialPath == null && o.initialPath != null) return false;
-    if (initialPath != o.initialPath && initialPath != null
-            && !initialPath.equals(o.initialPath)) return false;
+    if (initialPath != null && o.initialPath == null) {
+      return false;
+    }
+    if (initialPath == null && o.initialPath != null) {
+      return false;
+    }
+    if (initialPath != o.initialPath && initialPath != null &&
+        !initialPath.equals(o.initialPath)) {
+      return false;
+    }
+    if (reference != null && o.reference == null) {
+      return false;
+    }
+    if (reference == null && o.reference != null) {
+      return false;
+    }
+    if (reference != o.reference && reference != null &&
+        !reference.equals(o.reference)) {
+      return false;
+    }
 
-    if (reference != null && o.reference == null) return false;
-    if (reference == null && o.reference != null) return false;
-    if (reference != o.reference && reference != null
-            && !reference.equals(o.reference)) return false;
-
-    if (link != null && o.link == null) return false;
-    if (link == null && o.link != null) return false;
-    if (link != o.link && link != null && !link.equals(o.link)) return false;
-
+    if (link != null && o.link == null) {
+      return false;
+    }
+    if (link == null && o.link != null) {
+      return false;
+    }
+    if (link != o.link && link != null && !link.equals(o.link)) {
+      return false;
+    }
     return true;
-  };
-
+  }
 
   @Override
   public int hashCode() {
@@ -632,6 +660,13 @@ public class StoreFileInfo {
     return this.fs;
   }
 
+  /**
+   * @return True if passed filesystem is same as the one this instance was created against.
+   */
+  public boolean isFileSystem(FileSystem other) {
+    return this.fs.equals(other);
+  }
+
   Configuration getConf() {
     return this.conf;
   }
@@ -645,7 +680,7 @@ public class StoreFileInfo {
   }
 
   void initHDFSBlocksDistribution() throws IOException {
-    hdfsBlocksDistribution = computeHDFSBlocksDistribution(fs);
+    hdfsBlocksDistribution = computeHDFSBlocksDistribution();
   }
 
   StoreFileReader preStoreFileReaderOpen(ReaderContext context, CacheConfig cacheConf)

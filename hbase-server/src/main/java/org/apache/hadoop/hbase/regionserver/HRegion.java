@@ -1305,8 +1305,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // Only construct StoreFileInfo object if its not a hfile, save obj
           // creation
           StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, status);
-          hdfsBlocksDistribution.add(storeFileInfo
-              .computeHDFSBlocksDistribution(fs));
+          hdfsBlocksDistribution.add(storeFileInfo.computeHDFSBlocksDistribution());
         } else if (StoreFileInfo.isHFile(p)) {
           // If its a HFile, then lets just add to the block distribution
           // lets not create more objects here, not even another HDFSBlocksDistribution
