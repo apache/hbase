@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_K
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.ROW_LOCK_READ_LOCK_KEY;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
-
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.opentelemetry.api.trace.Span;
 import java.io.EOFException;
@@ -72,7 +71,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -184,7 +182,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -199,7 +196,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -252,6 +248,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /** Parameter name for compaction after bulkload */
   public static final String COMPACTION_AFTER_BULKLOAD_ENABLE =
       "hbase.compaction.after.bulkload.enable";
+
+  /** Config for allow split when file count greater than the configured blocking file count*/
+  public static final String SPLIT_IGNORE_BLOCKING_ENABLED_KEY =
+      "hbase.hregion.split.ignore.blocking.enabled";
 
   /**
    * This is for for using HRegion as a local storage, where we may put the recovered edits in a
@@ -8241,6 +8241,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return The priority that this region should have in the compaction queue
    */
   public int getCompactPriority() {
+    if (checkSplit().isPresent() && conf.getBoolean(SPLIT_IGNORE_BLOCKING_ENABLED_KEY, false)) {
+      // if a region should split, split it before compact
+      return Store.PRIORITY_USER;
+    }
     return stores.values().stream().mapToInt(HStore::getCompactPriority).min()
         .orElse(Store.NO_PRIORITY);
   }
