@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
-import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -99,9 +98,11 @@ public class TestSnapshotScannerHDFSAclController {
           + SnapshotScannerHDFSAclController.class.getName());
 
     TEST_UTIL.startMiniCluster();
-    ProcedureTestingUtility.waitAllProcedures(
-      TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor());
+    SnapshotScannerHDFSAclController coprocessor = TEST_UTIL.getHBaseCluster().getMaster()
+      .getMasterCoprocessorHost().findCoprocessor(SnapshotScannerHDFSAclController.class);
+    TEST_UTIL.waitFor(30000, () -> coprocessor.checkInitialized("check initialized"));
     TEST_UTIL.waitTableAvailable(PermissionStorage.ACL_TABLE_NAME);
+
     admin = TEST_UTIL.getAdmin();
     rootDir = TEST_UTIL.getDefaultRootDirPath();
     FS = rootDir.getFileSystem(conf);
@@ -131,10 +132,6 @@ public class TestSnapshotScannerHDFSAclController {
       FS.setPermission(path, commonDirectoryPermission);
       path = path.getParent();
     }
-
-    SnapshotScannerHDFSAclController coprocessor = TEST_UTIL.getHBaseCluster().getMaster()
-        .getMasterCoprocessorHost().findCoprocessor(SnapshotScannerHDFSAclController.class);
-    TEST_UTIL.waitFor(1200000, () -> coprocessor.checkInitialized("check initialized"));
     aclTable = admin.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME);
   }
 
