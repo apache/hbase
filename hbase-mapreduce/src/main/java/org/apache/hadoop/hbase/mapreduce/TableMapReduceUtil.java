@@ -585,7 +585,7 @@ public class TableMapReduceUtil {
    */
   public static void initCredentialsForCluster(Job job, Configuration conf)
       throws IOException {
-    UserProvider userProvider = UserProvider.instantiate(job.getConfiguration());
+    UserProvider userProvider = UserProvider.instantiate(conf);
     if (userProvider.isHBaseSecurityEnabled()) {
       try {
         Connection peerConn = ConnectionFactory.createConnection(conf);
