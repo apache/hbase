@@ -501,7 +501,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       LOG.info("Log " + path + " was moved to " + archivedLogLocation);
       return archivedLogLocation;
     }
-
     LOG.error("Couldn't locate log: " + path);
     return null;
   }
@@ -529,7 +528,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
         // If the log was archived, continue reading from there
         Path archivedLog = AbstractFSWALProvider.findArchivedLog(path, conf);
         // archivedLog can be null if unable to locate in archiveDir.
-        if (archivedLog != null && !Objects.equals(path, archivedLog)) {
+        if (archivedLog != null) {
           return openReader(archivedLog, conf);
         } else {
           throw fnfe;
