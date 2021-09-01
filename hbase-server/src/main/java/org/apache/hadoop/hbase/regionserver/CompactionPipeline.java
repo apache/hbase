@@ -229,7 +229,7 @@ public class CompactionPipeline {
         if ( s.canBeFlattened() ) {
           s.waitForUpdates(); // to ensure all updates preceding s in-memory flush have completed
           if (s.isEmpty()) {
-            // after s.waitForUpdates() is called, there is no updates preceding,if no cells in s,
+            // after s.waitForUpdates() is called, there is no updates pending,if no cells in s,
             // we can skip it.
             continue;
           }
