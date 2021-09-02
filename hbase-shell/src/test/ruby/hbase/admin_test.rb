@@ -192,13 +192,7 @@ module Hbase
       did_balancer_run = command(:balancer)
       assert(did_balancer_run == true)
       output = capture_stdout { command(:balancer, 'force') }
-      assert(output.include?('Balancer ran'))
-
-      command(:balance_switch, false)
-      output = capture_stdout { command(:balancer) }
-      assert(output.include?('Balancer did not run'))
-      output = capture_stdout { command(:balancer, 'dry_run') }
-      assert(output.include?('Balancer ran'))
+      assert(output.include?('true'))
     end
 
     #-------------------------------------------------------------------------------

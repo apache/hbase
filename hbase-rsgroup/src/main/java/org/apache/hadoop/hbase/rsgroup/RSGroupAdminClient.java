@@ -32,15 +32,13 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.BalanceRequest;
-import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
-import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.AddRSGroupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfTableRequest;
@@ -160,11 +158,11 @@ public class RSGroupAdminClient implements RSGroupAdmin {
   }
 
   @Override
-  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
+  public boolean balanceRSGroup(String groupName) throws IOException {
+    BalanceRSGroupRequest request = BalanceRSGroupRequest.newBuilder()
+        .setRSGroupName(groupName).build();
     try {
-      RSGroupAdminProtos.BalanceRSGroupRequest req =
-        RSGroupProtobufUtil.createBalanceRSGroupRequest(groupName, request);
-      return RSGroupProtobufUtil.toBalanceResponse(stub.balanceRSGroup(null, req));
+      return stub.balanceRSGroup(null, request).getBalanceRan();
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }

@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
-import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -121,7 +120,7 @@ public class TestProcedurePriority {
     for (Future<?> future : futures) {
       future.get(1, TimeUnit.MINUTES);
     }
-    UTIL.getAdmin().balance(BalanceRequest.newBuilder().setIgnoreRegionsInTransition(true).build());
+    UTIL.getAdmin().balance(true);
     UTIL.waitUntilNoRegionsInTransition();
   }
 

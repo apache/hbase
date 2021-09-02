@@ -663,7 +663,8 @@ public class MasterRpcServices extends RSRpcServices implements
   public BalanceResponse balance(RpcController controller,
       BalanceRequest request) throws ServiceException {
     try {
-      return ProtobufUtil.toBalanceResponse(master.balance(ProtobufUtil.toBalanceRequest(request)));
+      return BalanceResponse.newBuilder().setBalancerRan(master.balance(
+        request.hasForce()? request.getForce(): false)).build();
     } catch (IOException ex) {
       throw new ServiceException(ex);
     }

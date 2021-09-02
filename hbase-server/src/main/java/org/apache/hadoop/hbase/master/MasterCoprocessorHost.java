@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SharedConnection;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.BalanceRequest;
-import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -739,20 +737,20 @@ public class MasterCoprocessorHost
     });
   }
 
-  public boolean preBalance(final BalanceRequest request) throws IOException {
+  public boolean preBalance() throws IOException {
     return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preBalance(this, request);
+        observer.preBalance(this);
       }
     });
   }
 
-  public void postBalance(final BalanceRequest request, final List<RegionPlan> plans) throws IOException {
+  public void postBalance(final List<RegionPlan> plans) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postBalance(this, request, plans);
+        observer.postBalance(this, plans);
       }
     });
   }
@@ -1435,22 +1433,22 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preBalanceRSGroup(final String name, final BalanceRequest request)
+  public void preBalanceRSGroup(final String name)
       throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preBalanceRSGroup(this, name, request);
+        observer.preBalanceRSGroup(this, name);
       }
     });
   }
 
-  public void postBalanceRSGroup(final String name, final BalanceRequest request, final BalanceResponse response)
+  public void postBalanceRSGroup(final String name, final boolean balanceRan)
       throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postBalanceRSGroup(this, name, request, response);
+        observer.postBalanceRSGroup(this, name, balanceRan);
       }
     });
   }

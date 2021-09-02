@@ -684,8 +684,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<BalanceResponse> balance(BalanceRequest request) {
-    return wrap(rawAdmin.balance(request));
+  public CompletableFuture<Boolean> balance(boolean forcible) {
+    return wrap(rawAdmin.balance(forcible));
   }
 
   @Override
