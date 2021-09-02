@@ -17,9 +17,15 @@
  */
 package org.apache.hadoop.hbase.testing;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.regionserver.OnlineRegions;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -113,6 +119,41 @@ public interface TestingHBaseCluster {
    * again. An {@link IllegalStateException} will be thrown if you call this method incorrectly.
    */
   void start() throws Exception;
+
+  /**
+   * Get the address of active master if there is one.
+   */
+  Optional<ServerName> getActiveMasterAddress();
+
+  /**
+   * Get all the backup master addresses.
+   */
+  List<ServerName> getBackupMasterAddresses();
+
+  /**
+   * Get all the region server addresses.
+   */
+  List<ServerName> getRegionServerAddresses();
+
+  /**
+   * Get the server side {@link Region} interface for the specific region.
+   * <p/>
+   * This is used for CPs to test something which can only be accessed at server side, such as tags.
+   */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+  Optional<Region> getRegion(RegionInfo regionInfo);
+
+  /**
+   * Get the server side {@link OnlineRegions} interface for the specific region server.
+   * <p/>
+   * You could list the addresses of all the region server through the
+   * {@link #getRegionServerAddresses()} method.
+   * <p/>
+   * This is used for CPs to test something which can only be accessed at server side, such as tags.
+   * And also you could use the returned interface to get all regions on this region server, etc.
+   */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+  Optional<OnlineRegions> getOnlineRegionsInterface(ServerName serverName);
 
   /**
    * Return whether the cluster is running.
