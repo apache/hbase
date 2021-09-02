@@ -47,6 +47,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
@@ -68,6 +69,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
@@ -118,6 +120,7 @@ import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
@@ -3607,6 +3610,36 @@ public final class ProtobufUtil {
     return clearSlowLogResponses.getIsCleaned();
   }
 
+  public static void populateBalanceRSGroupResponse(RSGroupAdminProtos.BalanceRSGroupResponse.Builder responseBuilder, BalanceResponse response) {
+    responseBuilder
+      .setBalanceRan(response.isBalancerRan())
+      .setMovesCalculated(response.getMovesCalculated())
+      .setMovesExecuted(response.getMovesExecuted());
+  }
+
+  public static BalanceResponse toBalanceResponse(RSGroupAdminProtos.BalanceRSGroupResponse response) {
+    return BalanceResponse.newBuilder()
+      .setBalancerRan(response.getBalanceRan())
+      .setMovesExecuted(response.hasMovesExecuted() ? response.getMovesExecuted() : 0)
+      .setMovesCalculated(response.hasMovesCalculated() ? response.getMovesCalculated() : 0)
+      .build();
+  }
+
+  public static RSGroupAdminProtos.BalanceRSGroupRequest createBalanceRSGroupRequest(String groupName, BalanceRequest request) {
+    return RSGroupAdminProtos.BalanceRSGroupRequest.newBuilder()
+      .setRSGroupName(groupName)
+      .setDryRun(request.isDryRun())
+      .setIgnoreRit(request.isIgnoreRegionsInTransition())
+      .build();
+  }
+
+  public static BalanceRequest toBalanceRequest(RSGroupAdminProtos.BalanceRSGroupRequest request) {
+    return BalanceRequest.newBuilder()
+      .setDryRun(request.hasDryRun() && request.getDryRun())
+      .setIgnoreRegionsInTransition(request.hasIgnoreRit() && request.getIgnoreRit())
+      .build();
+  }
+
   public static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {
     RSGroupInfo rsGroupInfo = new RSGroupInfo(proto.getName());
 
@@ -3832,6 +3865,36 @@ public final class ProtobufUtil {
     return HBaseProtos.LogRequest.newBuilder()
       .setLogClassName(balancerRejectionsRequest.getClass().getName())
       .setLogMessage(balancerRejectionsRequest.toByteString())
+      .build();
+  }
+
+  public static MasterProtos.BalanceRequest toBalanceRequest(BalanceRequest request) {
+    return MasterProtos.BalanceRequest.newBuilder()
+      .setDryRun(request.isDryRun())
+      .setIgnoreRit(request.isIgnoreRegionsInTransition())
+      .build();
+  }
+
+  public static BalanceRequest toBalanceRequest(MasterProtos.BalanceRequest request) {
+    return BalanceRequest.newBuilder()
+      .setDryRun(request.hasDryRun() && request.getDryRun())
+      .setIgnoreRegionsInTransition(request.hasIgnoreRit() && request.getIgnoreRit())
+      .build();
+  }
+
+  public static MasterProtos.BalanceResponse toBalanceResponse(BalanceResponse response) {
+    return MasterProtos.BalanceResponse.newBuilder()
+      .setBalancerRan(response.isBalancerRan())
+      .setMovesCalculated(response.getMovesCalculated())
+      .setMovesExecuted(response.getMovesExecuted())
+      .build();
+  }
+
+  public static BalanceResponse toBalanceResponse(MasterProtos.BalanceResponse response) {
+    return BalanceResponse.newBuilder()
+      .setBalancerRan(response.hasBalancerRan() && response.getBalancerRan())
+      .setMovesCalculated(response.hasMovesCalculated() ? response.getMovesExecuted() : 0)
+      .setMovesExecuted(response.hasMovesExecuted() ? response.getMovesExecuted() : 0)
       .build();
   }
 

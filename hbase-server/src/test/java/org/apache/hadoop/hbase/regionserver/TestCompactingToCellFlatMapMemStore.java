@@ -821,11 +821,11 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
 
     // The in-memory flush size is bigger than the size of a single cell,
     // but smaller than the size of two cells.
-    // Therefore, the two created cells are flattened together.
+    // Therefore, the two created cells are flushed together as a single CSLMImmutableSegment and
+    // flattened.
     totalHeapSize = MutableSegment.DEEP_OVERHEAD
         + CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
-        + 1 * oneCellOnCSLMHeapSize
-        + 1 * oneCellOnCCMHeapSize;
+        + 2 * oneCellOnCCMHeapSize;
     assertEquals(totalHeapSize, ((CompactingMemStore) memstore).heapSize());
   }
 

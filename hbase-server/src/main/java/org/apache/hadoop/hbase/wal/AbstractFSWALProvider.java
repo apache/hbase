@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -470,36 +469,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   /**
-   * Get the archived WAL file path
-   * @param path - active WAL file path
-   * @param conf - configuration
-   * @return archived path if exists, path - otherwise
-   * @throws IOException exception
-   */
-  public static Path getArchivedLogPath(Path path, Configuration conf) throws IOException {
-    Path rootDir = CommonFSUtils.getWALRootDir(conf);
-    Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    if (conf.getBoolean(SEPARATE_OLDLOGDIR, DEFAULT_SEPARATE_OLDLOGDIR)) {
-      ServerName serverName = getServerNameFromWALDirectoryName(path);
-      if (serverName == null) {
-        LOG.error("Couldn't locate log: " + path);
-        return path;
-      }
-      oldLogDir = new Path(oldLogDir, serverName.getServerName());
-    }
-    Path archivedLogLocation = new Path(oldLogDir, path.getName());
-    final FileSystem fs = CommonFSUtils.getWALFileSystem(conf);
-
-    if (fs.exists(archivedLogLocation)) {
-      LOG.info("Log " + path + " was moved to " + archivedLogLocation);
-      return archivedLogLocation;
-    } else {
-      LOG.error("Couldn't locate log: " + path);
-      return path;
-    }
-  }
-
-  /**
    * Find the archived WAL file path if it is not able to locate in WALs dir.
    * @param path - active WAL file path
    * @param conf - configuration
@@ -531,7 +500,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       LOG.info("Log " + path + " was moved to " + archivedLogLocation);
       return archivedLogLocation;
     }
-
     LOG.error("Couldn't locate log: " + path);
     return null;
   }
@@ -557,8 +525,9 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
         return reader;
       } catch (FileNotFoundException fnfe) {
         // If the log was archived, continue reading from there
-        Path archivedLog = AbstractFSWALProvider.getArchivedLogPath(path, conf);
-        if (!Objects.equals(path, archivedLog)) {
+        Path archivedLog = AbstractFSWALProvider.findArchivedLog(path, conf);
+        // archivedLog can be null if unable to locate in archiveDir.
+        if (archivedLog != null) {
           return openReader(archivedLog, conf);
         } else {
           throw fnfe;

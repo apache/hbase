@@ -144,7 +144,7 @@ public class TestSeparateClientZKCluster {
       }
       LOG.info("Got master {}", cluster.getMaster().getServerName());
       // confirm client access still works
-      assertTrue(admin.balance(false));
+      assertTrue(admin.balance(BalanceRequest.defaultInstance()).isBalancerRan());
     }
   }
 

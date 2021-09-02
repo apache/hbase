@@ -28,6 +28,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -37,11 +39,9 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos;
@@ -265,21 +265,28 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
   @Override
   public void balanceRSGroup(RpcController controller, BalanceRSGroupRequest request,
       RpcCallback<BalanceRSGroupResponse> done) {
-    BalanceRSGroupResponse.Builder builder = BalanceRSGroupResponse.newBuilder();
+    BalanceRequest balanceRequest = ProtobufUtil.toBalanceRequest(request);
+    BalanceRSGroupResponse.Builder builder = BalanceRSGroupResponse.newBuilder()
+      .setBalanceRan(false);
+
     LOG.info(
       master.getClientIdAuditPrefix() + " balance rsgroup, group=" + request.getRSGroupName());
     try {
       if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().preBalanceRSGroup(request.getRSGroupName());
+        master.getMasterCoprocessorHost()
+          .preBalanceRSGroup(request.getRSGroupName(), balanceRequest);
       }
-      boolean balancerRan = rsGroupInfoManager.balanceRSGroup(request.getRSGroupName());
-      builder.setBalanceRan(balancerRan);
+
+      BalanceResponse response =
+        rsGroupInfoManager.balanceRSGroup(request.getRSGroupName(), balanceRequest);
+      ProtobufUtil.populateBalanceRSGroupResponse(builder, response);
+
       if (master.getMasterCoprocessorHost() != null) {
-        master.getMasterCoprocessorHost().postBalanceRSGroup(request.getRSGroupName(), balancerRan);
+        master.getMasterCoprocessorHost()
+          .postBalanceRSGroup(request.getRSGroupName(), balanceRequest, response);
       }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
-      builder.setBalanceRan(false);
     }
     done.run(builder.build());
   }

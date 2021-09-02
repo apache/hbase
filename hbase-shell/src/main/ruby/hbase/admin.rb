@@ -30,6 +30,8 @@ java_import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder
 java_import org.apache.hadoop.hbase.client.TableDescriptorBuilder
 java_import org.apache.hadoop.hbase.HConstants
 
+require 'hbase/balancer_utils'
+
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
 module Hbase
@@ -230,9 +232,10 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Requests a cluster balance
-    # Returns true if balancer ran
-    def balancer(force)
-      @admin.balance(java.lang.Boolean.valueOf(force))
+    # Returns BalanceResponse with details of the balancer run
+    def balancer(*args)
+      request = ::Hbase::BalancerUtils.create_balance_request(args)
+      @admin.balance(request)
     end
 
     #----------------------------------------------------------------------------------------------

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -27,6 +28,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -132,14 +134,21 @@ public class TestRegionRebalancing {
       assertRegionsAreBalanced();
 
       // On a balanced cluster, calling balance() should return true
-      assert(UTIL.getHBaseCluster().getMaster().balance() == true);
+      BalanceResponse response = UTIL.getHBaseCluster().getMaster().balance();
+      assertTrue(response.isBalancerRan());
+      assertEquals(0, response.getMovesCalculated());
+      assertEquals(0, response.getMovesExecuted());
 
       // if we add a server, then the balance() call should return true
       // add a region server - total of 3
       LOG.info("Started third server=" +
           UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
       waitForAllRegionsAssigned();
-      assert(UTIL.getHBaseCluster().getMaster().balance() == true);
+
+      response = UTIL.getHBaseCluster().getMaster().balance();
+      assertTrue(response.isBalancerRan());
+      assertTrue(response.getMovesCalculated() > 0);
+      assertEquals(response.getMovesCalculated(), response.getMovesExecuted());
       assertRegionsAreBalanced();
 
       // kill a region server - total of 2
@@ -156,14 +165,24 @@ public class TestRegionRebalancing {
           UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
       waitOnCrashProcessing();
       waitForAllRegionsAssigned();
-      assert(UTIL.getHBaseCluster().getMaster().balance() == true);
+
+      response = UTIL.getHBaseCluster().getMaster().balance();
+      assertTrue(response.isBalancerRan());
+      assertTrue(response.getMovesCalculated() > 0);
+      assertEquals(response.getMovesCalculated(), response.getMovesExecuted());
+
       assertRegionsAreBalanced();
       for (int i = 0; i < 6; i++){
         LOG.info("Adding " + (i + 5) + "th region server");
         UTIL.getHBaseCluster().startRegionServer();
       }
       waitForAllRegionsAssigned();
-      assert(UTIL.getHBaseCluster().getMaster().balance() == true);
+
+      response = UTIL.getHBaseCluster().getMaster().balance();
+      assertTrue(response.isBalancerRan());
+      assertTrue(response.getMovesCalculated() > 0);
+      assertEquals(response.getMovesCalculated(), response.getMovesExecuted());
+
       assertRegionsAreBalanced();
       regionLocator.close();
     }
