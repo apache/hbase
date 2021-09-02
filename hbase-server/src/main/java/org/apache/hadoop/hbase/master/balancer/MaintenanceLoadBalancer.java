@@ -121,4 +121,9 @@ public class MaintenanceLoadBalancer implements LoadBalancer {
   @Override
   public void updateBalancerStatus(boolean status) {
   }
+
+  @Override
+  public void reloadConfiguration() {
+
+  }
 }

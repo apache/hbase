@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -103,29 +104,41 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   protected static final String STEPS_PER_REGION_KEY =
       "hbase.master.balancer.stochastic.stepsPerRegion";
+  private static final int DEFAULT_STEPS_PER_REGION = 800;
+
   protected static final String MAX_STEPS_KEY =
       "hbase.master.balancer.stochastic.maxSteps";
+  private static final int DEFAULT_MAX_STEPS = 1000000;
+
   protected static final String RUN_MAX_STEPS_KEY =
       "hbase.master.balancer.stochastic.runMaxSteps";
+  private static final boolean DEFAULT_RUN_MAX_STEPS = false;
+
   protected static final String MAX_RUNNING_TIME_KEY =
       "hbase.master.balancer.stochastic.maxRunningTime";
+  private static final long DEFAULT_RUNNING_TIME = TimeUnit.SECONDS.toMillis(30);
+
   protected static final String KEEP_REGION_LOADS =
       "hbase.master.balancer.stochastic.numRegionLoadsToRemember";
+  private static final int DEFAULT_KEEP_REGION_LOADS = 15;
+
   private static final String TABLE_FUNCTION_SEP = "_";
   protected static final String MIN_COST_NEED_BALANCE_KEY =
       "hbase.master.balancer.stochastic.minCostNeedBalance";
+  private static final float DEFAULT_MIN_COST_NEED_BALANCE = 0.025f;
+
   protected static final String COST_FUNCTIONS_COST_FUNCTIONS_KEY =
           "hbase.master.balancer.stochastic.additionalCostFunctions";
 
   Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<>();
 
   // values are defaults
-  private int maxSteps = 1000000;
-  private boolean runMaxSteps = false;
-  private int stepsPerRegion = 800;
-  private long maxRunningTime = 30 * 1000 * 1; // 30 seconds.
-  private int numRegionLoadsToRemember = 15;
-  private float minCostNeedBalance = 0.025f;
+  private int maxSteps = DEFAULT_MAX_STEPS;
+  private boolean runMaxSteps = DEFAULT_RUN_MAX_STEPS;
+  private int stepsPerRegion = DEFAULT_STEPS_PER_REGION;
+  private long maxRunningTime = DEFAULT_RUNNING_TIME;
+  private int numRegionLoadsToRemember = DEFAULT_KEEP_REGION_LOADS;
+  private float minCostNeedBalance = DEFAULT_MIN_COST_NEED_BALANCE;
 
   private List<CandidateGenerator> candidateGenerators;
   private List<CostFunction> costFunctions; // FindBugs: Wants this protected; IS2_INCONSISTENT_SYNC
@@ -206,13 +219,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   @Override
   protected void loadConf(Configuration conf) {
     super.loadConf(conf);
-    maxSteps = conf.getInt(MAX_STEPS_KEY, maxSteps);
-    stepsPerRegion = conf.getInt(STEPS_PER_REGION_KEY, stepsPerRegion);
-    maxRunningTime = conf.getLong(MAX_RUNNING_TIME_KEY, maxRunningTime);
-    runMaxSteps = conf.getBoolean(RUN_MAX_STEPS_KEY, runMaxSteps);
+    maxSteps = conf.getInt(MAX_STEPS_KEY, DEFAULT_MAX_STEPS);
+    stepsPerRegion = conf.getInt(STEPS_PER_REGION_KEY, DEFAULT_STEPS_PER_REGION);
+    maxRunningTime = conf.getLong(MAX_RUNNING_TIME_KEY, DEFAULT_RUNNING_TIME);
+    runMaxSteps = conf.getBoolean(RUN_MAX_STEPS_KEY, DEFAULT_RUN_MAX_STEPS);
 
-    numRegionLoadsToRemember = conf.getInt(KEEP_REGION_LOADS, numRegionLoadsToRemember);
-    minCostNeedBalance = conf.getFloat(MIN_COST_NEED_BALANCE_KEY, minCostNeedBalance);
+    numRegionLoadsToRemember = conf.getInt(KEEP_REGION_LOADS, DEFAULT_KEEP_REGION_LOADS);
+    minCostNeedBalance = conf.getFloat(MIN_COST_NEED_BALANCE_KEY, DEFAULT_MIN_COST_NEED_BALANCE);
     localityCandidateGenerator = new LocalityBasedCandidateGenerator();
     localityCost = new ServerLocalityCostFunction(conf);
     rackLocalityCost = new RackLocalityCostFunction(conf);
@@ -240,10 +253,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     curFunctionCosts = new double[costFunctions.size()];
     tempFunctionCosts = new double[costFunctions.size()];
 
-    LOG.info("Loaded config; maxSteps=" + maxSteps + ", runMaxSteps=" + runMaxSteps,
-      ", stepsPerRegion=" + stepsPerRegion +
-      ", maxRunningTime=" + maxRunningTime + ", isByTable=" + isByTable + ", CostFunctions=" +
-      Arrays.toString(getCostFunctionNames()) + " etc.");
+    LOG.info("Loaded config; maxSteps={}, runMaxSteps={}, stepsPerRegion={}, maxRunningTime={}, "
+        + "isByTable={}, CostFunctions={}", maxSteps, runMaxSteps, stepsPerRegion, maxRunningTime,
+      isByTable, Arrays.toString(getCostFunctionNames()));
   }
 
   @Override

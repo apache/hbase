@@ -27,7 +27,7 @@ module Hbase
       args = args.first if args.first.is_a?(Array) and args.size == 1
       if args.nil? or args.empty?
         return BalanceRequest.defaultInstance()
-      elsif args.size > 2
+      elsif args.size > 3
         raise ArgumentError, "Illegal arguments #{args}. Expected between 0 and 2 arguments, but got #{args.size}."
       end
 
@@ -44,8 +44,10 @@ module Hbase
           builder.setIgnoreRegionsInTransition(true)
         when 'dry_run'
           builder.setDryRun(true)
+        when 'reload_configs'
+          builder.setReloadConfigs(true)
         else
-          raise ArgumentError, "Illegal argument in index #{index}: #{arg}. Unknown option #{arg}, expected 'force', 'ignore_rit', or 'dry_run'."
+          raise ArgumentError, "Illegal argument in index #{index}: #{arg}. Unknown option #{arg}, expected 'force', 'ignore_rit', 'dry_run', or 'reload_configs'."
         end
 
         index += 1

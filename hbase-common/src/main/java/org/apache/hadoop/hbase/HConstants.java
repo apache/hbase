@@ -139,6 +139,8 @@ public final class HConstants {
   /** Config for balancing the cluster by table */
   public static final String HBASE_MASTER_LOADBALANCE_BYTABLE = "hbase.master.loadbalance.bytable";
 
+  public static final boolean DEFAULT_HBASE_MASTER_LOADBALANCE_BYTABLE = false;
+
   /** Config for the max percent of regions in transition */
   public static final String HBASE_MASTER_BALANCER_MAX_RIT_PERCENT =
       "hbase.master.balancer.maxRitPercent";

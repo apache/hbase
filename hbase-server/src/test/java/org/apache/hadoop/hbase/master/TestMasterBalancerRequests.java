@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
@@ -34,19 +35,28 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 @Category({ MasterTests.class, MediumTests.class})
-public class TestMasterDryRunBalancer {
+public class TestMasterBalancerRequests {
+
+  private static final int NUM_SERVERS = 2;
+
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterDryRunBalancer.class);
+    HBaseClassTestRule.forClass(TestMasterBalancerRequests.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
+
+  @Before
+  public void setUp() throws Exception {
+    TEST_UTIL.startMiniCluster(NUM_SERVERS);
+  }
 
   @After
   public void shutdown() throws Exception {
@@ -55,10 +65,8 @@ public class TestMasterDryRunBalancer {
 
   @Test
   public void testDryRunBalancer() throws Exception {
-    TEST_UTIL.startMiniCluster(2);
-
     int numRegions = 100;
-    int regionsPerRs = numRegions / 2;
+    int regionsPerRs = numRegions / NUM_SERVERS;
     TableName tableName = createTable("testDryRunBalancer", numRegions);
     HMaster master = Mockito.spy(TEST_UTIL.getHBaseCluster().getMaster());
 
@@ -72,9 +80,7 @@ public class TestMasterDryRunBalancer {
     BalanceResponse response = master.balance(BalanceRequest.newBuilder().setDryRun(true).build());
     assertTrue(response.isBalancerRan());
     // we don't know for sure that it will be exactly half the regions
-    assertTrue(
-      response.getMovesCalculated() >= (regionsPerRs - 1)
-        && response.getMovesCalculated() <= (regionsPerRs + 1));
+    assertAlmostEquals(regionsPerRs, 1, response.getMovesCalculated());
     // but we expect no moves executed due to dry run
     assertEquals(0, response.getMovesExecuted());
 
@@ -85,6 +91,50 @@ public class TestMasterDryRunBalancer {
     assertServerContainsAllRegions(biasedServer.getServerName(), tableName);
 
     TEST_UTIL.deleteTable(tableName);
+  }
+
+  @Test
+  public void testReloadConfigs() throws Exception {
+    int numRegions = 100;
+    int regionsPerRs = numRegions / NUM_SERVERS;
+    TableName tableName = createTable("testReloadConfigs", numRegions);
+    HMaster master = Mockito.spy(TEST_UTIL.getHBaseCluster().getMaster());
+
+    Configuration badConfig = new Configuration(TEST_UTIL.getConfiguration());
+    badConfig.setInt("hbase.master.balancer.stochastic.maxSteps", 0);
+
+    master.getLoadBalancer().onConfigurationChange(badConfig);
+
+    assertTrue(master.isBalancerOn());
+
+    HRegionServer biasedServer = unbalance(master, tableName);
+
+    // Balancer should run but not produce anything because we've forced maxSteps to 0
+    BalanceResponse response = master.balance(BalanceRequest.defaultInstance());
+    assertTrue(response.isBalancerRan());
+    assertEquals(0, response.getMovesCalculated());
+    assertEquals(0, response.getMovesExecuted());
+
+    // verify imbalance still exists
+    assertServerContainsAllRegions(biasedServer.getServerName(), tableName);
+
+    // Run with reloadConfigs, which should clear our maxSteps override from above, proving
+    // that reloads work end-to-end.
+    response = master.balance(BalanceRequest.newBuilder().setReloadConfigs(true).build());
+    assertTrue(response.isBalancerRan());
+    // this time we should calculate and execute moves, since the balancer is allowed to do
+    // the default steps
+    assertAlmostEquals(regionsPerRs, 1, response.getMovesCalculated());
+    assertEquals(response.getMovesCalculated(), response.getMovesExecuted());
+
+    TEST_UTIL.deleteTable(tableName);
+  }
+
+  private void assertAlmostEquals(int expectedValue, int allowedDeviation, int value) {
+    assertTrue(
+      value >= (expectedValue - allowedDeviation)
+        && value <= (expectedValue + allowedDeviation)
+    );
   }
 
   private TableName createTable(String table, int numRegions) throws IOException {

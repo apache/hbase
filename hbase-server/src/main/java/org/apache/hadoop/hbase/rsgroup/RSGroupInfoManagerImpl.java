@@ -1192,6 +1192,10 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         return responseBuilder.build();
       }
 
+      if (request.isReloadConfigs()) {
+        balancer.reloadConfiguration();
+      }
+
       // We balance per group instead of per table
       Map<TableName, Map<ServerName, List<RegionInfo>>> assignmentsByTable =
           getRSGroupAssignmentsByTable(masterServices.getTableStateManager(), groupName);

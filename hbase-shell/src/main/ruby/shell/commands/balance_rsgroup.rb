@@ -27,13 +27,17 @@ Parameter can be "force" or "dry_run":
    This is useful for testing out new balance configurations. See the active HMaster logs for the results of the dry_run.
  - "ignore_rit" tells master whether we should force the balancer to run even if there is region in transition.
    WARNING: For experts only. Forcing a balance may do more damage than repair when assignment is confused
+ - "reload_configs" tells master to reload balancer configs from disk before running the balance.
+
+Multiple parameters can be added, in any order, by separating them by commas.
 
 Example:
 
   hbase> balance_rsgroup 'my_group'
   hbase> balance_rsgroup 'my_group', 'ignore_rit'
   hbase> balance_rsgroup 'my_group', 'dry_run'
-  hbase> balance_rsgroup 'my_group', 'dry_run', 'ignore_rit'
+  hbase> balance_rsgroup 'my_group', 'reload_configs'
+  hbase> balance_rsgroup 'my_group', 'dry_run', 'ignore_rit', 'reload_configs'
 
 EOF
       end

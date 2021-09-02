@@ -24,18 +24,22 @@ module Shell
         <<-EOF
 Trigger the cluster balancer. Returns true if balancer ran, otherwise false (Will not run if regions in transition).
 
-Parameter can be "force" or "dry_run":
+Parameter can be "force", "dry_run", or "reload_configs":
  - "dry_run" will run the balancer to generate a plan, but will not actually execute that plan.
    This is useful for testing out new balance configurations. See the active HMaster logs for the results of the dry_run.
  - "ignore_rit" tells master whether we should force the balancer to run even if there is region in transition.
    WARNING: For experts only. Forcing a balance may do more damage than repair when assignment is confused
+ - "reload_configs" tells master to reload balancer configs from disk before running the balance.
+
+Multiple parameters can be added, in any order, by separating them by commas.
 
 Examples:
 
   hbase> balancer
   hbase> balancer "ignore_rit"
   hbase> balancer "dry_run"
-  hbase> balancer "dry_run", "ignore_rit"
+  hbase> balancer "reload_configs"
+  hbase> balancer "dry_run", "ignore_rit", "reload_configs"
 EOF
       end
 

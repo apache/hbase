@@ -147,4 +147,9 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
 
   /*Updates balancer status tag reported to JMX*/
   void updateBalancerStatus(boolean status);
+
+  /**
+   * Forces a reload of the underlying Configuration for the balancer
+   */
+  void reloadConfiguration();
 }

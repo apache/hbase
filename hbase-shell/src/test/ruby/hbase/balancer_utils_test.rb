@@ -49,30 +49,42 @@ module Hbase
       request = create_balance_request()
       assert(!request.isDryRun())
       assert(!request.isIgnoreRegionsInTransition())
+      assert(!request.isReloadConfigs())
     end
 
     define_test "should parse 'force' string" do
       request = create_balance_request('force')
       assert(!request.isDryRun())
       assert(request.isIgnoreRegionsInTransition())
+      assert(!request.isReloadConfigs())
     end
     
     define_test "should parse 'ignore_rit' string" do
       request = create_balance_request('ignore_rit')
       assert(!request.isDryRun())
       assert(request.isIgnoreRegionsInTransition())
+      assert(!request.isReloadConfigs())
     end
 
     define_test "should parse 'dry_run' string" do
       request = create_balance_request('dry_run')
       assert(request.isDryRun())
       assert(!request.isIgnoreRegionsInTransition())
+      assert(!request.isReloadConfigs())
+    end
+
+    define_test "should parse 'reload_configs' string" do
+      request = create_balance_request('reload_configs')
+      assert(!request.isDryRun())
+      assert(!request.isIgnoreRegionsInTransition())
+      assert(request.isReloadConfigs())
     end
 
     define_test "should parse multiple string args" do
-      request = create_balance_request('dry_run', 'ignore_rit')
+      request = create_balance_request('dry_run', 'ignore_rit', 'reload_configs')
       assert(request.isDryRun())
       assert(request.isIgnoreRegionsInTransition())
+      assert(request.isReloadConfigs())
     end
   end
 end
