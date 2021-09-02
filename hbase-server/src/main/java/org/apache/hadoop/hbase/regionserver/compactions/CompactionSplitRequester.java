@@ -21,16 +21,17 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 
 /**
- * Request a compaction.
+ * Request compaction and split.
  */
 @InterfaceAudience.Private
-public interface CompactionRequester {
+public interface CompactionSplitRequester {
 
   /**
    * Request compaction on all the stores of the given region.
@@ -43,6 +44,16 @@ public interface CompactionRequester {
    */
   void requestCompaction(HRegion region, HStore store, String why, int priority,
       CompactionLifeCycleTracker tracker, @Nullable User user) throws IOException;
+
+  /**
+   * Request compaction on the given region.
+   */
+  void requestSystemCompaction(HRegion region, String why) throws IOException;
+
+  /**
+   * Request split on the given region.
+   */
+  boolean requestSplit(final Region r) throws IOException;
 
   /**
    * on/off compaction

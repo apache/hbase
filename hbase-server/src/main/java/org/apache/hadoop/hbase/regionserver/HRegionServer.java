@@ -141,7 +141,7 @@ import org.apache.hadoop.hbase.quotas.RegionSizeStore;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionSplitRequester;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
@@ -3054,7 +3054,7 @@ public class HRegionServer extends Thread implements RegionServerServices, LastS
   }
 
   @Override
-  public CompactionRequester getCompactionRequestor() {
+  public CompactionSplitRequester getCompactionSplitRequester() {
     return this.compactSplitThread;
   }
 

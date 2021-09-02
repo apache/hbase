@@ -19,19 +19,16 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.HRegion.COMPACTION_AFTER_BULKLOAD_ENABLE;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.hamcrest.MockitoHamcrest.argThat;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
@@ -39,8 +36,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionSplitRequester;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -55,7 +51,7 @@ import org.mockito.stubbing.Answer;
 @Category(SmallTests.class)
 public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
   private final RegionServerServices regionServerServices = mock(RegionServerServices.class);
-  private final CompactionRequester compactionRequester = mock(CompactSplit.class);
+  private final CompactionSplitRequester compactionSplitRequester = mock(CompactSplit.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -88,7 +84,7 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
     try {
       conf.setBoolean(COMPACTION_AFTER_BULKLOAD_ENABLE, true);
       when(regionServerServices.getConfiguration()).thenReturn(conf);
-      when(regionServerServices.getCompactionRequestor()).thenReturn(compactionRequester);
+      when(regionServerServices.getCompactionSplitRequester()).thenReturn(compactionSplitRequester);
       when(log.appendMarker(any(), any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
           .thenAnswer(new Answer() {
             @Override
@@ -103,12 +99,10 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
             }
           });
 
-      Mockito.doNothing().when(compactionRequester).requestCompaction(any(), any(), any(), anyInt(),
-        any(), any());
-      testRegionWithFamilies(family1, family2, family3).bulkLoadHFiles(familyPaths, false, null);
-      // invoke three times for 3 families
-      verify(compactionRequester, times(3)).requestCompaction(isA(HRegion.class), isA(HStore.class),
-        isA(String.class), anyInt(), eq(CompactionLifeCycleTracker.DUMMY), eq(null));
+      Mockito.doNothing().when(compactionSplitRequester).requestSystemCompaction(any(), any());
+      testRegionWithFamilies(family1, family2, family3).bulkLoadHFiles(familyPaths, true, null);
+      // invoke three times for 1 families
+      verify(compactionSplitRequester, times(1)).requestSystemCompaction(isA(HRegion.class), anyString());
     } finally {
       conf.setBoolean(COMPACTION_AFTER_BULKLOAD_ENABLE, false);
     }

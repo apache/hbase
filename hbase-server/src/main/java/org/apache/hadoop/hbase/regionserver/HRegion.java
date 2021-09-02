@@ -6007,7 +6007,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
         }
         if (this.rsServices != null && store.needsCompaction()) {
-          this.rsServices.getCompactionRequestor()
+          this.rsServices.getCompactionSplitRequester()
               .requestCompaction(this, store, "load recovered hfiles request compaction",
                   Store.PRIORITY_USER + 1, CompactionLifeCycleTracker.DUMMY, null);
         }
@@ -6934,18 +6934,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // guaranteed to be one beyond the file made when we flushed (or if nothing to flush, it is
       // a sequence id that we can be sure is beyond the last hfile written).
       if (assignSeqId) {
-        FlushResult fs = flushcache(true, false, FlushLifeCycleTracker.DUMMY);
-        if (fs.isFlushSucceeded()) {
-          seqId = ((FlushResultImpl)fs).flushSequenceId;
-        } else if (fs.getResult() == FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY) {
-          seqId = ((FlushResultImpl)fs).flushSequenceId;
-        } else if (fs.getResult() == FlushResult.Result.CANNOT_FLUSH) {
+        FlushResult flushResult = flushcache(true, false,
+          FlushLifeCycleTracker.DUMMY);
+        if (flushResult.isFlushSucceeded()) {
+          seqId = ((FlushResultImpl)flushResult).flushSequenceId;
+        } else if (flushResult.getResult() == FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY) {
+          seqId = ((FlushResultImpl)flushResult).flushSequenceId;
+        } else if (flushResult.getResult() == FlushResult.Result.CANNOT_FLUSH) {
           // CANNOT_FLUSH may mean that a flush is already on-going
           // we need to wait for that flush to complete
           waitForFlushes();
         } else {
           throw new IOException("Could not bulk load with an assigned sequential ID because the "+
-            "flush didn't run. Reason for not flushing: " + ((FlushResultImpl)fs).failureReason);
+            "flush didn't run. Reason for not flushing: " + ((FlushResultImpl)flushResult).failureReason);
         }
       }
 
@@ -7038,22 +7039,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       isSuccessful = true;
-      if (conf.getBoolean(COMPACTION_AFTER_BULKLOAD_ENABLE, false)) {
-        // request compaction
-        familyWithFinalPath.keySet().forEach(family -> {
-          HStore store = getStore(family);
-          try {
-            if (this.rsServices != null && store.needsCompaction()) {
-              this.rsServices.getCompactionRequestor().requestCompaction(this, store,
-                "bulkload hfiles request compaction", Store.PRIORITY_USER + 1,
-                CompactionLifeCycleTracker.DUMMY, null);
-              LOG.debug("bulkload hfiles request compaction region : {}, family : {}",
-                this.getRegionInfo(), family);
+      // check split
+      boolean shouldSplit = checkSplit().isPresent();
+      if (shouldSplit) {
+        this.rsServices.getCompactionSplitRequester().requestSplit(this);
+      } else {
+        // request compact
+        try {
+          if (this.rsServices != null && conf.getBoolean(COMPACTION_AFTER_BULKLOAD_ENABLE, false)) {
+            for (byte[] familyKey : familyWithFinalPath.keySet()) {
+              HStore store = getStore(familyKey);
+              if (store != null && store.needsCompaction()) {
+                this.rsServices.getCompactionSplitRequester()
+                  .requestSystemCompaction(this, "bulk load hfiles");
+                LOG.debug("Request compact for region {} after bulk load", getRegionInfo());
+                break;
+              }
             }
-          } catch (IOException e) {
-            LOG.error("bulkload hfiles request compaction error ", e);
           }
-        });
+        } catch (IOException e) {
+          LOG.error("bulk load hfiles request compaction error ", e);
+        }
       }
     } finally {
       if (wal != null && !storeFiles.isEmpty()) {
@@ -8348,7 +8354,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (major) {
       stores.values().forEach(HStore::triggerMajorCompaction);
     }
-    rsServices.getCompactionRequestor().requestCompaction(this, why, priority, tracker,
+    rsServices.getCompactionSplitRequester().requestCompaction(this, why, priority, tracker,
         RpcServer.getRequestUser().orElse(null));
   }
 
@@ -8363,7 +8369,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (major) {
       store.triggerMajorCompaction();
     }
-    rsServices.getCompactionRequestor().requestCompaction(this, store, why, priority, tracker,
+    rsServices.getCompactionSplitRequester().requestCompaction(this, store, why, priority, tracker,
         RpcServer.getRequestUser().orElse(null));
   }
 

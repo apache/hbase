@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ReplicationSourceService;
 import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionSplitRequester;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
@@ -157,7 +157,7 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public CompactionRequester getCompactionRequestor() {
+  public CompactionSplitRequester getCompactionSplitRequester() {
     return null;
   }
 
