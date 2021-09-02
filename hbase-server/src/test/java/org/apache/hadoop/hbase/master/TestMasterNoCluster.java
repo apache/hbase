@@ -149,7 +149,7 @@ public class TestMasterNoCluster {
     conf.set(HConstants.CLIENT_ZOOKEEPER_QUORUM, HConstants.LOCALHOST);
     conf.setInt(HConstants.CLIENT_ZOOKEEPER_CLIENT_PORT,
       TESTUTIL.getZkCluster().getClientPort() + 1);
-    // need to enable maintenance mode so we will start master as a region server
+    // need to enable maintenance mode so we will start master and an in process region server
     conf.setBoolean(HMaster.MAINTENANCE_MODE, true);
     // settings to allow us not to start additional RS
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);

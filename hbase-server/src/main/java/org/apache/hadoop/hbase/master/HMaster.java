@@ -215,6 +215,7 @@ import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IdLock;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RetryCounter;
@@ -414,6 +415,9 @@ public class HMaster extends HRegionServer implements MasterServices {
   // servers and no user tables. Useful for repair and recovery of hbase:meta
   private final boolean maintenanceMode;
   static final String MAINTENANCE_MODE = "hbase.master.maintenance_mode";
+
+  // the in process region server for carry system regions in maintenanceMode
+  private JVMClusterUtil.RegionServerThread maintenanceRegionServer;
 
   // Cached clusterId on stand by masters to serve clusterID requests from clients.
   private final CachedClusterId cachedClusterId;
@@ -623,9 +627,6 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   @Override
   protected void waitForMasterActive() {
-    if (maintenanceMode) {
-      return;
-    }
     while (!isStopped() && !isAborted()) {
       sleeper.sleep();
     }
@@ -669,9 +670,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   protected void configureInfoServer() {
     infoServer.addUnprivilegedServlet("master-status", "/master-status", MasterStatusServlet.class);
     infoServer.setAttribute(MASTER, this);
-    if (maintenanceMode) {
-      super.configureInfoServer();
-    }
   }
 
   @Override
@@ -966,6 +964,11 @@ public class HMaster extends HRegionServer implements MasterServices {
       // initialize master side coprocessors before we start handling requests
       status.setStatus("Initializing master coprocessors");
       this.cpHost = new MasterCoprocessorHost(this, this.conf);
+    } else {
+      // start an in process region server for carrying system regions
+      maintenanceRegionServer =
+        JVMClusterUtil.createRegionServerThread(getConfiguration(), HRegionServer.class, 0);
+      maintenanceRegionServer.start();
     }
 
     // Checking if meta needs initializing.
@@ -1553,9 +1556,11 @@ public class HMaster extends HRegionServer implements MasterServices {
       cleanerPool.shutdownNow();
       cleanerPool = null;
     }
+    if (maintenanceRegionServer != null) {
+      maintenanceRegionServer.getRegionServer().stop(HBASE_MASTER_CLEANER_INTERVAL);
+    }
 
     LOG.debug("Stopping service threads");
-
     // stop procedure executor prior to other services such as server manager and assignment
     // manager, as these services are important for some running procedures. See HBASE-24117 for
     // example.
@@ -3873,10 +3878,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   public Map<String, ReplicationStatus> getWalGroupsReplicationStatus() {
-    if (!this.isOnline() || !maintenanceMode) {
-      return new HashMap<>();
-    }
-    return super.getWalGroupsReplicationStatus();
+    return new HashMap<>();
   }
 
   public HbckChore getHbckChore() {
