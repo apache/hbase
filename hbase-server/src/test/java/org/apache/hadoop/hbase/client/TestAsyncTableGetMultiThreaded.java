@@ -198,7 +198,7 @@ public class TestAsyncTableGetMultiThreaded {
       }
       Thread.sleep(5000);
       LOG.info("====== Balancing cluster ======");
-      admin.balance(true);
+      admin.balance(BalanceRequest.newBuilder().setIgnoreRegionsInTransition(true).build());
       LOG.info("====== Balance cluster done ======");
       Thread.sleep(5000);
       ServerName metaServer = TEST_UTIL.getHBaseCluster().getServerHoldingMeta();

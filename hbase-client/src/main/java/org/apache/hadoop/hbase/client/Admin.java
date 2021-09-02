@@ -1251,7 +1251,20 @@ public interface Admin extends Abortable, Closeable {
    * @return <code>true</code> if balancer ran, <code>false</code> otherwise.
    * @throws IOException if a remote or network exception occurs
    */
-  boolean balance() throws IOException;
+  default boolean balance() throws IOException {
+    return balance(BalanceRequest.defaultInstance())
+      .isBalancerRan();
+  }
+
+  /**
+   * Invoke the balancer with the given balance request.  The BalanceRequest defines how the
+   * balancer will run. See {@link BalanceRequest} for more details.
+   *
+   * @param request defines how the balancer should run
+   * @return {@link BalanceResponse} with details about the results of the invocation.
+   * @throws IOException if a remote or network exception occurs
+   */
+  BalanceResponse balance(BalanceRequest request) throws IOException;
 
   /**
    * Invoke the balancer.  Will run the balancer and if regions to move, it will
@@ -1262,7 +1275,7 @@ public interface Admin extends Abortable, Closeable {
    * @return <code>true</code> if balancer ran, <code>false</code> otherwise.
    * @throws IOException if a remote or network exception occurs
    * @deprecated Since 2.0.0. Will be removed in 3.0.0.
-   * Use {@link #balance(boolean)} instead.
+   * Use {@link #balance(BalanceRequest)} instead.
    */
   @Deprecated
   default boolean balancer(boolean force) throws IOException {
@@ -1277,8 +1290,17 @@ public interface Admin extends Abortable, Closeable {
    * @param force whether we should force balance even if there is region in transition
    * @return <code>true</code> if balancer ran, <code>false</code> otherwise.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Since 2.5.0. Will be removed in 4.0.0.
+   * Use {@link #balance(BalanceRequest)} instead.
    */
-  boolean balance(boolean force) throws IOException;
+  @Deprecated
+  default boolean balance(boolean force) throws IOException {
+    return balance(
+      BalanceRequest.newBuilder()
+      .setIgnoreRegionsInTransition(force)
+      .build()
+    ).isBalancerRan();
+  }
 
   /**
    * Query the current state of the balancer.

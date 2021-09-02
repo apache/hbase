@@ -292,11 +292,14 @@ message IsInMaintenanceModeResponse {
 }
 
 message BalanceRequest {
-  optional bool force = 1;
+  optional bool ignore_rit = 1;
+  optional bool dry_run = 2;
 }
 
 message BalanceResponse {
   required bool balancer_ran = 1;
+  optional uint32 moves_calculated = 2;
+  optional uint32 moves_executed = 3;
 }
 
 message SetBalancerRunningRequest {

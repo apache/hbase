@@ -40,6 +40,8 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
@@ -689,13 +691,14 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preBalance(ObserverContext<MasterCoprocessorEnvironment> env)
-        throws IOException {
+    public void preBalance(ObserverContext<MasterCoprocessorEnvironment> env,
+      BalanceRequest request) throws IOException {
       preBalanceCalled = true;
     }
 
     @Override
     public void postBalance(ObserverContext<MasterCoprocessorEnvironment> env,
+        BalanceRequest request,
         List<RegionPlan> plans) throws IOException {
       postBalanceCalled = true;
     }
@@ -1159,12 +1162,12 @@ public class TestMasterObserver {
 
     @Override
     public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                  String groupName) throws IOException {
+                                  String groupName, BalanceRequest request) throws IOException {
     }
 
     @Override
     public void postBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        String groupName, boolean balancerRan) throws IOException {
+        String groupName, BalanceRequest request, BalanceResponse response) throws IOException {
     }
 
     @Override
@@ -1616,7 +1619,7 @@ public class TestMasterObserver {
       UTIL.waitUntilNoRegionsInTransition();
       // now trigger a balance
       master.balanceSwitch(true);
-      boolean balanceRun = master.balance();
+      master.balance();
       assertTrue("Coprocessor should be called on region rebalancing",
           cp.wasBalanceCalled());
     } finally {
