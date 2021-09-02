@@ -144,4 +144,11 @@ public class TestTestingHBaseCluster {
     CLUSTER.startRegionServer(DNS.getHostname(CLUSTER.getConf(), ServerType.REGIONSERVER), 0);
     Waiter.waitFor(CLUSTER.getConf(), 30000, () -> admin.getRegionServers().size() == 4);
   }
+
+  @Test
+  public void testGetAddresses() throws Exception {
+    assertTrue(CLUSTER.getActiveMasterAddress().isPresent());
+    assertEquals(1, CLUSTER.getBackupMasterAddresses().size());
+    assertEquals(3, CLUSTER.getRegionServerAddresses().size());
+  }
 }
