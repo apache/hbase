@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -1003,7 +1004,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preBalance(ObserverContext<MasterCoprocessorEnvironment> c)
+  public void preBalance(ObserverContext<MasterCoprocessorEnvironment> c, BalanceRequest request)
       throws IOException {
     requirePermission(c, "balance", Action.ADMIN);
   }

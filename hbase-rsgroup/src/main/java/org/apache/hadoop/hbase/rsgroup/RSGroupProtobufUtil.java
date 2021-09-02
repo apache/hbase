@@ -21,12 +21,15 @@ package org.apache.hadoop.hbase.rsgroup;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -34,6 +37,36 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 final class RSGroupProtobufUtil {
   private RSGroupProtobufUtil() {
+  }
+
+  static void populateBalanceRSGroupResponse(BalanceRSGroupResponse.Builder responseBuilder, BalanceResponse response) {
+    responseBuilder
+      .setBalanceRan(response.isBalancerRan())
+      .setMovesCalculated(response.getMovesCalculated())
+      .setMovesExecuted(response.getMovesExecuted());
+  }
+
+  static BalanceResponse toBalanceResponse(BalanceRSGroupResponse response) {
+    return BalanceResponse.newBuilder()
+      .setBalancerRan(response.getBalanceRan())
+      .setMovesExecuted(response.hasMovesExecuted() ? response.getMovesExecuted() : 0)
+      .setMovesCalculated(response.hasMovesCalculated() ? response.getMovesCalculated() : 0)
+      .build();
+  }
+
+  static BalanceRSGroupRequest createBalanceRSGroupRequest(String groupName, BalanceRequest request) {
+    return BalanceRSGroupRequest.newBuilder()
+      .setRSGroupName(groupName)
+      .setDryRun(request.isDryRun())
+      .setIgnoreRit(request.isIgnoreRegionsInTransition())
+      .build();
+  }
+
+  static BalanceRequest toBalanceRequest(BalanceRSGroupRequest request) {
+    return BalanceRequest.newBuilder()
+      .setDryRun(request.hasDryRun() && request.getDryRun())
+      .setIgnoreRegionsInTransition(request.hasIgnoreRit() && request.getIgnoreRit())
+      .build();
   }
 
   static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {

@@ -27,6 +27,7 @@ import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
@@ -783,6 +785,11 @@ public class ThriftAdmin implements Admin {
 
   @Override
   public boolean balance(boolean force) {
+    throw new NotImplementedException("balance not supported in ThriftAdmin");
+  }
+
+  @Override
+  public BalanceResponse balance(BalanceRequest request) throws IOException {
     throw new NotImplementedException("balance not supported in ThriftAdmin");
   }
 

@@ -107,14 +107,14 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
     Address startRSAddress = t.getRegionServer().getServerName().getAddress();
     TEST_UTIL.waitFor(3000, () -> rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP)
       .containsServer(startRSAddress));
-    assertTrue(master.balance());
+    assertTrue(master.balance().isBalancerRan());
     assertRegionsInGroup(tableName, RSGroupInfo.DEFAULT_GROUP);
 
     // add a new server to test group, regions move back
     t = TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(60000);
     rsGroupAdmin.moveServers(
       Collections.singleton(t.getRegionServer().getServerName().getAddress()), groupName);
-    assertTrue(master.balance());
+    assertTrue(master.balance().isBalancerRan());
     assertRegionsInGroup(tableName, groupName);
 
     TEST_UTIL.deleteTable(tableName);
