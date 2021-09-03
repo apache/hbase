@@ -735,7 +735,8 @@ public class ServerManager {
    */
   private int getMinToStart() {
     if (master.isInMaintenanceMode()) {
-      // If in maintenance mode, then master hosting meta will be the only server available
+      // If in maintenance mode, then in process region server hosting meta will be the only server
+      // available
       return 1;
     }
 
