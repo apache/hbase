@@ -20,6 +20,78 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.4.6 - 2021-09-10
+
+
+
+### NEW FEATURES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-6908](https://issues.apache.org/jira/browse/HBASE-6908) | Pluggable Call BlockingQueue for HBaseServer |  Major | IPC/RPC |
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25642](https://issues.apache.org/jira/browse/HBASE-25642) | Fix or stop warning about already cached block |  Major | BlockCache, Operability, regionserver |
+| [HBASE-24652](https://issues.apache.org/jira/browse/HBASE-24652) | master-status UI make date type fields sortable |  Minor | master, Operability, UI, Usability |
+| [HBASE-25680](https://issues.apache.org/jira/browse/HBASE-25680) | Non-idempotent test in TestReplicationHFileCleaner |  Minor | test |
+| [HBASE-26179](https://issues.apache.org/jira/browse/HBASE-26179) | TestRequestTooBigException spends too much time to finish |  Major | test |
+| [HBASE-26160](https://issues.apache.org/jira/browse/HBASE-26160) | Configurable disallowlist for live editing of loglevels |  Minor | . |
+| [HBASE-25469](https://issues.apache.org/jira/browse/HBASE-25469) | Add detailed RIT info in JSON format for consumption as metrics |  Minor | master |
+| [HBASE-26154](https://issues.apache.org/jira/browse/HBASE-26154) | Provide exception metric for quota exceeded and throttling |  Minor | . |
+| [HBASE-26105](https://issues.apache.org/jira/browse/HBASE-26105) | Rectify the expired TODO comment in CombinedBC |  Trivial | BlockCache |
+| [HBASE-26146](https://issues.apache.org/jira/browse/HBASE-26146) | Allow custom opts for hbck in hbase bin |  Minor | . |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26106](https://issues.apache.org/jira/browse/HBASE-26106) | AbstractFSWALProvider#getArchivedLogPath doesn't look for wal file in all oldWALs directory. |  Critical | wal |
+| [HBASE-26205](https://issues.apache.org/jira/browse/HBASE-26205) | TableMRUtil#initCredentialsForCluster should use specified conf for UserProvider |  Major | mapreduce |
+| [HBASE-26210](https://issues.apache.org/jira/browse/HBASE-26210) | HBase Write should be doomed to hang when cell size exceeds InmemoryFlushSize for CompactingMemStore |  Critical | in-memory-compaction |
+| [HBASE-26244](https://issues.apache.org/jira/browse/HBASE-26244) | Avoid trim the error stack trace when running UT with maven |  Major | . |
+| [HBASE-25588](https://issues.apache.org/jira/browse/HBASE-25588) | Excessive logging of "hbase.zookeeper.useMulti is deprecated. Default to true always." |  Minor | logging, Operability, Replication |
+| [HBASE-26232](https://issues.apache.org/jira/browse/HBASE-26232) | SEEK\_NEXT\_USING\_HINT is ignored on reversed Scans |  Critical | Filters, scan |
+| [HBASE-26204](https://issues.apache.org/jira/browse/HBASE-26204) | VerifyReplication should obtain token for peerQuorumAddress too |  Major | . |
+| [HBASE-26219](https://issues.apache.org/jira/browse/HBASE-26219) | Negative time is logged while waiting on regionservers |  Trivial | . |
+| [HBASE-26087](https://issues.apache.org/jira/browse/HBASE-26087) | JVM crash when displaying RPC params by MonitoredRPCHandler |  Major | UI |
+| [HBASE-24570](https://issues.apache.org/jira/browse/HBASE-24570) | connection#close throws NPE |  Minor | Client |
+| [HBASE-26200](https://issues.apache.org/jira/browse/HBASE-26200) | Undo 'HBASE-25165 Change 'State time' in UI so sorts (#2508)' in favor of HBASE-24652 |  Major | UI |
+| [HBASE-26196](https://issues.apache.org/jira/browse/HBASE-26196) | Support configuration override for remote cluster of HFileOutputFormat locality sensitive |  Major | mapreduce |
+| [HBASE-26026](https://issues.apache.org/jira/browse/HBASE-26026) | HBase Write may be stuck forever when using CompactingMemStore |  Critical | in-memory-compaction |
+| [HBASE-26155](https://issues.apache.org/jira/browse/HBASE-26155) | JVM crash when scan |  Major | Scanners |
+| [HBASE-26176](https://issues.apache.org/jira/browse/HBASE-26176) | Correct regex in hbase-personality.sh |  Minor | build |
+| [HBASE-26170](https://issues.apache.org/jira/browse/HBASE-26170) | handleTooBigRequest in NettyRpcServer didn't skip enough bytes |  Major | . |
+| [HBASE-26142](https://issues.apache.org/jira/browse/HBASE-26142) | NullPointerException when set 'hbase.hregion.memstore.mslab.indexchunksize.percent' to zero |  Critical | . |
+| [HBASE-26166](https://issues.apache.org/jira/browse/HBASE-26166) | table list in master ui has a minor bug |  Minor | UI |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26185](https://issues.apache.org/jira/browse/HBASE-26185) | Fix TestMaster#testMoveRegionWhenNotInitialized with hbase.min.version.move.system.tables |  Minor | . |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26189](https://issues.apache.org/jira/browse/HBASE-26189) | Reduce log level of CompactionProgress notice to DEBUG |  Minor | Compaction |
+| [HBASE-26227](https://issues.apache.org/jira/browse/HBASE-26227) | Forward port HBASE-26223 test code to branch-2.4+ |  Major | test |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26152](https://issues.apache.org/jira/browse/HBASE-26152) | Exclude javax.servlet:servlet-api in hbase-shaded-testing-util |  Major | . |
+
+
 ## Release 2.4.5 - 2021-07-31
 
 

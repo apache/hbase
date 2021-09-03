@@ -20,6 +20,76 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.4.6 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-26204](https://issues.apache.org/jira/browse/HBASE-26204) | *Major* | **VerifyReplication should obtain token for peerQuorumAddress too**
+
+VerifyReplication obtains tokens even if the peer quorum parameter is used. VerifyReplication with peer quorum can be used for secure clusters also.
+
+
+---
+
+* [HBASE-24652](https://issues.apache.org/jira/browse/HBASE-24652) | *Minor* | **master-status UI make date type fields sortable**
+
+Makes RegionServer 'Start time' sortable in the Master UI
+
+
+---
+
+* [HBASE-26200](https://issues.apache.org/jira/browse/HBASE-26200) | *Major* | **Undo 'HBASE-25165 Change 'State time' in UI so sorts (#2508)' in favor of HBASE-24652**
+
+Undid showing RegionServer 'Start time' in ISO-8601 format. Revert.
+
+
+---
+
+* [HBASE-6908](https://issues.apache.org/jira/browse/HBASE-6908) | *Major* | **Pluggable Call BlockingQueue for HBaseServer**
+
+Can pass in a FQCN to load as the call queue implementation.
+
+Standardized arguments to the constructor are the max queue length, the PriorityFunction, and the Configuration.
+
+PluggableBlockingQueue abstract class provided to help guide the correct constructor signature.
+
+Hard fails with PluggableRpcQueueNotFound if the class fails to load as a BlockingQueue\<CallRunner\>
+
+Upstreaming on behalf of Hubspot, we are interested in defining our own custom RPC queue and don't want to get involved in necessarily upstreaming internal requirements/iterations.
+
+
+---
+
+* [HBASE-26196](https://issues.apache.org/jira/browse/HBASE-26196) | *Major* | **Support configuration override for remote cluster of HFileOutputFormat locality sensitive**
+
+Allow any configuration for the remote cluster in HFileOutputFormat2 that could be useful the different configuration from the job's configuration is necessary to connect the remote cluster, for instance, non-secure vs secure.
+
+
+---
+
+* [HBASE-26160](https://issues.apache.org/jira/browse/HBASE-26160) | *Minor* | **Configurable disallowlist for live editing of loglevels**
+
+Adds a new hbase.ui.logLevels.readonly.loggers config which takes a comma-separated list of logger names. Similar to log4j configurations, the logger names can be prefixes or a full logger name. The log level of read only loggers cannot be changed via the logLevel UI or setlevel CLI. This is useful for securing sensitive loggers, such as the SecurityLogger used for audit logs.
+
+
+---
+
+* [HBASE-26154](https://issues.apache.org/jira/browse/HBASE-26154) | *Minor* | **Provide exception metric for quota exceeded and throttling**
+
+Adds "exceptions.quotaExceeded" and "exceptions.rpcThrottling" to HBase server and Thrift server metrics.
+
+
+---
+
+* [HBASE-26146](https://issues.apache.org/jira/browse/HBASE-26146) | *Minor* | **Allow custom opts for hbck in hbase bin**
+
+Adds HBASE\_HBCK\_OPTS environment variable to bin/hbase for passing extra options to hbck/hbck2. Defaults to HBASE\_SERVER\_JAAS\_OPTS if specified, or HBASE\_REGIONSERVER\_OPTS.
+
+
+
 # HBASE  2.4.5 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
