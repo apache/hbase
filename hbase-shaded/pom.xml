@@ -259,14 +259,6 @@
                                         <pattern>org.eclipse</pattern>
                                         <shadedPattern>${shaded.prefix}.org.eclipse</shadedPattern>
                                     </relocation>
-                                    <!-- Jetty maintains a string of available classes. This string must be
-                                      properly relocated. For more details, see "Setting server classes" at
-                                      https://www.eclipse.org/jetty/documentation/current/jetty-classloading.html
-                                     -->
-                                    <relocation>
-                                        <pattern>-org.eclipse</pattern>
-                                        <shadedPattern>-${shaded.prefix}.org.eclipse</shadedPattern>
-                                    </relocation>
                                     <relocation>
                                         <pattern>org.ehcache</pattern>
                                         <shadedPattern>${shaded.prefix}.org.ehcache</shadedPattern>
@@ -467,9 +459,6 @@
                                       <resource>ASL2.0</resource>
                                       <!-- also this unneeded doc -->
                                       <resource>overview.html</resource>
-                                      <resource>.SF</resource>
-                                      <resource>.RSA</resource>
-                                      <resource>.DSA</resource>
                                     </resources>
                                   </transformer>
                                   <!-- Where notices exist, just concat them -->
@@ -510,6 +499,7 @@
                                     </excludes>
                                   </filter>
                                   <filter>
+                                    <!-- server side webapps that we don't need -->
                                     <artifact>org.apache.hadoop:hadoop-yarn-common</artifact>
                                     <excludes>
                                       <exclude>webapps/*</exclude>
