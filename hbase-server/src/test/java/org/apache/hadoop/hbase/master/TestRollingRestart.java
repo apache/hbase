@@ -261,9 +261,6 @@ public class TestRollingRestart {
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
       numFound += rst.getRegionServer().getNumberOfOnlineRegions();
     }
-    for (MasterThread mt : cluster.getMasterThreads()) {
-      numFound += mt.getMaster().getNumberOfOnlineRegions();
-    }
     return numFound;
   }
 

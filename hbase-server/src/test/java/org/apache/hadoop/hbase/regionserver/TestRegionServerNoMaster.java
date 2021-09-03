@@ -161,7 +161,7 @@ public class TestRegionServerNoMaster {
       throws Exception {
     AdminProtos.OpenRegionRequest orr =
       RequestConverter.buildOpenRegionRequest(rs.getServerName(), hri, null);
-    AdminProtos.OpenRegionResponse responseOpen = rs.rpcServices.openRegion(null, orr);
+    AdminProtos.OpenRegionResponse responseOpen = rs.getRpcServices().openRegion(null, orr);
 
     Assert.assertTrue(responseOpen.getOpeningStateCount() == 1);
     Assert.assertTrue(responseOpen.getOpeningState(0).
@@ -184,7 +184,7 @@ public class TestRegionServerNoMaster {
       throws Exception {
     AdminProtos.CloseRegionRequest crr = ProtobufUtil.buildCloseRegionRequest(
       rs.getServerName(), hri.getRegionName());
-    AdminProtos.CloseRegionResponse responseClose = rs.rpcServices.closeRegion(null, crr);
+    AdminProtos.CloseRegionResponse responseClose = rs.getRpcServices().closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());
     checkRegionIsClosed(HTU, rs, hri);
   }
@@ -209,7 +209,7 @@ public class TestRegionServerNoMaster {
     // no transition in ZK
     AdminProtos.CloseRegionRequest crr =
         ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), regionName);
-    AdminProtos.CloseRegionResponse responseClose = getRS().rpcServices.closeRegion(null, crr);
+    AdminProtos.CloseRegionResponse responseClose = getRS().getRpcServices().closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());
 
     // now waiting & checking. After a while, the transition should be done and the region closed
@@ -227,11 +227,12 @@ public class TestRegionServerNoMaster {
   public void testMultipleCloseFromMaster() throws Exception {
     for (int i = 0; i < 10; i++) {
       AdminProtos.CloseRegionRequest crr =
-          ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), regionName, null);
+        ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), regionName, null);
       try {
-        AdminProtos.CloseRegionResponse responseClose = getRS().rpcServices.closeRegion(null, crr);
+        AdminProtos.CloseRegionResponse responseClose =
+          getRS().getRpcServices().closeRegion(null, crr);
         Assert.assertTrue("request " + i + " failed",
-            responseClose.getClosed() || responseClose.hasClosed());
+          responseClose.getClosed() || responseClose.hasClosed());
       } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException se) {
         Assert.assertTrue("The next queries may throw an exception.", i > 0);
       }
@@ -258,7 +259,7 @@ public class TestRegionServerNoMaster {
     AdminProtos.CloseRegionRequest crr =
         ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), regionName);
     try {
-      getRS().rpcServices.closeRegion(null, crr);
+      getRS().getRpcServices().closeRegion(null, crr);
       Assert.assertTrue(false);
     } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException expected) {
     }
@@ -268,9 +269,9 @@ public class TestRegionServerNoMaster {
         hri.getEncodedNameAsBytes()));
 
     // Let's start the open handler
-    TableDescriptor htd = getRS().tableDescriptors.get(hri.getTable());
+    TableDescriptor htd = getRS().getTableDescriptors().get(hri.getTable());
 
-    getRS().executorService.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd, -1));
+    getRS().getExecutorService().submit(new OpenRegionHandler(getRS(), getRS(), hri, htd, -1));
 
     // The open handler should have removed the region from RIT but kept the region closed
     checkRegionIsClosed(HTU, getRS(), hri);

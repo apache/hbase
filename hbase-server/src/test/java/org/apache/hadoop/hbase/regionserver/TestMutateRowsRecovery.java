@@ -125,7 +125,7 @@ public class TestMutateRowsRecovery {
       // Send the RS Load to ensure correct lastflushedseqid for stores
       rs1.tryRegionServerReport(now - 30000, now);
       // Kill the RS to trigger wal replay
-      cluster.killRegionServer(rs1.serverName);
+      cluster.killRegionServer(rs1.getServerName());
 
       // Ensure correct data exists
       Get g1 = new Get(row1);

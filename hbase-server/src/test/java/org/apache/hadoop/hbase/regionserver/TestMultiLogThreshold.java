@@ -178,7 +178,6 @@ public class TestMultiLogThreshold {
   }
 
   private void assertLogBatchWarnings(boolean expected) {
-    assertFalse(logs.isEmpty());
     boolean actual = false;
     for (LevelAndMessage event : logs) {
       if (event.level == org.apache.logging.log4j.Level.WARN &&

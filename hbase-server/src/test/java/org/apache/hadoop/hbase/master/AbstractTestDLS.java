@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_wait_for_zk_delet
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,7 +54,6 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
-import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
@@ -78,6 +78,7 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -379,27 +380,6 @@ public abstract class AbstractTestDLS {
         }
         LOG.debug(
           "adding data to rs = " + rst.getName() + " region = " + hri.getRegionNameAsString());
-        Region region = hrs.getOnlineRegion(hri.getRegionName());
-        assertTrue(region != null);
-        putData(region, hri.getStartKey(), nrows, Bytes.toBytes("q"), COLUMN_FAMILY);
-      }
-    }
-
-    for (MasterThread mt : cluster.getLiveMasterThreads()) {
-      HRegionServer hrs = mt.getMaster();
-      List<RegionInfo> hris;
-      try {
-        hris = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
-      } catch (ServerNotRunningYetException e) {
-        // It's ok: this master may be a backup. Ignored.
-        continue;
-      }
-      for (RegionInfo hri : hris) {
-        if (hri.getTable().isSystemTable()) {
-          continue;
-        }
-        LOG.debug(
-          "adding data to rs = " + mt.getName() + " region = " + hri.getRegionNameAsString());
         Region region = hrs.getOnlineRegion(hri.getRegionName());
         assertTrue(region != null);
         putData(region, hri.getStartKey(), nrows, Bytes.toBytes("q"), COLUMN_FAMILY);

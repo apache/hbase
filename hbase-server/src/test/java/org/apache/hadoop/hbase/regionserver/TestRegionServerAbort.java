@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -120,12 +119,6 @@ public class TestRegionServerAbort {
       RegionServerCoprocessorHost cpHost = rs.getRegionServerCoprocessorHost();
       StopBlockingRegionObserver cp = (StopBlockingRegionObserver)cpHost.findCoprocessor(className);
       cp.setStopAllowed(true);
-    }
-    HMaster master = cluster.getMaster();
-    RegionServerCoprocessorHost host = master.getRegionServerCoprocessorHost();
-    if (host != null) {
-      StopBlockingRegionObserver obs = (StopBlockingRegionObserver) host.findCoprocessor(className);
-      if (obs != null) obs.setStopAllowed(true);
     }
     testUtil.shutdownMiniCluster();
   }

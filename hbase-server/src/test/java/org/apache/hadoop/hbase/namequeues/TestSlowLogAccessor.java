@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.namequeues;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -93,9 +92,7 @@ public class TestSlowLogAccessor {
   @Before
   public void setUp() throws Exception {
     HRegionServer hRegionServer = HBASE_TESTING_UTILITY.getMiniHBaseCluster().getRegionServer(0);
-    Field slowLogRecorder = HRegionServer.class.getDeclaredField("namedQueueRecorder");
-    slowLogRecorder.setAccessible(true);
-    this.namedQueueRecorder = (NamedQueueRecorder) slowLogRecorder.get(hRegionServer);
+    this.namedQueueRecorder = hRegionServer.getNamedQueueRecorder();
   }
 
   private List<TooSlowLog.SlowLogPayload> getSlowLogPayloads(

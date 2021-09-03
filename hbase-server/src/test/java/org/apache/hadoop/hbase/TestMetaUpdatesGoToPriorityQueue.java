@@ -113,13 +113,8 @@ public class TestMetaUpdatesGoToPriorityQueue {
     // find the meta server
     SingleProcessHBaseCluster cluster = UTIL.getMiniHBaseCluster();
     int rsIndex = cluster.getServerWithMeta();
-    HRegionServer rs;
-    if (rsIndex >= 0) {
-      rs = cluster.getRegionServer(rsIndex);
-    } else {
-      // it is in master
-      rs = cluster.getMaster();
-    }
+    assertTrue(rsIndex >= 0);
+    HRegionServer rs = cluster.getRegionServer(rsIndex);
     SpyingRpcScheduler scheduler = (SpyingRpcScheduler) rs.getRpcServer().getScheduler();
     long prevCalls = scheduler.numPriorityCalls;
     long time = EnvironmentEdgeManager.currentTime();

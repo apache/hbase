@@ -290,7 +290,6 @@ public class TestTableFavoredNodes {
    * 3. Is the FN information consistent between Master and the respective RegionServer?
    */
   private void checkIfFavoredNodeInformationIsCorrect(TableName tableName) throws Exception {
-
     /*
      * Since we need HRegionServer to check for consistency of FN between Master and RS,
      * lets construct a map for each serverName lookup. Makes it easy later.
@@ -299,11 +298,6 @@ public class TestTableFavoredNodes {
     for (JVMClusterUtil.RegionServerThread rst :
       TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()) {
       snRSMap.put(rst.getRegionServer().getServerName(), rst.getRegionServer());
-    }
-    // Also include master, since it can also host user regions.
-    for (JVMClusterUtil.MasterThread rst :
-      TEST_UTIL.getMiniHBaseCluster().getLiveMasterThreads()) {
-      snRSMap.put(rst.getMaster().getServerName(), rst.getMaster());
     }
 
     int dnPort = FavoredNodeAssignmentHelper.getDataNodePort(TEST_UTIL.getConfiguration());
