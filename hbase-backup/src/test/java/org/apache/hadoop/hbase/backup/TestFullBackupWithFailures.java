@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -76,7 +76,7 @@ public class TestFullBackupWithFailures extends TestBackupBase {
         assertFalse(checkSucceeded(backupId));
       }
       Set<TableName> tables = table.getIncrementalBackupTableSet(BACKUP_ROOT_DIR);
-      assertTrue(tables.size() == 0);
+      assertEquals((Stage.stage_4.ordinal() == stage) ? 2 : 0, tables.size());
     }
   }
 

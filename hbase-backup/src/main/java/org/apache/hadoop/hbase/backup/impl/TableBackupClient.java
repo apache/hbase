@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,7 +96,7 @@ public abstract class TableBackupClient {
       this.tableList = new ArrayList<>(backupInfo.getTables());
     }
     // Start new session
-    backupManager.startBackupSession();
+    backupManager.startBackupSession(Arrays.asList(backupInfo));
   }
 
   /**
@@ -106,7 +107,6 @@ public abstract class TableBackupClient {
   protected void beginBackup(BackupManager backupManager, BackupInfo backupInfo)
       throws IOException {
 
-    BackupSystemTable.snapshot(conn);
     backupManager.setBackupInfo(backupInfo);
     // set the start timestamp of the overall backup
     long startTs = EnvironmentEdgeManager.currentTime();
@@ -247,7 +247,7 @@ public abstract class TableBackupClient {
       // If backup session is updated to FAILED state - means we
       // processed recovery already.
       backupManager.updateBackupInfo(backupInfo);
-      backupManager.finishBackupSession();
+      backupManager.finishBackupSession(backupId);
       LOG.error("Backup " + backupInfo.getBackupId() + " failed.");
     } catch (IOException ee) {
       LOG.error("Please run backup repair tool manually to restore backup system integrity");
@@ -264,8 +264,6 @@ public abstract class TableBackupClient {
       deleteSnapshots(conn, backupInfo, conf);
       cleanupExportSnapshotLog(conf);
     }
-    BackupSystemTable.restoreFromSnapshot(conn);
-    BackupSystemTable.deleteSnapshot(conn);
     // clean up the uncompleted data at target directory if the ongoing backup has already entered
     // the copy phase
     // For incremental backup, DistCp logs will be cleaned with the targetDir.
@@ -393,11 +391,10 @@ public abstract class TableBackupClient {
     } else if (type == BackupType.INCREMENTAL) {
       cleanupDistCpLog(backupInfo, conf);
     }
-    BackupSystemTable.deleteSnapshot(conn);
     backupManager.updateBackupInfo(backupInfo);
 
     // Finish active session
-    backupManager.finishBackupSession();
+    backupManager.finishBackupSession(backupId);
 
     LOG.info("Backup " + backupInfo.getBackupId() + " completed.");
   }
