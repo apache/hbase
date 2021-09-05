@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLongArray;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -94,7 +95,7 @@ public class TestBackupManager {
       @Override
       public void run() {
         try {
-          backupManager.startBackupSession();
+          backupManager.startBackupSession(new ArrayList<>());
           boolean result = startTimes.compareAndSet(0, 0, EnvironmentEdgeManager.currentTime());
           if (!result) {
             result = startTimes.compareAndSet(1, 0, EnvironmentEdgeManager.currentTime());
@@ -110,7 +111,7 @@ public class TestBackupManager {
               throw new IOException("PANIC! Unreachable code");
             }
           }
-          backupManager.finishBackupSession();
+          backupManager.finishBackupSession(null);
         } catch (IOException | InterruptedException e) {
           fail("Unexpected exception: " + e.getMessage());
         }
@@ -128,8 +129,8 @@ public class TestBackupManager {
     }
     LOG.info("Diff start time=" + (startTimes.get(1) - startTimes.get(0)) + "ms");
     LOG.info("Diff finish time=" + (stopTimes.get(1) - stopTimes.get(0)) + "ms");
-    assertTrue(startTimes.get(1) - startTimes.get(0) >= sleepTime);
-    assertTrue(stopTimes.get(1) - stopTimes.get(0) >= sleepTime);
+    assertTrue(startTimes.get(1) - startTimes.get(0) < sleepTime);
+    assertTrue(stopTimes.get(1) - stopTimes.get(0) < sleepTime);
 
   }
 
