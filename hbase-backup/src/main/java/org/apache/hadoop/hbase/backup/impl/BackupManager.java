@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.backup.impl;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -283,14 +284,14 @@ public class BackupManager implements Closeable {
    * Starts new backup session
    * @throws IOException if active session already exists
    */
-  public void startBackupSession() throws IOException {
+  public void startBackupSession(List<BackupInfo> backupInfos) throws IOException {
     long startTime = EnvironmentEdgeManager.currentTime();
     long timeout = conf.getInt(BACKUP_EXCLUSIVE_OPERATION_TIMEOUT_SECONDS_KEY,
       DEFAULT_BACKUP_EXCLUSIVE_OPERATION_TIMEOUT) * 1000L;
     long lastWarningOutputTime = 0;
     while (EnvironmentEdgeManager.currentTime() - startTime < timeout) {
       try {
-        systemTable.startBackupExclusiveOperation();
+        systemTable.startBackupExclusiveOperation(backupInfos);
         return;
       } catch (IOException e) {
         if (e instanceof ExclusiveOperationException) {
@@ -322,8 +323,8 @@ public class BackupManager implements Closeable {
    * Finishes active backup session
    * @throws IOException if no active session
    */
-  public void finishBackupSession() throws IOException {
-    systemTable.finishBackupExclusiveOperation();
+  public void finishBackupSession(String backupId) throws IOException {
+    systemTable.finishBackupExclusiveOperation(Arrays.asList(backupId));
   }
 
   /**

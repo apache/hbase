@@ -44,6 +44,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -266,7 +267,7 @@ public final class BackupCommands {
 
     @Override
     protected boolean requiresNoActiveSession() {
-      return true;
+      return false;
     }
 
     @Override
@@ -339,12 +340,12 @@ public final class BackupCommands {
 
       boolean ignoreChecksum = cmdline.hasOption(OPTION_IGNORECHECKSUM);
 
+      List<TableName> tablesList = Lists.newArrayList(BackupUtils.parseTableNames(tables));
+
       try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         BackupRequest.Builder builder = new BackupRequest.Builder();
         BackupRequest request = builder.withBackupType(BackupType.valueOf(args[1].toUpperCase()))
-          .withTableList(
-            tables != null ? Lists.newArrayList(BackupUtils.parseTableNames(tables)) : null)
-          .withTargetRootDir(targetBackupDir).withTotalTasks(workers)
+          .withTableList(tablesList).withTargetRootDir(targetBackupDir).withTotalTasks(workers)
           .withBandwidthPerTasks(bandwidth).withNoChecksumVerify(ignoreChecksum)
           .withBackupSetName(setName).build();
         String backupId = admin.backupTables(request);
@@ -678,9 +679,8 @@ public final class BackupCommands {
       try (final Connection conn = ConnectionFactory.createConnection(conf);
         final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
         // Failed backup
-        BackupInfo backupInfo;
-        List<BackupInfo> list = sysTable.getBackupInfos(BackupState.RUNNING);
-        if (list.size() == 0) {
+        List<BackupInfo> backupInfos = sysTable.getBackupInfos(BackupState.RUNNING);
+        if (backupInfos.size() == 0) {
           // No failed sessions found
           System.out.println("REPAIR status: no failed sessions found."
             + " Checking failed delete backup operation ...");
@@ -688,25 +688,26 @@ public final class BackupCommands {
           repairFailedBackupMergeIfAny(conn, sysTable);
           return;
         }
-        backupInfo = list.get(0);
-        // If this is a cancel exception, then we've already cleaned.
-        // set the failure timestamp of the overall backup
-        backupInfo.setCompleteTs(EnvironmentEdgeManager.currentTime());
-        // set failure message
-        backupInfo.setFailedMsg("REPAIR status: repaired after failure:\n" + backupInfo);
-        // set overall backup status: failed
-        backupInfo.setState(BackupState.FAILED);
-        // compose the backup failed data
-        String backupFailedData = "BackupId=" + backupInfo.getBackupId() + ",startts="
-          + backupInfo.getStartTs() + ",failedts=" + backupInfo.getCompleteTs() + ",failedphase="
-          + backupInfo.getPhase() + ",failedmessage=" + backupInfo.getFailedMsg();
-        System.out.println(backupFailedData);
-        TableBackupClient.cleanupAndRestoreBackupSystem(conn, backupInfo, conf);
-        // If backup session is updated to FAILED state - means we
-        // processed recovery already.
-        sysTable.updateBackupInfo(backupInfo);
-        sysTable.finishBackupExclusiveOperation();
-        System.out.println("REPAIR status: finished repair failed session:\n " + backupInfo);
+        for (BackupInfo backupInfo : backupInfos) {
+          // If this is a cancel exception, then we've already cleaned.
+          // set the failure timestamp of the overall backup
+          backupInfo.setCompleteTs(EnvironmentEdgeManager.currentTime());
+          // set failure message
+          backupInfo.setFailedMsg("REPAIR status: repaired after failure:\n" + backupInfo);
+          // set overall backup status: failed
+          backupInfo.setState(BackupState.FAILED);
+          // compose the backup failed data
+          String backupFailedData = "BackupId=" + backupInfo.getBackupId() + ",startts="
+            + backupInfo.getStartTs() + ",failedts=" + backupInfo.getCompleteTs() + ",failedphase="
+            + backupInfo.getPhase() + ",failedmessage=" + backupInfo.getFailedMsg();
+          System.out.println(backupFailedData);
+          TableBackupClient.cleanupAndRestoreBackupSystem(conn, backupInfo, conf);
+          // If backup session is updated to FAILED state - means we
+          // processed recovery already.
+          sysTable.updateBackupInfo(backupInfo);
+          sysTable.finishBackupExclusiveOperation(Arrays.asList(backupInfo.getBackupId()));
+          System.out.println("REPAIR status: finished repair failed session:\n " + backupInfo);
+        }
       }
     }
 
@@ -715,16 +716,12 @@ public final class BackupCommands {
       String[] backupIds = sysTable.getListOfBackupIdsFromDeleteOperation();
       if (backupIds == null || backupIds.length == 0) {
         System.out.println("No failed backup DELETE operation found");
-        // Delete backup table snapshot if exists
-        BackupSystemTable.deleteSnapshot(conn);
         return;
       }
       System.out.println("Found failed DELETE operation for: " + StringUtils.join(backupIds));
       System.out.println("Running DELETE again ...");
-      // Restore table from snapshot
-      BackupSystemTable.restoreFromSnapshot(conn);
       // Finish previous failed session
-      sysTable.finishBackupExclusiveOperation();
+      sysTable.finishBackupExclusiveOperation(Arrays.asList(backupIds));
       try (BackupAdmin admin = new BackupAdminImpl(conn)) {
         admin.deleteBackups(backupIds);
       }
@@ -737,8 +734,6 @@ public final class BackupCommands {
       String[] backupIds = sysTable.getListOfBackupIdsFromMergeOperation();
       if (backupIds == null || backupIds.length == 0) {
         System.out.println("No failed backup MERGE operation found");
-        // Delete backup table snapshot if exists
-        BackupSystemTable.deleteSnapshot(conn);
         return;
       }
       System.out.println("Found failed MERGE operation for: " + StringUtils.join(backupIds));
@@ -764,10 +759,8 @@ public final class BackupCommands {
       } else {
         checkRemoveBackupImages(fs, backupRoot, backupIds);
       }
-      // Restore table from snapshot
-      BackupSystemTable.restoreFromSnapshot(conn);
       // Unlock backup system
-      sysTable.finishBackupExclusiveOperation();
+      sysTable.finishBackupExclusiveOperation(Arrays.asList(backupIds));
       // Finish previous failed session
       sysTable.finishMergeOperation();
 
