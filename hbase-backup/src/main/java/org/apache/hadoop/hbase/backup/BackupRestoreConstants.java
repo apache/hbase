@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.backup;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -120,7 +121,14 @@ public interface BackupRestoreConstants {
 
   String CONF_STAGING_ROOT = "snapshot.export.staging.root";
 
-  String BACKUPID_PREFIX = "backup_";
+  String BACKUPID_PREFIX = "backup";
+
+  String UNDERSCORE = "_";
+
+  static String getBackupPrefix() {
+    return BackupRestoreConstants.BACKUPID_PREFIX + RandomStringUtils.randomNumeric(4)
+      + BackupRestoreConstants.UNDERSCORE;
+  }
 
   enum BackupCommand {
     CREATE, CANCEL, DELETE, DESCRIBE, HISTORY, STATUS, CONVERT, MERGE, STOP, SHOW, HELP, PROGRESS,

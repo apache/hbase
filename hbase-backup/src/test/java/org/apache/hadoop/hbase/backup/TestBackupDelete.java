@@ -112,17 +112,17 @@ public class TestBackupDelete extends TestBackupBase {
   public void testBackupPurgeOldBackupsCommand() throws Exception {
     LOG.info("test backup delete (purge old backups) on a single table with data: command-line");
     List<TableName> tableList = Lists.newArrayList(table1);
+
+    String backupId = fullTableBackup(tableList);
+    assertTrue(checkSucceeded(backupId));
+
     EnvironmentEdgeManager.injectEdge(new EnvironmentEdge() {
       // time - 2 days
       @Override
       public long currentTime() {
-        return System.currentTimeMillis() - 2 * 24 * 3600 * 1000 ;
+        return System.currentTimeMillis() + 2 * 24 * 3600 * 1000 ;
       }
     });
-    String backupId = fullTableBackup(tableList);
-    assertTrue(checkSucceeded(backupId));
-
-    EnvironmentEdgeManager.reset();
 
     LOG.info("backup complete");
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -159,5 +159,7 @@ public class TestBackupDelete extends TestBackupBase {
     output = baos.toString();
     LOG.info(baos.toString());
     assertTrue(output.indexOf("Deleted 1 backups") >= 0);
+
+    EnvironmentEdgeManager.reset();
   }
 }

@@ -133,13 +133,6 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
         .findCoprocessor(MasterSnapshotObserver.class);
   }
 
-  @Test
-  public void testBackupDeleteWithFailures() throws Exception {
-    testBackupDeleteWithFailuresAfter(1, Failure.PRE_DELETE_SNAPSHOT_FAILURE);
-    testBackupDeleteWithFailuresAfter(0, Failure.POST_DELETE_SNAPSHOT_FAILURE);
-    testBackupDeleteWithFailuresAfter(1, Failure.PRE_SNAPSHOT_FAILURE);
-  }
-
   private void testBackupDeleteWithFailuresAfter(int expected, Failure ...failures)
           throws Exception {
     LOG.info("test repair backup delete on a single table with data and failures "+ failures[0]);

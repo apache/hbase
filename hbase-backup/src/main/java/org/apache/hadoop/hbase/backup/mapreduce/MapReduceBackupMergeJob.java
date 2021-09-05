@@ -21,11 +21,8 @@ import static org.apache.hadoop.hbase.backup.util.BackupUtils.succeeded;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -98,9 +95,16 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
     FileSystem fs = FileSystem.get(getConf());
 
     try {
+      List<BackupInfo> backupInfos = new ArrayList<>();
+      for (String backupId : backupIds) {
+        BackupInfo bInfo = table.readBackupInfo(backupId);
+        if (bInfo != null) {
+            backupInfos.add(bInfo);
+        }
+      }
 
       // Get exclusive lock on backup system
-      table.startBackupExclusiveOperation();
+      table.startBackupExclusiveOperation(backupInfos);
       // Start merge operation
       table.startMergeOperation(backupIds);
 
@@ -177,7 +181,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       // Finish merge session
       table.finishMergeOperation();
       // Release lock
-      table.finishBackupExclusiveOperation();
+      table.finishBackupExclusiveOperation(Arrays.asList(backupIds));
     } catch (RuntimeException e) {
 
       throw e;
@@ -188,7 +192,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
         // merge MUST be repeated (no need for repair)
         cleanupBulkLoadDirs(fs, toPathList(processedTableList));
         table.finishMergeOperation();
-        table.finishBackupExclusiveOperation();
+        table.finishBackupExclusiveOperation(Arrays.asList(backupIds));
         throw new IOException("Backup merge operation failed, you should try it again", e);
       } else {
         // backup repair must be run
