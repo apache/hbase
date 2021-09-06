@@ -25,7 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.eclipse.jetty.servlet.DefaultServlet;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.DefaultServlet;
 
 /**
  * General servlet which is admin-authorized.

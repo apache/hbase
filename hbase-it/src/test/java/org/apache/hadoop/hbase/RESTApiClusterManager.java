@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounter.RetryConfig;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
+import org.apache.hbase.thirdparty.org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.gson.JsonElement;

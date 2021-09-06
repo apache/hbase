@@ -46,7 +46,7 @@ public class HttpServerFunctionalTest extends Assert {
   /** JVM property for the webapp test dir : {@value} */
   public static final String TEST_BUILD_WEBAPPS = "test.build.webapps";
   /** expected location of the test.build.webapps dir: {@value} */
-  private static final String BUILD_WEBAPPS_DIR = "src/main/resources/hbase-webapps";
+  private static final String BUILD_WEBAPPS_DIR = "src/test/resources/webapps";
 
   /** name of the test webapp: {@value} */
   private static final String TEST = "test";

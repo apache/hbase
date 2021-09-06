@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RESTServlet;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version;
-import org.glassfish.jersey.servlet.ServletContainer;
+import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
 
 
 /**

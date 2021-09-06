@@ -85,6 +85,8 @@ allowed_expr+="|^mozilla/public-suffix-list.txt$"
 allowed_expr+="|^digesterRules.xml$"
 allowed_expr+="|^properties.dtd$"
 allowed_expr+="|^PropertyList-1.0.dtd$"
+allowed_expr+="|^about.html$"
+allowed_expr+="|^jetty-dir.css$"
 
 
 if [ -n "${allow_hadoop}" ]; then

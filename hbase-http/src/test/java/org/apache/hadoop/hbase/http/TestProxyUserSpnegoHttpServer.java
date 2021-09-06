@@ -266,7 +266,8 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
     if(responseCode == HttpURLConnection.HTTP_OK) {
         assertTrue(EntityUtils.toString(resp.getEntity()).trim().contains("a:b"));
     } else {
-        assertTrue(resp.getStatusLine().toString().contains(statusLine));
+      assertTrue(resp.getStatusLine().toString().contains(statusLine) ||
+        EntityUtils.toString(resp.getEntity()).contains(statusLine));
     }
   }
 

@@ -66,30 +66,30 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.eclipse.jetty.http.HttpVersion;
-import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.server.HttpConfiguration;
-import org.eclipse.jetty.server.HttpConnectionFactory;
-import org.eclipse.jetty.server.RequestLog;
-import org.eclipse.jetty.server.SecureRequestCustomizer;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.SslConnectionFactory;
-import org.eclipse.jetty.server.handler.ContextHandlerCollection;
-import org.eclipse.jetty.server.handler.HandlerCollection;
-import org.eclipse.jetty.server.handler.RequestLogHandler;
-import org.eclipse.jetty.server.handler.gzip.GzipHandler;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.FilterMapping;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.MultiException;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.eclipse.jetty.webapp.WebAppContext;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Handler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConfiguration;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.RequestLog;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SecureRequestCustomizer;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ContextHandlerCollection;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.HandlerCollection;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.RequestLogHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.gzip.GzipHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.DefaultServlet;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterMapping;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.MultiException;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.webapp.WebAppContext;
+import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
+import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -888,10 +888,8 @@ public class HttpServer implements FilterContainer {
       fmap.setFilterName(AdminAuthorizedFilter.class.getSimpleName());
       webAppContext.getServletHandler().addFilter(filter, fmap);
     }
-    webAppContext.getSessionHandler().getSessionManager().
-        getSessionCookieConfig().setHttpOnly(true);
-    webAppContext.getSessionHandler().getSessionManager().
-        getSessionCookieConfig().setSecure(true);
+    webAppContext.getSessionHandler().getSessionCookieConfig().setHttpOnly(true);
+    webAppContext.getSessionHandler().getSessionCookieConfig().setSecure(true);
     webAppContext.addServlet(holder, pathSpec);
   }
 

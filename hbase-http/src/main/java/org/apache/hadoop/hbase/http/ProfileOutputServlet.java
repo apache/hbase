@@ -26,7 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.eclipse.jetty.servlet.DefaultServlet;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.DefaultServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
