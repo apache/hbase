@@ -608,12 +608,12 @@ public class HRegionFileSystem {
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
       HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
         env.getMasterConfiguration(), fs, getTableDir(), regionInfo, false);
-      loadRegionFilesIntoStoreTracker(allRegionFiles, env, regionFs);
+      insertRegionFilesIntoStoreTracker(allRegionFiles, env, regionFs);
     }
     return regionDir;
   }
 
-  private void loadRegionFilesIntoStoreTracker(List<Path> allFiles, MasterProcedureEnv env,
+  private void insertRegionFilesIntoStoreTracker(List<Path> allFiles, MasterProcedureEnv env,
       HRegionFileSystem regionFs) throws IOException {
     TableDescriptor tblDesc = env.getMasterServices().getTableDescriptors().
       get(regionInfo.getTable());
@@ -797,7 +797,7 @@ public class HRegionFileSystem {
       Path regionInfoFile = new Path(regionDir, REGION_INFO_FILE);
       byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
-      loadRegionFilesIntoStoreTracker(allMergedFiles, env, this);
+      insertRegionFilesIntoStoreTracker(allMergedFiles, env, this);
     }
   }
 
