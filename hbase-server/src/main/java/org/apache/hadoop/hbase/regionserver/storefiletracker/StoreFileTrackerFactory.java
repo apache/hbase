@@ -35,21 +35,18 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public final class StoreFileTrackerFactory {
-  
   public static final String TRACK_IMPL = "hbase.store.file-tracker.impl";
-  
   private static final Logger LOG = LoggerFactory.getLogger(StoreFileTrackerFactory.class);
 
   public static StoreFileTracker create(Configuration conf, boolean isPrimaryReplica,
       StoreContext ctx) {
-    String className = conf.get(TRACK_IMPL, DefaultStoreFileTracker.class.getName());
+    Class<? extends StoreFileTracker> tracker =
+      conf.getClass(TRACK_IMPL, DefaultStoreFileTracker.class, StoreFileTracker.class);
     try {
-      LOG.info("instantiating StoreFileTracker impl {}", className);
-      return ReflectionUtils.newInstance(
-        (Class<? extends StoreFileTracker>) Class.forName(className), conf,
-        isPrimaryReplica, ctx);
+      LOG.info("instantiating StoreFileTracker impl {}", tracker.getName());
+      return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
     } catch (Exception e) {
-      LOG.error("Unable to create StoreFileTracker impl : {}", className, e);
+      LOG.error("Unable to create StoreFileTracker impl : {}", tracker.getName(), e);
       throw new RuntimeException(e);
     }
   }

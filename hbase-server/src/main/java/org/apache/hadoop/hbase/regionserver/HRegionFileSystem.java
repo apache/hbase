@@ -791,7 +791,6 @@ public class HRegionFileSystem {
   public void commitMergedRegion(List<Path> allMergedFiles, MasterProcedureEnv env)
       throws IOException {
     Path regionDir = getMergesDir(regionInfoForFs);
-    TableName tableName = TableName.valueOf(regionDir.getParent().getName());
     if (regionDir != null && fs.exists(regionDir)) {
       // Write HRI to a file in case we need to recover hbase:meta
       Path regionInfoFile = new Path(regionDir, REGION_INFO_FILE);
