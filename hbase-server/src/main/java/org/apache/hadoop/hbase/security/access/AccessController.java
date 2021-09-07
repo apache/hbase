@@ -2617,4 +2617,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     accessChecker.requirePermission(getActiveUser(ctx), "renameRSGroup",
       null, Permission.Action.ADMIN);
   }
+
+  @Override
+  public void preUpdateRSGroupConfig(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+    final String groupName, final Map<String, String> configuration) throws IOException {
+    accessChecker
+      .requirePermission(getActiveUser(ctx), "updateRSGroupConfig", null, Permission.Action.ADMIN);
+  }
 }
