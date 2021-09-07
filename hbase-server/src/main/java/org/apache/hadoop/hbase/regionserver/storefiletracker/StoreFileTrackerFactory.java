@@ -30,6 +30,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+import java.util.function.Function;
+
 /**
  * Factory method for creating store file tracker.
  */
@@ -65,10 +68,17 @@ public final class StoreFileTrackerFactory {
   public static Configuration mergeConfigurations(Configuration global,
     TableDescriptor table, ColumnFamilyDescriptor family) {
     if(!StringUtils.isEmpty(family.getConfigurationValue(TRACK_IMPL))){
-      global.set(TRACK_IMPL, family.getConfigurationValue(TRACK_IMPL));
+      mergeConfigs(global, family.getConfiguration(), e -> e);
     } else if(!StringUtils.isEmpty(table.getValue(TRACK_IMPL))) {
-      global.set(TRACK_IMPL, table.getValue(TRACK_IMPL));
+      mergeConfigs(global, table.getValues(), e -> Bytes.toString(e.get()));
     }
     return global;
+  }
+
+  private static<T> void mergeConfigs(Configuration config, Map<T,T> properties,
+      Function<T, String> converter) {
+    for(Map.Entry<T,T> e : properties.entrySet()){
+      config.set(converter.apply(e.getKey()), converter.apply(e.getValue()));
+    }
   }
 }

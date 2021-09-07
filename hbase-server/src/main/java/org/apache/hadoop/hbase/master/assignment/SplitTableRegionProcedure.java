@@ -696,7 +696,7 @@ public class SplitTableRegionProcedure
     }
     if (nbFiles == 0) {
       // no file needs to be splitted.
-      return new Pair<>(Collections.EMPTY_LIST, Collections.EMPTY_LIST);
+      return new Pair<>(Collections.emptyList(), Collections.emptyList());
     }
     // Max #threads is the smaller of the number of storefiles or the default max determined above.
     int maxThreads = Math.min(
@@ -755,10 +755,10 @@ public class SplitTableRegionProcedure
     for (Future<Pair<Path, Path>> future : futures) {
       try {
         Pair<Path, Path> p = future.get();
-        if(p.getFirst()!=null){
+        if(p.getFirst() != null){
           daughterA.add(p.getFirst());
         }
-        if(p.getSecond()!=null){
+        if(p.getSecond() != null){
           daughterB.add(p.getSecond());
         }
       } catch (InterruptedException e) {
@@ -773,7 +773,7 @@ public class SplitTableRegionProcedure
           getParentRegion().getShortNameToLog() + " Daughter A: " + daughterA +
           " storefiles, Daughter B: " + daughterB + " storefiles.");
     }
-    return new Pair<List<Path>, List<Path>>(daughterA, daughterB);
+    return new Pair<>(daughterA, daughterB);
   }
 
   private void assertReferenceFileCount(final FileSystem fs, final int expectedReferenceFileCount,
