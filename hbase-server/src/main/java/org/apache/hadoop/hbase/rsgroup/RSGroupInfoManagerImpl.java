@@ -259,6 +259,9 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     // do not need to persist, as we do not persist default group.
     resetRSGroupMap(newGroupMap);
     LOG.info("Updated default servers, {} servers", newDefaultGroupInfo.getServers().size());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("New default servers list: {}", newDefaultGroupInfo.getServers());
+    }
   }
 
   private synchronized void init() throws IOException {
@@ -300,6 +303,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.put(rsGroupInfo.getName(), rsGroupInfo);
     flushConfig(newGroupMap);
+    LOG.info("Add group {} done.", rsGroupInfo.getName());
   }
 
   private RSGroupInfo getRSGroupInfo(final String groupName) throws ConstraintException {
@@ -333,7 +337,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       if (onlineServers != null) {
         if (!onlineServers.contains(el)) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Dropping " + el + " during move-to-default rsgroup because not online");
+            LOG.debug("Dropping " + el + " during move-to-default RSGroup because not online");
           }
           continue;
         }
@@ -375,8 +379,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     for (TableDescriptor td : masterServices.getTableDescriptors().getAll().values()) {
       if (td.getRegionServerGroup().map(groupName::equals).orElse(false)) {
         throw new ConstraintException("RSGroup " + groupName + " is already referenced by " +
-            td.getTableName() + "; you must remove all the tables from the rsgroup before " +
-            "the rsgroup can be removed.");
+            td.getTableName() + "; you must remove all the tables from the RSGroup before " +
+            "the RSGroup can be removed.");
       }
     }
     for (NamespaceDescriptor ns : masterServices.getClusterSchema().getNamespaces()) {
@@ -394,6 +398,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.remove(groupName);
     flushConfig(newGroupMap);
+    LOG.info("Remove group {} done", groupName);
   }
 
   @Override
@@ -641,6 +646,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         return;
       }
 
+      LOG.debug("Offline mode, cannot persist to {}", RSGROUP_TABLE_NAME);
+
       Map<String, RSGroupInfo> oldGroupMap = Maps.newHashMap(holder.groupName2Group);
       RSGroupInfo oldDefaultGroup = oldGroupMap.remove(RSGroupInfo.DEFAULT_GROUP);
       RSGroupInfo newDefaultGroup = newGroupMap.remove(RSGroupInfo.DEFAULT_GROUP);
@@ -657,6 +664,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       // according to the inputted newGroupMap (an updated copy of rsGroupMap)
       this.holder = new RSGroupInfoHolder(newGroupMap);
 
+      LOG.debug("New RSGroup map: {}", newGroupMap);
+
       // Do not need to update tableMap
       // because only the update on servers in default group is allowed above,
       // or IOException will be thrown
@@ -664,15 +673,18 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
 
     /* For online mode, persist to hbase:rsgroup and Zookeeper */
+    LOG.debug("Online mode, persisting to {} and ZK", RSGROUP_TABLE_NAME);
     flushConfigTable(newGroupMap);
 
     // Make changes visible after having been persisted to the source of truth
     resetRSGroupMap(newGroupMap);
     saveRSGroupMapToZK(newGroupMap);
     updateCacheOfRSGroups(newGroupMap.keySet());
+    LOG.info("Flush config done, new RSGroup map: {}", newGroupMap);
   }
 
   private void saveRSGroupMapToZK(Map<String, RSGroupInfo> newGroupMap) throws IOException {
+    LOG.debug("Saving RSGroup info to ZK");
     try {
       String groupBasePath =
           ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, RS_GROUP_ZNODE);
@@ -802,6 +814,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       if (optProcId.isPresent()) {
         procId = optProcId.getAsLong();
       } else {
+        LOG.debug("Creating group table {}", RSGROUP_TABLE_NAME);
         procId = masterServices.createSystemTable(RSGROUP_TABLE_DESC);
       }
       // wait for region to be online
@@ -851,9 +864,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
     MutateRowsRequest request = builder.build();
     AsyncTable<?> table = conn.getTable(RSGROUP_TABLE_NAME);
+    LOG.debug("Multimutating {} with {} mutations", RSGROUP_TABLE_NAME, mutations.size());
     FutureUtils.get(table.<MultiRowMutationService, MutateRowsResponse> coprocessorService(
       MultiRowMutationService::newStub,
       (stub, controller, done) -> stub.mutateRows(controller, request, done), ROW_KEY));
+    LOG.info("Multimutating {} with {} mutations done", RSGROUP_TABLE_NAME, mutations.size());
   }
 
   private void checkGroupName(String groupName) throws ConstraintException {
@@ -873,7 +888,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
    * @param servers servers to remove
    */
   private void checkForDeadOrOnlineServers(Set<Address> servers) throws IOException {
-    // This uglyness is because we only have Address, not ServerName.
+    // This ugliness is because we only have Address, not ServerName.
     Set<Address> onlineServers = new HashSet<>();
     List<ServerName> drainingServers = masterServices.getServerManager().getDrainingServersList();
     for (ServerName server : masterServices.getServerManager().getOnlineServers().keySet()) {
@@ -1003,7 +1018,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         // Get regions that are associated with this server and filter regions by group tables.
         for (RegionInfo region : getRegionsInfo.apply((T) owner.getAddress())) {
           if (!validation.apply(region)) {
-            LOG.info("Moving region {}, which do not belong to RSGroup {}",
+            LOG.info("Moving region {}, which does not belong to RSGroup {}",
               region.getShortNameToLog(), targetGroupName);
             // Move region back to source RSGroup servers
             ServerName dest =
@@ -1197,6 +1212,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   }
 
   private void moveTablesAndWait(Set<TableName> tables, String targetGroup) throws IOException {
+    LOG.debug("Moving {} tables to target group {}", tables.size(), targetGroup);
     List<Long> procIds = new ArrayList<Long>();
     for (TableName tableName : tables) {
       TableDescriptor oldTd = masterServices.getTableDescriptors().get(tableName);
@@ -1215,6 +1231,10 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       }
       ProcedureSyncWait.waitForProcedureToCompleteIOE(masterServices.getMasterProcedureExecutor(),
           proc, Long.MAX_VALUE);
+    }
+    LOG.info("Move tables done: moved {} tables to {}", tables.size(), targetGroup);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Tables moved to {}: {}", targetGroup, tables);
     }
   }
 
@@ -1281,7 +1301,12 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       Set<Address> movedServers = moveServers(servers, srcGrp.getName(),
           targetGroupName);
       moveServerRegionsFromGroup(movedServers, srcGrp.getServers(), targetGroupName, srcGrp.getName());
-      LOG.info("Move servers done: {} => {}", srcGrp.getName(), targetGroupName);
+      LOG.info("Move servers done: moved {} servers from {} to {}", movedServers.size(),
+        srcGrp.getName(), targetGroupName);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Servers moved from {} to {}: {}", srcGrp.getName(), targetGroupName,
+          movedServers);
+      }
     }
   }
 
@@ -1315,6 +1340,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
                     .map(TableDescriptor::getTableName)
                     .collect(Collectors.toSet());
     setRSGroup(updateTables, newName);
+    LOG.info("Rename RSGroup done: {} => {}", oldName, newName);
   }
 
   @Override
