@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.BufferOverflowException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -481,5 +482,116 @@ public class TestMultiByteBuff {
     mbb.get(out, 0, 6);
     assertEquals(out.position(), 12);
     assertTrue(Bytes.equals(Bytes.toBytes("abcdekabcdef"), 0, 12, out.array(), 0, 12));
+  }
+
+  @Test
+  public void testPositionalPutByteBuff() throws Exception {
+    ByteBuffer bb1 = ByteBuffer.allocate(100);
+    ByteBuffer bb2 = ByteBuffer.allocate(100);
+    MultiByteBuff srcMultiByteBuff = new MultiByteBuff(bb1, bb2);
+    for (int i = 0; i < 25; i++) {
+      srcMultiByteBuff.putLong(i * 8L);
+    }
+    // Test MultiByteBuff To MultiByteBuff
+    doTestPositionalPutByteBuff(srcMultiByteBuff);
+
+    ByteBuffer bb3 = ByteBuffer.allocate(200);
+    SingleByteBuff srcSingleByteBuff = new SingleByteBuff(bb3);
+    for (int i = 0; i < 25; i++) {
+      srcSingleByteBuff.putLong(i * 8L);
+    }
+    // Test SingleByteBuff To MultiByteBuff
+    doTestPositionalPutByteBuff(srcSingleByteBuff);
+  }
+
+  private void doTestPositionalPutByteBuff(ByteBuff srcByteBuff) throws Exception {
+    ByteBuffer bb3 = ByteBuffer.allocate(50);
+    ByteBuffer bb4 = ByteBuffer.allocate(50);
+    ByteBuffer bb5 = ByteBuffer.allocate(50);
+    ByteBuffer bb6 = ByteBuffer.allocate(50);
+    MultiByteBuff destMultiByteBuff = new MultiByteBuff(bb3, bb4, bb5, bb6);
+
+    // full copy
+    destMultiByteBuff.put(0, srcByteBuff, 0, 200);
+    int compareTo = ByteBuff.compareTo(srcByteBuff, 0, 200, destMultiByteBuff, 0, 200);
+    assertTrue(compareTo == 0);
+
+    // Test src to dest first ByteBuffer
+    destMultiByteBuff.put(0, srcByteBuff, 32, 63);
+    compareTo = ByteBuff.compareTo(srcByteBuff, 32, 63, destMultiByteBuff, 0, 63);
+    assertTrue(compareTo == 0);
+
+    // Test src to dest first and second ByteBuffer
+    destMultiByteBuff.put(0, srcByteBuff, 0, 63);
+    compareTo = ByteBuff.compareTo(srcByteBuff, 0, 63, destMultiByteBuff, 0, 63);
+    assertTrue(compareTo == 0);
+
+    // Test src to dest third ByteBuffer
+    destMultiByteBuff.put(100, srcByteBuff, 100, 50);
+    compareTo = ByteBuff.compareTo(srcByteBuff, 100, 50, destMultiByteBuff, 100, 50);
+    assertTrue(compareTo == 0);
+
+    // Test src to dest first,second and third ByteBuffer
+    destMultiByteBuff.put(48, srcByteBuff, 32, 63);
+    compareTo = ByteBuff.compareTo(srcByteBuff, 32, 63, destMultiByteBuff, 48, 63);
+    assertTrue(compareTo == 0);
+
+    // Test src to dest first,second,third and fourth ByteBuffer
+    destMultiByteBuff.put(48, srcByteBuff, 32, 120);
+    compareTo = ByteBuff.compareTo(srcByteBuff, 32, 120, destMultiByteBuff, 48, 120);
+    assertTrue(compareTo == 0);
+
+    // Test src to dest first and second ByteBuffer
+    destMultiByteBuff.put(0, srcByteBuff, 132, 63);
+    compareTo = ByteBuff.compareTo(srcByteBuff, 132, 63, destMultiByteBuff, 0, 63);
+    assertTrue(compareTo == 0);
+
+    // Test src to dest second,third and fourth ByteBuffer
+    destMultiByteBuff.put(95, srcByteBuff, 132, 67);
+    compareTo = ByteBuff.compareTo(srcByteBuff, 132, 67, destMultiByteBuff, 95, 67);
+    assertTrue(compareTo == 0);
+
+    // Test src to dest fourth ByteBuffer
+    destMultiByteBuff.put(162, srcByteBuff, 132, 24);
+    compareTo = ByteBuff.compareTo(srcByteBuff, 132, 24, destMultiByteBuff, 162, 24);
+    assertTrue(compareTo == 0);
+
+    // Test src BufferUnderflowException
+    try {
+      destMultiByteBuff.put(0, srcByteBuff, 0, 300);
+      fail();
+    } catch (BufferUnderflowException e) {
+      assertTrue(e != null);
+    }
+
+    try {
+      destMultiByteBuff.put(95, srcByteBuff, 132, 89);
+      fail();
+    } catch (BufferUnderflowException e) {
+      assertTrue(e != null);
+    }
+
+    // Test dest BufferOverflowException
+    try {
+      destMultiByteBuff.put(100, srcByteBuff, 0, 101);
+      fail();
+    } catch (BufferOverflowException e) {
+      assertTrue(e != null);
+    }
+
+    try {
+      destMultiByteBuff.put(151, srcByteBuff, 132, 68);
+      fail();
+    } catch (BufferOverflowException e) {
+      assertTrue(e != null);
+    }
+
+    destMultiByteBuff = new MultiByteBuff(bb3, bb4);
+    try {
+      destMultiByteBuff.put(0, srcByteBuff, 0, 101);
+      fail();
+    } catch (BufferOverflowException e) {
+      assertTrue(e != null);
+    }
   }
 }
