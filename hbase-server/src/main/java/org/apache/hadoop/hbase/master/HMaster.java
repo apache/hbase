@@ -981,6 +981,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     // wait meta to be initialized after we start procedure executor
     if (initMetaProc != null) {
       initMetaProc.await();
+      if (initMetaProc.isFailed() && initMetaProc.hasException()) {
+        throw new IOException("Failed to initialize meta table", initMetaProc.getException());
+      }
     }
     // Wake up this server to check in
     sleeper.skipSleepCycle();
