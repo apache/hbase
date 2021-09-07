@@ -736,52 +736,125 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Copies from a src MBB to this MBB.
-   * @param offset the position in this MBB to which the copy should happen
+   * Copies from a src BB to this MBB. This will be absolute positional copying and won't affect the
+   * position of any of the buffers.
+   * @param destOffset the position in this MBB to which the copy should happen
    * @param src the src MBB
    * @param srcOffset the offset in the src MBB from where the elements should be read
    * @param length the length upto which the copy should happen
+   * @throws BufferUnderflowException If there are fewer than length bytes remaining in src
+   *           ByteBuff.
+   * @throws BufferOverflowException If there is insufficient available space in this MBB for length
+   *           bytes.
    */
   @Override
-  public MultiByteBuff put(int offset, ByteBuff src, int srcOffset, int length) {
+  public MultiByteBuff put(int destOffset, ByteBuff src, int srcOffset, int length) {
     checkRefCount();
-    int destItemIndex = getItemIndex(offset);
-    int srcItemIndex = getItemIndex(srcOffset);
+    int destItemIndex = getItemIndex(destOffset);
+    int srcItemIndex = getItemIndexForByteBuff(src, srcOffset, length);
+
     ByteBuffer destItem = this.items[destItemIndex];
-    offset = offset - this.itemBeginPos[destItemIndex];
+    destOffset = this.getRelativeOffset(destOffset, destItemIndex);
 
     ByteBuffer srcItem = getItemByteBuffer(src, srcItemIndex);
-    srcOffset = srcOffset - this.itemBeginPos[srcItemIndex];
-    int toRead, toWrite, toMove;
+    srcOffset = getRelativeOffsetForByteBuff(src, srcOffset, srcItemIndex);
+
     while (length > 0) {
-      toWrite = destItem.limit() - offset;
-      toRead = srcItem.limit() - srcOffset;
-      toMove = Math.min(length, Math.min(toRead, toWrite));
-      ByteBufferUtils.copyFromBufferToBuffer(srcItem, destItem, srcOffset, offset, toMove);
+      int toWrite = destItem.limit() - destOffset;
+      if (toWrite <= 0) {
+        throw new BufferOverflowException();
+      }
+      int toRead = srcItem.limit() - srcOffset;
+      if (toRead <= 0) {
+        throw new BufferUnderflowException();
+      }
+      int toMove = Math.min(length, Math.min(toRead, toWrite));
+      ByteBufferUtils.copyFromBufferToBuffer(srcItem, destItem, srcOffset, destOffset, toMove);
       length -= toMove;
-      if (length == 0) break;
+      if (length == 0) {
+        break;
+      }
       if (toRead < toWrite) {
-        srcItem = getItemByteBuffer(src, ++srcItemIndex);
+        if (++srcItemIndex >= getItemByteBufferCount(src)) {
+          throw new BufferUnderflowException();
+        }
+        srcItem = getItemByteBuffer(src, srcItemIndex);
         srcOffset = 0;
-        offset += toMove;
+        destOffset += toMove;
       } else if (toRead > toWrite) {
-        destItem = this.items[++destItemIndex];
-        offset = 0;
+        if (++destItemIndex >= this.items.length) {
+          throw new BufferOverflowException();
+        }
+        destItem = this.items[destItemIndex];
+        destOffset = 0;
         srcOffset += toMove;
       } else {
         // toRead = toWrite case
-        srcItem = getItemByteBuffer(src, ++srcItemIndex);
+        if (++srcItemIndex >= getItemByteBufferCount(src)) {
+          throw new BufferUnderflowException();
+        }
+        srcItem = getItemByteBuffer(src, srcItemIndex);
         srcOffset = 0;
-        destItem = this.items[++destItemIndex];
-        offset = 0;
+        if (++destItemIndex >= this.items.length) {
+          throw new BufferOverflowException();
+        }
+        destItem = this.items[destItemIndex];
+        destOffset = 0;
       }
     }
     return this;
   }
 
-  private static ByteBuffer getItemByteBuffer(ByteBuff buf, int index) {
-    return (buf instanceof SingleByteBuff) ? buf.nioByteBuffers()[0]
-        : ((MultiByteBuff) buf).items[index];
+  private static ByteBuffer getItemByteBuffer(ByteBuff buf, int byteBufferIndex) {
+    if (buf instanceof SingleByteBuff) {
+      if (byteBufferIndex != 0) {
+        throw new IndexOutOfBoundsException(
+            "index:[" + byteBufferIndex + "],but only index 0 is valid.");
+      }
+      return buf.nioByteBuffers()[0];
+    }
+    MultiByteBuff multiByteBuff = (MultiByteBuff) buf;
+    if (byteBufferIndex < 0 || byteBufferIndex >= multiByteBuff.items.length) {
+      throw new IndexOutOfBoundsException(
+          "index:[" + byteBufferIndex + "],but only index [0-" + multiByteBuff.items.length
+              + ") is valid.");
+    }
+    return multiByteBuff.items[byteBufferIndex];
+  }
+
+  private static int getItemIndexForByteBuff(ByteBuff byteBuff, int offset, int length) {
+    if (byteBuff instanceof SingleByteBuff) {
+      ByteBuffer byteBuffer = byteBuff.nioByteBuffers()[0];
+      if (offset + length > byteBuffer.limit()) {
+        throw new BufferUnderflowException();
+      }
+      return 0;
+    }
+    MultiByteBuff multiByteBuff = (MultiByteBuff) byteBuff;
+    return multiByteBuff.getItemIndex(offset);
+  }
+
+  private static int getRelativeOffsetForByteBuff(ByteBuff byteBuff, int globalOffset,
+      int itemIndex) {
+    if (byteBuff instanceof SingleByteBuff) {
+      if (itemIndex != 0) {
+        throw new IndexOutOfBoundsException("index:[" + itemIndex + "],but only index 0 is valid.");
+      }
+      return globalOffset;
+    }
+    return ((MultiByteBuff) byteBuff).getRelativeOffset(globalOffset, itemIndex);
+  }
+
+  private int getRelativeOffset(int globalOffset, int itemIndex) {
+    if (itemIndex < 0 || itemIndex >= this.items.length) {
+      throw new IndexOutOfBoundsException(
+          "index:[" + itemIndex + "],but only index [0-" + this.items.length + ") is valid.");
+    }
+    return globalOffset - this.itemBeginPos[itemIndex];
+  }
+
+  private static int getItemByteBufferCount(ByteBuff buf) {
+    return (buf instanceof SingleByteBuff) ? 1 : ((MultiByteBuff) buf).items.length;
   }
 
   /**
