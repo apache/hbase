@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -29,9 +30,6 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
-import java.util.function.Function;
 
 /**
  * Factory method for creating store file tracker.
@@ -45,13 +43,8 @@ public final class StoreFileTrackerFactory {
       StoreContext ctx) {
     Class<? extends StoreFileTracker> tracker =
       conf.getClass(TRACK_IMPL, DefaultStoreFileTracker.class, StoreFileTracker.class);
-    try {
-      LOG.info("instantiating StoreFileTracker impl {}", tracker.getName());
-      return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
-    } catch (Exception e) {
-      LOG.error("Unable to create StoreFileTracker impl : {}", tracker.getName(), e);
-      throw new RuntimeException(e);
-    }
+    LOG.info("instantiating StoreFileTracker impl {}", tracker.getName());
+    return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
   }
 
   public static StoreFileTracker create(Configuration conf, boolean isPrimaryReplica, String family,
@@ -67,18 +60,10 @@ public final class StoreFileTrackerFactory {
 
   public static Configuration mergeConfigurations(Configuration global,
     TableDescriptor table, ColumnFamilyDescriptor family) {
-    if(!StringUtils.isEmpty(family.getConfigurationValue(TRACK_IMPL))){
-      mergeConfigs(global, family.getConfiguration(), e -> e);
-    } else if(!StringUtils.isEmpty(table.getValue(TRACK_IMPL))) {
-      mergeConfigs(global, table.getValues(), e -> Bytes.toString(e.get()));
-    }
-    return global;
-  }
-
-  private static<T> void mergeConfigs(Configuration config, Map<T,T> properties,
-      Function<T, String> converter) {
-    for(Map.Entry<T,T> e : properties.entrySet()){
-      config.set(converter.apply(e.getKey()), converter.apply(e.getValue()));
-    }
+    return new CompoundConfiguration()
+      .add(global)
+      .addBytesMap(table.getValues())
+      .addStringMap(family.getConfiguration())
+      .addBytesMap(family.getValues());
   }
 }
