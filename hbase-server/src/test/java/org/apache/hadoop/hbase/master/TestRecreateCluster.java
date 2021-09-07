@@ -89,7 +89,7 @@ public class TestRecreateCluster {
     validateRecreateClusterWithUserTableEnabled(false, false);
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testRecreateCluster_UserTableEnabled_CleanupZNodes() throws Exception {
     // new InitMetaProcedure are not submitted and reused the existing SUCCESS InitMetaProcedure
     // initMetaProc.await() hangs forever.

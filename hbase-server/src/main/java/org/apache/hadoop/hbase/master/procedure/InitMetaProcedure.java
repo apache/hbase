@@ -173,7 +173,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   private static boolean deleteMetaTableDirectoryIfPartial(FileSystem rootDirectoryFs,
     Path metaTableDir) throws IOException {
-    boolean isPartial = true;
+    boolean shouldDelete = true;
     try {
       TableDescriptor metaDescriptor =
         FSTableDescriptors.getTableDescriptorFromFs(rootDirectoryFs, metaTableDir);
@@ -186,13 +186,13 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
           LocatedFileStatus status = iterator.next();
           if (StoreFileInfo.isHFile(status.getPath()) && HFile
             .isHFileFormat(rootDirectoryFs, status.getPath())) {
-            isPartial = false;
+            shouldDelete = false;
             break;
           }
         }
       }
     } finally {
-      if (!isPartial) {
+      if (!shouldDelete) {
         throw new IOException("Meta table is not partial, please sideline this meta directory "
           + "or run HBCK to fix this meta table, e.g. rebuild the server hostname in ZNode for the "
           + "meta region");
