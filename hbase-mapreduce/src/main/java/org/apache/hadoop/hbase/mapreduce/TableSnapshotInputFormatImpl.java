@@ -31,10 +31,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution.HostAndWeight;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.ClientSideRegionScanner;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -100,6 +104,15 @@ public class TableSnapshotInputFormatImpl {
   public static final String  SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY =
       "hbase.TableSnapshotInputFormat.locality.enabled";
   public static final boolean SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT = true;
+
+  /**
+   * Whether to calculate the Snapshot region location by region location from meta.
+   * It is much faster than computing block locations for splits.
+   */
+  public static final String  SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION =
+    "hbase.TableSnapshotInputFormat.locality.by.region.location";
+
+  public static final boolean SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION_DEFAULT = false;
 
   /**
    * In some scenario, scan limited rows on each InputSplit for sampling data extraction
@@ -392,17 +405,49 @@ public class TableSnapshotInputFormatImpl {
       SNAPSHOT_INPUTFORMAT_SCAN_METRICS_ENABLED_DEFAULT);
     scan.setScanMetricsEnabled(scanMetricsEnabled);
 
+    boolean useRegionLoc = conf.getBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION,
+      SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION_DEFAULT);
+
+    Connection connection = null;
+    RegionLocator regionLocator = null;
+    if (localityEnabled && useRegionLoc) {
+      Configuration newConf = new Configuration(conf);
+      newConf.setInt("hbase.hconnection.threads.max", 1);
+      try {
+        connection = ConnectionFactory.createConnection(newConf);
+        regionLocator = connection.getRegionLocator(htd.getTableName());
+
+        /* Get all locations for the table and cache it */
+        regionLocator.getAllRegionLocations();
+      } finally {
+        if (connection != null) {
+          connection.close();
+        }
+      }
+    }
+
     List<InputSplit> splits = new ArrayList<>();
     for (RegionInfo hri : regionManifests) {
       // load region descriptor
+      List<String> hosts = null;
+      if (localityEnabled) {
+        if (regionLocator != null) {
+          /* Get Location from the local cache */
+          HRegionLocation
+            location = regionLocator.getRegionLocation(hri.getStartKey(), false);
+
+          hosts = new ArrayList<>(1);
+          hosts.add(location.getHostname());
+        } else {
+          hosts = calculateLocationsForInputSplit(conf, htd, hri, tableDir);
+        }
+      }
 
       if (numSplits > 1) {
         byte[][] sp = sa.split(hri.getStartKey(), hri.getEndKey(), numSplits, true);
         for (int i = 0; i < sp.length - 1; i++) {
           if (PrivateCellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), sp[i],
                   sp[i + 1])) {
-            List<String> hosts =
-                calculateLocationsForInputSplit(conf, htd, hri, tableDir, localityEnabled);
 
             Scan boundedScan = new Scan(scan);
             if (scan.getStartRow().length == 0) {
@@ -425,8 +470,7 @@ public class TableSnapshotInputFormatImpl {
       } else {
         if (PrivateCellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(),
             hri.getStartKey(), hri.getEndKey())) {
-          List<String> hosts =
-              calculateLocationsForInputSplit(conf, htd, hri, tableDir, localityEnabled);
+
           splits.add(new InputSplit(htd, hri, hosts, scan, restoreDir));
         }
       }
@@ -440,14 +484,9 @@ public class TableSnapshotInputFormatImpl {
    * only when localityEnabled is true.
    */
   private static List<String> calculateLocationsForInputSplit(Configuration conf,
-    TableDescriptor htd, RegionInfo hri, Path tableDir, boolean localityEnabled)
-    throws IOException {
-    if (localityEnabled) { // care block locality
-      return getBestLocations(conf,
-        HRegion.computeHDFSBlocksDistribution(conf, htd, hri, tableDir));
-    } else { // do not care block locality
-      return null;
-    }
+      TableDescriptor htd, RegionInfo hri, Path tableDir)
+      throws IOException {
+    return getBestLocations(conf, HRegion.computeHDFSBlocksDistribution(conf, htd, hri, tableDir));
   }
 
   /**
