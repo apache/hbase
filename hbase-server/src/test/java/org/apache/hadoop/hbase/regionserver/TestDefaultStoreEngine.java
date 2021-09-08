@@ -67,6 +67,7 @@ public class TestDefaultStoreEngine {
         DummyStoreFlusher.class.getName());
     HRegion mockRegion = Mockito.mock(HRegion.class);
     HStore mockStore = Mockito.mock(HStore.class);
+    mockStore.conf = conf;
     Mockito.when(mockStore.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
     Mockito.when(mockStore.getHRegion()).thenReturn(mockRegion);
     StoreEngine<?, ?, ?, ?> se =
