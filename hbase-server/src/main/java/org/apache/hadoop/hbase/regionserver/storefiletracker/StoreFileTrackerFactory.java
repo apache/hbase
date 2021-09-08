@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
