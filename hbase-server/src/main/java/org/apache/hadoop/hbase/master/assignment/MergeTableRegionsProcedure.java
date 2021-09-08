@@ -24,7 +24,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -56,6 +55,8 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
@@ -587,30 +588,35 @@ public class MergeTableRegionsProcedure
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), regionsToMerge[0].getTable());
     final FileSystem fs = mfs.getFileSystem();
-
+    List<Path> mergedFiles = new ArrayList<>();
     HRegionFileSystem mergeRegionFs = HRegionFileSystem.createRegionOnFileSystem(
       env.getMasterConfiguration(), fs, tableDir, mergedRegion);
 
     for (RegionInfo ri: this.regionsToMerge) {
       HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
           env.getMasterConfiguration(), fs, tableDir, ri, false);
-      mergeStoreFiles(env, regionFs, mergeRegionFs, mergedRegion);
+      mergedFiles.addAll(mergeStoreFiles(env, regionFs, mergeRegionFs, mergedRegion));
     }
     assert mergeRegionFs != null;
-    mergeRegionFs.commitMergedRegion();
+    mergeRegionFs.commitMergedRegion(mergedFiles, env);
 
     // Prepare to create merged regions
     env.getAssignmentManager().getRegionStates().
         getOrCreateRegionStateNode(mergedRegion).setState(State.MERGING_NEW);
   }
 
-  private void mergeStoreFiles(MasterProcedureEnv env, HRegionFileSystem regionFs,
+  private List<Path> mergeStoreFiles(MasterProcedureEnv env, HRegionFileSystem regionFs,
     HRegionFileSystem mergeRegionFs, RegionInfo mergedRegion) throws IOException {
     final TableDescriptor htd = env.getMasterServices().getTableDescriptors()
       .get(mergedRegion.getTable());
+    List<Path> mergedFiles = new ArrayList<>();
     for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
       String family = hcd.getNameAsString();
-      final Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family);
+      Configuration trackerConfig =
+        StoreFileTrackerFactory.mergeConfigurations(env.getMasterConfiguration(), htd, hcd);
+      StoreFileTracker tracker = StoreFileTrackerFactory.create(trackerConfig, true,
+        family, regionFs);
+      final Collection<StoreFileInfo> storeFiles = tracker.load();
       if (storeFiles != null && storeFiles.size() > 0) {
         final Configuration storeConfiguration =
           StoreUtils.createStoreConfiguration(env.getMasterConfiguration(), htd, hcd);
@@ -622,11 +628,13 @@ public class MergeTableRegionsProcedure
           // is running in a regionserver's Store context, or we might not be able
           // to read the hfiles.
           storeFileInfo.setConf(storeConfiguration);
-          mergeRegionFs.mergeStoreFile(regionFs.getRegionInfo(), family,
+          Path refFile = mergeRegionFs.mergeStoreFile(regionFs.getRegionInfo(), family,
             new HStoreFile(storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED));
+          mergedFiles.add(refFile);
         }
       }
     }
+    return mergedFiles;
   }
 
   /**
