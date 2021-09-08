@@ -177,6 +177,7 @@ public class TestFailedAppendAndSync {
     boolean threwOnBoth = false;
 
     HRegion region = initHRegion(tableName, null, null, CONF, dodgyWAL);
+    region.setRegionServerServices(services);
     try {
       // Get some random bytes.
       byte[] value = Bytes.toBytes(getName());
