@@ -222,39 +222,50 @@ public final class MasterRegion {
     if (!walFs.exists(replayEditsDir) && !walFs.mkdirs(replayEditsDir)) {
       throw new IOException("Failed to create replay directory: " + replayEditsDir);
     }
+
+    // Replay any WALs for the Master Region before opening it.
     Path walsDir = new Path(walRootDir, HREGION_LOGDIR_NAME);
-    for (FileStatus walDir : walFs.listStatus(walsDir)) {
-      if (!walDir.isDirectory()) {
-        continue;
-      }
-      if (walDir.getPath().getName().startsWith(serverName)) {
-        LOG.warn("This should not happen in real production as we have not created our WAL " +
-          "directory yet, ignore if you are running a local region related UT");
-      }
-      Path deadWALDir;
-      if (!walDir.getPath().getName().endsWith(DEAD_WAL_DIR_SUFFIX)) {
-        deadWALDir =
-          new Path(walDir.getPath().getParent(), walDir.getPath().getName() + DEAD_WAL_DIR_SUFFIX);
-        if (!walFs.rename(walDir.getPath(), deadWALDir)) {
-          throw new IOException("Can not rename " + walDir + " to " + deadWALDir +
-            " when recovering lease of proc store");
+    // In open(...), we expect that the WAL directory for the MasterRegion to already exist.
+    // This is in contrast to bootstrap() where we create the MasterRegion data and WAL dir.
+    // However, it's possible that users directly remove the WAL directory. We expect walsDir
+    // to always exist in normal situations, but we should guard against users changing the
+    // filesystem outside of HBase's line of sight.
+    if (walFs.exists(walsDir)) {
+      for (FileStatus walDir : walFs.listStatus(walsDir)) {
+        if (!walDir.isDirectory()) {
+          continue;
         }
-        LOG.info("Renamed {} to {} as it is dead", walDir.getPath(), deadWALDir);
-      } else {
-        deadWALDir = walDir.getPath();
-        LOG.info("{} is already marked as dead", deadWALDir);
-      }
-      for (FileStatus walFile : walFs.listStatus(deadWALDir)) {
-        Path replayEditsFile = new Path(replayEditsDir, walFile.getPath().getName());
-        RecoverLeaseFSUtils.recoverFileLease(walFs, walFile.getPath(), conf);
-        if (!walFs.rename(walFile.getPath(), replayEditsFile)) {
-          throw new IOException("Can not rename " + walFile.getPath() + " to " + replayEditsFile +
-            " when recovering lease for local region");
+        if (walDir.getPath().getName().startsWith(serverName)) {
+          LOG.warn("This should not happen in real production as we have not created our WAL "
+            + "directory yet, ignore if you are running a local region related UT");
         }
-        LOG.info("Renamed {} to {}", walFile.getPath(), replayEditsFile);
+        Path deadWALDir;
+        if (!walDir.getPath().getName().endsWith(DEAD_WAL_DIR_SUFFIX)) {
+          deadWALDir = new Path(walDir.getPath().getParent(), walDir.getPath().getName() + DEAD_WAL_DIR_SUFFIX);
+          if (!walFs.rename(walDir.getPath(), deadWALDir)) {
+            throw new IOException("Can not rename " + walDir + " to " + deadWALDir
+              + " when recovering lease of proc store");
+          }
+          LOG.info("Renamed {} to {} as it is dead", walDir.getPath(), deadWALDir);
+        } else {
+          deadWALDir = walDir.getPath();
+          LOG.info("{} is already marked as dead", deadWALDir);
+        }
+        for (FileStatus walFile : walFs.listStatus(deadWALDir)) {
+          Path replayEditsFile = new Path(replayEditsDir, walFile.getPath().getName());
+          RecoverLeaseFSUtils.recoverFileLease(walFs, walFile.getPath(), conf);
+          if (!walFs.rename(walFile.getPath(), replayEditsFile)) {
+            throw new IOException("Can not rename " + walFile.getPath() + " to " + replayEditsFile
+              + " when recovering lease for local region");
+          }
+          LOG.info("Renamed {} to {}", walFile.getPath(), replayEditsFile);
+        }
+        LOG.info("Delete empty local region wal dir {}", deadWALDir);
+        walFs.delete(deadWALDir, true);
       }
-      LOG.info("Delete empty local region wal dir {}", deadWALDir);
-      walFs.delete(deadWALDir, true);
+    } else {
+      LOG.warn("UNEXPECTED: WAL directory for MasterRegion is missing."
+        + " {} is unexpectedly missing.", walsDir);
     }
 
     WAL wal = createWAL(walFactory, walRoller, serverName, walFs, walRootDir, regionInfo);
