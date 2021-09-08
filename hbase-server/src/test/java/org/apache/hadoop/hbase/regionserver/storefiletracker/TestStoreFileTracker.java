@@ -18,43 +18,39 @@
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
-import org.apache.hadoop.conf.Configuration;
+import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * The default implementation for store file tracker, where we do not persist the store file list,
- * and use listing when loading store files.
- */
-@InterfaceAudience.Private
-class DefaultStoreFileTracker extends StoreFileTrackerBase {
+public class TestStoreFileTracker extends DefaultStoreFileTracker {
 
-  public DefaultStoreFileTracker(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
+  private static final Logger LOG = LoggerFactory.getLogger(TestStoreFileTracker.class);
+  public static Map<String, List<StoreFileInfo>> trackedFiles = new HashMap<>();
+  private String storeId;
+
+  public TestStoreFileTracker(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
     super(conf, isPrimaryReplica, ctx);
-  }
-
-  @Override
-  public List<StoreFileInfo> load() throws IOException {
-    return ctx.getRegionFileSystem().getStoreFiles(ctx.getFamily().getNameAsString());
-  }
-
-  @Override
-  public boolean requireWritingToTmpDirFirst() {
-    return true;
+    this.storeId = ctx.getRegionInfo().getEncodedName() + "-" + ctx.getFamily().getNameAsString();
+    LOG.info("created storeId: {}", storeId);
+    trackedFiles.computeIfAbsent(storeId, v -> new ArrayList<>());
   }
 
   @Override
   protected void doAddNewStoreFiles(Collection<StoreFileInfo> newFiles) throws IOException {
-    // NOOP
+    LOG.info("adding to storeId: {}", storeId);
+    trackedFiles.get(storeId).addAll(newFiles);
   }
 
   @Override
-  protected void doAddCompactionResults(Collection<StoreFileInfo> compactedFiles,
-    Collection<StoreFileInfo> newFiles) throws IOException {
-    // NOOP
+  public List<StoreFileInfo> load() throws IOException {
+    return trackedFiles.get(storeId);
   }
 }
