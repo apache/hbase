@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.fs.Path;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -139,7 +141,9 @@ public class TestDirectStoreSplitsMerges {
         setRegionId(region.getRegionInfo().getRegionId() +
           EnvironmentEdgeManager.currentTime()).build();
     Path splitDir = regionFS.getSplitsDir(daughterA);
-    Path result = regionFS.commitDaughterRegion(daughterA);
+    MasterProcedureEnv env = TEST_UTIL.getMiniHBaseCluster().getMaster().
+      getMasterProcedureExecutor().getEnvironment();
+    Path result = regionFS.commitDaughterRegion(daughterA, new ArrayList<>(), env);
     assertEquals(splitDir, result);
   }
 
@@ -162,14 +166,18 @@ public class TestDirectStoreSplitsMerges {
     Path splitDirA = regionFS.getSplitsDir(daughterA);
     Path splitDirB = regionFS.getSplitsDir(daughterB);
     HStoreFile file = (HStoreFile) region.getStore(FAMILY_NAME).getStorefiles().toArray()[0];
-    regionFS
+    List<Path> filesA = new ArrayList<>();
+    filesA.add(regionFS
       .splitStoreFile(daughterA, Bytes.toString(FAMILY_NAME), file,
-        Bytes.toBytes("002"), false, region.getSplitPolicy());
-    regionFS
+        Bytes.toBytes("002"), false, region.getSplitPolicy()));
+    List<Path> filesB = new ArrayList<>();
+    filesB.add(regionFS
       .splitStoreFile(daughterB, Bytes.toString(FAMILY_NAME), file,
-        Bytes.toBytes("002"), true, region.getSplitPolicy());
-    Path resultA = regionFS.commitDaughterRegion(daughterA);
-    Path resultB = regionFS.commitDaughterRegion(daughterB);
+        Bytes.toBytes("002"), true, region.getSplitPolicy()));
+    MasterProcedureEnv env = TEST_UTIL.getMiniHBaseCluster().getMaster().
+      getMasterProcedureExecutor().getEnvironment();
+    Path resultA = regionFS.commitDaughterRegion(daughterA, filesA, env);
+    Path resultB = regionFS.commitDaughterRegion(daughterB, filesB, env);
     assertEquals(splitDirA, resultA);
     assertEquals(splitDirB, resultB);
   }
@@ -203,8 +211,11 @@ public class TestDirectStoreSplitsMerges {
     mergeFileFromRegion(mergeRegionFs, first, file);
     //merge file from second region
     file = (HStoreFile) second.getStore(FAMILY_NAME).getStorefiles().toArray()[0];
-    mergeFileFromRegion(mergeRegionFs, second, file);
-    mergeRegionFs.commitMergedRegion();
+    List<Path> mergedFiles = new ArrayList<>();
+    mergedFiles.add(mergeFileFromRegion(mergeRegionFs, second, file));
+    MasterProcedureEnv env = TEST_UTIL.getMiniHBaseCluster().getMaster().
+      getMasterProcedureExecutor().getEnvironment();
+    mergeRegionFs.commitMergedRegion(mergedFiles, env);
   }
 
   private void waitForSplitProcComplete(int attempts, int waitTime) throws Exception {
@@ -223,11 +234,12 @@ public class TestDirectStoreSplitsMerges {
     }
   }
 
-  private void mergeFileFromRegion(HRegionFileSystem regionFS, HRegion regionToMerge,
+  private Path mergeFileFromRegion(HRegionFileSystem regionFS, HRegion regionToMerge,
       HStoreFile file) throws IOException {
     Path mergedFile = regionFS.mergeStoreFile(regionToMerge.getRegionInfo(),
       Bytes.toString(FAMILY_NAME), file);
     validateResultingFile(regionToMerge.getRegionInfo().getEncodedName(), mergedFile);
+    return mergedFile;
   }
 
   private void validateResultingFile(String originalRegion, Path result){
