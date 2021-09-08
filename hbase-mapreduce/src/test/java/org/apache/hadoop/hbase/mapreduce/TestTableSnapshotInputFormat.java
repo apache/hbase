@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY;
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT;
+import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION;
+import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION_DEFAULT;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -198,6 +200,18 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     }
   }
 
+  @Test
+  public void testWithMockedMapReduceSingleRegionByRegionLocation() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    conf.setBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION, true);
+    try {
+      testWithMockedMapReduce(UTIL, name.getMethodName() + "Snapshot", 1, 1, 1,
+        true);
+    } finally {
+      conf.unset(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION);
+    }
+  }
+
   @Override
   public void testRestoreSnapshotDoesNotCreateBackRefLinksInit(TableName tableName,
       String snapshotName, Path tmpTableDir) throws Exception {
@@ -218,6 +232,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
       Configuration conf = util.getConfiguration();
       conf.setBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY, setLocalityEnabledTo);
+      conf.setBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION,
+        SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION_DEFAULT);
       Job job = new Job(conf);
       Path tmpTableDir = util.getDataTestDirOnTestFS(snapshotName);
       Scan scan = new Scan(getStartRow(), getEndRow()); // limit the scan
@@ -406,6 +422,9 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
         job.getConfiguration().getBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY,
                                           SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT);
 
+    boolean byRegionLoc =
+      job.getConfiguration().getBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION,
+                                        SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION_DEFAULT);
     for (int i = 0; i < splits.size(); i++) {
       // validate input split
       InputSplit split = splits.get(i);
@@ -413,6 +432,16 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       TableSnapshotRegionSplit snapshotRegionSplit = (TableSnapshotRegionSplit) split;
       if (localityEnabled) {
         Assert.assertTrue(split.getLocations() != null && split.getLocations().length != 0);
+        if (byRegionLoc) {
+          // When it uses region location from meta, the hostname will be "localhost",
+          // the location from hdfs block location is "127.0.0.1".
+          Assert.assertEquals(1, split.getLocations().length);
+          Assert.assertTrue("Not using region location!",
+            split.getLocations()[0].equals("localhost"));
+        } else {
+          Assert.assertTrue("Not using region location!",
+            split.getLocations()[0].equals("127.0.0.1"));
+        }
       } else {
         Assert.assertTrue(split.getLocations() != null && split.getLocations().length == 0);
       }
