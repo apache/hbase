@@ -65,6 +65,8 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.RegionSplitRestriction;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -622,19 +624,19 @@ public class SplitTableRegionProcedure
       env.getMasterConfiguration(), fs, tabledir, getParentRegion(), false);
     regionFs.createSplitsDir(daughterOneRI, daughterTwoRI);
 
-    Pair<Integer, Integer> expectedReferences = splitStoreFiles(env, regionFs);
+    Pair<List<Path>, List<Path>> expectedReferences = splitStoreFiles(env, regionFs);
 
-    assertSplitResultFilesCount(fs, expectedReferences.getFirst(),
+    assertSplitResultFilesCount(fs, expectedReferences.getFirst().size(),
       regionFs.getSplitsDir(daughterOneRI));
     //Move the files from the temporary .splits to the final /table/region directory
-    regionFs.commitDaughterRegion(daughterOneRI);
-    assertSplitResultFilesCount(fs, expectedReferences.getFirst(),
+    regionFs.commitDaughterRegion(daughterOneRI, expectedReferences.getFirst(), env);
+    assertSplitResultFilesCount(fs, expectedReferences.getFirst().size(),
       new Path(tabledir, daughterOneRI.getEncodedName()));
 
-    assertSplitResultFilesCount(fs, expectedReferences.getSecond(),
+    assertSplitResultFilesCount(fs, expectedReferences.getSecond().size(),
       regionFs.getSplitsDir(daughterTwoRI));
-    regionFs.commitDaughterRegion(daughterTwoRI);
-    assertSplitResultFilesCount(fs, expectedReferences.getSecond(),
+    regionFs.commitDaughterRegion(daughterTwoRI, expectedReferences.getSecond(), env);
+    assertSplitResultFilesCount(fs, expectedReferences.getSecond().size(),
       new Path(tabledir, daughterTwoRI.getEncodedName()));
   }
 
@@ -651,8 +653,9 @@ public class SplitTableRegionProcedure
    * Create Split directory
    * @param env MasterProcedureEnv
    */
-  private Pair<Integer, Integer> splitStoreFiles(final MasterProcedureEnv env,
+  private Pair<List<Path>, List<Path>> splitStoreFiles(final MasterProcedureEnv env,
       final HRegionFileSystem regionFs) throws IOException {
+    final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Configuration conf = env.getMasterConfiguration();
     TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
     // The following code sets up a thread pool executor with as many slots as
@@ -667,7 +670,11 @@ public class SplitTableRegionProcedure
         new HashMap<String, Collection<StoreFileInfo>>(htd.getColumnFamilyCount());
     for (ColumnFamilyDescriptor cfd : htd.getColumnFamilies()) {
       String family = cfd.getNameAsString();
-      Collection<StoreFileInfo> sfis = regionFs.getStoreFiles(family);
+      Configuration trackerConfig = StoreFileTrackerFactory.
+        mergeConfigurations(env.getMasterConfiguration(), htd, htd.getColumnFamily(cfd.getName()));
+      StoreFileTracker tracker = StoreFileTrackerFactory.create(trackerConfig, true,
+        family, regionFs);
+      Collection<StoreFileInfo> sfis = tracker.load();
       if (sfis == null) {
         continue;
       }
@@ -693,7 +700,7 @@ public class SplitTableRegionProcedure
     }
     if (nbFiles == 0) {
       // no file needs to be splitted.
-      return new Pair<Integer, Integer>(0, 0);
+      return new Pair<>(Collections.emptyList(), Collections.emptyList());
     }
     // Max #threads is the smaller of the number of storefiles or the default max determined above.
     int maxThreads = Math.min(
@@ -717,8 +724,9 @@ public class SplitTableRegionProcedure
           // As this procedure is running on master, use CacheConfig.DISABLED means
           // don't cache any block.
           StoreFileSplitter sfs =
-              new StoreFileSplitter(regionFs, familyName, new HStoreFile(
-                  storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED));
+              new StoreFileSplitter(regionFs, familyName, new HStoreFile(mfs.getFileSystem(),
+                storeFileInfo.getPath(), conf, CacheConfig.DISABLED,
+                hcd.getBloomFilterType(), true));
           futures.add(threadPool.submit(sfs));
         }
       }
@@ -746,14 +754,18 @@ public class SplitTableRegionProcedure
       throw (InterruptedIOException) new InterruptedIOException().initCause(e);
     }
 
-    int daughterA = 0;
-    int daughterB = 0;
+    List<Path> daughterA = new ArrayList<>();
+    List<Path> daughterB = new ArrayList<>();
     // Look for any exception
     for (Future<Pair<Path, Path>> future : futures) {
       try {
         Pair<Path, Path> p = future.get();
-        daughterA += p.getFirst() != null ? 1 : 0;
-        daughterB += p.getSecond() != null ? 1 : 0;
+        if(p.getFirst() != null){
+          daughterA.add(p.getFirst());
+        }
+        if(p.getSecond() != null){
+          daughterB.add(p.getSecond());
+        }
       } catch (InterruptedException e) {
         throw (InterruptedIOException) new InterruptedIOException().initCause(e);
       } catch (ExecutionException e) {
@@ -766,7 +778,7 @@ public class SplitTableRegionProcedure
           getParentRegion().getShortNameToLog() + " Daughter A: " + daughterA +
           " storefiles, Daughter B: " + daughterB + " storefiles.");
     }
-    return new Pair<Integer, Integer>(daughterA, daughterB);
+    return new Pair<>(daughterA, daughterB);
   }
 
   private void assertSplitResultFilesCount(final FileSystem fs,
