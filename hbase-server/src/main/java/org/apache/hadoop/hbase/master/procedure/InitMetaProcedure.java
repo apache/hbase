@@ -23,6 +23,7 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableInfoMissingException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -70,6 +71,11 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     LOG.info("BOOTSTRAP: creating hbase:meta region");
     FileSystem fs = rootDir.getFileSystem(conf);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
+    TableDescriptor metaDescriptor = metaAppearsSane(fs, conf, tableDir);
+    if (metaDescriptor != null) {
+      LOG.info("Found a sane-looking hbase:meta, not recreating it");
+      return metaDescriptor;
+    }
     if (fs.exists(tableDir) && !fs.delete(tableDir, true)) {
       LOG.warn("Can not delete partial created meta table, continue...");
     }
@@ -77,12 +83,28 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     // created here in bootstrap and it'll need to be cleaned up. Better to
     // not make it in first place. Turn off block caching for bootstrap.
     // Enable after.
-    TableDescriptor metaDescriptor =
-      FSTableDescriptors.tryUpdateAndGetMetaTableDescriptor(conf, fs, rootDir);
+    metaDescriptor = FSTableDescriptors.tryUpdateAndGetMetaTableDescriptor(conf, fs, rootDir);
     HRegion
       .createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rootDir, conf, metaDescriptor, null)
       .close();
     return metaDescriptor;
+  }
+
+  static TableDescriptor metaAppearsSane(FileSystem fs, Configuration conf, Path tableDir) throws IOException {
+    if (!fs.exists(tableDir)) {
+      LOG.warn("hbase:meta directory {} does not exist", tableDir);
+      return null;
+    }
+    if (!fs.getFileStatus(tableDir).isDirectory()) {
+      LOG.warn("hbase:meta directory {} is not a directory. Very unexpected.", tableDir);
+      return null;
+    }
+    try {
+      return FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
+    } catch (TableInfoMissingException e) {
+      LOG.warn("Table descriptor missing for hbase:meta", e);
+      return null;
+    }
   }
 
   @Override
