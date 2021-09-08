@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACK_IMPL;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,10 +35,13 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -283,6 +288,13 @@ public class CreateTableProcedure
       ProcedureSyncWait.getMasterQuotaManager(env)
         .checkNamespaceTableAndRegionQuota(
           getTableName(), (newRegions != null ? newRegions.size() : 0));
+    }
+
+    if(StringUtils.isEmpty(tableDescriptor.getValue(TRACK_IMPL))){
+      String trackerImpl = StoreFileTrackerFactory.
+        getStoreFileTrackerImpl(env.getMasterConfiguration()).getName();
+      tableDescriptor = TableDescriptorBuilder.newBuilder(tableDescriptor).
+        setValue(TRACK_IMPL, trackerImpl).build();
     }
 
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();

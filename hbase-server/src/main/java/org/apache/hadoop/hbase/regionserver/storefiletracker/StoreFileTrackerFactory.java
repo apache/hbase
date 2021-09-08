@@ -40,10 +40,13 @@ public final class StoreFileTrackerFactory {
   public static final String TRACK_IMPL = "hbase.store.file-tracker.impl";
   private static final Logger LOG = LoggerFactory.getLogger(StoreFileTrackerFactory.class);
 
+  public static Class<? extends StoreFileTracker> getStoreFileTrackerImpl(Configuration conf){
+    return conf.getClass(TRACK_IMPL, DefaultStoreFileTracker.class, StoreFileTracker.class);
+  }
+
   public static StoreFileTracker create(Configuration conf, boolean isPrimaryReplica,
-    StoreContext ctx) {
-    Class<? extends StoreFileTracker> tracker =
-      conf.getClass(TRACK_IMPL, DefaultStoreFileTracker.class, StoreFileTracker.class);
+      StoreContext ctx) {
+    Class<? extends StoreFileTracker> tracker = getStoreFileTrackerImpl(conf);
     LOG.info("instantiating StoreFileTracker impl {}", tracker.getName());
     return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
   }
