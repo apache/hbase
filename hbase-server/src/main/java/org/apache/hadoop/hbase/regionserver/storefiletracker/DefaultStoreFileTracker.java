@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 
@@ -39,7 +40,9 @@ class DefaultStoreFileTracker extends StoreFileTrackerBase {
 
   @Override
   public List<StoreFileInfo> load() throws IOException {
-    return ctx.getRegionFileSystem().getStoreFiles(ctx.getFamily().getNameAsString());
+    List<StoreFileInfo> files =
+      ctx.getRegionFileSystem().getStoreFiles(ctx.getFamily().getNameAsString());
+    return files != null ? files : Collections.emptyList();
   }
 
   @Override
@@ -55,6 +58,11 @@ class DefaultStoreFileTracker extends StoreFileTrackerBase {
   @Override
   protected void doAddCompactionResults(Collection<StoreFileInfo> compactedFiles,
     Collection<StoreFileInfo> newFiles) throws IOException {
+    // NOOP
+  }
+
+  @Override
+  void set(List<StoreFileInfo> files) {
     // NOOP
   }
 }
