@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.StoreFileTrackerProtos.
  * storages.
  */
 @InterfaceAudience.Private
-public class FileBasedStoreFileTracker extends StoreFileTrackerBase {
+class FileBasedStoreFileTracker extends StoreFileTrackerBase {
 
   private final StoreFileListFile backedFile;
 
@@ -137,6 +137,19 @@ public class FileBasedStoreFileTracker extends StoreFileTrackerBase {
       for (StoreFileInfo info : newFiles) {
         storefiles.put(info.getPath().getName(), info);
       }
+    }
+  }
+
+  @Override
+  void set(List<StoreFileInfo> files) throws IOException {
+    synchronized (storefiles) {
+      storefiles.clear();
+      StoreFileList.Builder builder = StoreFileList.newBuilder();
+      for (StoreFileInfo info : files) {
+        storefiles.put(info.getPath().getName(), info);
+        builder.addStoreFile(toStoreFileEntry(info));
+      }
+      backedFile.update(builder);
     }
   }
 }
