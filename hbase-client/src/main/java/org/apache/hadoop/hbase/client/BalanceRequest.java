@@ -30,7 +30,7 @@ public final class BalanceRequest {
   /**
    * Builder for constructing a {@link BalanceRequest}
    */
-  @InterfaceAudience.Public
+  @InterfaceAudience.Private
   public final static class Builder {
     private boolean dryRun = false;
     private boolean ignoreRegionsInTransition = false;
@@ -38,7 +38,7 @@ public final class BalanceRequest {
     private Builder() {}
 
     /**
-     * Creates a BalancerRequest which runs the balancer in dryRun mode.
+     * Updates BalancerRequest to run the balancer in dryRun mode.
      * In this mode, the balancer will try to find a plan but WILL NOT
      * execute any region moves or call any coprocessors.
      *
@@ -55,8 +55,8 @@ public final class BalanceRequest {
     }
 
     /**
-     * Creates a BalancerRequest to cause the balancer to run even if there
-     * are regions in transition.
+     * Updates BalancerRequest to run the balancer even if there are regions
+     * in transition.
      *
      * WARNING: Advanced usage only, this could cause more issues than it fixes.
      */
