@@ -29,7 +29,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
@@ -121,7 +120,10 @@ class StoreFileListFile {
    * We will set the timestamp in this method so just pass the builder in
    */
   void update(StoreFileList.Builder builder) throws IOException {
-    Preconditions.checkState(nextTrackFile >= 0, "should call load first before calling update");
+    if (nextTrackFile < 0) {
+      // we need to call load first to load the prevTimestamp and also the next file
+      load();
+    }
     FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
     long timestamp = Math.max(prevTimestamp + 1, EnvironmentEdgeManager.currentTime());
     try (FSDataOutputStream out = fs.create(trackFiles[nextTrackFile], true)) {
