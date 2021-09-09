@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -95,8 +96,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
   }
 
   @Override
-  public final StoreFileWriter createWriter(CreateStoreFileWriterParams params)
-    throws IOException {
+  public final StoreFileWriter createWriter(CreateStoreFileWriterParams params) throws IOException {
     if (!isPrimaryReplica) {
       throw new IllegalStateException("Should not call create writer on secondary replicas");
     }
@@ -170,4 +170,12 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   protected abstract void doAddCompactionResults(Collection<StoreFileInfo> compactedFiles,
     Collection<StoreFileInfo> newFiles) throws IOException;
+
+  /**
+   * used to mirror the store file list after loading when migration.
+   * <p/>
+   * Do not add this method to the {@link StoreFileTracker} interface since we do not need this
+   * method in upper layer.
+   */
+  abstract void set(List<StoreFileInfo> files) throws IOException;
 }
