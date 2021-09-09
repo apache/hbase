@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -41,6 +42,8 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
@@ -290,12 +293,9 @@ public class CreateTableProcedure
           getTableName(), (newRegions != null ? newRegions.size() : 0));
     }
 
-    if(StringUtils.isEmpty(tableDescriptor.getValue(TRACK_IMPL))){
-      String trackerImpl = StoreFileTrackerFactory.
-        getStoreFileTrackerImpl(env.getMasterConfiguration()).getName();
-      tableDescriptor = TableDescriptorBuilder.newBuilder(tableDescriptor).
-        setValue(TRACK_IMPL, trackerImpl).build();
-    }
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
+    StoreFileTrackerFactory.persistTrackerConfig(env.getMasterConfiguration(), builder);
+    tableDescriptor = builder.build();
 
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {

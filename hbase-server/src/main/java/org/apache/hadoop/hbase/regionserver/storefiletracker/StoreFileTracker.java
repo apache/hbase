@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -71,4 +73,10 @@ public interface StoreFileTracker {
    * @return Writer for a new StoreFile
    */
   StoreFileWriter createWriter(CreateStoreFileWriterParams params) throws IOException;
+
+  /**
+   * Saves StoreFileTracker implementations specific configs into the table descriptors.
+   * @param builder The table descriptor builder for the given table.
+   */
+  void persistConfiguration(TableDescriptorBuilder builder);
 }

@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -78,5 +79,13 @@ public final class StoreFileTrackerFactory {
     }
     LOG.info("instantiating StoreFileTracker impl {} as {}", tracker.getName(), configName);
     return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
+  }
+
+  public static void persistTrackerConfig(Configuration conf, TableDescriptorBuilder builder) {
+    TableDescriptor tableDescriptor = builder.build();
+    ColumnFamilyDescriptor cfDesc = tableDescriptor.getColumnFamilies()[0];
+    StoreContext context = StoreContext.getBuilder().withColumnFamilyDescriptor(cfDesc).build();
+    StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true, context);
+    tracker.persistConfiguration(builder);
   }
 }
