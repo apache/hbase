@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -127,6 +128,14 @@ public class TableSnapshotInputFormatImpl {
     "hbase.TableSnapshotInputFormat.scan_metrics.enabled";
 
   public static final boolean SNAPSHOT_INPUTFORMAT_SCAN_METRICS_ENABLED_DEFAULT = true;
+
+  /**
+   * The {@link ReadType} which should be set on the {@link Scan} to read the HBase Snapshot,
+   * default STREAM.
+   */
+  public static final String SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE =
+      "hbase.TableSnapshotInputFormat.scanner.readtype";
+  public static final ReadType SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE_DEFAULT = ReadType.STREAM;
 
   /**
    * Implementation class for InputSplit logic common between mapred and mapreduce.
@@ -382,6 +391,15 @@ public class TableSnapshotInputFormatImpl {
     } else {
       throw new IllegalArgumentException("Unable to create scan");
     }
+
+    if (scan.getReadType() == ReadType.DEFAULT) {
+      LOG.info("Provided Scan has DEFAULT ReadType,"
+          + " updating STREAM for Snapshot-based InputFormat");
+      // Update the "DEFAULT" ReadType to be "STREAM" to try to improve the default case.
+      scan.setReadType(conf.getEnum(SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE,
+          SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE_DEFAULT));
+    }
+
     return scan;
   }
 
