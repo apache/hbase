@@ -82,7 +82,7 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
   protected static CPMasterObserver OBSERVER;
 
   public final static long WAIT_TIMEOUT = 60000;
-  public final static int NUM_SLAVES_BASE = 4; // number of slaves for the smallest cluster
+  public static int NUM_SLAVES_BASE = 4; // number of slaves for the smallest cluster
   public static int NUM_DEAD_SERVERS = 0;
 
   // Per test variables

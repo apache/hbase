@@ -43,6 +43,11 @@ public final class RSGroupUtil {
     return conf.getBoolean(RS_GROUP_ENABLED, false);
   }
 
+  public static boolean isRSGroupAutoScaleEnabled(Configuration conf) {
+    return isRSGroupEnabled(conf)
+        && conf.getBoolean(RSGroupAutoScaleChore.AUTO_SCALE_ENABLED_CONF_KEY, false);
+  }
+
   public static void enableRSGroup(Configuration conf) {
     conf.setBoolean(RS_GROUP_ENABLED, true);
   }

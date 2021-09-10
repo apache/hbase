@@ -136,7 +136,7 @@ public class RSGroupInfo {
    * @param value String value.
    */
   public void setConfiguration(String key, String value) {
-    configuration.put(key, Objects.requireNonNull(value));
+    configuration.put(Objects.requireNonNull(key), Objects.requireNonNull(value));
   }
 
   /**
