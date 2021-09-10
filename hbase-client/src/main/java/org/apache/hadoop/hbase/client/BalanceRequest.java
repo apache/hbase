@@ -30,7 +30,7 @@ public final class BalanceRequest {
   /**
    * Builder for constructing a {@link BalanceRequest}
    */
-  @InterfaceAudience.Private
+  @InterfaceAudience.Public
   public final static class Builder {
     private boolean dryRun = false;
     private boolean ignoreRegionsInTransition = false;

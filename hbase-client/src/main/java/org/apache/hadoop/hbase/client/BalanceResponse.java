@@ -27,9 +27,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class BalanceResponse {
 
   /**
-   * Builds a {@link BalanceResponse} for returning results of a balance invocation to callers
+   * Used in HMaster to build a {@link BalanceResponse} for returning results of a balance invocation to callers
    */
-  @InterfaceAudience.Public
+  @InterfaceAudience.Private
   public final static class Builder {
     private boolean balancerRan;
     private int movesCalculated;
