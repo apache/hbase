@@ -84,7 +84,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   @Override
   public void persistConfiguration(TableDescriptorBuilder builder) {
-    if(StringUtils.isEmpty(builder.getValue(TRACK_IMPL))){
+    if (StringUtils.isEmpty(builder.getValue(TRACK_IMPL))) {
       String trackerImpl = StoreFileTrackerFactory.
         getStoreFileTrackerImpl(conf).getName();
       builder.setValue(TRACK_IMPL, trackerImpl).build();

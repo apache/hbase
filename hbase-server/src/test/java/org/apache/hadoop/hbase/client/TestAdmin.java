@@ -425,10 +425,10 @@ public class TestAdmin extends TestAdminBase {
     assertEquals(BLOCK_SIZE, newTableDesc.getColumnFamily(FAMILY_1).getBlocksize());
     assertEquals(BLOCK_CACHE, newTableDesc.getColumnFamily(FAMILY_1).isBlockCacheEnabled());
     assertEquals(TTL, newTableDesc.getColumnFamily(FAMILY_1).getTimeToLive());
-    //HBASE-26246 introduced persist of store file tracker into table descriptor
+    // HBASE-26246 introduced persist of store file tracker into table descriptor
     tableDesc = TableDescriptorBuilder.newBuilder(tableDesc).setValue(TRACK_IMPL,
       StoreFileTrackerFactory.getStoreFileTrackerImpl(TEST_UTIL.getConfiguration()).getName()).
-        build();
+      build();
     TEST_UTIL.verifyTableDescriptorIgnoreTableName(tableDesc, newTableDesc);
 
     if (preserveSplits) {

@@ -229,7 +229,7 @@ public class MasterProcedureTestingUtility {
     }
     assertEquals(family.length, htd.getColumnFamilyCount());
 
-    //checks store file tracker impl has been properly set in htd
+    // checks store file tracker impl has been properly set in htd
     String storeFileTrackerImpl =
       StoreFileTrackerFactory.getStoreFileTrackerImpl(master.getConfiguration()).getName();
     assertEquals(storeFileTrackerImpl, htd.getValue(TRACK_IMPL));
