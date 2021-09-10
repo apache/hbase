@@ -22,6 +22,8 @@ import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNA
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT;
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION;
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION_DEFAULT;
+import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -41,6 +43,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TestTableSnapshotScanner;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.TableSnapshotRegionSplit;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
@@ -405,6 +408,34 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
     }
+  }
+
+  @Test
+  public void testScannerReadTypeConfiguration() throws IOException {
+    Configuration conf = new Configuration(false);
+    // Explicitly set ReadTypes should persist
+    for (ReadType readType : Arrays.asList(ReadType.PREAD, ReadType.STREAM)) {
+      Scan scanWithReadType = new Scan();
+      scanWithReadType.setReadType(readType);
+      assertEquals(scanWithReadType.getReadType(), serializeAndReturn(conf, scanWithReadType).getReadType());
+    }
+    // We should only see the DEFAULT ReadType getting updated to STREAM.
+    Scan scanWithoutReadType = new Scan();
+    assertEquals(ReadType.DEFAULT, scanWithoutReadType.getReadType());
+    assertEquals(ReadType.STREAM, serializeAndReturn(conf, scanWithoutReadType).getReadType());
+
+    // We should still be able to force a certain ReadType when DEFAULT is given.
+    conf.setEnum(SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE, ReadType.PREAD);
+    assertEquals(ReadType.DEFAULT, scanWithoutReadType.getReadType());
+    assertEquals(ReadType.PREAD, serializeAndReturn(conf, scanWithoutReadType).getReadType());
+  }
+
+  /**
+   * Serializes and deserializes the given scan in the same manner that TableSnapshotInputFormat does.
+   */
+  private Scan serializeAndReturn(Configuration conf, Scan s) throws IOException {
+    conf.set(TableInputFormat.SCAN, TableMapReduceUtil.convertScanToString(s));
+    return TableSnapshotInputFormatImpl.extractScanFromConf(conf);
   }
 
   private void verifyWithMockedMapReduce(Job job, int numRegions, int expectedNumSplits,
