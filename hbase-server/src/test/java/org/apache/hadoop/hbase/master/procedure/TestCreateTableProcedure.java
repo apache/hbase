@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACK_IMPL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.TestStoreFileTracker;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -86,6 +88,21 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       getMasterProcedureExecutor(), tableName, splitKeys, F1, F2);
     MasterProcedureTestingUtility.validateTableCreation(getMaster(), tableName, regions, F1, F2);
+  }
+
+  @Test
+  public void testCreateWithTrackImpl() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, F1);
+    String trackerName = TestStoreFileTracker.class.getName();
+    htd = TableDescriptorBuilder.newBuilder(htd).setValue(TRACK_IMPL, trackerName).build();
+    RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, null);
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
+    ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
+    htd = getMaster().getTableDescriptors().get(tableName);
+    assertEquals(trackerName, htd.getValue(TRACK_IMPL));
   }
 
   @Test

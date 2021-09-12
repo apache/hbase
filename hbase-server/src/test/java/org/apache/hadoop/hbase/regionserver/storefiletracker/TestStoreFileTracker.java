@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -38,15 +37,21 @@ public class TestStoreFileTracker extends DefaultStoreFileTracker {
 
   public TestStoreFileTracker(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
     super(conf, isPrimaryReplica, ctx);
-    this.storeId = ctx.getRegionInfo().getEncodedName() + "-" + ctx.getFamily().getNameAsString();
-    LOG.info("created storeId: {}", storeId);
-    trackedFiles.computeIfAbsent(storeId, v -> new ArrayList<>());
+    if (ctx.getRegionFileSystem() != null) {
+      this.storeId = ctx.getRegionInfo().getEncodedName() + "-" + ctx.getFamily().getNameAsString();
+      LOG.info("created storeId: {}", storeId);
+      trackedFiles.computeIfAbsent(storeId, v -> new ArrayList<>());
+    } else {
+      LOG.info("ctx.getRegionFileSystem() returned null. Leaving storeId null.");
+    }
+
   }
 
   @Override
   protected void doAddNewStoreFiles(Collection<StoreFileInfo> newFiles) throws IOException {
     LOG.info("adding to storeId: {}", storeId);
     trackedFiles.get(storeId).addAll(newFiles);
+    trackedFiles.putIfAbsent(storeId, (List<StoreFileInfo>)newFiles);
   }
 
   @Override
