@@ -17,18 +17,22 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACK_IMPL;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -75,6 +79,15 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     Collection<StoreFileInfo> newFiles) throws IOException {
     if (isPrimaryReplica) {
       doAddCompactionResults(compactedFiles, newFiles);
+    }
+  }
+
+  @Override
+  public void persistConfiguration(TableDescriptorBuilder builder) {
+    if (StringUtils.isEmpty(builder.getValue(TRACK_IMPL))) {
+      String trackerImpl = StoreFileTrackerFactory.
+        getStoreFileTrackerImpl(conf).getName();
+      builder.setValue(TRACK_IMPL, trackerImpl).build();
     }
   }
 
