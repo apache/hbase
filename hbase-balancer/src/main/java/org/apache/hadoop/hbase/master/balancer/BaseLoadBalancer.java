@@ -546,7 +546,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       new HashMap<>();
   }
 
-  private Map<ServerName, List<RegionInfo>> toEnsumbleTableLoad(
+  protected final Map<ServerName, List<RegionInfo>> toEnsumbleTableLoad(
       Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable) {
     Map<ServerName, List<RegionInfo>> returnMap = new TreeMap<>();
     for (Map<ServerName, List<RegionInfo>> serverNameListMap : LoadOfAllTable.values()) {

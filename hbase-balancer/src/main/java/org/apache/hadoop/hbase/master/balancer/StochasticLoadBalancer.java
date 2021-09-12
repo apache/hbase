@@ -31,6 +31,7 @@ import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -260,6 +261,43 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       updateMetricsSize(tablesCount * (functionsCount + 1)); // +1 for overall
     } catch (Exception e) {
       LOG.error("failed to get the size of all tables", e);
+    }
+  }
+
+  private void updateBalancerTableLoadInfo(TableName tableName, Map<ServerName, List<RegionInfo>> loadOfOneTable) {
+    RegionHDFSBlockLocationFinder finder = null;
+    if ((this.localityCost != null) || (this.rackLocalityCost != null)) {
+      finder = this.regionFinder;
+    }
+    BalancerClusterState cluster =
+      new BalancerClusterState(loadOfOneTable, loads, finder, rackManager);
+
+    initCosts(cluster);
+    double total = 0;
+    double[] functionCosts = new double[costFunctions.size()];
+    for (int i = 0; i < costFunctions.size(); i++) {
+      CostFunction c = costFunctions.get(i);
+      functionCosts[i] = 0.0;
+      if (!c.isNeeded()) {
+        continue;
+      }
+      Float multiplier = c.getMultiplier();
+      double cost = c.cost();
+      functionCosts[i] = multiplier * cost;
+      total += functionCosts[i];
+    }
+    updateStochasticCosts(tableName, total, functionCosts);
+  }
+
+  @Override
+  public void updateBalancerLoadInfo(
+    Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+    if (isByTable) {
+      loadOfAllTable.forEach((tableName, loadOfOneTable) -> {
+        updateBalancerTableLoadInfo(tableName, loadOfOneTable);
+      });
+    } else {
+      updateBalancerTableLoadInfo(HConstants.ENSEMBLE_TABLE_NAME, toEnsumbleTableLoad(loadOfAllTable));
     }
   }
 

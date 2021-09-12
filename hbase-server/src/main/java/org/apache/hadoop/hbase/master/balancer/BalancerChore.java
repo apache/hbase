@@ -19,9 +19,15 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalanceResponse;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +52,20 @@ public class BalancerChore extends ScheduledChore {
   @Override
   protected void chore() {
     try {
-      master.balance();
+      BalanceResponse balanceResponse = master.balance();
+      //TODO: Now, only StochasticLoadBalancer has implemented the method
+      // 'updateBalancerLoadInfo'. Code here should be more generic if other balancers implement
+      // the method 'updateBalancerLoadInfo'
+      if (!balanceResponse.isBalancerRan()) {
+        Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
+          master.getAssignmentManager().getRegionStates()
+            .getAssignmentsForBalancer(master.getTableStateManager(),
+              master.getServerManager().getOnlineServersList());
+        for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
+          serverMap.keySet().removeAll(master.getServerManager().getDrainingServersList());
+        }
+        master.getLoadBalancer().updateBalancerLoadInfo(assignments);
+      }
     } catch (IOException e) {
       LOG.error("Failed to balance.", e);
     }
