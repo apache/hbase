@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,15 +40,21 @@ public class TestStoreFileTracker extends DefaultStoreFileTracker {
 
   public TestStoreFileTracker(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
     super(conf, isPrimaryReplica, ctx);
-    this.storeId = ctx.getRegionInfo().getEncodedName() + "-" + ctx.getFamily().getNameAsString();
-    LOG.info("created storeId: {}", storeId);
-    trackedFiles.computeIfAbsent(storeId, v -> new ArrayList<>());
+    if (ctx.getRegionFileSystem() != null) {
+      this.storeId = ctx.getRegionInfo().getEncodedName() + "-" + ctx.getFamily().getNameAsString();
+      LOG.info("created storeId: {}", storeId);
+      trackedFiles.computeIfAbsent(storeId, v -> new ArrayList<>());
+    } else {
+      LOG.info("ctx.getRegionFileSystem() returned null. Leaving storeId null.");
+    }
+
   }
 
   @Override
   protected void doAddNewStoreFiles(Collection<StoreFileInfo> newFiles) throws IOException {
     LOG.info("adding to storeId: {}", storeId);
     trackedFiles.get(storeId).addAll(newFiles);
+    trackedFiles.putIfAbsent(storeId, (List<StoreFileInfo>)newFiles);
   }
 
   @Override
