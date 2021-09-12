@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,10 +34,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -284,6 +287,10 @@ public class CreateTableProcedure
         .checkNamespaceTableAndRegionQuota(
           getTableName(), (newRegions != null ? newRegions.size() : 0));
     }
+
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
+    StoreFileTrackerFactory.persistTrackerConfig(env.getMasterConfiguration(), builder);
+    tableDescriptor = builder.build();
 
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
