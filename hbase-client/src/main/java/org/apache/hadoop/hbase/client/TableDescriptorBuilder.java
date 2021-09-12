@@ -581,6 +581,10 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public String getValue(String key) {
+    return desc.getValue(key);
+  }
+
   /**
    * Sets replication scope all & only the columns already in the builder. Columns added later won't
    * be backfilled with replication scope.

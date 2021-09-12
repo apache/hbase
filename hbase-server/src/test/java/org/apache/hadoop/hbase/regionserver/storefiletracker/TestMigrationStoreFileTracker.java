@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
@@ -70,7 +70,7 @@ public class TestMigrationStoreFileTracker {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMigrationStoreFileTracker.class);
 
-  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static final byte[] CF = Bytes.toBytes("cf");
 
@@ -125,7 +125,7 @@ public class TestMigrationStoreFileTracker {
     conf.setClass(MigrationStoreFileTracker.SRC_IMPL, srcImplClass, StoreFileTrackerBase.class);
     conf.setClass(MigrationStoreFileTracker.DST_IMPL, dstImplClass, StoreFileTrackerBase.class);
     rootDir = UTIL.getDataTestDir(name.getMethodName().replaceAll("[=:\\[ ]", "_"));
-    wal = HBaseTestingUtil.createWal(conf, rootDir, RI);
+    wal = HBaseTestingUtility.createWal(conf, rootDir, RI);
   }
 
   @After
