@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACK_IMPL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -36,6 +37,8 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -399,7 +402,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
     assertEquals(NUM_REGIONS, TEST_UTIL.getHBaseCluster().getRegions(tableName).size());
     assertTrue("Table should be created with splitKyes + 1 rows in META",
-        admin.isTableAvailable(tableName, splitKeys).get());
+        admin.isTableAvailable(tableName).get());
 
     // Clone & Verify
     admin.cloneTableSchema(tableName, newTableName, preserveSplits).join();
@@ -409,12 +412,16 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     assertEquals(BLOCK_SIZE, newTableDesc.getColumnFamily(FAMILY_1).getBlocksize());
     assertEquals(BLOCK_CACHE, newTableDesc.getColumnFamily(FAMILY_1).isBlockCacheEnabled());
     assertEquals(TTL, newTableDesc.getColumnFamily(FAMILY_1).getTimeToLive());
+    //HBASE-26246 introduced persist of store file tracker into table descriptor
+    tableDesc = TableDescriptorBuilder.newBuilder(tableDesc).setValue(TRACK_IMPL,
+      StoreFileTrackerFactory.getStoreFileTrackerImpl(TEST_UTIL.getConfiguration()).getName()).
+      build();
     TEST_UTIL.verifyTableDescriptorIgnoreTableName(tableDesc, newTableDesc);
 
     if (preserveSplits) {
       assertEquals(NUM_REGIONS, TEST_UTIL.getHBaseCluster().getRegions(newTableName).size());
       assertTrue("New table should be created with splitKyes + 1 rows in META",
-          admin.isTableAvailable(newTableName, splitKeys).get());
+          admin.isTableAvailable(newTableName).get());
     } else {
       assertEquals(1, TEST_UTIL.getHBaseCluster().getRegions(newTableName).size());
     }

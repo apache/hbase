@@ -610,7 +610,7 @@ public class HRegionFileSystem {
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
       HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
         env.getMasterConfiguration(), fs, getTableDir(), regionInfo, false);
-      insertRegionFilesIntoStoreTracker(allRegionFiles, env, regionFs);
+        insertRegionFilesIntoStoreTracker(allRegionFiles, env, regionFs);
     }
     return regionDir;
   }
