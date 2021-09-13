@@ -21,8 +21,8 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hbase.HBaseRpcServicesBase;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
 // RegionSpecifier object. Methods can be invoked on the returned object
 // to figure out whether it is a meta region or not.
 @InterfaceAudience.Private
-public abstract class AnnotationReadingPriorityFunction<T extends RSRpcServices>
+public abstract class AnnotationReadingPriorityFunction<T extends HBaseRpcServicesBase<?>>
   implements PriorityFunction {
 
   protected final Map<String, Integer> annotatedQos;

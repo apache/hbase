@@ -49,7 +49,9 @@ public interface Server extends Abortable, Stoppable {
    * Important note: this method returns a reference to Connection which is managed
    * by Server itself, so callers must NOT attempt to close connection obtained.
    */
-  Connection getConnection();
+  default Connection getConnection() {
+    return getAsyncConnection().toConnection();
+  }
 
   Connection createConnection(Configuration conf) throws IOException;
 

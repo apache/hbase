@@ -75,11 +75,11 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -88,7 +88,6 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
-import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -3412,18 +3411,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
           online.add(region.getRegionNameAsString());
         }
       } catch (RegionServerStoppedException e) {
-        // That's fine.
-      }
-    }
-    for (MasterThread mt : cluster.getLiveMasterThreads()) {
-      try {
-        for (RegionInfo region :
-            ProtobufUtil.getOnlineRegions(mt.getMaster().getRSRpcServices())) {
-          online.add(region.getRegionNameAsString());
-        }
-      } catch (RegionServerStoppedException e) {
-        // That's fine.
-      } catch (ServerNotRunningYetException e) {
         // That's fine.
       }
     }

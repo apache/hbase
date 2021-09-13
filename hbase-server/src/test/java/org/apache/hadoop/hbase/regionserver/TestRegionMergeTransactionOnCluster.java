@@ -529,7 +529,7 @@ public class TestRegionMergeTransactionOnCluster {
     }
 
     @Override
-    protected RSRpcServices createRpcServices() throws IOException {
+    protected MasterRpcServices createRpcServices() throws IOException {
       return new MyMasterRpcServices(this);
     }
   }

@@ -806,15 +806,6 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
   @Override
   public ServerName getServerHoldingRegion(final TableName tn, byte[] regionName)
     throws IOException {
-    // Assume there is only one master thread which is the active master.
-    // If there are multiple master threads, the backup master threads
-    // should hold some regions. Please refer to #countServedRegions
-    // to see how we find out all regions.
-    HMaster master = getMaster();
-    Region region = master.getOnlineRegion(regionName);
-    if (region != null) {
-      return master.getServerName();
-    }
     int index = getServerWith(regionName);
     if (index < 0) {
       return null;
@@ -832,9 +823,6 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
     long count = 0;
     for (JVMClusterUtil.RegionServerThread rst : getLiveRegionServerThreads()) {
       count += rst.getRegionServer().getNumberOfOnlineRegions();
-    }
-    for (JVMClusterUtil.MasterThread mt : getLiveMasterThreads()) {
-      count += mt.getMaster().getNumberOfOnlineRegions();
     }
     return count;
   }

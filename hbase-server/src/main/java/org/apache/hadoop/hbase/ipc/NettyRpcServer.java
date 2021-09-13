@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HBaseServerBase;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
@@ -79,7 +80,7 @@ public class NettyRpcServer extends RpcServer {
     EventLoopGroup eventLoopGroup;
     Class<? extends ServerChannel> channelClass;
     if (server instanceof HRegionServer) {
-      NettyEventLoopGroupConfig config = ((HRegionServer) server).getEventLoopGroupConfig();
+      NettyEventLoopGroupConfig config = ((HBaseServerBase) server).getEventLoopGroupConfig();
       eventLoopGroup = config.group();
       channelClass = config.serverChannelClass();
     } else {

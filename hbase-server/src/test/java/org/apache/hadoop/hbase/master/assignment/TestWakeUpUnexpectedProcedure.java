@@ -107,7 +107,7 @@ public class TestWakeUpUnexpectedProcedure {
         ExecuteProceduresRequest request) throws ServiceException {
       if (request.getOpenRegionCount() > 0) {
         if (ARRIVE_EXEC_PROC != null) {
-          SERVER_TO_KILL = regionServer.getServerName();
+          SERVER_TO_KILL = getServer().getServerName();
           ARRIVE_EXEC_PROC.countDown();
           ARRIVE_EXEC_PROC = null;
           try {

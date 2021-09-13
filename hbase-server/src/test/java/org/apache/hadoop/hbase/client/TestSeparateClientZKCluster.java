@@ -133,7 +133,7 @@ public class TestSeparateClientZKCluster {
       HMaster master = cluster.getMaster();
       master.stopMaster();
       LOG.info("Stopped master {}", master.getServerName());
-      while (!master.isShutDown()) {
+      while (master.isAlive()) {
         Thread.sleep(200);
       }
       LOG.info("Shutdown master {}", master.getServerName());
@@ -225,7 +225,7 @@ public class TestSeparateClientZKCluster {
       int metaServerId = cluster.getServerWithMeta();
       HRegionServer metaServer = cluster.getRegionServer(metaServerId);
       metaServer.stop("Stop current RS holding meta region");
-      while (!metaServer.isShutDown()) {
+      while (metaServer.isAlive()) {
         Thread.sleep(200);
       }
       // wait for meta region online
