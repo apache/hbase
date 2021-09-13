@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -65,7 +64,6 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -94,6 +92,7 @@ public class TestBackupBase {
   protected static TableName table1_restore = TableName.valueOf("default:table1");
   protected static TableName table2_restore = TableName.valueOf("ns2:table2");
   protected static TableName table3_restore = TableName.valueOf("ns3:table3_restore");
+  protected static TableName table4_restore = TableName.valueOf("ns4:table4_restore");
 
   protected static final int NB_ROWS_IN_BATCH = 99;
   protected static final byte[] qualName = Bytes.toBytes("q1");
@@ -136,12 +135,14 @@ public class TestBackupBase {
         incrementalCopyHFiles(new String[] {getBulkOutputDir().toString()},
           backupInfo.getBackupRootDir());
         failStageIf(Stage.stage_2);
+        // Save list of WAL files copied
+        backupManager.recordWALFiles(backupInfo.getIncrBackupFileList());
 
         // case INCR_BACKUP_COMPLETE:
         // set overall backup status: complete. Here we make sure to complete the backup.
         // After this checkpoint, even if entering cancel process, will let the backup finished
         // Set the previousTimestampMap which is before this current log roll to the manifest.
-        Map<TableName, Map<String, Long>> previousTimestampMap =
+        HashMap<TableName, HashMap<String, Long>> previousTimestampMap =
             backupManager.readLogTimestampMap();
         backupInfo.setIncrTimestampMap(previousTimestampMap);
 
@@ -150,7 +151,7 @@ public class TestBackupBase {
         backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
         failStageIf(Stage.stage_3);
 
-        Map<TableName, Map<String, Long>> newTableSetTimestampMap =
+        HashMap<TableName, HashMap<String, Long>> newTableSetTimestampMap =
             backupManager.readLogTimestampMap();
 
         Long newStartCode =
@@ -211,6 +212,14 @@ public class TestBackupBase {
           LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME, props);
         failStageIf(Stage.stage_2);
         newTimestamps = backupManager.readRegionServerLastLogRollResult();
+        if (firstBackup) {
+          // Updates registered log files
+          // We record ALL old WAL files as registered, because
+          // this is a first full backup in the system and these
+          // files are not needed for next incremental backup
+          List<String> logFiles = BackupUtils.getWALFilesOlderThan(conf, newTimestamps);
+          backupManager.recordWALFiles(logFiles);
+        }
 
         // SNAPSHOT_TABLES:
         backupInfo.setPhase(BackupPhase.SNAPSHOT);
@@ -238,7 +247,7 @@ public class TestBackupBase {
         // For incremental backup, it contains the incremental backup table set.
         backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
 
-        Map<TableName, Map<String, Long>> newTableSetTimestampMap =
+        HashMap<TableName, HashMap<String, Long>> newTableSetTimestampMap =
             backupManager.readLogTimestampMap();
 
         Long newStartCode =
@@ -421,10 +430,15 @@ public class TestBackupBase {
     Admin ha = TEST_UTIL.getAdmin();
 
     // Create namespaces
-    ha.createNamespace(NamespaceDescriptor.create("ns1").build());
-    ha.createNamespace(NamespaceDescriptor.create("ns2").build());
-    ha.createNamespace(NamespaceDescriptor.create("ns3").build());
-    ha.createNamespace(NamespaceDescriptor.create("ns4").build());
+    NamespaceDescriptor desc1 = NamespaceDescriptor.create("ns1").build();
+    NamespaceDescriptor desc2 = NamespaceDescriptor.create("ns2").build();
+    NamespaceDescriptor desc3 = NamespaceDescriptor.create("ns3").build();
+    NamespaceDescriptor desc4 = NamespaceDescriptor.create("ns4").build();
+
+    ha.createNamespace(desc1);
+    ha.createNamespace(desc2);
+    ha.createNamespace(desc3);
+    ha.createNamespace(desc4);
 
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(table1)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(famName)).build();
@@ -491,21 +505,6 @@ public class TestBackupBase {
       ret.add(TableName.valueOf(args[i]));
     }
     return ret;
-  }
-
-  protected List<FileStatus> getListOfWALFiles(Configuration c) throws IOException {
-    Path logRoot = new Path(CommonFSUtils.getWALRootDir(c), HConstants.HREGION_LOGDIR_NAME);
-    FileSystem fs = logRoot.getFileSystem(c);
-    RemoteIterator<LocatedFileStatus> it = fs.listFiles(logRoot, true);
-    List<FileStatus> logFiles = new ArrayList<FileStatus>();
-    while (it.hasNext()) {
-      LocatedFileStatus lfs = it.next();
-      if (lfs.isFile() && !AbstractFSWALProvider.isMetaFile(lfs.getPath())) {
-        logFiles.add(lfs);
-        LOG.info(Objects.toString(lfs));
-      }
-    }
-    return logFiles;
   }
 
   protected void dumpBackupDir() throws IOException {

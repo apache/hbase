@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos.BackupInfo.Builder;
@@ -134,13 +136,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
    * New region server log timestamps for table set after distributed log roll key - table name,
    * value - map of RegionServer hostname -> last log rolled timestamp
    */
-  private Map<TableName, Map<String, Long>> tableSetTimestampMap;
-
-  /**
-   * Previous Region server log timestamps for table set after distributed log roll key -
-   * table name, value - map of RegionServer hostname -> last log rolled timestamp
-   */
-  private Map<TableName, Map<String, Long>> incrTimestampMap;
+  private HashMap<TableName, HashMap<String, Long>> tableSetTimestampMap;
 
   /**
    * Backup progress in %% (0-100)
@@ -194,12 +190,12 @@ public class BackupInfo implements Comparable<BackupInfo> {
     this.backupTableInfoMap = backupTableInfoMap;
   }
 
-  public Map<TableName, Map<String, Long>> getTableSetTimestampMap() {
+  public HashMap<TableName, HashMap<String, Long>> getTableSetTimestampMap() {
     return tableSetTimestampMap;
   }
 
-  public void setTableSetTimestampMap(Map<TableName,
-          Map<String, Long>> tableSetTimestampMap) {
+  public void setTableSetTimestampMap(HashMap<TableName,
+          HashMap<String, Long>> tableSetTimestampMap) {
     this.tableSetTimestampMap = tableSetTimestampMap;
   }
 
@@ -355,19 +351,19 @@ public class BackupInfo implements Comparable<BackupInfo> {
 
   /**
    * Set the new region server log timestamps after distributed log roll
-   * @param prevTableSetTimestampMap table timestamp map
+   * @param newTableSetTimestampMap table timestamp map
    */
-  public void setIncrTimestampMap(Map<TableName,
-          Map<String, Long>> prevTableSetTimestampMap) {
-    this.incrTimestampMap = prevTableSetTimestampMap;
+  public void setIncrTimestampMap(HashMap<TableName,
+          HashMap<String, Long>> newTableSetTimestampMap) {
+    this.tableSetTimestampMap = newTableSetTimestampMap;
   }
 
   /**
    * Get new region server log timestamps after distributed log roll
    * @return new region server log timestamps
    */
-  public Map<TableName, Map<String, Long>> getIncrTimestampMap() {
-    return this.incrTimestampMap;
+  public HashMap<TableName, HashMap<String, Long>> getIncrTimestampMap() {
+    return this.tableSetTimestampMap;
   }
 
   public TableName getTableBySnapshot(String snapshotName) {
@@ -383,7 +379,6 @@ public class BackupInfo implements Comparable<BackupInfo> {
     BackupProtos.BackupInfo.Builder builder = BackupProtos.BackupInfo.newBuilder();
     builder.setBackupId(getBackupId());
     setBackupTableInfoMap(builder);
-    setTableSetTimestampMap(builder);
     builder.setCompleteTs(getCompleteTs());
     if (getFailedMsg() != null) {
       builder.setFailedMessage(getFailedMsg());
@@ -451,16 +446,6 @@ public class BackupInfo implements Comparable<BackupInfo> {
     }
   }
 
-  private void setTableSetTimestampMap(Builder builder) {
-    if (this.getTableSetTimestampMap() != null) {
-      for (Entry<TableName, Map<String, Long>> entry : this.getTableSetTimestampMap().entrySet()) {
-        builder.putTableSetTimestamp(entry.getKey().getNameAsString(),
-          BackupProtos.BackupInfo.RSTimestampMap.newBuilder().putAllRsTimestamp(entry.getValue())
-            .build());
-      }
-    }
-  }
-
   public static BackupInfo fromByteArray(byte[] data) throws IOException {
     return fromProto(BackupProtos.BackupInfo.parseFrom(data));
   }
@@ -473,7 +458,6 @@ public class BackupInfo implements Comparable<BackupInfo> {
     BackupInfo context = new BackupInfo();
     context.setBackupId(proto.getBackupId());
     context.setBackupTableInfoMap(toMap(proto.getBackupTableInfoList()));
-    context.setTableSetTimestampMap(getTableSetTimestampMap(proto.getTableSetTimestampMap()));
     context.setCompleteTs(proto.getCompleteTs());
     if (proto.hasFailedMessage()) {
       context.setFailedMsg(proto.getFailedMessage());
@@ -505,17 +489,6 @@ public class BackupInfo implements Comparable<BackupInfo> {
       map.put(ProtobufUtil.toTableName(tbs.getTableName()), BackupTableInfo.convert(tbs));
     }
     return map;
-  }
-
-  private static Map<TableName, Map<String, Long>> getTableSetTimestampMap(
-    Map<String, BackupProtos.BackupInfo.RSTimestampMap> map) {
-    Map<TableName, Map<String, Long>> tableSetTimestampMap = new HashMap<>();
-    for (Entry<String, BackupProtos.BackupInfo.RSTimestampMap> entry : map.entrySet()) {
-      tableSetTimestampMap
-        .put(TableName.valueOf(entry.getKey()), entry.getValue().getRsTimestampMap());
-    }
-
-    return tableSetTimestampMap;
   }
 
   public String getShortDescription() {
