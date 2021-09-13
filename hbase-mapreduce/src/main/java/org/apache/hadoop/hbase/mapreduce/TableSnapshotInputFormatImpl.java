@@ -130,10 +130,12 @@ public class TableSnapshotInputFormatImpl {
   public static final boolean SNAPSHOT_INPUTFORMAT_SCAN_METRICS_ENABLED_DEFAULT = true;
 
   /**
-   * The {@link ReadType} which should be set on the {@link Scan} to read the HBase Snapshot, default STREAM.
+   * The {@link ReadType} which should be set on the {@link Scan} to read the HBase Snapshot,
+   * default STREAM.
    */
-  public static final String SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE = "hbase.TableSnapshotinputFormat.scanner.readtype";
-  public static final ReadType SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE_DEFAULT = ReadType.STREAM; 
+  public static final String SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE =
+      "hbase.TableSnapshotInputFormat.scanner.readtype";
+  public static final ReadType SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE_DEFAULT = ReadType.STREAM;
 
   /**
    * Implementation class for InputSplit logic common between mapred and mapreduce.
@@ -391,7 +393,8 @@ public class TableSnapshotInputFormatImpl {
     }
 
     if (scan.getReadType() == ReadType.DEFAULT) {
-      LOG.info("Provided Scan has DEFAULT ReadType, updating STREAM for Snapshot-based InputFormat");
+      LOG.info("Provided Scan has DEFAULT ReadType,"
+          + " updating STREAM for Snapshot-based InputFormat");
       // Update the "DEFAULT" ReadType to be "STREAM" to try to improve the default case.
       scan.setReadType(conf.getEnum(SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE,
           SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE_DEFAULT));

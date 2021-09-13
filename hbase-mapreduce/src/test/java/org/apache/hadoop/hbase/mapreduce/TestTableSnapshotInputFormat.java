@@ -41,9 +41,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TestTableSnapshotScanner;
-import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.TableSnapshotRegionSplit;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
@@ -417,7 +417,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     for (ReadType readType : Arrays.asList(ReadType.PREAD, ReadType.STREAM)) {
       Scan scanWithReadType = new Scan();
       scanWithReadType.setReadType(readType);
-      assertEquals(scanWithReadType.getReadType(), serializeAndReturn(conf, scanWithReadType).getReadType());
+      assertEquals(scanWithReadType.getReadType(),
+          serializeAndReturn(conf, scanWithReadType).getReadType());
     }
     // We should only see the DEFAULT ReadType getting updated to STREAM.
     Scan scanWithoutReadType = new Scan();
@@ -431,7 +432,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   /**
-   * Serializes and deserializes the given scan in the same manner that TableSnapshotInputFormat does.
+   * Serializes and deserializes the given scan in the same manner that
+   * TableSnapshotInputFormat does.
    */
   private Scan serializeAndReturn(Configuration conf, Scan s) throws IOException {
     conf.set(TableInputFormat.SCAN, TableMapReduceUtil.convertScanToString(s));
