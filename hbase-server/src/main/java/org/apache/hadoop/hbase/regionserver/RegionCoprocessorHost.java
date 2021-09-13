@@ -565,11 +565,11 @@ public class RegionCoprocessorHost
     }
   }
 
-  void preRequestCompaction(final User user) throws IOException {
+  void preRequestCompaction() throws IOException {
     if (coprocEnvironments.isEmpty()) {
       return;
     }
-    execOperation(new RegionObserverOperationWithoutResult(user) {
+    execOperation(new RegionObserverOperationWithoutResult() {
       @Override
       public void call(RegionObserver observer) throws IOException {
         observer.preRequestCompaction(this);

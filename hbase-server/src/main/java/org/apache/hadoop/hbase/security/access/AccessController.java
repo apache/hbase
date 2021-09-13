@@ -1283,8 +1283,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         null, null, Action.ADMIN, Action.CREATE);
   }
 
-  @Override public void preRequestCompaction(ObserverContext<RegionCoprocessorEnvironment> c)
-    throws IOException {
+  @Override
+  public void preRequestCompaction(ObserverContext<RegionCoprocessorEnvironment> c)
+      throws IOException {
     requirePermission(c, "compact", getTableName(c.getEnvironment()), null, null, Action.ADMIN,
       Action.CREATE);
   }

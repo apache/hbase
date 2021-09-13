@@ -1947,9 +1947,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     if (!this.areWritesEnabled()) {
       return Optional.empty();
     }
-    if (this.getCoprocessorHost() != null) {
-      this.getCoprocessorHost().preRequestCompaction(user);
-    }
     // Before we do compaction, try to get rid of unneeded files to simplify things.
     removeUnneededFiles(true);
 
