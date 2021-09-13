@@ -21,7 +21,6 @@ import static org.apache.hadoop.security.UserGroupInformation.loginUserFromKeyta
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import java.io.Closeable;
 import java.io.File;
 import java.util.Collection;
@@ -48,6 +47,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.After;
@@ -151,6 +151,8 @@ public class TestTableMapReduceUtil {
     HBaseKerberosUtils.setSecuredConfiguration(conf,
       principal + '@' + kdc.getRealm(), HTTP_PRINCIPAL + '@' + kdc.getRealm());
 
+    KerberosName.resetDefaultRealm();
+
     util.startMiniCluster();
     try {
       util.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
@@ -162,7 +164,8 @@ public class TestTableMapReduceUtil {
     return util::shutdownMiniCluster;
   }
 
-  @Test public void testInitCredentialsForCluster1() throws Exception {
+  @Test
+  public void testInitCredentialsForCluster1() throws Exception {
     HBaseTestingUtility util1 = new HBaseTestingUtility();
     HBaseTestingUtility util2 = new HBaseTestingUtility();
 
@@ -186,21 +189,23 @@ public class TestTableMapReduceUtil {
     }
   }
 
-  @Test @SuppressWarnings("unchecked") public void testInitCredentialsForCluster2()
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testInitCredentialsForCluster2()
     throws Exception {
     HBaseTestingUtility util1 = new HBaseTestingUtility();
     HBaseTestingUtility util2 = new HBaseTestingUtility();
 
     File keytab = new File(util1.getDataTestDir("keytab").toUri().getPath());
     MiniKdc kdc = util1.setupMiniKdc(keytab);
-    try {
-      String username = UserGroupInformation.getLoginUser().getShortUserName();
-      String userPrincipal = username + "/localhost";
-      kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
-      loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
+    String username = UserGroupInformation.getLoginUser().getShortUserName();
+    String userPrincipal = username + "/localhost";
+    kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
+    loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
 
-      try (Closeable util1Closeable = startSecureMiniCluster(util1, kdc, userPrincipal);
-        Closeable util2Closeable = startSecureMiniCluster(util2, kdc, userPrincipal)) {
+    try (Closeable util1Closeable = startSecureMiniCluster(util1, kdc, userPrincipal);
+      Closeable util2Closeable = startSecureMiniCluster(util2, kdc, userPrincipal)) {
+      try {
         Configuration conf1 = util1.getConfiguration();
         Job job = Job.getInstance(conf1);
 
@@ -215,24 +220,25 @@ public class TestTableMapReduceUtil {
           (Token<AuthenticationTokenIdentifier>) credentials.getToken(new Text(clusterId));
         assertEquals(userPrincipal + '@' + kdc.getRealm(),
           tokenForCluster.decodeIdentifier().getUsername());
+      } finally {
+        kdc.stop();
       }
-    } finally {
-      kdc.stop();
     }
   }
 
-  @Test public void testInitCredentialsForCluster3() throws Exception {
+  @Test
+  public void testInitCredentialsForCluster3() throws Exception {
     HBaseTestingUtility util1 = new HBaseTestingUtility();
 
     File keytab = new File(util1.getDataTestDir("keytab").toUri().getPath());
     MiniKdc kdc = util1.setupMiniKdc(keytab);
-    try {
-      String username = UserGroupInformation.getLoginUser().getShortUserName();
-      String userPrincipal = username + "/localhost";
-      kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
-      loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
+    String username = UserGroupInformation.getLoginUser().getShortUserName();
+    String userPrincipal = username + "/localhost";
+    kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
+    loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
 
-      try (Closeable util1Closeable = startSecureMiniCluster(util1, kdc, userPrincipal)) {
+    try (Closeable util1Closeable = startSecureMiniCluster(util1, kdc, userPrincipal)) {
+      try {
         HBaseTestingUtility util2 = new HBaseTestingUtility();
         // Assume util2 is insecure cluster
         // Do not start util2 because cannot boot secured mini cluster and insecure mini cluster at
@@ -246,13 +252,15 @@ public class TestTableMapReduceUtil {
         Credentials credentials = job.getCredentials();
         Collection<Token<? extends TokenIdentifier>> tokens = credentials.getAllTokens();
         assertTrue(tokens.isEmpty());
+      } finally {
+        kdc.stop();
       }
-    } finally {
-      kdc.stop();
     }
   }
 
-  @Test @SuppressWarnings("unchecked") public void testInitCredentialsForCluster4()
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testInitCredentialsForCluster4()
     throws Exception {
     HBaseTestingUtility util1 = new HBaseTestingUtility();
     // Assume util1 is insecure cluster
@@ -261,13 +269,13 @@ public class TestTableMapReduceUtil {
     HBaseTestingUtility util2 = new HBaseTestingUtility();
     File keytab = new File(util2.getDataTestDir("keytab").toUri().getPath());
     MiniKdc kdc = util2.setupMiniKdc(keytab);
-    try {
-      String username = UserGroupInformation.getLoginUser().getShortUserName();
-      String userPrincipal = username + "/localhost";
-      kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
-      loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
+    String username = UserGroupInformation.getLoginUser().getShortUserName();
+    String userPrincipal = username + "/localhost";
+    kdc.createPrincipal(keytab, userPrincipal, HTTP_PRINCIPAL);
+    loginUserFromKeytab(userPrincipal + '@' + kdc.getRealm(), keytab.getAbsolutePath());
 
-      try (Closeable util2Closeable = startSecureMiniCluster(util2, kdc, userPrincipal)) {
+    try (Closeable util2Closeable = startSecureMiniCluster(util2, kdc, userPrincipal)) {
+      try {
         Configuration conf1 = util1.getConfiguration();
         Job job = Job.getInstance(conf1);
 
@@ -282,9 +290,9 @@ public class TestTableMapReduceUtil {
           (Token<AuthenticationTokenIdentifier>) credentials.getToken(new Text(clusterId));
         assertEquals(userPrincipal + '@' + kdc.getRealm(),
           tokenForCluster.decodeIdentifier().getUsername());
+      } finally {
+        kdc.stop();
       }
-    } finally {
-      kdc.stop();
     }
   }
 }
