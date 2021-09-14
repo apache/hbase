@@ -1049,6 +1049,11 @@ public final class HConstants {
 
   public static final float HFILE_BLOCK_CACHE_SIZE_DEFAULT = 0.4f;
 
+  public static final String HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_KEY =
+    "hbase.client.scanner.block.cache.size";
+
+  public static final float HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_DEFAULT = 0.1f;
+
   /*
     * Minimum percentage of free heap necessary for a successful cluster startup.
     */
