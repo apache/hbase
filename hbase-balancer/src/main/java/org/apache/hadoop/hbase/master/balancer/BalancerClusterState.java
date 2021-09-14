@@ -26,6 +26,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.agrona.collections.IntArrayList;
 import org.agrona.collections.Int2IntCounterMap;
 import org.agrona.collections.Hashing;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -89,7 +90,7 @@ class BalancerClusterState {
   double[] minRegionSkewByTable;       // min skew on RS per by table
   double[] maxRegionSkewByTable;       // max skew on RS per by table
   int[] regionIndexToPrimaryIndex; // regionIndex -> regionIndex of the primary
-  int[][] primaryIndexToRegionIndex; // regionIndex of the primary -> regionIndex
+  IntArrayList[] primaryIndexToSecondaryIndex; // regionIndex of the primary -> secondary regionIndex
   boolean hasRegionReplicas = false; // whether there is regions with replicas
 
   Integer[] serverIndicesSortedByRegionCount;
@@ -340,7 +341,7 @@ class BalancerClusterState {
       RegionInfo info = regions[i];
       if (RegionReplicaUtil.isDefaultReplica(info)) {
         regionIndexToPrimaryIndex[i] = i;
-        primary++;
+        primaryCount++;
       } else {
         hasRegionReplicas = true;
         RegionInfo primaryInfo = RegionReplicaUtil.getRegionInfoForDefaultReplica(info);
@@ -348,8 +349,15 @@ class BalancerClusterState {
       }
     }
 
+    primaryIndexToSecondaryIndex = new IntArrayList[primaryCount];
     for (int i = 0; i < numRegions; i++) {
-      
+      int primary = regionIndexToPrimaryIndex[i];
+      if ( primary != i) {
+        if (primaryIndexToSecondaryIndex[primary] == null) {
+          primaryIndexToSecondaryIndex[primary] = new IntArrayList();
+        }
+        primaryIndexToSecondaryIndex[primary].add(i);
+      }
     }
 
     for (int i = 0; i < regionsPerServer.length; i++) {

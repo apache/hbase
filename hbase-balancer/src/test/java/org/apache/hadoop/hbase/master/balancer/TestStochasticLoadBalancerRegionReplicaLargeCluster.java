@@ -34,10 +34,10 @@ public class TestStochasticLoadBalancerRegionReplicaLargeCluster
 
   @Test
   public void testRegionReplicasOnLargeCluster() {
-    int numNodes = 1000;
-    int numRegions = 20 * numNodes; // 20 * replication regions per RS
-    int numRegionsPerServer = 19; // all servers except one
-    int numTables = 100;
+    int numNodes = 200;
+    int numRegions = 100 * numNodes; // 20 * replication regions per RS
+    int numRegionsPerServer = 99; // all servers except one
+    int numTables = 20;
     int replication = 3;
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }

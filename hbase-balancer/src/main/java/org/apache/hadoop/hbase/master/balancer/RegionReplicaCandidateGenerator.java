@@ -43,7 +43,7 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
    * @return a regionIndex for the selected primary or -1 if there is no co-locating
    */
   int selectCoHostedRegionPerGroup(Int2IntCounterMap primariesOfRegionsPerGroup, int[] regionsPerGroup,
-    int[] regionIndexToPrimaryIndex) {
+    IntArrayList[] primaryIndexToSecondaryIndex) {
     final IntArrayList colocated = new IntArrayList(primariesOfRegionsPerGroup.size(), -1);
 
     primariesOfRegionsPerGroup.forEach((primary, count) -> {
@@ -57,13 +57,10 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
       int selectedPrimaryIndex = colocated.get(rand);
       // we have found the primary id for the region to move. Now find the actual regionIndex
       // with the given primary, prefer to move the secondary region.
-      for (int regionIndex : regionsPerGroup) {
-        if (selectedPrimaryIndex == regionIndexToPrimaryIndex[regionIndex]) {
-          // always move the secondary, not the primary
-          if (selectedPrimaryIndex != regionIndex) {
-            return regionIndex;
-          }
-        }
+      if (!primaryIndexToSecondaryIndex[selectedPrimaryIndex].isEmpty()) {
+        rand = ThreadLocalRandom.current().nextInt(
+          primaryIndexToSecondaryIndex[selectedPrimaryIndex].size());
+        return primaryIndexToSecondaryIndex[selectedPrimaryIndex].get(rand);
       }
     }
     return -1;
@@ -77,7 +74,7 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
     }
 
     int regionIndex = selectCoHostedRegionPerGroup(cluster.primariesOfRegionsPerServer[serverIndex],
-      cluster.regionsPerServer[serverIndex], cluster.regionIndexToPrimaryIndex);
+      cluster.regionsPerServer[serverIndex], cluster.primaryIndexToSecondaryIndex);
 
     // if there are no pairs of region replicas co-hosted, default to random generator
     if (regionIndex == -1) {
