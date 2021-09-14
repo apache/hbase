@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
-import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACK_IMPL;
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -86,10 +86,13 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
   @Override
   public void persistConfiguration(TableDescriptorBuilder builder) {
     TableDescriptor desc = builder.build();
-    if (StringUtils.isEmpty(desc.getValue(TRACK_IMPL))) {
-      String trackerImpl = StoreFileTrackerFactory.getStoreFileTrackerImpl(conf).getName();
-      builder.setValue(TRACK_IMPL, trackerImpl);
+    if (StringUtils.isEmpty(desc.getValue(TRACKER_IMPL))) {
+      builder.setValue(TRACKER_IMPL, getTrackerName());
     }
+  }
+
+  protected final String getTrackerName() {
+    return StoreFileTrackerFactory.getStoreFileTrackerName(getClass());
   }
 
   private HFileContext createFileContext(Compression.Algorithm compression,
