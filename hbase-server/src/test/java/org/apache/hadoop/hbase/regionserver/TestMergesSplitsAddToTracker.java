@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.
-  TRACK_IMPL;
+  TRACKER_IMPL;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -74,7 +74,7 @@ public class TestMergesSplitsAddToTracker {
 
   @BeforeClass
   public static void setupClass() throws Exception {
-    TEST_UTIL.getConfiguration().set(TRACK_IMPL, TestStoreFileTracker.class.getName());
+    TEST_UTIL.getConfiguration().set(TRACKER_IMPL, TestStoreFileTracker.class.getName());
     TEST_UTIL.startMiniCluster();
   }
 

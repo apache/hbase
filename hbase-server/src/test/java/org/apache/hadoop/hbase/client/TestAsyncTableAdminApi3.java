@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
-import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACK_IMPL;
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -150,8 +150,8 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     admin.createTable(desc).join();
     TableDescriptor confirmedHtd = admin.getDescriptor(tableName).get();
     //HBASE-26246 introduced persist of store file tracker into table descriptor
-    desc = TableDescriptorBuilder.newBuilder(desc).setValue(TRACK_IMPL,
-      StoreFileTrackerFactory.getStoreFileTrackerImpl(TEST_UTIL.getConfiguration()).getName()).
+    desc = TableDescriptorBuilder.newBuilder(desc).setValue(TRACKER_IMPL,
+      StoreFileTrackerFactory.getStoreFileTrackerName(TEST_UTIL.getConfiguration())).
       build();
     assertEquals(0, TableDescriptor.COMPARATOR.compare(desc, confirmedHtd));
   }
