@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACK_IMPL;
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -231,8 +231,8 @@ public class MasterProcedureTestingUtility {
 
     // checks store file tracker impl has been properly set in htd
     String storeFileTrackerImpl =
-      StoreFileTrackerFactory.getStoreFileTrackerImpl(master.getConfiguration()).getName();
-    assertEquals(storeFileTrackerImpl, htd.getValue(TRACK_IMPL));
+      StoreFileTrackerFactory.getStoreFileTrackerName(master.getConfiguration());
+    assertEquals(storeFileTrackerImpl, htd.getValue(TRACKER_IMPL));
   }
 
   public static void validateTableDeletion(
