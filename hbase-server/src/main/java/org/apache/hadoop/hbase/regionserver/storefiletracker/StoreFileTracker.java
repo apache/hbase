@@ -75,7 +75,12 @@ public interface StoreFileTracker {
   StoreFileWriter createWriter(CreateStoreFileWriterParams params) throws IOException;
 
   /**
-   * Saves StoreFileTracker implementations specific configs into the table descriptors.
+   * Saves StoreFileTracker implementations specific configurations into the table descriptors.
+   * <p/>
+   * This is used to avoid accidentally data loss when changing the cluster level store file tracker
+   * implementation, and also possible misconfiguration between master and region servers.
+   * <p/>
+   * See HBASE-26246 for more details.
    * @param builder The table descriptor builder for the given table.
    */
   void persistConfiguration(TableDescriptorBuilder builder);
