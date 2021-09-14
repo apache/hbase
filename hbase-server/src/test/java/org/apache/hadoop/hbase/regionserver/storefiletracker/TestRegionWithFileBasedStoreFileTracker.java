@@ -71,10 +71,9 @@ public class TestRegionWithFileBasedStoreFileTracker {
   @Before
   public void setUp() throws IOException {
     Configuration conf = new Configuration(UTIL.getConfiguration());
-    conf.setClass(StoreFileTrackerFactory.TRACK_IMPL, FileBasedStoreFileTracker.class,
-      StoreFileTracker.class);
-    region =
-      HBaseTestingUtility.createRegionAndWAL(RI, UTIL.getDataTestDir(name.getMethodName()), conf, TD);
+    conf.set(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.FILE.name());
+    region = HBaseTestingUtility.createRegionAndWAL(RI, UTIL.getDataTestDir(name.getMethodName()),
+      conf, TD);
   }
 
   @After
