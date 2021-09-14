@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -44,8 +45,8 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
 
   public MigrationStoreFileTracker(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
     super(conf, isPrimaryReplica, ctx);
-    this.src = StoreFileTrackerFactory.create(conf, SRC_IMPL, isPrimaryReplica, ctx);
-    this.dst = StoreFileTrackerFactory.create(conf, DST_IMPL, isPrimaryReplica, ctx);
+    this.src = StoreFileTrackerFactory.createForMigration(conf, SRC_IMPL, isPrimaryReplica, ctx);
+    this.dst = StoreFileTrackerFactory.createForMigration(conf, DST_IMPL, isPrimaryReplica, ctx);
     Preconditions.checkArgument(!src.getClass().equals(dst.getClass()),
       "src and dst is the same: %s", src.getClass());
   }
@@ -90,7 +91,11 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
   @Override
   public void persistConfiguration(TableDescriptorBuilder builder) {
     super.persistConfiguration(builder);
-    builder.setValue(SRC_IMPL, src.getClass().getName());
-    builder.setValue(DST_IMPL, dst.getClass().getName());
+    if (StringUtils.isEmpty(builder.getValue(SRC_IMPL))) {
+      builder.setValue(SRC_IMPL, src.getTrackerName());
+    }
+    if (StringUtils.isEmpty(builder.getValue(DST_IMPL))) {
+      builder.setValue(DST_IMPL, dst.getTrackerName());
+    }
   }
 }

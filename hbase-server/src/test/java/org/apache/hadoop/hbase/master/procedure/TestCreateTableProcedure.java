@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACK_IMPL;
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -96,13 +96,13 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, F1);
     String trackerName = TestStoreFileTracker.class.getName();
-    htd = TableDescriptorBuilder.newBuilder(htd).setValue(TRACK_IMPL, trackerName).build();
+    htd = TableDescriptorBuilder.newBuilder(htd).setValue(TRACKER_IMPL, trackerName).build();
     RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, null);
     long procId = ProcedureTestingUtility.submitAndWait(procExec,
       new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
     htd = getMaster().getTableDescriptors().get(tableName);
-    assertEquals(trackerName, htd.getValue(TRACK_IMPL));
+    assertEquals(trackerName, htd.getValue(TRACKER_IMPL));
   }
 
   @Test
