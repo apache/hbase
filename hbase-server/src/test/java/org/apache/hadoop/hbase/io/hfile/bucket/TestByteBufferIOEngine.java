@@ -50,7 +50,7 @@ public class TestByteBufferIOEngine {
     private long off;
 
     MockBucketEntry(long offset, int length, ByteBuffAllocator allocator) {
-      super(offset & 0xFF00, length, 0, false, RefCnt.create(), allocator);
+      super(offset & 0xFF00, length, 0, false, null, allocator);
       this.off = offset;
     }
 

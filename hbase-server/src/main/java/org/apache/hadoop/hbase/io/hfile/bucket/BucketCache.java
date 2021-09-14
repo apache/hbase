@@ -49,6 +49,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
+import java.util.function.Function;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -429,7 +431,7 @@ public class BucketCache implements BlockCache, HeapSize {
       boolean wait) {
     if (cacheEnabled) {
       if (backingMap.containsKey(cacheKey) || ramCache.containsKey(cacheKey)) {
-        if (BlockCacheUtil.shouldReplaceExistingCacheBlock(this, cacheKey, cachedItem)) {
+        if (shouldReplaceExistingCacheBlock(cacheKey, cachedItem)) {
           BucketEntry bucketEntry = backingMap.get(cacheKey);
           if (bucketEntry != null && bucketEntry.isRpcRef()) {
             // avoid replace when there are RPC refs for the bucket entry in bucket cache
@@ -443,7 +445,11 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
-  private void cacheBlockWithWaitInternal(BlockCacheKey cacheKey, Cacheable cachedItem,
+  protected boolean shouldReplaceExistingCacheBlock(BlockCacheKey cacheKey, Cacheable newBlock) {
+    return BlockCacheUtil.shouldReplaceExistingCacheBlock(this, cacheKey, newBlock);
+  }
+
+  protected void cacheBlockWithWaitInternal(BlockCacheKey cacheKey, Cacheable cachedItem,
       boolean inMemory, boolean wait) {
     if (!cacheEnabled) {
       return;
@@ -451,8 +457,7 @@ public class BucketCache implements BlockCache, HeapSize {
     LOG.trace("Caching key={}, item={}", cacheKey, cachedItem);
     // Stuff the entry into the RAM cache so it can get drained to the persistent store
     RAMQueueEntry re =
-        new RAMQueueEntry(cacheKey, cachedItem, accessCount.incrementAndGet(), inMemory,
-              createRecycler(cacheKey));
+        new RAMQueueEntry(cacheKey, cachedItem, accessCount.incrementAndGet(), inMemory);
     /**
      * Don't use ramCache.put(cacheKey, re) here. because there may be a existing entry with same
      * key in ramCache, the heap size of bucket cache need to update if replacing entry from
@@ -550,13 +555,29 @@ public class BucketCache implements BlockCache, HeapSize {
     return null;
   }
 
+  /**
+   * This method is invoked after the bucketEntry is removed from {@link BucketCache#backingMap}
+   * @param cacheKey
+   * @param bucketEntry
+   * @param decrementBlockNumber
+   */
   void blockEvicted(BlockCacheKey cacheKey, BucketEntry bucketEntry, boolean decrementBlockNumber) {
-    bucketAllocator.freeBlock(bucketEntry.offset());
-    realCacheSize.add(-1 * bucketEntry.getLength());
+    bucketEntry.markAsEvicted();
     blocksByHFile.remove(cacheKey);
     if (decrementBlockNumber) {
       this.blockNumber.decrement();
     }
+    cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
+  }
+
+  /**
+   * Free the {{@link BucketEntry} actually,which could only be invoked when the
+   * {@link BucketEntry#refCnt} becoming 0.
+   * @param bucketEntry
+   */
+  void freeBucketEntry(BucketEntry bucketEntry) {
+    bucketAllocator.freeBlock(bucketEntry.offset());
+    realCacheSize.add(-1 * bucketEntry.getLength());
   }
 
   /**
@@ -577,43 +598,84 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public boolean evictBlock(BlockCacheKey cacheKey) {
+    return doEvictBlock(cacheKey, null);
+  }
+
+  /**
+   * Evict the {@link BlockCacheKey} and {@link BucketEntry} from {@link BucketCache#backingMap} and
+   * {@link BucketCache#ramCache}. <br/>
+   * NOTE:When Evict from {@link BucketCache#backingMap},only the matched {@link BlockCacheKey} and
+   * {@link BucketEntry} could be removed.
+   * @param cacheKey
+   * @param bucketEntry
+   * @return
+   */
+  private boolean doEvictBlock(BlockCacheKey cacheKey, BucketEntry bucketEntry) {
     if (!cacheEnabled) {
       return false;
     }
-    boolean existed = removeFromRamCache(cacheKey);
-    BucketEntry be = backingMap.get(cacheKey);
-    if (be == null) {
-      if (existed) {
+    boolean existedInRamCache = removeFromRamCache(cacheKey);
+    if (bucketEntry == null) {
+      bucketEntry = backingMap.get(cacheKey);
+    }
+    final BucketEntry bucketEntryToUse = bucketEntry;
+
+    if (bucketEntryToUse == null) {
+      if (existedInRamCache) {
         cacheStats.evicted(0, cacheKey.isPrimary());
       }
-      return existed;
+      return existedInRamCache;
     } else {
-      return be.withWriteLock(offsetLock, be::markAsEvicted);
+      return bucketEntryToUse.withWriteLock(offsetLock, () -> {
+        if (backingMap.remove(cacheKey, bucketEntryToUse)) {
+          blockEvicted(cacheKey, bucketEntryToUse, !existedInRamCache);
+          return true;
+        }
+        return false;
+      });
     }
   }
 
-  private Recycler createRecycler(BlockCacheKey cacheKey) {
+  /**
+   * Create the {@link Recycler} for {@link BucketEntry#refCnt}.
+   * @param bucketEntry
+   * @return
+   */
+  protected Recycler createRecycler(final BucketEntry bucketEntry) {
     return () -> {
-      if (!cacheEnabled) {
-        return;
-      }
-      boolean existed = removeFromRamCache(cacheKey);
-      BucketEntry be = backingMap.get(cacheKey);
-      if (be == null && existed) {
-        cacheStats.evicted(0, cacheKey.isPrimary());
-      } else if (be != null) {
-        be.withWriteLock(offsetLock, () -> {
-          if (backingMap.remove(cacheKey, be)) {
-            blockEvicted(cacheKey, be, !existed);
-            cacheStats.evicted(be.getCachedTime(), cacheKey.isPrimary());
-          }
-          return null;
-        });
-      }
+      freeBucketEntry(bucketEntry);
+      return;
     };
   }
 
-  private boolean removeFromRamCache(BlockCacheKey cacheKey) {
+  /**
+   * NOTE: This method is only for test.
+   * @param blockCacheKey
+   * @return
+   */
+  public boolean evictBlockIfNoRpcReferenced(BlockCacheKey blockCacheKey) {
+    BucketEntry bucketEntry = backingMap.get(blockCacheKey);
+    if (bucketEntry == null) {
+      return false;
+    }
+    return evictBucketEntryIfNoRpcReferneced(blockCacheKey, bucketEntry);
+  }
+
+  /**
+   * Evict {@link BlockCacheKey} and its corresponding {@link BucketEntry} only if
+   * {@link BucketEntry#isRpcRef} is false.
+   * @param blockCacheKey
+   * @param bucketEntry
+   * @return
+   */
+  boolean evictBucketEntryIfNoRpcReferneced(BlockCacheKey blockCacheKey, BucketEntry bucketEntry) {
+    if (!bucketEntry.isRpcRef()) {
+      return doEvictBlock(blockCacheKey, bucketEntry);
+    }
+    return false;
+  }
+
+  protected boolean removeFromRamCache(BlockCacheKey cacheKey) {
     return ramCache.remove(cacheKey, re -> {
       if (re != null) {
         this.blockNumber.decrement();
@@ -717,7 +779,7 @@ public class BucketCache implements BlockCache, HeapSize {
           bucketAllocator.getLeastFilledBuckets(inUseBuckets, completelyFreeBucketsNeeded);
       for (Map.Entry<BlockCacheKey, BucketEntry> entry : backingMap.entrySet()) {
         if (candidateBuckets.contains(bucketAllocator.getBucketIndex(entry.getValue().offset()))) {
-          entry.getValue().withWriteLock(offsetLock, entry.getValue()::markStaleAsEvicted);
+          evictBucketEntryIfNoRpcReferneced(entry.getKey(), entry.getValue());
         }
       }
     }
@@ -906,134 +968,135 @@ public class BucketCache implements BlockCache, HeapSize {
       }
       LOG.info(this.getName() + " exiting, cacheEnabled=" + cacheEnabled);
     }
+  }
 
-    /**
-     * Put the new bucket entry into backingMap. Notice that we are allowed to replace the existing
-     * cache with a new block for the same cache key. there's a corner case: one thread cache a
-     * block in ramCache, copy to io-engine and add a bucket entry to backingMap. Caching another
-     * new block with the same cache key do the same thing for the same cache key, so if not evict
-     * the previous bucket entry, then memory leak happen because the previous bucketEntry is gone
-     * but the bucketAllocator do not free its memory.
-     * @see BlockCacheUtil#shouldReplaceExistingCacheBlock(BlockCache blockCache,BlockCacheKey
-     *      cacheKey, Cacheable newBlock)
-     * @param key Block cache key
-     * @param bucketEntry Bucket entry to put into backingMap.
-     */
-    private void putIntoBackingMap(BlockCacheKey key, BucketEntry bucketEntry) {
-      BucketEntry previousEntry = backingMap.put(key, bucketEntry);
-      if (previousEntry != null && previousEntry != bucketEntry) {
-        previousEntry.withWriteLock(offsetLock, () -> {
-          blockEvicted(key, previousEntry, false);
+  /**
+   * Put the new bucket entry into backingMap. Notice that we are allowed to replace the existing
+   * cache with a new block for the same cache key. there's a corner case: one thread cache a block
+   * in ramCache, copy to io-engine and add a bucket entry to backingMap. Caching another new block
+   * with the same cache key do the same thing for the same cache key, so if not evict the previous
+   * bucket entry, then memory leak happen because the previous bucketEntry is gone but the
+   * bucketAllocator do not free its memory.
+   * @see BlockCacheUtil#shouldReplaceExistingCacheBlock(BlockCache blockCache,BlockCacheKey
+   *      cacheKey, Cacheable newBlock)
+   * @param key Block cache key
+   * @param bucketEntry Bucket entry to put into backingMap.
+   */
+  protected void putIntoBackingMap(BlockCacheKey key, BucketEntry bucketEntry) {
+    BucketEntry previousEntry = backingMap.put(key, bucketEntry);
+    if (previousEntry != null && previousEntry != bucketEntry) {
+      previousEntry.withWriteLock(offsetLock, () -> {
+        blockEvicted(key, previousEntry, false);
+        return null;
+      });
+    }
+  }
+
+  /**
+   * Flush the entries in ramCache to IOEngine and add bucket entry to backingMap. Process all that
+   * are passed in even if failure being sure to remove from ramCache else we'll never undo the
+   * references and we'll OOME.
+   * @param entries Presumes list passed in here will be processed by this invocation only. No
+   *          interference expected.
+   * @throws InterruptedException
+   */
+  void doDrain(final List<RAMQueueEntry> entries) throws InterruptedException {
+    if (entries.isEmpty()) {
+      return;
+    }
+    // This method is a little hard to follow. We run through the passed in entries and for each
+    // successful add, we add a non-null BucketEntry to the below bucketEntries. Later we must
+    // do cleanup making sure we've cleared ramCache of all entries regardless of whether we
+    // successfully added the item to the bucketcache; if we don't do the cleanup, we'll OOME by
+    // filling ramCache. We do the clean up by again running through the passed in entries
+    // doing extra work when we find a non-null bucketEntries corresponding entry.
+    final int size = entries.size();
+    BucketEntry[] bucketEntries = new BucketEntry[size];
+    // Index updated inside loop if success or if we can't succeed. We retry if cache is full
+    // when we go to add an entry by going around the loop again without upping the index.
+    int index = 0;
+    while (cacheEnabled && index < size) {
+      RAMQueueEntry re = null;
+      try {
+        re = entries.get(index);
+        if (re == null) {
+          LOG.warn("Couldn't get entry or changed on us; who else is messing with it?");
+          index++;
+          continue;
+        }
+        BucketEntry bucketEntry = re.writeToCache(ioEngine, bucketAllocator, realCacheSize,
+          (entry) -> createRecycler(entry));
+        // Successfully added. Up index and add bucketEntry. Clear io exceptions.
+        bucketEntries[index] = bucketEntry;
+        if (ioErrorStartTime > 0) {
+          ioErrorStartTime = -1;
+        }
+        index++;
+      } catch (BucketAllocatorException fle) {
+        LOG.warn("Failed allocation for " + (re == null ? "" : re.getKey()) + "; " + fle);
+        // Presume can't add. Too big? Move index on. Entry will be cleared from ramCache below.
+        bucketEntries[index] = null;
+        index++;
+      } catch (CacheFullException cfe) {
+        // Cache full when we tried to add. Try freeing space and then retrying (don't up index)
+        if (!freeInProgress) {
+          freeSpace("Full!");
+        } else {
+          Thread.sleep(50);
+        }
+      } catch (IOException ioex) {
+        // Hopefully transient. Retry. checkIOErrorIsTolerated disables cache if problem.
+        LOG.error("Failed writing to bucket cache", ioex);
+        checkIOErrorIsTolerated();
+      }
+    }
+
+    // Make sure data pages are written on media before we update maps.
+    try {
+      ioEngine.sync();
+    } catch (IOException ioex) {
+      LOG.error("Failed syncing IO engine", ioex);
+      checkIOErrorIsTolerated();
+      // Since we failed sync, free the blocks in bucket allocator
+      for (int i = 0; i < entries.size(); ++i) {
+        if (bucketEntries[i] != null) {
+          bucketAllocator.freeBlock(bucketEntries[i].offset());
+          bucketEntries[i] = null;
+        }
+      }
+    }
+
+    // Now add to backingMap if successfully added to bucket cache. Remove from ramCache if
+    // success or error.
+    for (int i = 0; i < size; ++i) {
+      BlockCacheKey key = entries.get(i).getKey();
+      // Only add if non-null entry.
+      if (bucketEntries[i] != null) {
+        putIntoBackingMap(key, bucketEntries[i]);
+      }
+      // Always remove from ramCache even if we failed adding it to the block cache above.
+      boolean existed = ramCache.remove(key, re -> {
+        if (re != null) {
+          heapSize.add(-1 * re.getData().heapSize());
+        }
+      });
+      if (!existed && bucketEntries[i] != null) {
+        // Block should have already been evicted. Remove it and free space.
+        final BucketEntry bucketEntry = bucketEntries[i];
+        bucketEntry.withWriteLock(offsetLock, () -> {
+          if (backingMap.remove(key, bucketEntry)) {
+            blockEvicted(key, bucketEntry, false);
+          }
           return null;
         });
       }
     }
 
-    /**
-     * Flush the entries in ramCache to IOEngine and add bucket entry to backingMap.
-     * Process all that are passed in even if failure being sure to remove from ramCache else we'll
-     * never undo the references and we'll OOME.
-     * @param entries Presumes list passed in here will be processed by this invocation only. No
-     *   interference expected.
-     * @throws InterruptedException
-     */
-    void doDrain(final List<RAMQueueEntry> entries) throws InterruptedException {
-      if (entries.isEmpty()) {
-        return;
-      }
-      // This method is a little hard to follow. We run through the passed in entries and for each
-      // successful add, we add a non-null BucketEntry to the below bucketEntries.  Later we must
-      // do cleanup making sure we've cleared ramCache of all entries regardless of whether we
-      // successfully added the item to the bucketcache; if we don't do the cleanup, we'll OOME by
-      // filling ramCache.  We do the clean up by again running through the passed in entries
-      // doing extra work when we find a non-null bucketEntries corresponding entry.
-      final int size = entries.size();
-      BucketEntry[] bucketEntries = new BucketEntry[size];
-      // Index updated inside loop if success or if we can't succeed. We retry if cache is full
-      // when we go to add an entry by going around the loop again without upping the index.
-      int index = 0;
-      while (cacheEnabled && index < size) {
-        RAMQueueEntry re = null;
-        try {
-          re = entries.get(index);
-          if (re == null) {
-            LOG.warn("Couldn't get entry or changed on us; who else is messing with it?");
-            index++;
-            continue;
-          }
-          BucketEntry bucketEntry = re.writeToCache(ioEngine, bucketAllocator, realCacheSize);
-          // Successfully added. Up index and add bucketEntry. Clear io exceptions.
-          bucketEntries[index] = bucketEntry;
-          if (ioErrorStartTime > 0) {
-            ioErrorStartTime = -1;
-          }
-          index++;
-        } catch (BucketAllocatorException fle) {
-          LOG.warn("Failed allocation for " + (re == null ? "" : re.getKey()) + "; " + fle);
-          // Presume can't add. Too big? Move index on. Entry will be cleared from ramCache below.
-          bucketEntries[index] = null;
-          index++;
-        } catch (CacheFullException cfe) {
-          // Cache full when we tried to add. Try freeing space and then retrying (don't up index)
-          if (!freeInProgress) {
-            freeSpace("Full!");
-          } else {
-            Thread.sleep(50);
-          }
-        } catch (IOException ioex) {
-          // Hopefully transient. Retry. checkIOErrorIsTolerated disables cache if problem.
-          LOG.error("Failed writing to bucket cache", ioex);
-          checkIOErrorIsTolerated();
-        }
-      }
-
-      // Make sure data pages are written on media before we update maps.
-      try {
-        ioEngine.sync();
-      } catch (IOException ioex) {
-        LOG.error("Failed syncing IO engine", ioex);
-        checkIOErrorIsTolerated();
-        // Since we failed sync, free the blocks in bucket allocator
-        for (int i = 0; i < entries.size(); ++i) {
-          if (bucketEntries[i] != null) {
-            bucketAllocator.freeBlock(bucketEntries[i].offset());
-            bucketEntries[i] = null;
-          }
-        }
-      }
-
-      // Now add to backingMap if successfully added to bucket cache.  Remove from ramCache if
-      // success or error.
-      for (int i = 0; i < size; ++i) {
-        BlockCacheKey key = entries.get(i).getKey();
-        // Only add if non-null entry.
-        if (bucketEntries[i] != null) {
-          putIntoBackingMap(key, bucketEntries[i]);
-        }
-        // Always remove from ramCache even if we failed adding it to the block cache above.
-        boolean existed = ramCache.remove(key, re -> {
-          if (re != null) {
-            heapSize.add(-1 * re.getData().heapSize());
-          }
-        });
-        if (!existed && bucketEntries[i] != null) {
-          // Block should have already been evicted. Remove it and free space.
-          final BucketEntry bucketEntry = bucketEntries[i];
-          bucketEntry.withWriteLock(offsetLock, () -> {
-            if (backingMap.remove(key, bucketEntry)) {
-              blockEvicted(key, bucketEntry, false);
-            }
-            return null;
-          });
-        }
-      }
-
-      long used = bucketAllocator.getUsedSize();
-      if (used > acceptableSize()) {
-        freeSpace("Used=" + used + " > acceptable=" + acceptableSize());
-      }
-      return;
+    long used = bucketAllocator.getUsedSize();
+    if (used > acceptableSize()) {
+      freeSpace("Used=" + used + " > acceptable=" + acceptableSize());
     }
+    return;
   }
 
   /**
@@ -1327,8 +1390,9 @@ public class BucketCache implements BlockCache, HeapSize {
       // TODO avoid a cycling siutation. We find no block which is not in use and so no way to free
       // What to do then? Caching attempt fail? Need some changes in cacheBlock API?
       while ((entry = queue.pollLast()) != null) {
+        BlockCacheKey blockCacheKey = entry.getKey();
         BucketEntry be = entry.getValue();
-        if (be.withWriteLock(offsetLock, be::markStaleAsEvicted)) {
+        if (evictBucketEntryIfNoRpcReferneced(blockCacheKey, be)) {
           freedBytes += be.getLength();
         }
         if (freedBytes >= toFree) {
@@ -1355,15 +1419,12 @@ public class BucketCache implements BlockCache, HeapSize {
     private final Cacheable data;
     private long accessCounter;
     private boolean inMemory;
-    private final Recycler recycler;
 
-    RAMQueueEntry(BlockCacheKey bck, Cacheable data, long accessCounter, boolean inMemory,
-        Recycler recycler) {
+    RAMQueueEntry(BlockCacheKey bck, Cacheable data, long accessCounter, boolean inMemory) {
       this.key = bck;
       this.data = data;
       this.accessCounter = accessCounter;
       this.inMemory = inMemory;
-      this.recycler = recycler;
     }
 
     public Cacheable getData() {
@@ -1386,7 +1447,8 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     public BucketEntry writeToCache(final IOEngine ioEngine, final BucketAllocator alloc,
-        final LongAdder realCacheSize) throws IOException {
+        final LongAdder realCacheSize, Function<BucketEntry, Recycler> createRecycler)
+        throws IOException {
       int len = data.getSerializedLength();
       // This cacheable thing can't be serialized
       if (len == 0) {
@@ -1396,7 +1458,7 @@ public class BucketCache implements BlockCache, HeapSize {
       boolean succ = false;
       BucketEntry bucketEntry = null;
       try {
-        bucketEntry = new BucketEntry(offset, len, accessCounter, inMemory, RefCnt.create(recycler),
+        bucketEntry = new BucketEntry(offset, len, accessCounter, inMemory, createRecycler,
             getByteBuffAllocator());
         bucketEntry.setDeserializerReference(data.getDeserializer());
         if (data instanceof HFileBlock) {

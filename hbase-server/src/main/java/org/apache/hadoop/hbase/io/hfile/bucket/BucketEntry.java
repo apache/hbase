@@ -25,8 +25,10 @@ import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
 
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
@@ -88,16 +90,21 @@ class BucketEntry implements HBaseReferenceCounted {
   private final long cachedTime = System.nanoTime();
 
   BucketEntry(long offset, int length, long accessCounter, boolean inMemory) {
-    this(offset, length, accessCounter, inMemory, RefCnt.create(), ByteBuffAllocator.HEAP);
+    this(offset, length, accessCounter, inMemory, null, ByteBuffAllocator.HEAP);
   }
 
-  BucketEntry(long offset, int length, long accessCounter, boolean inMemory, RefCnt refCnt,
+  BucketEntry(long offset, int length, long accessCounter, boolean inMemory,
+      Function<BucketEntry, Recycler> createRecycler,
       ByteBuffAllocator allocator) {
     setOffset(offset);
     this.length = length;
     this.accessCounter = accessCounter;
     this.priority = inMemory ? BlockPriority.MEMORY : BlockPriority.MULTI;
-    this.refCnt = refCnt;
+    if (createRecycler == null) {
+      this.refCnt = RefCnt.create();
+    } else {
+      this.refCnt = RefCnt.create(createRecycler.apply(this));
+    }
     this.markedAsEvicted = new AtomicBoolean(false);
     this.allocator = allocator;
   }
@@ -161,19 +168,6 @@ class BucketEntry implements HBaseReferenceCounted {
   boolean markAsEvicted() {
     if (markedAsEvicted.compareAndSet(false, true)) {
       return this.release();
-    }
-    return false;
-  }
-
-  /**
-   * Mark as evicted only when NO RPC references. Mainly used for eviction when cache size exceed
-   * the max acceptable size.
-   * @return true if we deallocate this entry successfully.
-   */
-  boolean markStaleAsEvicted() {
-    if (!markedAsEvicted.get() && this.refCnt() == 1) {
-      // The only reference was coming from backingMap, now release the stale entry.
-      return this.markAsEvicted();
     }
     return false;
   }

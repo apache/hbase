@@ -141,7 +141,7 @@ public class TestBucketWriterThread {
     RAMQueueEntry rqe = q.remove();
     RAMQueueEntry spiedRqe = Mockito.spy(rqe);
     Mockito.doThrow(new IOException("Mocked!")).when(spiedRqe).
-      writeToCache(Mockito.any(), Mockito.any(), Mockito.any());
+        writeToCache(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     this.q.add(spiedRqe);
     doDrainOfOneEntry(bc, wt, q);
     // Cache disabled when ioes w/o ever healing.
@@ -163,7 +163,7 @@ public class TestBucketWriterThread {
     BucketEntry mockedBucketEntry = Mockito.mock(BucketEntry.class);
     Mockito.doThrow(cfe).
       doReturn(mockedBucketEntry).
-      when(spiedRqe).writeToCache(Mockito.any(), Mockito.any(), Mockito.any());
+        when(spiedRqe).writeToCache(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     this.q.add(spiedRqe);
     doDrainOfOneEntry(bc, wt, q);
   }
@@ -172,7 +172,7 @@ public class TestBucketWriterThread {
       final BlockingQueue<RAMQueueEntry> q)
   throws InterruptedException {
     List<RAMQueueEntry> rqes = BucketCache.getRAMQueueEntries(q, new ArrayList<>(1));
-    wt.doDrain(rqes);
+    bc.doDrain(rqes);
     assertTrue(q.isEmpty());
     assertTrue(bc.ramCache.isEmpty());
     assertEquals(0, bc.heapSize());
