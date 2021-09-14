@@ -23,7 +23,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
@@ -86,10 +85,10 @@ public class TestMigrationStoreFileTracker {
   public TestName name = new TestName();
 
   @Parameter(0)
-  public Class<? extends StoreFileTrackerBase> srcImplClass;
+  public StoreFileTrackerFactory.Trackers srcImpl;
 
   @Parameter(1)
-  public Class<? extends StoreFileTrackerBase> dstImplClass;
+  public StoreFileTrackerFactory.Trackers dstImpl;
 
   private HRegion region;
 
@@ -99,11 +98,13 @@ public class TestMigrationStoreFileTracker {
 
   @Parameters(name = "{index}: src={0}, dst={1}")
   public static List<Object[]> params() {
-    List<Class<? extends StoreFileTrackerBase>> impls =
-      Arrays.asList(DefaultStoreFileTracker.class, FileBasedStoreFileTracker.class);
     List<Object[]> params = new ArrayList<>();
-    for (Class<? extends StoreFileTrackerBase> src : impls) {
-      for (Class<? extends StoreFileTrackerBase> dst : impls) {
+    for (StoreFileTrackerFactory.Trackers src : StoreFileTrackerFactory.Trackers.values()) {
+      for (StoreFileTrackerFactory.Trackers dst : StoreFileTrackerFactory.Trackers.values()) {
+        if (src == StoreFileTrackerFactory.Trackers.MIGRATION
+          || dst == StoreFileTrackerFactory.Trackers.MIGRATION) {
+          continue;
+        }
         if (src.equals(dst)) {
           continue;
         }
@@ -122,8 +123,8 @@ public class TestMigrationStoreFileTracker {
   @Before
   public void setUp() throws IOException {
     Configuration conf = UTIL.getConfiguration();
-    conf.setClass(MigrationStoreFileTracker.SRC_IMPL, srcImplClass, StoreFileTrackerBase.class);
-    conf.setClass(MigrationStoreFileTracker.DST_IMPL, dstImplClass, StoreFileTrackerBase.class);
+    conf.set(MigrationStoreFileTracker.SRC_IMPL, srcImpl.name().toLowerCase());
+    conf.set(MigrationStoreFileTracker.DST_IMPL, dstImpl.name().toLowerCase());
     rootDir = UTIL.getDataTestDir(name.getMethodName().replaceAll("[=:\\[ ]", "_"));
     wal = HBaseTestingUtil.createWal(conf, rootDir, RI);
   }
@@ -145,7 +146,7 @@ public class TestMigrationStoreFileTracker {
   private HRegion createRegion(Class<? extends StoreFileTrackerBase> trackerImplClass)
     throws IOException {
     Configuration conf = new Configuration(UTIL.getConfiguration());
-    conf.setClass(StoreFileTrackerFactory.TRACK_IMPL, trackerImplClass, StoreFileTracker.class);
+    conf.setClass(StoreFileTrackerFactory.TRACKER_IMPL, trackerImplClass, StoreFileTracker.class);
     return HRegion.createHRegion(RI, rootDir, conf, TD, wal, true);
   }
 
@@ -155,7 +156,7 @@ public class TestMigrationStoreFileTracker {
     List<String> before = getStoreFiles();
     region.close();
     Configuration conf = new Configuration(UTIL.getConfiguration());
-    conf.setClass(StoreFileTrackerFactory.TRACK_IMPL, trackerImplClass, StoreFileTracker.class);
+    conf.setClass(StoreFileTrackerFactory.TRACKER_IMPL, trackerImplClass, StoreFileTracker.class);
     region = HRegion.openHRegion(rootDir, RI, TD, wal, conf);
     List<String> after = getStoreFiles();
     assertEquals(before.size(), after.size());
@@ -180,14 +181,14 @@ public class TestMigrationStoreFileTracker {
 
   @Test
   public void testMigration() throws IOException {
-    region = createRegion(srcImplClass);
+    region = createRegion(srcImpl.clazz.asSubclass(StoreFileTrackerBase.class));
     putData(0, 100);
     verifyData(0, 100);
     reopenRegion(MigrationStoreFileTracker.class);
     verifyData(0, 100);
     region.compact(true);
     putData(100, 200);
-    reopenRegion(dstImplClass);
+    reopenRegion(dstImpl.clazz.asSubclass(StoreFileTrackerBase.class));
     verifyData(0, 200);
   }
 }
