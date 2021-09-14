@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
+import org.agrona.collections.Int2IntCounterMap;
+import org.agrona.collections.IntArrayList;
+
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -39,41 +42,27 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
    * @param regionIndexToPrimaryIndex Cluster.regionsIndexToPrimaryIndex
    * @return a regionIndex for the selected primary or -1 if there is no co-locating
    */
-  int selectCoHostedRegionPerGroup(int[] primariesOfRegionsPerGroup, int[] regionsPerGroup,
+  int selectCoHostedRegionPerGroup(Int2IntCounterMap primariesOfRegionsPerGroup, int[] regionsPerGroup,
     int[] regionIndexToPrimaryIndex) {
-    int currentPrimary = -1;
-    int currentPrimaryIndex = -1;
-    int selectedPrimaryIndex = -1;
-    double currentLargestRandom = -1;
-    // primariesOfRegionsPerGroup is a sorted array. Since it contains the primary region
-    // ids for the regions hosted in server, a consecutive repetition means that replicas
-    // are co-hosted
-    for (int j = 0; j <= primariesOfRegionsPerGroup.length; j++) {
-      int primary = j < primariesOfRegionsPerGroup.length ? primariesOfRegionsPerGroup[j] : -1;
-      if (primary != currentPrimary) { // check for whether we see a new primary
-        int numReplicas = j - currentPrimaryIndex;
-        if (numReplicas > 1) { // means consecutive primaries, indicating co-location
-          // decide to select this primary region id or not
-          double currentRandom = ThreadLocalRandom.current().nextDouble();
-          // we don't know how many region replicas are co-hosted, we will randomly select one
-          // using reservoir sampling (http://gregable.com/2007/10/reservoir-sampling.html)
-          if (currentRandom > currentLargestRandom) {
-            selectedPrimaryIndex = currentPrimary;
-            currentLargestRandom = currentRandom;
-          }
-        }
-        currentPrimary = primary;
-        currentPrimaryIndex = j;
-      }
-    }
+    final IntArrayList colocated = new IntArrayList(primariesOfRegionsPerGroup.size(), -1);
 
-    // we have found the primary id for the region to move. Now find the actual regionIndex
-    // with the given primary, prefer to move the secondary region.
-    for (int regionIndex : regionsPerGroup) {
-      if (selectedPrimaryIndex == regionIndexToPrimaryIndex[regionIndex]) {
-        // always move the secondary, not the primary
-        if (selectedPrimaryIndex != regionIndex) {
-          return regionIndex;
+    primariesOfRegionsPerGroup.forEach((primary, count) -> {
+      if (count > 1) { // means consecutive primaries, indicating co-location
+        colocated.add(primary);
+      }
+    });
+
+    if (colocated.size() > 0) {
+      int rand = ThreadLocalRandom.current().nextInt(colocated.size());
+      int selectedPrimaryIndex = colocated.get(rand);
+      // we have found the primary id for the region to move. Now find the actual regionIndex
+      // with the given primary, prefer to move the secondary region.
+      for (int regionIndex : regionsPerGroup) {
+        if (selectedPrimaryIndex == regionIndexToPrimaryIndex[regionIndex]) {
+          // always move the secondary, not the primary
+          if (selectedPrimaryIndex != regionIndex) {
+            return regionIndex;
+          }
         }
       }
     }
@@ -100,5 +89,4 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
     int toRegionIndex = pickRandomRegion(cluster, toServerIndex, 0.9f);
     return getAction(serverIndex, regionIndex, toServerIndex, toRegionIndex);
   }
-
 }
