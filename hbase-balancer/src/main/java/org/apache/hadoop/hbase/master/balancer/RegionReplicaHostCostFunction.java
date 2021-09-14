@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import org.agrona.collections.Int2IntCounterMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -32,7 +33,7 @@ class RegionReplicaHostCostFunction extends RegionReplicaGroupingCostFunction {
     "hbase.master.balancer.stochastic.regionReplicaHostCostKey";
   private static final float DEFAULT_REGION_REPLICA_HOST_COST_KEY = 100000;
 
-  private int[][] primariesOfRegionsPerGroup;
+  private Int2IntCounterMap[] primariesOfRegionsPerGroup;
 
   public RegionReplicaHostCostFunction(Configuration conf) {
     this.setMultiplier(
