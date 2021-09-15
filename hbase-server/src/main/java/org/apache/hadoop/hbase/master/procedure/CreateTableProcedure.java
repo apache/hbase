@@ -277,15 +277,17 @@ public class CreateTableProcedure
       MasterProcedureUtil.checkGroupNotEmpty(rsGroupInfo, forWhom);
     }
 
+    // check for store file tracker configurations
+    StoreFileTrackerFactory.checkForCreateTable(env.getMasterConfiguration(), tableDescriptor);
+
     return true;
   }
 
   private void preCreate(final MasterProcedureEnv env)
       throws IOException, InterruptedException {
     if (!getTableName().isSystemTable()) {
-      ProcedureSyncWait.getMasterQuotaManager(env)
-        .checkNamespaceTableAndRegionQuota(
-          getTableName(), (newRegions != null ? newRegions.size() : 0));
+      ProcedureSyncWait.getMasterQuotaManager(env).checkNamespaceTableAndRegionQuota(getTableName(),
+        (newRegions != null ? newRegions.size() : 0));
     }
 
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
