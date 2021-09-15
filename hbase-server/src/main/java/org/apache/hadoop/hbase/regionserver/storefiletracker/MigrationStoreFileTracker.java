@@ -93,4 +93,12 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
   static Class<? extends StoreFileTracker> getDstTrackerClass(Configuration conf) {
     return StoreFileTrackerFactory.getStoreFileTrackerClassForMigration(conf, DST_IMPL);
   }
+
+  static Class<? extends StoreFileTracker> getSrcTrackerClass(Configuration conf) {
+    return StoreFileTrackerFactory.getStoreFileTrackerClassForMigration(conf, SRC_IMPL);
+  }
+
+  static Class<? extends StoreFileTracker> getDstTrackerClass(Configuration conf) {
+    return StoreFileTrackerFactory.getStoreFileTrackerClassForMigration(conf, DST_IMPL);
+  }
 }
