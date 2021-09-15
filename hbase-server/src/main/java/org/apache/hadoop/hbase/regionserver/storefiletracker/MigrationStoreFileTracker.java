@@ -98,4 +98,12 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
       builder.setValue(DST_IMPL, dst.getTrackerName());
     }
   }
+
+  static Class<? extends StoreFileTracker> getSrcTrackerClass(Configuration conf) {
+    return StoreFileTrackerFactory.getStoreFileTrackerClassForMigration(conf, SRC_IMPL);
+  }
+
+  static Class<? extends StoreFileTracker> getDstTrackerClass(Configuration conf) {
+    return StoreFileTrackerFactory.getStoreFileTrackerClassForMigration(conf, DST_IMPL);
+  }
 }
