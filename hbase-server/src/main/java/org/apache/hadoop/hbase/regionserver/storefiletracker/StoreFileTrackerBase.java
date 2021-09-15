@@ -108,7 +108,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
       .withBlockSize(family.getBlocksize()).withHBaseCheckSum(true)
       .withDataBlockEncoding(family.getDataBlockEncoding()).withEncryptionContext(encryptionContext)
       .withCreateTime(EnvironmentEdgeManager.currentTime()).withColumnFamily(family.getName())
-      .withTableName(ctx.getTableName().getName()).build();
+      .withTableName(ctx.getTableName().getName()).withCellComparator(ctx.getComparator()).build();
     return hFileContext;
   }
 
@@ -173,7 +173,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
         .withMaxKeyCount(params.maxKeyCount()).withFavoredNodes(ctx.getFavoredNodes())
         .withFileContext(hFileContext).withShouldDropCacheBehind(params.shouldDropBehind())
         .withCompactedFilesSupplier(ctx.getCompactedFilesSupplier())
-        .withComparator(ctx.getComparator());
+        .withFileStoragePolicy(params.fileStoragePolicy());
     return builder.build();
   }
 
