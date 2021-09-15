@@ -614,8 +614,7 @@ public class MergeTableRegionsProcedure
       String family = hcd.getNameAsString();
       Configuration trackerConfig =
         StoreFileTrackerFactory.mergeConfigurations(env.getMasterConfiguration(), htd, hcd);
-      StoreFileTracker tracker = StoreFileTrackerFactory.create(trackerConfig, true,
-        family, regionFs);
+      StoreFileTracker tracker = StoreFileTrackerFactory.create(trackerConfig, family, regionFs);
       final Collection<StoreFileInfo> storeFiles = tracker.load();
       if (storeFiles != null && storeFiles.size() > 0) {
         final Configuration storeConfiguration =
