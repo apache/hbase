@@ -629,7 +629,7 @@ public class HRegionFileSystem {
         Configuration config = StoreFileTrackerFactory.mergeConfigurations(conf, tblDesc,
           tblDesc.getColumnFamily(Bytes.toBytes(familyName)));
         return StoreFileTrackerFactory.
-          create(config, true, familyName, regionFs);
+          create(config, familyName, regionFs);
       });
       fileInfoMap.computeIfAbsent(familyName, l -> new ArrayList<>());
       List<StoreFileInfo> infos = fileInfoMap.get(familyName);
