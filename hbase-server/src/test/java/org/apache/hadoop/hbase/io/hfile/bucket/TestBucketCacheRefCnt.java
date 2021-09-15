@@ -282,7 +282,7 @@ public class TestBucketCacheRefCnt {
       assertEquals(2, be1.refCnt());
 
       // We've some RPC reference, so it won't have any effect.
-      assertFalse(cache.evictBucketEntryIfNoRpcReferneced(key, be1));
+      assertFalse(cache.evictBucketEntryIfNoRpcReferenced(key, be1));
       assertEquals(2, block1.refCnt());
       assertEquals(2, cache.backingMap.get(key).refCnt());
 
@@ -292,7 +292,7 @@ public class TestBucketCacheRefCnt {
       assertEquals(1, cache.backingMap.get(key).refCnt());
 
       // Mark the stale as evicted again, it'll do the de-allocation.
-      assertTrue(cache.evictBucketEntryIfNoRpcReferneced(key, be1));
+      assertTrue(cache.evictBucketEntryIfNoRpcReferenced(key, be1));
       assertEquals(0, block1.refCnt());
       assertNull(cache.backingMap.get(key));
       assertEquals(0, cache.size());
@@ -710,13 +710,12 @@ public class TestBucketCacheRefCnt {
     @Override
     void blockEvicted(BlockCacheKey cacheKey, BucketEntry bucketEntry,
         boolean decrementBlockNumber) {
-      if (Thread.currentThread().getName().equals(EVICT_BLOCK_THREAD_NAME)) {
-        super.blockEvicted(cacheKey, bucketEntry, decrementBlockNumber);
-        return;
-      }
       /**
-       * This is invoked by {@link BucketCache.WriterThread}.
+       * This is only invoked by {@link BucketCache.WriterThread}. {@link MyMyBucketCache2} create
+       * only one {@link BucketCache.WriterThread}.
        */
+      assertTrue(Thread.currentThread() == this.writerThreads[0]);
+
       blockEvictCounter.incrementAndGet();
       super.blockEvicted(cacheKey, bucketEntry, decrementBlockNumber);
     }

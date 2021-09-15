@@ -557,9 +557,6 @@ public class BucketCache implements BlockCache, HeapSize {
 
   /**
    * This method is invoked after the bucketEntry is removed from {@link BucketCache#backingMap}
-   * @param cacheKey
-   * @param bucketEntry
-   * @param decrementBlockNumber
    */
   void blockEvicted(BlockCacheKey cacheKey, BucketEntry bucketEntry, boolean decrementBlockNumber) {
     bucketEntry.markAsEvicted();
@@ -573,7 +570,6 @@ public class BucketCache implements BlockCache, HeapSize {
   /**
    * Free the {{@link BucketEntry} actually,which could only be invoked when the
    * {@link BucketEntry#refCnt} becoming 0.
-   * @param bucketEntry
    */
   void freeBucketEntry(BucketEntry bucketEntry) {
     bucketAllocator.freeBlock(bucketEntry.offset());
@@ -585,10 +581,10 @@ public class BucketCache implements BlockCache, HeapSize {
    * 1. Close an HFile, and clear all cached blocks. <br>
    * 2. Call {@link Admin#clearBlockCache(TableName)} to clear all blocks for a given table.<br>
    * <p>
-   * Firstly, we'll try to remove the block from RAMCache. If it doesn't exist in RAMCache, then try
-   * to evict from backingMap. Here we only need to free the reference from bucket cache by calling
-   * {@link BucketEntry#markedAsEvicted}. If there're still some RPC referring this block, block can
-   * only be de-allocated when all of them release the block.
+   * Firstly, we'll try to remove the block from RAMCache,and then try to evict from backingMap.
+   * Here we evict the block from backingMap immediately, but only free the reference from bucket
+   * cache by calling {@link BucketEntry#markedAsEvicted}. If there're still some RPC referring this
+   * block, block can only be de-allocated when all of them release the block.
    * <p>
    * NOTICE: we need to grab the write offset lock firstly before releasing the reference from
    * bucket cache. if we don't, we may read an {@link BucketEntry} with refCnt = 0 when
@@ -606,9 +602,9 @@ public class BucketCache implements BlockCache, HeapSize {
    * {@link BucketCache#ramCache}. <br/>
    * NOTE:When Evict from {@link BucketCache#backingMap},only the matched {@link BlockCacheKey} and
    * {@link BucketEntry} could be removed.
-   * @param cacheKey
-   * @param bucketEntry
-   * @return
+   * @param cacheKey {@link BlockCacheKey} to evict.
+   * @param bucketEntry {@link BucketEntry} matched {@link BlockCacheKey} to evict.
+   * @return true to indicate whether we've evicted successfully or not.
    */
   private boolean doEvictBlock(BlockCacheKey cacheKey, BucketEntry bucketEntry) {
     if (!cacheEnabled) {
@@ -637,9 +633,17 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Create the {@link Recycler} for {@link BucketEntry#refCnt}.
-   * @param bucketEntry
-   * @return
+   * <pre>
+   * Create the {@link Recycler} for {@link BucketEntry#refCnt},which would be used as
+   * {@link RefCnt#recycler} of {@link HFileBlock#buf} returned from {@link BucketCache#getBlock}.
+   * NOTE: for {@link BucketCache#getBlock},the {@link RefCnt#recycler} of {@link HFileBlock#buf} from
+   * {@link BucketCache#backingMap} and {@link BucketCache#ramCache} are different:
+   * 1.For {@link RefCnt#recycler} of {@link HFileBlock#buf} from {@link BucketCache#backingMap},
+   *   it is the return value of current {@link BucketCache#createRecycler} method.
+   *
+   * 2.For {@link RefCnt#recycler} of {@link HFileBlock#buf} from {@link BucketCache#ramCache},
+   *   it is {@link ByteBuffAllocator#putbackBuffer}.
+   * </pre>
    */
   protected Recycler createRecycler(final BucketEntry bucketEntry) {
     return () -> {
@@ -650,25 +654,25 @@ public class BucketCache implements BlockCache, HeapSize {
 
   /**
    * NOTE: This method is only for test.
-   * @param blockCacheKey
-   * @return
    */
   public boolean evictBlockIfNoRpcReferenced(BlockCacheKey blockCacheKey) {
     BucketEntry bucketEntry = backingMap.get(blockCacheKey);
     if (bucketEntry == null) {
       return false;
     }
-    return evictBucketEntryIfNoRpcReferneced(blockCacheKey, bucketEntry);
+    return evictBucketEntryIfNoRpcReferenced(blockCacheKey, bucketEntry);
   }
 
   /**
    * Evict {@link BlockCacheKey} and its corresponding {@link BucketEntry} only if
-   * {@link BucketEntry#isRpcRef} is false.
-   * @param blockCacheKey
-   * @param bucketEntry
-   * @return
+   * {@link BucketEntry#isRpcRef} is false. <br/>
+   * NOTE:When Evict from {@link BucketCache#backingMap},only the matched {@link BlockCacheKey} and
+   * {@link BucketEntry} could be removed.
+   * @param blockCacheKey {@link BlockCacheKey} to evict.
+   * @param bucketEntry {@link BucketEntry} matched {@link BlockCacheKey} to evict.
+   * @return true to indicate whether we've evicted successfully or not.
    */
-  boolean evictBucketEntryIfNoRpcReferneced(BlockCacheKey blockCacheKey, BucketEntry bucketEntry) {
+  boolean evictBucketEntryIfNoRpcReferenced(BlockCacheKey blockCacheKey, BucketEntry bucketEntry) {
     if (!bucketEntry.isRpcRef()) {
       return doEvictBlock(blockCacheKey, bucketEntry);
     }
@@ -779,7 +783,7 @@ public class BucketCache implements BlockCache, HeapSize {
           bucketAllocator.getLeastFilledBuckets(inUseBuckets, completelyFreeBucketsNeeded);
       for (Map.Entry<BlockCacheKey, BucketEntry> entry : backingMap.entrySet()) {
         if (candidateBuckets.contains(bucketAllocator.getBucketIndex(entry.getValue().offset()))) {
-          evictBucketEntryIfNoRpcReferneced(entry.getKey(), entry.getValue());
+          evictBucketEntryIfNoRpcReferenced(entry.getKey(), entry.getValue());
         }
       }
     }
@@ -1392,7 +1396,7 @@ public class BucketCache implements BlockCache, HeapSize {
       while ((entry = queue.pollLast()) != null) {
         BlockCacheKey blockCacheKey = entry.getKey();
         BucketEntry be = entry.getValue();
-        if (evictBucketEntryIfNoRpcReferneced(blockCacheKey, be)) {
+        if (evictBucketEntryIfNoRpcReferenced(blockCacheKey, be)) {
           freedBytes += be.getLength();
         }
         if (freedBytes >= toFree) {
