@@ -85,8 +85,10 @@ public class TestClientSideRegionScanner {
     assertTrue(blockCache instanceof LruBlockCache);
 
     float actualBlockCacheRatio = copyConf
-      .getFloat(HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_KEY,
-        HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_DEFAULT);
+      .getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
+        copyConf.getFloat(HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_KEY,
+          HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_DEFAULT));
+
     assertTrue(HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_DEFAULT == actualBlockCacheRatio);
   }
 
@@ -103,8 +105,9 @@ public class TestClientSideRegionScanner {
     assertTrue(blockCache instanceof LruBlockCache);
 
     float actualBlockCacheRatio = copyConf
-      .getFloat(HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_KEY,
-        HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_DEFAULT);
+      .getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
+        copyConf.getFloat(HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_KEY,
+          HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_DEFAULT));
     assertTrue(blockCacheRatio == actualBlockCacheRatio);
   }
 
