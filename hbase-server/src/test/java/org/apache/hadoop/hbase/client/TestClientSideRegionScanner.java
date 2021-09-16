@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.io.hfile.IndexOnlyLruBlockCache;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.AfterClass;
@@ -82,40 +82,30 @@ public class TestClientSideRegionScanner {
 
     BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
     assertNotNull(blockCache);
-    assertTrue(blockCache instanceof LruBlockCache);
-
-    float actualBlockCacheRatio = copyConf
-      .getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
-        copyConf.getFloat(HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_KEY,
-          HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_DEFAULT));
-
-    assertTrue(HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_DEFAULT == actualBlockCacheRatio);
+    assertTrue(blockCache instanceof IndexOnlyLruBlockCache);
+    assertTrue(
+      HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_FIXED_SIZE_DEFAULT == blockCache.getMaxSize());
   }
 
   @Test
   public void testConfiguredBlockCache() throws IOException {
     Configuration copyConf = new Configuration(conf);
-    float blockCacheRatio = 0.05f;
-    copyConf.setFloat(HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_KEY, blockCacheRatio);
+    // tiny 1MB fixed cache size
+    long blockCacheFixedSize = 1024 * 1024L;
+    copyConf.setLong(HConstants.HBASE_BLOCK_CACHE_FIXED_SIZE_KEY, blockCacheFixedSize);
     ClientSideRegionScanner clientSideRegionScanner =
       new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null);
 
     BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
     assertNotNull(blockCache);
-    assertTrue(blockCache instanceof LruBlockCache);
-
-    float actualBlockCacheRatio = copyConf
-      .getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
-        copyConf.getFloat(HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_KEY,
-          HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_DEFAULT));
-    assertTrue(blockCacheRatio == actualBlockCacheRatio);
+    assertTrue(blockCache instanceof IndexOnlyLruBlockCache);
+    assertTrue(blockCacheFixedSize == blockCache.getMaxSize());
   }
 
   @Test
   public void testNoBlockCache() throws IOException {
     Configuration copyConf = new Configuration(conf);
-    float blockCacheRatio = 0.0f;
-    copyConf.setFloat(HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_KEY, blockCacheRatio);
+    copyConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     ClientSideRegionScanner clientSideRegionScanner =
       new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null);
 

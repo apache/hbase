@@ -1049,10 +1049,15 @@ public final class HConstants {
 
   public static final float HFILE_BLOCK_CACHE_SIZE_DEFAULT = 0.4f;
 
-  public static final String HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_KEY =
-    "hbase.client.scanner.block.cache.size";
-
-  public static final float HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_DEFAULT = 0.1f;
+  /**
+   * Configuration key for setting the fix size of the block size, default do nothing and it should
+   * be explicitly set by user or only used within ClientSideRegionScanner. if it's set less than
+   * current max on heap size, it overrides the max size of block cache
+   */
+  public static final String HBASE_BLOCK_CACHE_FIXED_SIZE_KEY =
+    "hfile.block.cache.fixed.size";
+  public static final long HBASE_BLOCK_CACHE_FIXED_SIZE_DEFAULT = 0L;
+  public static final long HBASE_CLIENT_SCANNER_BLOCK_CACHE_FIXED_SIZE_DEFAULT = 32 * 1024 * 1024L;
 
   /*
     * Minimum percentage of free heap necessary for a successful cluster startup.
