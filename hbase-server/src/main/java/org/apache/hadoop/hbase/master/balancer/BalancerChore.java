@@ -19,15 +19,9 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.BalanceResponse;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,20 +46,7 @@ public class BalancerChore extends ScheduledChore {
   @Override
   protected void chore() {
     try {
-      BalanceResponse balanceResponse = master.balance();
-      //This 'isBalanceRan' checking is an optimation for  StochasticLoadBalancer only, which is
-      // the only subclass has implemented 'updateBalancerLoadInfo', see HBASE-26251. TODO: Make
-      // code here more generic if other balancer use 'updateBalancerLoadInfo' in the future.
-      if (!balanceResponse.isBalancerRan()) {
-        Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
-          master.getAssignmentManager().getRegionStates()
-            .getAssignmentsForBalancer(master.getTableStateManager(),
-              master.getServerManager().getOnlineServersList());
-        for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
-          serverMap.keySet().removeAll(master.getServerManager().getDrainingServersList());
-        }
-        master.getLoadBalancer().updateBalancerLoadInfo(assignments);
-      }
+      master.balanceOrUpdateMetrics();
     } catch (IOException e) {
       LOG.error("Failed to balance.", e);
     }
