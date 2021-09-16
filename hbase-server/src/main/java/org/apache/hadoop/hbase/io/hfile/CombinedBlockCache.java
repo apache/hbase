@@ -71,10 +71,6 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     cacheBlock(cacheKey, buf, false);
   }
 
-  private boolean isMetaBlock(BlockType blockType) {
-    return blockType.getCategory() != BlockCategory.DATA;
-  }
-
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching,
       boolean repeat, boolean updateCacheMetrics) {

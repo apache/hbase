@@ -42,8 +42,7 @@ public class IndexOnlyLruBlockCache extends LruBlockCache {
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
-    boolean isIndexBlock = buf.getBlockType().getCategory() != BlockType.BlockCategory.DATA;
-    if (isIndexBlock) {
+    if (isMetaBlock(buf.getBlockType())) {
       super.cacheBlock(cacheKey, buf, inMemory);
     }
   }
