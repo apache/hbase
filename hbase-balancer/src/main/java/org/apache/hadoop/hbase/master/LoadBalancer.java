@@ -151,13 +151,9 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
   /**
    * In some scenarios, Balancer needs to update internal status or information according to the
    * current tables load
-   * TODO: Maybe we can make a better name than 'updateBalancerLoadInfo'.
    *
    * @param loadOfAllTable region load of servers for all table
    */
   default void updateBalancerLoadInfo(Map<TableName, Map<ServerName, List<RegionInfo>>>
     loadOfAllTable){}
-
-
-
 }

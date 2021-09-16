@@ -53,9 +53,9 @@ public class BalancerChore extends ScheduledChore {
   protected void chore() {
     try {
       BalanceResponse balanceResponse = master.balance();
-      //TODO: Now, only StochasticLoadBalancer has implemented the method
-      // 'updateBalancerLoadInfo'. Code here should be more generic if other balancers implement
-      // the method 'updateBalancerLoadInfo'
+      //This 'isBalanceRan' checking is an optimation for  StochasticLoadBalancer only, which is
+      // the only subclass has implemented 'updateBalancerLoadInfo', see HBASE-26251. TODO: Make
+      // code here more generic if other balancer use 'updateBalancerLoadInfo' in the future.
       if (!balanceResponse.isBalancerRan()) {
         Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
           master.getAssignmentManager().getRegionStates()

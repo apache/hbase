@@ -273,20 +273,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       new BalancerClusterState(loadOfOneTable, loads, finder, rackManager);
 
     initCosts(cluster);
-    double total = 0;
-    double[] functionCosts = new double[costFunctions.size()];
-    for (int i = 0; i < costFunctions.size(); i++) {
-      CostFunction c = costFunctions.get(i);
-      functionCosts[i] = 0.0;
-      if (!c.isNeeded()) {
-        continue;
-      }
-      Float multiplier = c.getMultiplier();
-      double cost = c.cost();
-      functionCosts[i] = multiplier * cost;
-      total += functionCosts[i];
-    }
-    updateStochasticCosts(tableName, total, functionCosts);
+    curOverallCost = computeCost(cluster, Double.MAX_VALUE);
+    System.arraycopy(tempFunctionCosts, 0, curFunctionCosts, 0, curFunctionCosts.length);
+    updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
   }
 
   @Override
@@ -439,15 +428,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     initCosts(cluster);
 
-    if (!needsBalance(tableName, cluster)) {
-      return null;
-    }
-
     double currentCost = computeCost(cluster, Double.MAX_VALUE);
     curOverallCost = currentCost;
     System.arraycopy(tempFunctionCosts, 0, curFunctionCosts, 0, curFunctionCosts.length);
+    updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
     double initCost = currentCost;
     double newCost;
+
+    if (!needsBalance(tableName, cluster)) {
+      return null;
+    }
 
     long computedMaxSteps;
     if (runMaxSteps) {
@@ -507,9 +497,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     metricsBalancer.balanceCluster(endTime - startTime);
 
-    // update costs metrics
-    updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
     if (initCost > currentCost) {
+      updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
       List<RegionPlan> plans = createRegionPlans(cluster);
       LOG.info("Finished computing new moving plan. Computation took {} ms" +
           " to try {} different iterations.  Found a solution that moves " +
