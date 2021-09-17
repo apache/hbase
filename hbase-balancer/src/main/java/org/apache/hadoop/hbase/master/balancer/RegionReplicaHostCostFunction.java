@@ -45,7 +45,8 @@ class RegionReplicaHostCostFunction extends RegionReplicaGroupingCostFunction {
     // max cost is the case where every region replica is hosted together regardless of host
     maxCost = cluster.numHosts > 1 ? getMaxCost(cluster) : 0;
     costsPerGroup = new long[cluster.numHosts];
-    colocatedReplicaCountsPerGroup = cluster.multiServersPerHost // either server based or host based
+    // either server based or host based
+    colocatedReplicaCountsPerGroup = cluster.multiServersPerHost
       ? cluster.colocatedReplicaCountsPerHost : cluster.colocatedReplicaCountsPerServer;
     for (int i = 0; i < colocatedReplicaCountsPerGroup.length; i++) {
       costsPerGroup[i] = costPerGroup(colocatedReplicaCountsPerGroup[i]);

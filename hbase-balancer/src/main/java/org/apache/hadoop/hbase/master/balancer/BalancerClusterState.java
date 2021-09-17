@@ -72,8 +72,8 @@ class BalancerClusterState {
   int[] serverIndexToRegionsOffset; // serverIndex -> offset of region list
   int[][] regionsPerHost; // hostIndex -> list of regions
   int[][] regionsPerRack; // rackIndex -> region list
-  Int2IntCounterMap[] colocatedReplicaCountsPerServer; // serverIndex -> counts of colocated replicas
-                                       // by primary region index
+  Int2IntCounterMap[] colocatedReplicaCountsPerServer; // serverIndex -> counts of colocated
+                                       // replicas by primary region index
   Int2IntCounterMap[] colocatedReplicaCountsPerHost; // hostIndex -> counts of colocated replicas by
                                       // primary region index
   Int2IntCounterMap[] colocatedReplicaCountsPerRack; // rackIndex -> counts of colocated replicas by
@@ -726,7 +726,7 @@ class BalancerClusterState {
       colocatedReplicaCountsPerLocation[newLocation].getAndIncrement(primary);
       if (oldLocation >= 0) {
         regionsPerLocation[oldLocation] = removeRegion(regionsPerLocation[oldLocation], region);
-        colocatedReplicaCountsPerLocation[oldLocation].getAndDecrement(primary); // will still be sorted
+        colocatedReplicaCountsPerLocation[oldLocation].getAndDecrement(primary);
       }
     }
 
