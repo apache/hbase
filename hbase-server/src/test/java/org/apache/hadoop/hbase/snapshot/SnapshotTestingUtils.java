@@ -550,6 +550,7 @@ public final class SnapshotTestingUtils {
         RegionData regionData = tableRegions[this.snapshotted++];
         ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(desc.getName());
         SnapshotManifest manifest = SnapshotManifest.create(conf, fs, snapshotDir, desc, monitor);
+        manifest.addTableDescriptor(htd);
         manifest.addRegion(regionData.tableDir, regionData.hri);
         return regionData.files;
       }

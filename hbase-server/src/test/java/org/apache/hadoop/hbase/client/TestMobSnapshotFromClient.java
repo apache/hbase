@@ -20,14 +20,15 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Test create/using/deleting snapshots from the client
@@ -35,13 +36,16 @@ import org.slf4j.LoggerFactory;
  * This is an end-to-end test for the snapshot utility
  */
 @Category({LargeTests.class, ClientTests.class})
+@RunWith(Parameterized.class)
 public class TestMobSnapshotFromClient extends TestSnapshotFromClient {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobSnapshotFromClient.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestMobSnapshotFromClient.class);
+  public TestMobSnapshotFromClient(StoreFileTrackerFactory.Trackers trackerImpl) {
+    super(trackerImpl);
+  }
 
   /**
    * Setup the config for the cluster
@@ -60,6 +64,7 @@ public class TestMobSnapshotFromClient extends TestSnapshotFromClient {
 
   @Override
   protected void createTable() throws Exception {
-    MobSnapshotTestingUtils.createMobTable(UTIL, TABLE_NAME, getNumReplicas(), TEST_FAM);
+    MobSnapshotTestingUtils.createMobTable(UTIL, TABLE_NAME, getNumReplicas(), trackerImpl.name(),
+      TEST_FAM);
   }
 }

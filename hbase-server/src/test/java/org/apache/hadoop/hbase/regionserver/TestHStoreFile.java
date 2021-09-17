@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -1110,10 +1111,9 @@ public class TestHStoreFile extends HBaseTestCase {
     when(mockEnv.getMasterConfiguration()).thenReturn(new Configuration());
     TableDescriptors mockTblDescs = mock(TableDescriptors.class);
     when(mockServices.getTableDescriptors()).thenReturn(mockTblDescs);
-    TableDescriptor mockTblDesc = mock(TableDescriptor.class);
+    TableDescriptor mockTblDesc = TableDescriptorBuilder.newBuilder(hri.getTable())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
     when(mockTblDescs.get(any())).thenReturn(mockTblDesc);
-    ColumnFamilyDescriptor mockCfDesc = mock(ColumnFamilyDescriptor.class);
-    when(mockTblDesc.getColumnFamily(any())).thenReturn(mockCfDesc);
     Path regionDir = regionFs.commitDaughterRegion(hri, splitFiles, mockEnv);
     return new Path(new Path(regionDir, family), path.getName());
   }

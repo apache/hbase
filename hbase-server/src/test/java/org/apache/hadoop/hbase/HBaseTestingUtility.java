@@ -1950,6 +1950,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param tableName existing table
    */
   public void deleteTable(TableName tableName) throws IOException {
+    if (!getAdmin().tableExists(tableName)) {
+      return;
+    }
     try {
       getAdmin().disableTable(tableName);
     } catch (TableNotEnabledException e) {

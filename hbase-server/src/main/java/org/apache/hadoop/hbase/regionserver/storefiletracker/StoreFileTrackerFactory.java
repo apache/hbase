@@ -23,12 +23,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -113,18 +111,17 @@ public final class StoreFileTrackerFactory {
    * Used at master side when splitting/merging regions, as we do not have a Store, thus no
    * StoreContext at master side.
    */
-  public static StoreFileTracker create(Configuration conf, String family,
-    HRegionFileSystem regionFs) {
-    ColumnFamilyDescriptorBuilder fDescBuilder =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family));
-    StoreContext ctx = StoreContext.getBuilder().withColumnFamilyDescriptor(fDescBuilder.build())
-      .withRegionFileSystem(regionFs)
-      .withFamilyStoreDirectoryPath(regionFs.getStoreDir(family))
+  public static StoreFileTracker create(Configuration conf, TableDescriptor td,
+    ColumnFamilyDescriptor cfd, HRegionFileSystem regionFs) {
+    StoreContext ctx =
+      StoreContext.getBuilder().withColumnFamilyDescriptor(cfd).withRegionFileSystem(regionFs)
+        .withFamilyStoreDirectoryPath(regionFs.getStoreDir(cfd.getNameAsString()))
+      .withFamilyStoreDirectoryPath(regionFs.getStoreDir(cfd.getNameAsString()))
       .build();
-    return StoreFileTrackerFactory.create(conf, true, ctx);
+    return StoreFileTrackerFactory.create(mergeConfigurations(conf, td, cfd), true, ctx);
   }
 
-  public static Configuration mergeConfigurations(Configuration global, TableDescriptor table,
+  private static Configuration mergeConfigurations(Configuration global, TableDescriptor table,
     ColumnFamilyDescriptor family) {
     return new CompoundConfiguration().add(global).addBytesMap(table.getValues())
       .addStringMap(family.getConfiguration()).addBytesMap(family.getValues());
