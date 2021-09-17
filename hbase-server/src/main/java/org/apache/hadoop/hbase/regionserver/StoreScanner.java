@@ -757,7 +757,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         }
       } while ((cell = this.heap.peek()) != null);
 
-      if (count > 0) {
+      if (count > 0 || storeLimit > -1 && this.countPerRow > (storeLimit + storeOffset)) {
         return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
       }
 
