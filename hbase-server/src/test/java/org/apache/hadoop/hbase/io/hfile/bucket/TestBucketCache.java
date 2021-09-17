@@ -249,8 +249,26 @@ public class TestBucketCache {
     assertEquals(1, cache.getBlockCount());
     lock.writeLock().unlock();
     evictThread.join();
-    assertEquals(0, cache.getBlockCount());
-    assertEquals(cache.getCurrentSize(), 0L);
+    /**
+     * <pre>
+     * The asserts here before HBASE-21957 are:
+     * assertEquals(1L, cache.getBlockCount());
+     * assertTrue(cache.getCurrentSize() > 0L);
+     * assertTrue("We should have a block!", cache.iterator().hasNext());
+     *
+     * The asserts here after HBASE-21957 are:
+     * assertEquals(0, cache.getBlockCount());
+     * assertEquals(cache.getCurrentSize(), 0L);
+     *
+     * I think the asserts before HBASE-21957 is more reasonable,because
+     * {@link BucketCache#evictBlock} should only evict the {@link BucketEntry}
+     * it had seen, and newly added Block after the {@link BucketEntry}
+     * it had seen should not be evicted.
+     * </pre>
+     */
+    assertEquals(1L, cache.getBlockCount());
+    assertTrue(cache.getCurrentSize() > 0L);
+    assertTrue("We should have a block!", cache.iterator().hasNext());
   }
 
   @Test
@@ -503,8 +521,8 @@ public class TestBucketCache {
         HFileBlock.FILL_HEADER, -1, 52, -1, meta, ByteBuffAllocator.HEAP);
     HFileBlock blk2 = new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(buf),
         HFileBlock.FILL_HEADER, -1, -1, -1, meta, ByteBuffAllocator.HEAP);
-    RAMQueueEntry re1 = new RAMQueueEntry(key1, blk1, 1, false, ByteBuffAllocator.NONE);
-    RAMQueueEntry re2 = new RAMQueueEntry(key1, blk2, 1, false, ByteBuffAllocator.NONE);
+    RAMQueueEntry re1 = new RAMQueueEntry(key1, blk1, 1, false);
+    RAMQueueEntry re2 = new RAMQueueEntry(key1, blk2, 1, false);
 
     assertFalse(cache.containsKey(key1));
     assertNull(cache.putIfAbsent(key1, re1));
@@ -551,11 +569,11 @@ public class TestBucketCache {
     BucketAllocator allocator = new BucketAllocator(availableSpace, null);
 
     BlockCacheKey key = new BlockCacheKey("dummy", 1L);
-    RAMQueueEntry re = new RAMQueueEntry(key, block, 1, true, ByteBuffAllocator.NONE);
+    RAMQueueEntry re = new RAMQueueEntry(key, block, 1, true);
 
     Assert.assertEquals(0, allocator.getUsedSize());
     try {
-      re.writeToCache(ioEngine, allocator, null);
+      re.writeToCache(ioEngine, allocator, null, null);
       Assert.fail();
     } catch (Exception e) {
     }
