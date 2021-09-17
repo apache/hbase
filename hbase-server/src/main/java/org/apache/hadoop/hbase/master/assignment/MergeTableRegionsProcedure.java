@@ -612,9 +612,8 @@ public class MergeTableRegionsProcedure
     List<Path> mergedFiles = new ArrayList<>();
     for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
       String family = hcd.getNameAsString();
-      Configuration trackerConfig =
-        StoreFileTrackerFactory.mergeConfigurations(env.getMasterConfiguration(), htd, hcd);
-      StoreFileTracker tracker = StoreFileTrackerFactory.create(trackerConfig, family, regionFs);
+      StoreFileTracker tracker =
+        StoreFileTrackerFactory.create(env.getMasterConfiguration(), htd, hcd, regionFs);
       final Collection<StoreFileInfo> storeFiles = tracker.load();
       if (storeFiles != null && storeFiles.size() > 0) {
         final Configuration storeConfiguration =
