@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
@@ -32,9 +33,11 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifestV1;
@@ -51,7 +54,10 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +70,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  * <p>
  * This is an end-to-end test for the snapshot utility
  */
-@Category({LargeTests.class, ClientTests.class})
+@RunWith(Parameterized.class)
+@Category({ LargeTests.class, ClientTests.class })
 public class TestSnapshotFromClient {
 
   @ClassRule
@@ -82,7 +89,16 @@ public class TestSnapshotFromClient {
   private static final Pattern MATCH_ALL = Pattern.compile(".*");
 
   @Rule
-  public TestName name = new TestName();
+  public TableNameTestRule name = new TableNameTestRule();
+
+  @Parameter
+  public StoreFileTrackerFactory.Trackers trackerImpl;
+
+  @Parameters(name = "{index}: tracker={0}")
+  public static List<Object[]> params() {
+    return Arrays.asList(new Object[] { StoreFileTrackerFactory.Trackers.DEFAULT },
+      new Object[] { StoreFileTrackerFactory.Trackers.FILE });
+  }
 
   /**
    * Setup the config for the cluster
@@ -109,7 +125,6 @@ public class TestSnapshotFromClient {
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
         ConstantSizeRegionSplitPolicy.class.getName());
-
   }
 
   @Before
@@ -119,7 +134,8 @@ public class TestSnapshotFromClient {
 
   protected void createTable() throws Exception {
     TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(getNumReplicas()).build();
+      TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(getNumReplicas())
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL, trackerImpl.name()).build();
     UTIL.createTable(htd, new byte[][] { TEST_FAM }, null);
   }
 
@@ -316,7 +332,7 @@ public class TestSnapshotFromClient {
   @Test
   public void testListTableSnapshots() throws Exception {
     Admin admin = null;
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = name.getTableName();
     try {
       admin = UTIL.getAdmin();
 
@@ -401,7 +417,7 @@ public class TestSnapshotFromClient {
   @Test
   public void testDeleteTableSnapshots() throws Exception {
     Admin admin = null;
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = name.getTableName();
     try {
       admin = UTIL.getAdmin();
 

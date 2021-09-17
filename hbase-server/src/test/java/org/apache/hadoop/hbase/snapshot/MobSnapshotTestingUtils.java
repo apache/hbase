@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 
@@ -45,29 +46,40 @@ public class MobSnapshotTestingUtils {
   /**
    * Create the Mob Table.
    */
-  public static void createMobTable(final HBaseTestingUtil util,
-      final TableName tableName, int regionReplication,
-      final byte[]... families) throws IOException, InterruptedException {
-    createMobTable(util, tableName, SnapshotTestingUtils.getSplitKeys(),
-      regionReplication, families);
-  }
-
-  public static void createPreSplitMobTable(final HBaseTestingUtil util,
-      final TableName tableName, int nRegions, final byte[]... families)
-      throws IOException, InterruptedException {
-    createMobTable(util, tableName, SnapshotTestingUtils.getSplitKeys(nRegions),
-      1, families);
+  public static void createMobTable(final HBaseTestingUtil util, final TableName tableName,
+    int regionReplication, final byte[]... families) throws IOException, InterruptedException {
+    createMobTable(util, tableName, SnapshotTestingUtils.getSplitKeys(), regionReplication,
+      StoreFileTrackerFactory.Trackers.DEFAULT.name(), families);
   }
 
   public static void createMobTable(final HBaseTestingUtil util, final TableName tableName,
-      final byte[][] splitKeys, int regionReplication, final byte[]... families)
-      throws IOException, InterruptedException {
-    createMobTable(util, tableName, splitKeys, regionReplication, null, families);
+    int regionReplication, String storeFileTracker, final byte[]... families)
+    throws IOException, InterruptedException {
+    createMobTable(util, tableName, SnapshotTestingUtils.getSplitKeys(), regionReplication,
+      storeFileTracker, families);
   }
 
-  public static void createMobTable(HBaseTestingUtil util, TableName tableName,
-      byte[][] splitKeys, int regionReplication, String cpClassName, byte[]... families)
-      throws IOException, InterruptedException {
+  public static void createPreSplitMobTable(final HBaseTestingUtil util, final TableName tableName,
+    int nRegions, final byte[]... families) throws IOException, InterruptedException {
+    createMobTable(util, tableName, SnapshotTestingUtils.getSplitKeys(nRegions), 1, families);
+  }
+
+  public static void createMobTable(final HBaseTestingUtil util, final TableName tableName,
+    final byte[][] splitKeys, int regionReplication, final byte[]... families)
+    throws IOException, InterruptedException {
+    createMobTable(util, tableName, splitKeys, regionReplication,
+      StoreFileTrackerFactory.Trackers.DEFAULT.name(), families);
+  }
+
+  public static void createMobTable(final HBaseTestingUtil util, final TableName tableName,
+    final byte[][] splitKeys, int regionReplication, String storeFileTracker,
+    final byte[]... families) throws IOException, InterruptedException {
+    createMobTable(util, tableName, splitKeys, regionReplication, storeFileTracker, null, families);
+  }
+
+  public static void createMobTable(HBaseTestingUtil util, TableName tableName, byte[][] splitKeys,
+    int regionReplication, String storeFileTracker, String cpClassName, byte[]... families)
+    throws IOException, InterruptedException {
     TableDescriptorBuilder builder =
       TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
     for (byte[] family : families) {
@@ -77,6 +89,7 @@ public class MobSnapshotTestingUtils {
     if (!StringUtils.isBlank(cpClassName)) {
       builder.setCoprocessor(cpClassName);
     }
+    builder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, storeFileTracker);
     util.getAdmin().createTable(builder.build(), splitKeys);
     SnapshotTestingUtils.waitForTableToBeOnline(util, tableName);
     assertEquals((splitKeys.length + 1) * regionReplication,
@@ -85,15 +98,10 @@ public class MobSnapshotTestingUtils {
 
   /**
    * Create a Mob table.
-   *
-   * @param util
-   * @param tableName
-   * @param families
    * @return An Table instance for the created table.
-   * @throws IOException
    */
-  public static Table createMobTable(final HBaseTestingUtil util,
-      final TableName tableName, final byte[]... families) throws IOException {
+  public static Table createMobTable(final HBaseTestingUtil util, final TableName tableName,
+    final byte[]... families) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
       // Disable blooms (they are on by default as of 0.95) but we disable them
@@ -102,10 +110,7 @@ public class MobSnapshotTestingUtils {
       // and blooms being
       // on is interfering.
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family)
-              .setBloomFilterType(BloomType.NONE)
-              .setMobEnabled(true)
-              .setMobThreshold(0L)
-              .build());
+        .setBloomFilterType(BloomType.NONE).setMobEnabled(true).setMobThreshold(0L).build());
     }
     util.getAdmin().createTable(builder.build());
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait
@@ -135,8 +140,8 @@ public class MobSnapshotTestingUtils {
     }
   }
 
-  public static void verifyMobRowCount(final HBaseTestingUtil util,
-      final TableName tableName, long expectedRows) throws IOException {
+  public static void verifyMobRowCount(final HBaseTestingUtil util, final TableName tableName,
+    long expectedRows) throws IOException {
 
     Table table = ConnectionFactory.createConnection(util.getConfiguration()).getTable(tableName);
     try {
@@ -156,13 +161,10 @@ public class MobSnapshotTestingUtils {
 
     @Override
     public TableDescriptor createHtd(final String tableName) {
-      return TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-              .setColumnFamily(ColumnFamilyDescriptorBuilder
-                  .newBuilder(Bytes.toBytes(TEST_FAMILY))
-                  .setMobEnabled(true)
-                  .setMobThreshold(0L)
-                  .build())
-              .build();
+      return TableDescriptorBuilder
+        .newBuilder(TableName.valueOf(tableName)).setColumnFamily(ColumnFamilyDescriptorBuilder
+          .newBuilder(Bytes.toBytes(TEST_FAMILY)).setMobEnabled(true).setMobThreshold(0L).build())
+        .build();
     }
   }
 }
