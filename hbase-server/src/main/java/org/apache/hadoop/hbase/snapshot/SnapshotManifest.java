@@ -47,7 +47,8 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Threads;
@@ -291,8 +292,8 @@ public final class SnapshotManifest {
     addRegion(tableDir, regionInfo, visitor);
   }
 
-  protected void addRegion(final Path tableDir, final RegionInfo regionInfo, RegionVisitor visitor)
-      throws IOException {
+  protected void addRegion(Path tableDir, RegionInfo regionInfo, RegionVisitor visitor)
+    throws IOException {
     boolean isMobRegion = MobUtils.isMobRegionInfo(regionInfo);
     try {
       Path baseDir = tableDir;
@@ -300,8 +301,8 @@ public final class SnapshotManifest {
       if (isMobRegion) {
         baseDir = CommonFSUtils.getTableDir(MobUtils.getMobHome(conf), regionInfo.getTable());
       }
-      HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, rootFs,
-        baseDir, regionInfo, true);
+      HRegionFileSystem regionFs =
+        HRegionFileSystem.openRegionFromFileSystem(conf, rootFs, baseDir, regionInfo, true);
       monitor.rethrowException();
 
       // 1. dump region meta info into the snapshot directory
@@ -317,26 +318,19 @@ public final class SnapshotManifest {
       // in batches and may miss files being added/deleted. This could be more robust (iteratively
       // checking to see if we have all the files until we are sure), but the limit is currently
       // 1000 files/batch, far more than the number of store files under a single column family.
-      Collection<String> familyNames = regionFs.getFamilies();
-      if (familyNames != null) {
-        for (String familyName: familyNames) {
-          Object familyData = visitor.familyOpen(regionData, Bytes.toBytes(familyName));
-          monitor.rethrowException();
-
-          Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(familyName);
-          if (storeFiles == null) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("No files under family: " + familyName);
-            }
-            continue;
-          }
-
-          // 2.1. build the snapshot reference for the store
-          // iterate through all the store's files and create "references".
-          addReferenceFiles(visitor, regionData, familyData, storeFiles, false);
-
-          visitor.familyClose(regionData, familyData);
+      for (ColumnFamilyDescriptor cfd : htd.getColumnFamilies()) {
+        Object familyData = visitor.familyOpen(regionData, cfd.getName());
+        monitor.rethrowException();
+        StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, htd, cfd, regionFs);
+        List<StoreFileInfo> storeFiles = tracker.load();
+        if (storeFiles.isEmpty()) {
+          LOG.debug("No files under family: {}", cfd.getNameAsString());
+          continue;
         }
+        // 2.1. build the snapshot reference for the store
+        // iterate through all the store's files and create "references".
+        addReferenceFiles(visitor, regionData, familyData, storeFiles, false);
+        visitor.familyClose(regionData, familyData);
       }
       visitor.regionClose(regionData);
     } catch (IOException e) {

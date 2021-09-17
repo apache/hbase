@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -92,7 +93,8 @@ public class TestMobCloneSnapshotFromClientCloneLinksAfterDelete
   @Override
   protected void createTable() throws IOException, InterruptedException {
     MobSnapshotTestingUtils.createMobTable(TEST_UTIL, tableName,
-      SnapshotTestingUtils.getSplitKeys(), getNumReplicas(), DelayFlushCoprocessor.class.getName(),
+      SnapshotTestingUtils.getSplitKeys(), getNumReplicas(),
+      StoreFileTrackerFactory.Trackers.DEFAULT.name(), DelayFlushCoprocessor.class.getName(),
       FAMILY);
   }
 
