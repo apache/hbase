@@ -24,8 +24,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
@@ -612,9 +610,8 @@ public class MergeTableRegionsProcedure
     List<Path> mergedFiles = new ArrayList<>();
     for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
       String family = hcd.getNameAsString();
-      Configuration trackerConfig =
-        StoreFileTrackerFactory.mergeConfigurations(env.getMasterConfiguration(), htd, hcd);
-      StoreFileTracker tracker = StoreFileTrackerFactory.create(trackerConfig, family, regionFs);
+      StoreFileTracker tracker =
+        StoreFileTrackerFactory.create(env.getMasterConfiguration(), htd, hcd, regionFs);
       final Collection<StoreFileInfo> storeFiles = tracker.load();
       if (storeFiles != null && storeFiles.size() > 0) {
         for (StoreFileInfo storeFileInfo : storeFiles) {
