@@ -26,8 +26,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Test create/using/deleting snapshots from the client
@@ -40,8 +38,6 @@ public class TestMobSnapshotFromClient extends TestSnapshotFromClient {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobSnapshotFromClient.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestMobSnapshotFromClient.class);
 
   /**
    * Setup the config for the cluster
@@ -60,6 +56,7 @@ public class TestMobSnapshotFromClient extends TestSnapshotFromClient {
 
   @Override
   protected void createTable() throws Exception {
-    MobSnapshotTestingUtils.createMobTable(UTIL, TABLE_NAME, getNumReplicas(), TEST_FAM);
+    MobSnapshotTestingUtils.createMobTable(UTIL, TABLE_NAME, getNumReplicas(), trackerImpl.name(),
+      TEST_FAM);
   }
 }
