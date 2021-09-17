@@ -37,16 +37,16 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
   /**
    * Randomly select one regionIndex out of all region replicas co-hosted in the same group (a group
    * is a server, host or rack)
-   * @param primariesOfRegionsPerGroup either Cluster.primariesOfRegionsPerServer,
-   *          primariesOfRegionsPerHost or primariesOfRegionsPerRack
+   * @param colocatedReplicaCountsPerGroup either Cluster.colocatedReplicaCountsPerServer,
+   *          colocatedReplicaCountsPerHost or colocatedReplicaCountsPerRack
    * @param regionsPerGroup either Cluster.regionsPerServer, regionsPerHost or regionsPerRack
-   * @param regionsIndexToPrimaryIndex Cluster.regionsIndexToPrimaryIndex
+   * @param regionIndexToPrimaryIndex Cluster.regionsIndexToPrimaryIndex
    * @return a regionIndex for the selected primary or -1 if there is no co-locating
    */
-  int selectCoHostedRegionPerGroup(Int2IntCounterMap primariesOfRegionsPerGroup,
+  int selectCoHostedRegionPerGroup(Int2IntCounterMap colocatedReplicaCountsPerGroup,
     int[] regionsPerGroup, int[] regionIndexToPrimaryIndex) {
-    final IntArrayList colocated = new IntArrayList(primariesOfRegionsPerGroup.size(), -1);
-    primariesOfRegionsPerGroup.forEach((primary, count) -> {
+    final IntArrayList colocated = new IntArrayList(colocatedReplicaCountsPerGroup.size(), -1);
+    colocatedReplicaCountsPerGroup.forEach((primary, count) -> {
       if (count > 1) { // means consecutive primaries, indicating co-location
         colocated.add(primary);
       }
@@ -76,7 +76,8 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
       return BalanceAction.NULL_ACTION;
     }
 
-    int regionIndex = selectCoHostedRegionPerGroup(cluster.primariesOfRegionsPerServer[serverIndex],
+    int regionIndex = selectCoHostedRegionPerGroup(
+      cluster.colocatedReplicaCountsPerServer[serverIndex],
       cluster.regionsPerServer[serverIndex], cluster.regionIndexToPrimaryIndex);
 
     // if there are no pairs of region replicas co-hosted, default to random generator

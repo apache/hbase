@@ -33,7 +33,7 @@ class RegionReplicaHostCostFunction extends RegionReplicaGroupingCostFunction {
     "hbase.master.balancer.stochastic.regionReplicaHostCostKey";
   private static final float DEFAULT_REGION_REPLICA_HOST_COST_KEY = 100000;
 
-  private Int2IntCounterMap[] primariesOfRegionsPerGroup;
+  private Int2IntCounterMap[] colocatedReplicaCountsPerGroup;
 
   public RegionReplicaHostCostFunction(Configuration conf) {
     this.setMultiplier(
@@ -45,10 +45,10 @@ class RegionReplicaHostCostFunction extends RegionReplicaGroupingCostFunction {
     // max cost is the case where every region replica is hosted together regardless of host
     maxCost = cluster.numHosts > 1 ? getMaxCost(cluster) : 0;
     costsPerGroup = new long[cluster.numHosts];
-    primariesOfRegionsPerGroup = cluster.multiServersPerHost // either server based or host based
-      ? cluster.primariesOfRegionsPerHost : cluster.primariesOfRegionsPerServer;
-    for (int i = 0; i < primariesOfRegionsPerGroup.length; i++) {
-      costsPerGroup[i] = costPerGroup(primariesOfRegionsPerGroup[i]);
+    colocatedReplicaCountsPerGroup = cluster.multiServersPerHost // either server based or host based
+      ? cluster.colocatedReplicaCountsPerHost : cluster.colocatedReplicaCountsPerServer;
+    for (int i = 0; i < colocatedReplicaCountsPerGroup.length; i++) {
+      costsPerGroup[i] = costPerGroup(colocatedReplicaCountsPerGroup[i]);
     }
   }
 
@@ -61,12 +61,12 @@ class RegionReplicaHostCostFunction extends RegionReplicaGroupingCostFunction {
       int oldHost = cluster.serverIndexToHostIndex[oldServer];
       int newHost = cluster.serverIndexToHostIndex[newServer];
       if (newHost != oldHost) {
-        costsPerGroup[oldHost] = costPerGroup(cluster.primariesOfRegionsPerHost[oldHost]);
-        costsPerGroup[newHost] = costPerGroup(cluster.primariesOfRegionsPerHost[newHost]);
+        costsPerGroup[oldHost] = costPerGroup(cluster.colocatedReplicaCountsPerHost[oldHost]);
+        costsPerGroup[newHost] = costPerGroup(cluster.colocatedReplicaCountsPerHost[newHost]);
       }
     } else {
-      costsPerGroup[oldServer] = costPerGroup(cluster.primariesOfRegionsPerServer[oldServer]);
-      costsPerGroup[newServer] = costPerGroup(cluster.primariesOfRegionsPerServer[newServer]);
+      costsPerGroup[oldServer] = costPerGroup(cluster.colocatedReplicaCountsPerServer[oldServer]);
+      costsPerGroup[newServer] = costPerGroup(cluster.colocatedReplicaCountsPerServer[newServer]);
     }
   }
 }

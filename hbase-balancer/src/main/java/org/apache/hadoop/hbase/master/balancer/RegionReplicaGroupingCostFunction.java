@@ -31,7 +31,6 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 abstract class RegionReplicaGroupingCostFunction extends CostFunction {
-
   protected long maxCost = 0;
   protected long[] costsPerGroup; // group is either server, host or rack
 
@@ -48,14 +47,13 @@ abstract class RegionReplicaGroupingCostFunction extends CostFunction {
 
   protected final long getMaxCost(BalancerClusterState cluster) {
     // max cost is the case where every region replica is hosted together regardless of host
-    Int2IntCounterMap primariesOfRegions = new Int2IntCounterMap(cluster.numRegions,
+    Int2IntCounterMap colocatedReplicaCounts = new Int2IntCounterMap(cluster.numRegions,
       Hashing.DEFAULT_LOAD_FACTOR, 0);
     for (int i = 0; i < cluster.regionIndexToPrimaryIndex.length; i++) {
-      primariesOfRegions.getAndIncrement(cluster.regionIndexToPrimaryIndex[i]);
+      colocatedReplicaCounts.getAndIncrement(cluster.regionIndexToPrimaryIndex[i]);
     }
-
     // compute numReplicas from the sorted array
-    return costPerGroup(primariesOfRegions);
+    return costPerGroup(colocatedReplicaCounts);
   }
 
   @Override
@@ -81,19 +79,18 @@ abstract class RegionReplicaGroupingCostFunction extends CostFunction {
    * and returns a sum of numReplicas-1 squared. For example, if the server hosts regions a, b, c,
    * d, e, f where a and b are same replicas, and c,d,e are same replicas, it returns (2-1) * (2-1)
    * + (3-1) * (3-1) + (1-1) * (1-1).
-   * @param primariesOfRegions a sorted array of primary regions ids for the regions hosted
+   * @param colocatedReplicaCounts a sorted array of primary regions ids for the regions hosted
    * @return a sum of numReplicas-1 squared for each primary region in the group.
    */
-  protected final long costPerGroup(Int2IntCounterMap primariesOfRegions) {
+  protected final long costPerGroup(Int2IntCounterMap colocatedReplicaCounts) {
     final AtomicLong cost = new AtomicLong(0);
-    // primariesOfRegions is a sorted array of primary ids of regions. Replicas of regions
+    // colocatedReplicaCounts is a sorted array of primary ids of regions. Replicas of regions
     // sharing the same primary will have consecutive numbers in the array.
-    primariesOfRegions.forEach((primary,count) -> {
+    colocatedReplicaCounts.forEach((primary,count) -> {
       if (count > 1) { // means consecutive primaries, indicating co-location
         cost.getAndAdd((count - 1) * (count - 1));
       }
     });
-
     return cost.longValue();
   }
 }

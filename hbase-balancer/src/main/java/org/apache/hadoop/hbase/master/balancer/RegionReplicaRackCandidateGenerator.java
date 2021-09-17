@@ -33,7 +33,7 @@ class RegionReplicaRackCandidateGenerator extends RegionReplicaCandidateGenerato
       return super.generate(cluster);
     }
 
-    int regionIndex = selectCoHostedRegionPerGroup(cluster.primariesOfRegionsPerRack[rackIndex],
+    int regionIndex = selectCoHostedRegionPerGroup(cluster.colocatedReplicaCountsPerRack[rackIndex],
       cluster.regionsPerRack[rackIndex], cluster.regionIndexToPrimaryIndex);
 
     // if there are no pairs of region replicas co-hosted, default to random generator
