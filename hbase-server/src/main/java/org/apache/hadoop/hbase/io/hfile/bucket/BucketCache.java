@@ -636,8 +636,8 @@ public class BucketCache implements BlockCache, HeapSize {
    * <pre>
    * Create the {@link Recycler} for {@link BucketEntry#refCnt},which would be used as
    * {@link RefCnt#recycler} of {@link HFileBlock#buf} returned from {@link BucketCache#getBlock}.
-   * NOTE: for {@link BucketCache#getBlock},the {@link RefCnt#recycler} of {@link HFileBlock#buf} from
-   * {@link BucketCache#backingMap} and {@link BucketCache#ramCache} are different:
+   * NOTE: for {@link BucketCache#getBlock},the {@link RefCnt#recycler} of {@link HFileBlock#buf}
+   * from {@link BucketCache#backingMap} and {@link BucketCache#ramCache} are different:
    * 1.For {@link RefCnt#recycler} of {@link HFileBlock#buf} from {@link BucketCache#backingMap},
    *   it is the return value of current {@link BucketCache#createRecycler} method.
    *
@@ -666,7 +666,7 @@ public class BucketCache implements BlockCache, HeapSize {
   /**
    * Evict {@link BlockCacheKey} and its corresponding {@link BucketEntry} only if
    * {@link BucketEntry#isRpcRef} is false. <br/>
-   * NOTE:When Evict from {@link BucketCache#backingMap},only the matched {@link BlockCacheKey} and
+   * NOTE:When evict from {@link BucketCache#backingMap},only the matched {@link BlockCacheKey} and
    * {@link BucketEntry} could be removed.
    * @param blockCacheKey {@link BlockCacheKey} to evict.
    * @param bucketEntry {@link BucketEntry} matched {@link BlockCacheKey} to evict.
@@ -1002,7 +1002,6 @@ public class BucketCache implements BlockCache, HeapSize {
    * references and we'll OOME.
    * @param entries Presumes list passed in here will be processed by this invocation only. No
    *          interference expected.
-   * @throws InterruptedException
    */
   void doDrain(final List<RAMQueueEntry> entries) throws InterruptedException {
     if (entries.isEmpty()) {

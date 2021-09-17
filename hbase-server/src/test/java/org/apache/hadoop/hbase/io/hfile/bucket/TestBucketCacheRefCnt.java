@@ -400,7 +400,6 @@ public class TestBucketCacheRefCnt {
    *    returning false, so invoking {@link BucketCache#blockEvicted} to free the the Block1
    *    directly which {@link RefCnt} is 2 and the Block1 is still used by Thread3.
    * </pre>
-   * @throws Exception
    */
   @Test
   public void testEvictingBlockCachingBlockGettingBlockConcurrently() throws Exception {
@@ -564,7 +563,6 @@ public class TestBucketCacheRefCnt {
     /**
      * Overwrite 0xff to the {@link BucketEntry} content to simulate it would be overwrite after the
      * {@link BucketEntry} is freed.
-     * @param bucketEntry
      */
     @Override
     void freeBucketEntry(BucketEntry bucketEntry) {
@@ -723,7 +721,6 @@ public class TestBucketCacheRefCnt {
     /**
      * Overwrite 0xff to the {@link BucketEntry} content to simulate it would be overwrite after the
      * {@link BucketEntry} is freed.
-     * @param bucketEntry
      */
     @Override
     void freeBucketEntry(BucketEntry bucketEntry) {

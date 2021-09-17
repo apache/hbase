@@ -73,7 +73,6 @@ public class TestBucketWriterThread {
   /**
    * Set up variables and get BucketCache and WriterThread into state where tests can  manually
    * control the running of WriterThread and BucketCache is empty.
-   * @throws Exception
    */
   @Before
   public void setUp() throws Exception {

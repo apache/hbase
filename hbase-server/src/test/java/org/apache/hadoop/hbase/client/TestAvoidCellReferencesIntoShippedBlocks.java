@@ -444,8 +444,6 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
 
   /**
    * For {@link BucketCache},we only evict Block if there is no rpc referenced.
-   * @param blockCache
-   * @param blockCacheKey
    */
   private void evictBlock(BlockCache blockCache, BlockCacheKey blockCacheKey) {
     assertTrue(blockCache instanceof CombinedBlockCache);
