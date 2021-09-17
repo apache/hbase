@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
@@ -64,6 +63,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.janitor.MetaFixer;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
@@ -114,7 +114,6 @@ import org.apache.hadoop.hbase.util.DNS.ServerType;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -1752,17 +1751,13 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         LOG.warn("unassignRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
           + " actual: " + type);
       }
-      Pair<RegionInfo, ServerName> pair =
-        MetaTableAccessor.getRegion(server.getConnection(), regionName);
-      if (Bytes.equals(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName(), regionName)) {
-        pair = new Pair<>(RegionInfoBuilder.FIRST_META_REGIONINFO,
-          MetaTableLocator.getMetaRegionLocation(server.getZooKeeper()));
-      }
-      if (pair == null) {
+      RegionStateNode rsn =
+        server.getAssignmentManager().getRegionStates().getRegionStateNodeFromName(regionName);
+      if (rsn == null) {
         throw new UnknownRegionException(Bytes.toString(regionName));
       }
 
-      RegionInfo hri = pair.getFirst();
+      RegionInfo hri = rsn.getRegionInfo();
       if (server.cpHost != null) {
         server.cpHost.preUnassign(hri);
       }
