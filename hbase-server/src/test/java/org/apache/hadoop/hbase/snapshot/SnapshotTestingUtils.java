@@ -480,9 +480,8 @@ public final class SnapshotTestingUtils {
         this.desc = desc;
         this.tableRegions = tableRegions;
         this.snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
-        new FSTableDescriptors(conf)
-          .createTableDescriptorForTableDirectory(this.snapshotDir.getFileSystem(conf),
-            snapshotDir, htd, false);
+        FSTableDescriptors.createTableDescriptorForTableDirectory(
+          this.snapshotDir.getFileSystem(conf), snapshotDir, htd, false);
       }
 
       public TableDescriptor getTableDescriptor() {
@@ -502,15 +501,13 @@ public final class SnapshotTestingUtils {
       }
 
       public Path[] addRegionV1() throws IOException {
-        return addRegion(desc.toBuilder()
-                          .setVersion(SnapshotManifestV1.DESCRIPTOR_VERSION)
-                          .build());
+        return addRegion(
+          desc.toBuilder().setVersion(SnapshotManifestV1.DESCRIPTOR_VERSION).build());
       }
 
       public Path[] addRegionV2() throws IOException {
-        return addRegion(desc.toBuilder()
-                          .setVersion(SnapshotManifestV2.DESCRIPTOR_VERSION)
-                          .build());
+        return addRegion(
+          desc.toBuilder().setVersion(SnapshotManifestV2.DESCRIPTOR_VERSION).build());
       }
 
       private Path[] addRegion(final SnapshotProtos.SnapshotDescription desc) throws IOException {
@@ -521,6 +518,7 @@ public final class SnapshotTestingUtils {
         RegionData regionData = tableRegions[this.snapshotted++];
         ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(desc.getName());
         SnapshotManifest manifest = SnapshotManifest.create(conf, fs, snapshotDir, desc, monitor);
+        manifest.addTableDescriptor(htd);
         manifest.addRegion(regionData.tableDir, regionData.hri);
         return regionData.files;
       }
