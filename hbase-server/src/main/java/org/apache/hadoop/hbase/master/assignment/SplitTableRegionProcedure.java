@@ -668,9 +668,8 @@ public class SplitTableRegionProcedure
         new HashMap<String, Collection<StoreFileInfo>>(htd.getColumnFamilyCount());
     for (ColumnFamilyDescriptor cfd : htd.getColumnFamilies()) {
       String family = cfd.getNameAsString();
-      Configuration trackerConfig = StoreFileTrackerFactory.
-        mergeConfigurations(env.getMasterConfiguration(), htd, htd.getColumnFamily(cfd.getName()));
-      StoreFileTracker tracker = StoreFileTrackerFactory.create(trackerConfig, family, regionFs);
+      StoreFileTracker tracker =
+        StoreFileTrackerFactory.create(env.getMasterConfiguration(), htd, cfd, regionFs);
       Collection<StoreFileInfo> sfis = tracker.load();
       if (sfis == null) {
         continue;
