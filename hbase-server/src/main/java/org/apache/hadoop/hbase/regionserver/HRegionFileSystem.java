@@ -598,7 +598,6 @@ public class HRegionFileSystem {
    * to the proper location in the filesystem.
    *
    * @param regionInfo daughter {@link org.apache.hadoop.hbase.client.RegionInfo}
-   * @throws IOException
    */
   public Path commitDaughterRegion(final RegionInfo regionInfo, List<Path> allRegionFiles,
       MasterProcedureEnv env) throws IOException {
@@ -625,12 +624,8 @@ public class HRegionFileSystem {
     Map<String, List<StoreFileInfo>> fileInfoMap = new HashMap<>();
     for(Path file : allFiles) {
       String familyName = file.getParent().getName();
-      trackerMap.computeIfAbsent(familyName, t -> {
-        Configuration config = StoreFileTrackerFactory.mergeConfigurations(conf, tblDesc,
-          tblDesc.getColumnFamily(Bytes.toBytes(familyName)));
-        return StoreFileTrackerFactory.
-          create(config, familyName, regionFs);
-      });
+      trackerMap.computeIfAbsent(familyName, t -> StoreFileTrackerFactory.create(conf, tblDesc,
+        tblDesc.getColumnFamily(Bytes.toBytes(familyName)), regionFs));
       fileInfoMap.computeIfAbsent(familyName, l -> new ArrayList<>());
       List<StoreFileInfo> infos = fileInfoMap.get(familyName);
       infos.add(new StoreFileInfo(conf, fs, file, true));
@@ -676,7 +671,6 @@ public class HRegionFileSystem {
    *                    this method is invoked on the Master side, then the RegionSplitPolicy will
    *                    NOT have a reference to a Region.
    * @return Path to created reference.
-   * @throws IOException
    */
   public Path splitStoreFile(RegionInfo hri, String familyName, HStoreFile f, byte[] splitRow,
       boolean top, RegionSplitPolicy splitPolicy) throws IOException {
