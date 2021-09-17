@@ -25,11 +25,17 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheUtil;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
@@ -37,6 +43,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.WriterThread;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -62,6 +69,18 @@ public class TestBucketCacheRefCnt {
 
   private static BucketCache create(int writerSize, int queueSize) throws IOException {
     return new BucketCache(IO_ENGINE, CAPACITY_SIZE, BLOCK_SIZE, BLOCK_SIZE_ARRAY, writerSize,
+        queueSize, PERSISTENCE_PATH);
+  }
+
+  private static MyBucketCache createMyBucketCache(int writerSize, int queueSize)
+      throws IOException {
+    return new MyBucketCache(IO_ENGINE, CAPACITY_SIZE, BLOCK_SIZE, BLOCK_SIZE_ARRAY, writerSize,
+        queueSize, PERSISTENCE_PATH);
+  }
+
+  private static MyBucketCache2 createMyBucketCache2(int writerSize, int queueSize)
+      throws IOException {
+    return new MyBucketCache2(IO_ENGINE, CAPACITY_SIZE, BLOCK_SIZE, BLOCK_SIZE_ARRAY, writerSize,
         queueSize, PERSISTENCE_PATH);
   }
 
@@ -133,8 +152,10 @@ public class TestBucketCacheRefCnt {
     }
   }
 
-  private void waitUntilFlushedToCache(BlockCacheKey key) throws InterruptedException {
-    while (!cache.backingMap.containsKey(key) || cache.ramCache.containsKey(key)) {
+  private static void waitUntilFlushedToCache(BucketCache bucketCache, BlockCacheKey blockCacheKey)
+      throws InterruptedException {
+    while (!bucketCache.backingMap.containsKey(blockCacheKey)
+        || bucketCache.ramCache.containsKey(blockCacheKey)) {
       Thread.sleep(100);
     }
     Thread.sleep(1000);
@@ -148,7 +169,7 @@ public class TestBucketCacheRefCnt {
       HFileBlock blk = createBlock(200, 1020, alloc);
       BlockCacheKey key = createKey("testHFile-00", 200);
       cache.cacheBlock(key, blk);
-      waitUntilFlushedToCache(key);
+      waitUntilFlushedToCache(cache, key);
       assertEquals(1, blk.refCnt());
 
       Cacheable block = cache.getBlock(key, false, false, false);
@@ -180,17 +201,18 @@ public class TestBucketCacheRefCnt {
       assertFalse(block.release());
       assertEquals(1, block.refCnt());
 
-      newBlock = cache.getBlock(key, false, false, false);
-      assertEquals(2, block.refCnt());
-      assertEquals(2, newBlock.refCnt());
+      /**
+       * The key was evicted from {@link BucketCache#backingMap} and {@link BucketCache#ramCache},
+       * so {@link BucketCache#getBlock} return null.
+       */
+      Cacheable newestBlock = cache.getBlock(key, false, false, false);
+      assertNull(newestBlock);
+      assertEquals(1, block.refCnt());
       assertTrue(((HFileBlock) newBlock).getByteBuffAllocator() == alloc);
 
       // Release the block
-      assertFalse(block.release());
-      assertEquals(1, block.refCnt());
-
-      // Release the newBlock;
-      assertTrue(newBlock.release());
+      assertTrue(block.release());
+      assertEquals(0, block.refCnt());
       assertEquals(0, newBlock.refCnt());
     } finally {
       cache.shutdown();
@@ -247,7 +269,7 @@ public class TestBucketCacheRefCnt {
       HFileBlock blk = createBlock(200, 1020);
       BlockCacheKey key = createKey("testMarkStaleAsEvicted", 200);
       cache.cacheBlock(key, blk);
-      waitUntilFlushedToCache(key);
+      waitUntilFlushedToCache(cache, key);
       assertEquals(1, blk.refCnt());
       assertNotNull(cache.backingMap.get(key));
       assertEquals(1, cache.backingMap.get(key).refCnt());
@@ -260,7 +282,7 @@ public class TestBucketCacheRefCnt {
       assertEquals(2, be1.refCnt());
 
       // We've some RPC reference, so it won't have any effect.
-      assertFalse(be1.markStaleAsEvicted());
+      assertFalse(cache.evictBucketEntryIfNoRpcReferenced(key, be1));
       assertEquals(2, block1.refCnt());
       assertEquals(2, cache.backingMap.get(key).refCnt());
 
@@ -270,12 +292,453 @@ public class TestBucketCacheRefCnt {
       assertEquals(1, cache.backingMap.get(key).refCnt());
 
       // Mark the stale as evicted again, it'll do the de-allocation.
-      assertTrue(be1.markStaleAsEvicted());
+      assertTrue(cache.evictBucketEntryIfNoRpcReferenced(key, be1));
       assertEquals(0, block1.refCnt());
       assertNull(cache.backingMap.get(key));
       assertEquals(0, cache.size());
     } finally {
       cache.shutdown();
     }
+  }
+
+  /**
+   * <pre>
+   * This test is for HBASE-26281,
+   * test two threads for replacing Block and getting Block execute concurrently.
+   * The threads sequence is:
+   * 1. Block1 was cached successfully,the {@link RefCnt} of Block1 is 1.
+   * 2. Thread1 caching the same {@link BlockCacheKey} with Block2 satisfied
+   *    {@link BlockCacheUtil#shouldReplaceExistingCacheBlock}, so Block2 would
+   *    replace Block1, but thread1 stopping before {@link BucketCache#cacheBlockWithWaitInternal}
+   * 3. Thread2 invoking {@link BucketCache#getBlock} with the same {@link BlockCacheKey},
+   *    which returned Block1, the {@link RefCnt} of Block1 is 2.
+   * 4. Thread1 continues caching Block2, in {@link BucketCache.WriterThread#putIntoBackingMap},
+   *    the old Block1 is freed directly which {@link RefCnt} is 2, but the Block1 is still used
+   *    by Thread2 and the content of Block1 would be overwritten after it is freed, which may
+   *    cause a serious error.
+   * </pre>
+   * @throws Exception
+   */
+  @Test
+  public void testReplacingBlockAndGettingBlockConcurrently() throws Exception {
+    ByteBuffAllocator byteBuffAllocator =
+        ByteBuffAllocator.create(HBaseConfiguration.create(), true);
+    final MyBucketCache myBucketCache = createMyBucketCache(1, 1000);
+    try {
+      HFileBlock hfileBlock = createBlock(200, 1020, byteBuffAllocator);
+      final BlockCacheKey blockCacheKey = createKey("testTwoThreadConcurrent", 200);
+      myBucketCache.cacheBlock(blockCacheKey, hfileBlock);
+      waitUntilFlushedToCache(myBucketCache, blockCacheKey);
+      assertEquals(1, hfileBlock.refCnt());
+
+      assertTrue(!myBucketCache.ramCache.containsKey(blockCacheKey));
+      final AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>();
+      Thread cacheBlockThread = new Thread(() -> {
+        try {
+          HFileBlock newHFileBlock = createBlock(200, 1020, byteBuffAllocator);
+          myBucketCache.cacheBlock(blockCacheKey, newHFileBlock);
+          waitUntilFlushedToCache(myBucketCache, blockCacheKey);
+
+        } catch (Throwable exception) {
+          exceptionRef.set(exception);
+        }
+      });
+      cacheBlockThread.setName(MyBucketCache.CACHE_BLOCK_THREAD_NAME);
+      cacheBlockThread.start();
+
+      String oldThreadName = Thread.currentThread().getName();
+      HFileBlock gotHFileBlock = null;
+      try {
+
+        Thread.currentThread().setName(MyBucketCache.GET_BLOCK_THREAD_NAME);
+
+        gotHFileBlock = (HFileBlock) (myBucketCache.getBlock(blockCacheKey, false, false, false));
+        assertTrue(gotHFileBlock.equals(hfileBlock));
+        assertTrue(gotHFileBlock.getByteBuffAllocator() == byteBuffAllocator);
+        assertEquals(2, gotHFileBlock.refCnt());
+        /**
+         * Release the second cyclicBarrier.await in
+         * {@link MyBucketCache#cacheBlockWithWaitInternal}
+         */
+        myBucketCache.cyclicBarrier.await();
+
+      } finally {
+        Thread.currentThread().setName(oldThreadName);
+      }
+
+      cacheBlockThread.join();
+      assertTrue(exceptionRef.get() == null);
+      assertEquals(1, gotHFileBlock.refCnt());
+      assertTrue(gotHFileBlock.equals(hfileBlock));
+      assertTrue(myBucketCache.overwiteByteBuff == null);
+      assertTrue(myBucketCache.freeBucketEntryCounter.get() == 0);
+
+      gotHFileBlock.release();
+      assertEquals(0, gotHFileBlock.refCnt());
+      assertTrue(myBucketCache.overwiteByteBuff != null);
+      assertTrue(myBucketCache.freeBucketEntryCounter.get() == 1);
+      assertTrue(myBucketCache.replaceCounter.get() == 1);
+      assertTrue(myBucketCache.blockEvictCounter.get() == 1);
+    } finally {
+      myBucketCache.shutdown();
+    }
+
+  }
+
+  /**
+   * <pre>
+   * This test also is for HBASE-26281,
+   * test three threads for evicting Block,caching Block and getting Block
+   * execute concurrently.
+   * 1. Thread1 caching Block1, stopping after {@link BucketCache.WriterThread#putIntoBackingMap},
+   *    the {@link RefCnt} of Block1 is 1.
+   * 2. Thread2 invoking {@link BucketCache#evictBlock} with the same {@link BlockCacheKey},
+   *    but stopping after {@link BucketCache#removeFromRamCache}.
+   * 3. Thread3 invoking {@link BucketCache#getBlock} with the same {@link BlockCacheKey},
+   *    which returned Block1, the {@link RefCnt} of Block1 is 2.
+   * 4. Thread1 continues caching block1,but finding that {@link BucketCache.RAMCache#remove}
+   *    returning false, so invoking {@link BucketCache#blockEvicted} to free the the Block1
+   *    directly which {@link RefCnt} is 2 and the Block1 is still used by Thread3.
+   * </pre>
+   */
+  @Test
+  public void testEvictingBlockCachingBlockGettingBlockConcurrently() throws Exception {
+    ByteBuffAllocator byteBuffAllocator =
+        ByteBuffAllocator.create(HBaseConfiguration.create(), true);
+    final MyBucketCache2 myBucketCache2 = createMyBucketCache2(1, 1000);
+    try {
+      final HFileBlock hfileBlock = createBlock(200, 1020, byteBuffAllocator);
+      final BlockCacheKey blockCacheKey = createKey("testThreeThreadConcurrent", 200);
+      final AtomicReference<Throwable> cacheBlockThreadExceptionRef =
+          new AtomicReference<Throwable>();
+      Thread cacheBlockThread = new Thread(() -> {
+        try {
+          myBucketCache2.cacheBlock(blockCacheKey, hfileBlock);
+          /**
+           * Wait for Caching Block completed.
+           */
+          myBucketCache2.writeThreadDoneCyclicBarrier.await();
+        } catch (Throwable exception) {
+          cacheBlockThreadExceptionRef.set(exception);
+        }
+      });
+      cacheBlockThread.setName(MyBucketCache2.CACHE_BLOCK_THREAD_NAME);
+      cacheBlockThread.start();
+
+      final AtomicReference<Throwable> evictBlockThreadExceptionRef =
+          new AtomicReference<Throwable>();
+      Thread evictBlockThread = new Thread(() -> {
+        try {
+          myBucketCache2.evictBlock(blockCacheKey);
+        } catch (Throwable exception) {
+          evictBlockThreadExceptionRef.set(exception);
+        }
+      });
+      evictBlockThread.setName(MyBucketCache2.EVICT_BLOCK_THREAD_NAME);
+      evictBlockThread.start();
+
+      String oldThreadName = Thread.currentThread().getName();
+      HFileBlock gotHFileBlock = null;
+      try {
+        Thread.currentThread().setName(MyBucketCache2.GET_BLOCK_THREAD_NAME);
+        gotHFileBlock = (HFileBlock) (myBucketCache2.getBlock(blockCacheKey, false, false, false));
+        assertTrue(gotHFileBlock.equals(hfileBlock));
+        assertTrue(gotHFileBlock.getByteBuffAllocator() == byteBuffAllocator);
+        assertEquals(2, gotHFileBlock.refCnt());
+        try {
+          /**
+           * Release the second cyclicBarrier.await in {@link MyBucketCache2#putIntoBackingMap} for
+           * {@link BucketCache.WriterThread},getBlock completed,{@link BucketCache.WriterThread}
+           * could continue.
+           */
+          myBucketCache2.putCyclicBarrier.await();
+        } catch (Throwable e) {
+          throw new RuntimeException(e);
+        }
+
+      } finally {
+        Thread.currentThread().setName(oldThreadName);
+      }
+
+      cacheBlockThread.join();
+      evictBlockThread.join();
+      assertTrue(cacheBlockThreadExceptionRef.get() == null);
+      assertTrue(evictBlockThreadExceptionRef.get() == null);
+
+      assertTrue(gotHFileBlock.equals(hfileBlock));
+      assertEquals(1, gotHFileBlock.refCnt());
+      assertTrue(myBucketCache2.overwiteByteBuff == null);
+      assertTrue(myBucketCache2.freeBucketEntryCounter.get() == 0);
+
+      gotHFileBlock.release();
+      assertEquals(0, gotHFileBlock.refCnt());
+      assertTrue(myBucketCache2.overwiteByteBuff != null);
+      assertTrue(myBucketCache2.freeBucketEntryCounter.get() == 1);
+      assertTrue(myBucketCache2.blockEvictCounter.get() == 1);
+    } finally {
+      myBucketCache2.shutdown();
+    }
+
+  }
+
+  static class MyBucketCache extends BucketCache {
+    private static final String GET_BLOCK_THREAD_NAME = "_getBlockThread";
+    private static final String CACHE_BLOCK_THREAD_NAME = "_cacheBlockThread";
+
+    private final CyclicBarrier cyclicBarrier = new CyclicBarrier(2);
+    private final AtomicInteger replaceCounter = new AtomicInteger(0);
+    private final AtomicInteger blockEvictCounter = new AtomicInteger(0);
+    private final AtomicInteger freeBucketEntryCounter = new AtomicInteger(0);
+    private ByteBuff overwiteByteBuff = null;
+
+    public MyBucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
+        int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
+      super(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
+          persistencePath);
+    }
+
+    /**
+     * Simulate the Block could be replaced.
+     */
+    @Override
+    protected boolean shouldReplaceExistingCacheBlock(BlockCacheKey cacheKey, Cacheable newBlock) {
+      replaceCounter.incrementAndGet();
+      return true;
+    }
+
+    @Override
+    public Cacheable getBlock(BlockCacheKey key, boolean caching, boolean repeat,
+        boolean updateCacheMetrics) {
+      if (Thread.currentThread().getName().equals(GET_BLOCK_THREAD_NAME)) {
+        /**
+         * Wait the first cyclicBarrier.await() in {@link MyBucketCache#cacheBlockWithWaitInternal},
+         * so the {@link BucketCache#getBlock} is executed after the {@link BucketEntry#isRpcRef}
+         * checking.
+         */
+        try {
+          cyclicBarrier.await();
+        } catch (Throwable e) {
+          throw new RuntimeException(e);
+        }
+      }
+      Cacheable result = super.getBlock(key, caching, repeat, updateCacheMetrics);
+      return result;
+    }
+
+    @Override
+    protected void cacheBlockWithWaitInternal(BlockCacheKey cacheKey, Cacheable cachedItem,
+        boolean inMemory, boolean wait) {
+      if (Thread.currentThread().getName().equals(CACHE_BLOCK_THREAD_NAME)) {
+        /**
+         * Wait the cyclicBarrier.await() in {@link MyBucketCache#getBlock}
+         */
+        try {
+          cyclicBarrier.await();
+        } catch (Throwable e) {
+          throw new RuntimeException(e);
+        }
+      }
+      if (Thread.currentThread().getName().equals(CACHE_BLOCK_THREAD_NAME)) {
+        /**
+         * Wait the cyclicBarrier.await() in
+         * {@link TestBucketCacheRefCnt#testReplacingBlockAndGettingBlockConcurrently} for
+         * {@link MyBucketCache#getBlock} and Assert completed.
+         */
+        try {
+          cyclicBarrier.await();
+        } catch (Throwable e) {
+          throw new RuntimeException(e);
+        }
+      }
+      super.cacheBlockWithWaitInternal(cacheKey, cachedItem, inMemory, wait);
+    }
+
+    @Override
+    void blockEvicted(BlockCacheKey cacheKey, BucketEntry bucketEntry,
+        boolean decrementBlockNumber) {
+      blockEvictCounter.incrementAndGet();
+      super.blockEvicted(cacheKey, bucketEntry, decrementBlockNumber);
+    }
+
+    /**
+     * Overwrite 0xff to the {@link BucketEntry} content to simulate it would be overwrite after the
+     * {@link BucketEntry} is freed.
+     */
+    @Override
+    void freeBucketEntry(BucketEntry bucketEntry) {
+      freeBucketEntryCounter.incrementAndGet();
+      super.freeBucketEntry(bucketEntry);
+      this.overwiteByteBuff = getOverwriteByteBuff(bucketEntry);
+      try {
+        this.ioEngine.write(this.overwiteByteBuff, bucketEntry.offset());
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  static class MyBucketCache2 extends BucketCache {
+    private static final String GET_BLOCK_THREAD_NAME = "_getBlockThread";
+    private static final String CACHE_BLOCK_THREAD_NAME = "_cacheBlockThread";
+    private static final String EVICT_BLOCK_THREAD_NAME = "_evictBlockThread";
+
+    private final CyclicBarrier getCyclicBarrier = new CyclicBarrier(2);
+    private final CyclicBarrier evictCyclicBarrier = new CyclicBarrier(2);
+    private final CyclicBarrier putCyclicBarrier = new CyclicBarrier(2);
+    /**
+     * This is used for {@link BucketCache.WriterThread},{@link #CACHE_BLOCK_THREAD_NAME} and
+     * {@link #EVICT_BLOCK_THREAD_NAME},waiting for caching block completed.
+     */
+    private final CyclicBarrier writeThreadDoneCyclicBarrier = new CyclicBarrier(3);
+    private final AtomicInteger blockEvictCounter = new AtomicInteger(0);
+    private final AtomicInteger removeRamCounter = new AtomicInteger(0);
+    private final AtomicInteger freeBucketEntryCounter = new AtomicInteger(0);
+    private ByteBuff overwiteByteBuff = null;
+
+    public MyBucketCache2(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
+        int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
+      super(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
+          persistencePath);
+    }
+
+    @Override
+    protected void putIntoBackingMap(BlockCacheKey key, BucketEntry bucketEntry) {
+      super.putIntoBackingMap(key, bucketEntry);
+      /**
+       * The {@link BucketCache.WriterThread} wait for evictCyclicBarrier.await before
+       * {@link MyBucketCache2#removeFromRamCache} for {@link #EVICT_BLOCK_THREAD_NAME}
+       */
+      try {
+        evictCyclicBarrier.await();
+      } catch (Throwable e) {
+        throw new RuntimeException(e);
+      }
+
+      /**
+       * Wait the cyclicBarrier.await() in
+       * {@link TestBucketCacheRefCnt#testEvictingBlockCachingBlockGettingBlockConcurrently} for
+       * {@link MyBucketCache#getBlock} and Assert completed.
+       */
+      try {
+        putCyclicBarrier.await();
+      } catch (Throwable e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    @Override
+    void doDrain(List<RAMQueueEntry> entries) throws InterruptedException {
+      super.doDrain(entries);
+      if (entries.size() > 0) {
+        /**
+         * Caching Block completed,release {@link #GET_BLOCK_THREAD_NAME} and
+         * {@link #EVICT_BLOCK_THREAD_NAME}.
+         */
+        try {
+          writeThreadDoneCyclicBarrier.await();
+        } catch (Throwable e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+    }
+
+    @Override
+    public Cacheable getBlock(BlockCacheKey key, boolean caching, boolean repeat,
+        boolean updateCacheMetrics) {
+      if (Thread.currentThread().getName().equals(GET_BLOCK_THREAD_NAME)) {
+        /**
+         * Wait for second getCyclicBarrier.await in {@link MyBucketCache2#removeFromRamCache} after
+         * {@link BucketCache#removeFromRamCache}.
+         */
+        try {
+          getCyclicBarrier.await();
+        } catch (Throwable e) {
+          throw new RuntimeException(e);
+        }
+      }
+      Cacheable result = super.getBlock(key, caching, repeat, updateCacheMetrics);
+      return result;
+    }
+
+    @Override
+    protected boolean removeFromRamCache(BlockCacheKey cacheKey) {
+      boolean firstTime = false;
+      if (Thread.currentThread().getName().equals(EVICT_BLOCK_THREAD_NAME)) {
+        int count = this.removeRamCounter.incrementAndGet();
+        firstTime = (count == 1);
+        if (firstTime) {
+          /**
+           * The {@link #EVICT_BLOCK_THREAD_NAME} wait for evictCyclicBarrier.await after
+           * {@link BucketCache#putIntoBackingMap}.
+           */
+          try {
+            evictCyclicBarrier.await();
+          } catch (Throwable e) {
+            throw new RuntimeException(e);
+          }
+        }
+      }
+      boolean result = super.removeFromRamCache(cacheKey);
+      if (Thread.currentThread().getName().equals(EVICT_BLOCK_THREAD_NAME)) {
+        if (firstTime) {
+          /**
+           * Wait for getCyclicBarrier.await before {@link BucketCache#getBlock}.
+           */
+          try {
+            getCyclicBarrier.await();
+          } catch (Throwable e) {
+            throw new RuntimeException(e);
+          }
+          /**
+           * Wait for Caching Block completed, after Caching Block completed, evictBlock could
+           * continue.
+           */
+          try {
+            writeThreadDoneCyclicBarrier.await();
+          } catch (Throwable e) {
+            throw new RuntimeException(e);
+          }
+        }
+      }
+
+      return result;
+    }
+
+    @Override
+    void blockEvicted(BlockCacheKey cacheKey, BucketEntry bucketEntry,
+        boolean decrementBlockNumber) {
+      /**
+       * This is only invoked by {@link BucketCache.WriterThread}. {@link MyMyBucketCache2} create
+       * only one {@link BucketCache.WriterThread}.
+       */
+      assertTrue(Thread.currentThread() == this.writerThreads[0]);
+
+      blockEvictCounter.incrementAndGet();
+      super.blockEvicted(cacheKey, bucketEntry, decrementBlockNumber);
+    }
+
+    /**
+     * Overwrite 0xff to the {@link BucketEntry} content to simulate it would be overwrite after the
+     * {@link BucketEntry} is freed.
+     */
+    @Override
+    void freeBucketEntry(BucketEntry bucketEntry) {
+      freeBucketEntryCounter.incrementAndGet();
+      super.freeBucketEntry(bucketEntry);
+      this.overwiteByteBuff = getOverwriteByteBuff(bucketEntry);
+      try {
+        this.ioEngine.write(this.overwiteByteBuff, bucketEntry.offset());
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  private static ByteBuff getOverwriteByteBuff(BucketEntry bucketEntry) {
+    int byteSize = bucketEntry.getLength();
+    byte[] data = new byte[byteSize];
+    Arrays.fill(data, (byte) 0xff);
+    return ByteBuff.wrap(ByteBuffer.wrap(data));
   }
 }
