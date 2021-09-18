@@ -107,6 +107,15 @@ public class MiniHBaseCluster extends HBaseCluster {
         regionserverClass);
   }
 
+  public MiniHBaseCluster(Configuration conf, int numMasters, int numAlwaysStandByMasters,
+      int numRegionServers, List<Integer> rsPorts, int numCompactionServers,
+      Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      throws IOException, InterruptedException {
+    this(conf, numMasters, numAlwaysStandByMasters, numRegionServers, rsPorts, numCompactionServers,
+        masterClass, regionserverClass, null);
+  }
+
   /**
    * @param numCompactionServers initial number of compaction servers to start.
    * @throws IOException
@@ -115,7 +124,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   public MiniHBaseCluster(Configuration conf, int numMasters, int numAlwaysStandByMasters,
       int numRegionServers, List<Integer> rsPorts, int numCompactionServers,
       Class<? extends HMaster> masterClass,
-      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass,
+      Class<? extends HCompactionServer> compactionserverClass)
       throws IOException, InterruptedException {
     super(conf);
 
@@ -123,7 +133,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     CompatibilityFactory.getInstance(MetricsAssertHelper.class).init();
 
     init(numMasters, numAlwaysStandByMasters, numRegionServers, rsPorts, numCompactionServers,
-      masterClass, regionserverClass);
+      masterClass, regionserverClass, compactionserverClass);
     this.initialClusterStatus = getClusterMetrics();
   }
 
@@ -242,7 +252,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   private void init(final int nMasterNodes, final int numAlwaysStandByMasters,
       final int nRegionNodes, List<Integer> rsPorts, int numCompactionServers,
       Class<? extends HMaster> masterClass,
-      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass,
+      Class<? extends HCompactionServer> compactionserverClass)
       throws IOException, InterruptedException {
     try {
       if (masterClass == null) {
@@ -251,10 +262,13 @@ public class MiniHBaseCluster extends HBaseCluster {
       if (regionserverClass == null) {
         regionserverClass = MiniHBaseCluster.MiniHBaseClusterRegionServer.class;
       }
+      if (compactionserverClass == null) {
+        compactionserverClass = HCompactionServer.class;
+      }
 
       // start up a LocalHBaseCluster
-      hbaseCluster = new LocalHBaseCluster(conf, nMasterNodes, numAlwaysStandByMasters, 0,
-          masterClass, regionserverClass);
+      hbaseCluster = new LocalHBaseCluster(conf, nMasterNodes, numAlwaysStandByMasters, 0, 0,
+          masterClass, regionserverClass, compactionserverClass);
 
       // manually add the regionservers as other users
       for (int i = 0; i < nRegionNodes; i++) {

@@ -146,7 +146,7 @@ public class HCompactionServer extends AbstractServer {
       SecurityConstants.COMPACTION_SERVER_KRB_PRINCIPAL, host);
   }
 
-  private ClusterStatusProtos.CompactionServerLoad buildServerLoad(long reportStartTime,
+  protected ClusterStatusProtos.CompactionServerLoad buildServerLoad(long reportStartTime,
     long reportEndTime) {
     ClusterStatusProtos.CompactionServerLoad.Builder serverLoad =
       ClusterStatusProtos.CompactionServerLoad.newBuilder();
@@ -185,7 +185,8 @@ public class HCompactionServer extends AbstractServer {
           this.cssStub.compactionServerReport(null, request.build());
       ThroughputController throughputController =
           compactionThreadManager.getCompactionThroughputController();
-      if (throughputController instanceof PressureAwareCompactionThroughputController) {
+      if (throughputController instanceof PressureAwareCompactionThroughputController
+          && compactionServerReportResponse.getMaxThroughputUpperBound() > 0) {
         ((PressureAwareCompactionThroughputController) throughputController)
             .setMaxThroughputUpperBound(
               compactionServerReportResponse.getMaxThroughputUpperBound());

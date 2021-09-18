@@ -687,12 +687,12 @@ public class MasterRpcServices extends RSRpcServices implements
       ServerName serverName = ProtobufUtil.toServerName(request.getServer());
       CompactionServerMetrics newLoad = CompactionServerMetricsBuilder
           .toCompactionServerMetrics(serverName, versionNumber, version, request.getLoad());
-      Triple<Long, Long, Long> throughput =
+      Triple<Double, Double, Double> throughput =
           master.getCompactionOffloadManager().compactionServerReport(serverName, newLoad);
       return CompactionServerReportResponse.newBuilder()
-          .setMaxThroughputUpperBound(throughput.getFirst())
-          .setMaxThroughputLowerBound(throughput.getSecond())
-          .setMaxThroughputOffPeak(throughput.getThird()).build();
+          .setMaxThroughputUpperBound(throughput.getFirst().longValue())
+          .setMaxThroughputLowerBound(throughput.getSecond().longValue())
+          .setMaxThroughputOffPeak(throughput.getThird().longValue()).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

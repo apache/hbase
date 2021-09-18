@@ -459,8 +459,8 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public Map<String, Long> updateCompactionServerTotalThroughput(Long upperBound, Long lowerBound,
-      Long offPeak) throws IOException {
+  public Map<String, Long> updateCompactionServerTotalThroughput(long upperBound, long lowerBound,
+      long offPeak) throws IOException {
     throw new NotImplementedException(
         "updateCompactionServerTotalThroughput by pattern not supported in ThriftAdmin");
   }

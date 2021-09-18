@@ -1466,8 +1466,8 @@ public interface AsyncAdmin {
    * @param offPeak the total throughput offPeak bound of all compaction servers
    * @return the now total throughput of all compaction servers
    */
-  CompletableFuture<Map<String, Long>> updateCompactionServerTotalThroughput(Long upperBound,
-    Long lowerBound, Long offPeak);
+  CompletableFuture<Map<String, Long>> updateCompactionServerTotalThroughput(long upperBound,
+    long lowerBound, long offPeak);
 
   /**
    * Get if the compaction offload is enabled.

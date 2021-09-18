@@ -728,8 +728,8 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.switchCompactionOffload(enable);
   }
 
-  public Map<String, Long> updateCompactionServerTotalThroughput(Long upperBound, Long lowerBound,
-      Long offPeak) throws IOException {
+  public Map<String, Long> updateCompactionServerTotalThroughput(long upperBound, long lowerBound,
+      long offPeak) throws IOException {
     return admin.updateCompactionServerTotalThroughput(upperBound, lowerBound, offPeak);
   }
 

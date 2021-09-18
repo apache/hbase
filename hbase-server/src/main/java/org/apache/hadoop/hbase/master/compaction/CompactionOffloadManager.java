@@ -116,12 +116,14 @@ public class CompactionOffloadManager {
       COMPACTION_SERVER_MAX_THROUGHPUT_OFFPEAK, DEFAULT_COMPACTION_SERVER_MAX_THROUGHPUT_OFFPEAK);
   }
 
-  public Triple<Long, Long, Long> compactionServerReport(ServerName sn,
-    CompactionServerMetrics sl) {
+  public Triple<Double, Double, Double> compactionServerReport(ServerName sn,
+      CompactionServerMetrics sl) {
     this.onlineServers.put(sn, sl);
-    long size = Math.max(onlineServers.size(), 1);
-    return new Triple<>(maxThroughputUpperBound / size, maxThroughputLowerBound / size,
-      maxThroughputOffPeak / size);
+    int totalTask = Math.max(onlineServers.asMap().values().stream()
+        .mapToInt(metric -> metric.getCompactionTasks().size()).sum(), 1);
+    double factor = 1.0 * onlineServers.asMap().get(sn).getCompactionTasks().size() / totalTask;
+    return new Triple<>(maxThroughputUpperBound * factor, maxThroughputLowerBound * factor,
+        maxThroughputOffPeak * factor);
   }
 
   /**

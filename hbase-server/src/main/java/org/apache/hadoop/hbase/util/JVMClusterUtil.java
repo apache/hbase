@@ -132,15 +132,23 @@ public class JVMClusterUtil {
    * Creates a {@link CompactionServerThread}.
    * Call 'start' on the returned thread to make it run.
    * @param c Configuration to use.
+   * @param hcsc Class to create.
    * @param index Used distinguishing the object returned.
    * @throws IOException
    * @return Compaction server added.
    */
   public static JVMClusterUtil.CompactionServerThread createCompactionServerThread(
-    final Configuration c, final int index) throws IOException {
+      final Configuration c, final Class<? extends HCompactionServer> hcsc, final int index)
+      throws IOException {
     HCompactionServer server;
     try {
-      server = new HCompactionServer(c);
+      Constructor<? extends HCompactionServer> ctor = hcsc.getConstructor(Configuration.class);
+      ctor.setAccessible(true);
+      server = ctor.newInstance(c);
+    } catch (InvocationTargetException ite) {
+      Throwable target = ite.getTargetException();
+      throw new RuntimeException("Failed construction of CompactionServer: " + hcsc.toString()
+          + ((target.getCause() != null) ? target.getCause().getMessage() : ""), target);
     } catch (Exception e) {
       throw new IOException(e);
     }

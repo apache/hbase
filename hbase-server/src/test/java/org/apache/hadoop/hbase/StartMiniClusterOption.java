@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.hbase.compactionserver.HCompactionServer;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -77,6 +78,11 @@ public final class StartMiniClusterOption {
   private Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass;
 
   /**
+   * The class to use as CompactionServer, or null for default.
+   */
+  private Class<? extends HCompactionServer> csClass;
+
+  /**
    * Number of compaction servers to start up.
    */
   private final int numCompactionServers;
@@ -115,8 +121,8 @@ public final class StartMiniClusterOption {
   private StartMiniClusterOption(int numMasters, int numAlwaysStandByMasters,
       Class<? extends HMaster> masterClass, int numRegionServers, List<Integer> rsPorts,
       Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass,
-      int numCompactionServers, int numDataNodes, String[] dataNodeHosts, int numZkServers,
-      boolean createRootDir, boolean createWALDir) {
+      int numCompactionServers, Class<? extends HCompactionServer> csClass, int numDataNodes,
+      String[] dataNodeHosts, int numZkServers, boolean createRootDir, boolean createWALDir) {
     this.numMasters = numMasters;
     this.numAlwaysStandByMasters = numAlwaysStandByMasters;
     this.masterClass = masterClass;
@@ -124,6 +130,7 @@ public final class StartMiniClusterOption {
     this.rsPorts = rsPorts;
     this.rsClass = rsClass;
     this.numCompactionServers = numCompactionServers;
+    this.csClass = csClass;
     this.numDataNodes = numDataNodes;
     this.dataNodeHosts = dataNodeHosts;
     this.numZkServers = numZkServers;
@@ -153,6 +160,10 @@ public final class StartMiniClusterOption {
 
   public Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> getRsClass() {
     return rsClass;
+  }
+
+  public Class<? extends HCompactionServer> getCsClass() {
+    return csClass;
   }
 
   public int getNumCompactionServers() {
@@ -210,6 +221,7 @@ public final class StartMiniClusterOption {
     private List<Integer> rsPorts = null;
     private int numCompactionServers;
     private Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass = null;
+    private Class<? extends HCompactionServer> csClass = null;
     private int numDataNodes = 1;
     private String[] dataNodeHosts = null;
     private int numZkServers = 1;
@@ -224,8 +236,8 @@ public final class StartMiniClusterOption {
         numDataNodes = dataNodeHosts.length;
       }
       return new StartMiniClusterOption(numMasters, numAlwaysStandByMasters, masterClass,
-          numRegionServers, rsPorts, rsClass, numCompactionServers, numDataNodes, dataNodeHosts,
-          numZkServers, createRootDir, createWALDir);
+          numRegionServers, rsPorts, rsClass, numCompactionServers, csClass, numDataNodes,
+          dataNodeHosts, numZkServers, createRootDir, createWALDir);
     }
 
     public Builder numMasters(int numMasters) {
@@ -263,6 +275,11 @@ public final class StartMiniClusterOption {
       return this;
     }
 
+    public Builder csClass(Class<? extends HCompactionServer> csClass) {
+      this.csClass = csClass;
+      return this;
+    }    
+    
     public Builder numDataNodes(int numDataNodes) {
       this.numDataNodes = numDataNodes;
       return this;

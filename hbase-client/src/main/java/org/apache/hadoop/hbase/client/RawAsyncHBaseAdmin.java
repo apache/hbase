@@ -3825,8 +3825,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Map<String, Long>> updateCompactionServerTotalThroughput(Long upperBound,
-      Long lowerBound, Long offPeak) {
+  public CompletableFuture<Map<String, Long>> updateCompactionServerTotalThroughput(long upperBound,
+      long lowerBound, long offPeak) {
     CompletableFuture<Map<String, Long>> future = this.<Map<String, Long>> newMasterCaller().action(
       (controller, stub) -> this
           .<UpdateCompactionServerTotalThroughputRequest, UpdateCompactionServerTotalThroughputResponse, Map<String, Long>> call(

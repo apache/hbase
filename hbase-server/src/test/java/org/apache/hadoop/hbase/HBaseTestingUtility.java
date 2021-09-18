@@ -1115,7 +1115,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     TraceUtil.initTracer(c);
     this.hbaseCluster = new MiniHBaseCluster(c, option.getNumMasters(),
       option.getNumAlwaysStandByMasters(), option.getNumRegionServers(), option.getRsPorts(),
-      option.getNumCompactionServers(), option.getMasterClass(), option.getRsClass());
+      option.getNumCompactionServers(), option.getMasterClass(), option.getRsClass(), option.getCsClass());
     // Populate the master address configuration from mini cluster configuration.
     conf.set(HConstants.MASTER_ADDRS_KEY, MasterRegistry.getMasterAddr(c));
     // Don't leave here till we've done a successful scan of the hbase:meta

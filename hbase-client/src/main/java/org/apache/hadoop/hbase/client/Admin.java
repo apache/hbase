@@ -2264,8 +2264,8 @@ public interface Admin extends Abortable, Closeable {
    * @return the now total throughput of all compaction servers
    * @throws IOException if a remote or network exception occurs
    */
-  Map<String, Long> updateCompactionServerTotalThroughput(Long upperBound, Long lowerBound,
-      Long offPeak) throws IOException;
+  Map<String, Long> updateCompactionServerTotalThroughput(long upperBound, long lowerBound,
+      long offPeak) throws IOException;
 
   /**
    * Switch the exceed throttle quota. If enabled, user/table/namespace throttle quota

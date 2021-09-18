@@ -74,7 +74,7 @@ public class LocalHBaseCluster {
   private final Configuration conf;
   private final Class<? extends HMaster> masterClass;
   private final Class<? extends HRegionServer> regionServerClass;
-
+  private final Class<? extends HCompactionServer> compactionServerClass;
   /**
    * Constructor.
    * @param conf
@@ -125,12 +125,26 @@ public class LocalHBaseCluster {
        HMaster.class);
   }
 
+  @SuppressWarnings("unchecked")
+  private static Class<? extends HCompactionServer>
+      getCompactionServerImplementation(final Configuration conf) {
+    return (Class<? extends HCompactionServer>) conf.getClass(HConstants.COMPACTION_SERVER_IMPL,
+      HCompactionServer.class);
+  }
+
   public LocalHBaseCluster(final Configuration conf, final int noMasters, final int noRegionServers,
       final Class<? extends HMaster> masterClass,
       final Class<? extends HRegionServer> regionServerClass) throws IOException {
     this(conf, noMasters, 0, noRegionServers, masterClass, regionServerClass);
   }
 
+  public LocalHBaseCluster(final Configuration conf, final int noMasters,
+      final int noAlwaysStandByMasters, final int noRegionServers,
+      final Class<? extends HMaster> masterClass,
+      final Class<? extends HRegionServer> regionServerClass) throws IOException {
+    this(conf, noMasters, noAlwaysStandByMasters, noRegionServers, 0, masterClass,
+        regionServerClass, getCompactionServerImplementation(conf));
+  }
   /**
    * Constructor.
    * @param conf Configuration to use.  Post construction has the master's
@@ -143,9 +157,10 @@ public class LocalHBaseCluster {
    */
   @SuppressWarnings("unchecked")
   public LocalHBaseCluster(final Configuration conf, final int noMasters,
-      final int noAlwaysStandByMasters, final int noRegionServers,
+      final int noAlwaysStandByMasters, final int noRegionServers, final int noCompactionServers,
       final Class<? extends HMaster> masterClass,
-      final Class<? extends HRegionServer> regionServerClass) throws IOException {
+      final Class<? extends HRegionServer> regionServerClass,
+      final Class<? extends HCompactionServer> compactionServerClass) throws IOException {
     this.conf = conf;
 
     // When active, if a port selection is default then we switch to random
@@ -208,6 +223,14 @@ public class LocalHBaseCluster {
 
     for (int j = 0; j < noRegionServers; j++) {
       addRegionServer(new Configuration(conf), j);
+    }
+    // Start the CompactionServers.
+    this.compactionServerClass=
+      (Class<? extends HCompactionServer>)conf.getClass(HConstants.COMPACTION_SERVER_IMPL,
+        compactionServerClass);
+
+    for (int j = 0; j < noCompactionServers; j++) {
+      addCompactionServer(new Configuration(conf), j);
     }
   }
 
@@ -485,13 +508,14 @@ public class LocalHBaseCluster {
   }
 
   @SuppressWarnings("unchecked")
-  public JVMClusterUtil.CompactionServerThread addCompactionServer(
-    Configuration config, final int index) throws IOException {
+  private JVMClusterUtil.CompactionServerThread addCompactionServer(Configuration config,
+      final int index) throws IOException {
     // Create each compaction server with its own Configuration instance so each has
     // its Connection instance rather than share (see HBASE_INSTANCES down in
     // the guts of ConnectionManager).
-    JVMClusterUtil.CompactionServerThread cst =
-      JVMClusterUtil.createCompactionServerThread(config, index);
+    JVMClusterUtil.CompactionServerThread cst = JVMClusterUtil.createCompactionServerThread(config,
+      (Class<? extends HCompactionServer>) conf.getClass(HConstants.COMPACTION_SERVER_IMPL,
+        this.compactionServerClass), index);
     this.compactionServerThreads.add(cst);
     return cst;
   }

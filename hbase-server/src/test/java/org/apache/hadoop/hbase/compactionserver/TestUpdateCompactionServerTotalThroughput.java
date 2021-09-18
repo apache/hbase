@@ -38,9 +38,29 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 
 @Category({ MediumTests.class, CompactionServerTests.class })
 public class TestUpdateCompactionServerTotalThroughput {
+  public static class MyCompactionServer extends HCompactionServer {
+    public MyCompactionServer(final Configuration conf) throws IOException {
+      super(conf);
+    }
+
+    protected ClusterStatusProtos.CompactionServerLoad buildServerLoad(long reportStartTime,
+        long reportEndTime) {
+      ClusterStatusProtos.CompactionServerLoad.Builder serverLoad =
+          ClusterStatusProtos.CompactionServerLoad.newBuilder();
+      serverLoad.addCompactionTasks("compactionTask");
+      serverLoad.setCompactedCells(0);
+      serverLoad.setCompactingCells(0);
+      serverLoad.setTotalNumberOfRequests(0);
+      serverLoad.setReportStartTime(reportStartTime);
+      serverLoad.setReportEndTime(reportEndTime);
+      return serverLoad.build();
+    }
+  }
+
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestUpdateCompactionServerTotalThroughput.class);
@@ -53,8 +73,10 @@ public class TestUpdateCompactionServerTotalThroughput {
   @Before
   public void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtility(conf);
-    TEST_UTIL.startMiniCluster(
-      StartMiniClusterOption.builder().numCompactionServers(COMPACTION_SERVER_NUM).build());
+    TEST_UTIL.startMiniCluster(StartMiniClusterOption.builder()
+        .numCompactionServers(COMPACTION_SERVER_NUM)
+      .csClass(MyCompactionServer.class)
+      .build());
     admin = TEST_UTIL.getAdmin();
     connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
   }
@@ -92,7 +114,8 @@ public class TestUpdateCompactionServerTotalThroughput {
   @Test
   public void testUpdateCompactionServerTotalThroughput() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
-
+    // each compactionServer only report on compactionTask, so the throughput for compaction get
+    // from master is totalLimit/CompactionServerNum
     Map<String, Long> result = admin.updateCompactionServerTotalThroughput(200L, 100L, 400L);
     checkThroughPut(200 / COMPACTION_SERVER_NUM, 100 / COMPACTION_SERVER_NUM,
       400 / COMPACTION_SERVER_NUM);
