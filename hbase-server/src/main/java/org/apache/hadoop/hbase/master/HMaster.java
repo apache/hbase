@@ -1791,18 +1791,19 @@ public class HMaster extends HRegionServer implements MasterServices {
    *  balancer metrics. This will lead to user missing the latest balancer info.
    * */
   public BalanceResponse balanceOrUpdateMetrics() throws IOException{
-    BalanceResponse response = balance(BalanceRequest.defaultInstance());
-    if (!response.isBalancerRan()) {
-      Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
-        this.assignmentManager.getRegionStates()
-          .getAssignmentsForBalancer(this.tableStateManager,
+    synchronized (this.balancer) {
+      BalanceResponse response = balance();
+      if (!response.isBalancerRan()) {
+        Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
+          this.assignmentManager.getRegionStates().getAssignmentsForBalancer(this.tableStateManager,
             this.serverManager.getOnlineServersList());
-      for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
-        serverMap.keySet().removeAll(this.serverManager.getDrainingServersList());
+        for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
+          serverMap.keySet().removeAll(this.serverManager.getDrainingServersList());
+        }
+        this.balancer.updateBalancerLoadInfo(assignments);
       }
-      this.balancer.updateBalancerLoadInfo(assignments);
+      return response;
     }
-    return response;
   }
 
   /**
