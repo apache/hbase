@@ -83,8 +83,8 @@ public class TestClientSideRegionScanner {
     BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
     assertNotNull(blockCache);
     assertTrue(blockCache instanceof IndexOnlyLruBlockCache);
-    assertTrue(
-      HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_FIXED_SIZE_DEFAULT == blockCache.getMaxSize());
+    assertTrue(HConstants.HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT == blockCache
+      .getMaxSize());
   }
 
   @Test
@@ -92,7 +92,7 @@ public class TestClientSideRegionScanner {
     Configuration copyConf = new Configuration(conf);
     // tiny 1MB fixed cache size
     long blockCacheFixedSize = 1024 * 1024L;
-    copyConf.setLong(HConstants.HBASE_BLOCK_CACHE_FIXED_SIZE_KEY, blockCacheFixedSize);
+    copyConf.setLong(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY, blockCacheFixedSize);
     ClientSideRegionScanner clientSideRegionScanner =
       new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null);
 

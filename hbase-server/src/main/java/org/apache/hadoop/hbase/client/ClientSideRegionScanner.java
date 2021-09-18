@@ -65,9 +65,9 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
     // non RS process does not have a block cache, and this a client side scanner,
     // create one for MapReduce jobs to cache the INDEX block by setting to use
     // IndexOnlyLruBlockCache and set a value to HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_KEY
-    conf.set(BlockCacheFactory.BLOCKCACHE_POLICY_KEY, "IndexOnlyLru");
-    conf.setIfUnset(HConstants.HBASE_BLOCK_CACHE_FIXED_SIZE_KEY,
-        String.valueOf(HConstants.HBASE_CLIENT_SCANNER_BLOCK_CACHE_FIXED_SIZE_DEFAULT));
+    conf.set(BlockCacheFactory.BLOCKCACHE_POLICY_KEY, "IndexOnlyLRU");
+    conf.setIfUnset(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY,
+        String.valueOf(HConstants.HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT));
     // don't allow L2 bucket cache for non RS process to avoid unexpected disk usage.
     conf.unset(HConstants.BUCKET_CACHE_IOENGINE_KEY);
     region.setBlockCache(BlockCacheFactory.createBlockCache(conf));

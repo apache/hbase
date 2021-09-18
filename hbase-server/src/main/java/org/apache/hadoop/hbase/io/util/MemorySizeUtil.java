@@ -216,9 +216,6 @@ public class MemorySizeUtil {
   public static long getOnHeapCacheSize(final Configuration conf) {
     float cachePercentage = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
       HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
-    // only uses when it's ClientSideRegionScanner or user explicitly sets it
-    long fixedCacheSize = conf.getLong(HConstants.HBASE_BLOCK_CACHE_FIXED_SIZE_KEY,
-        HConstants.HBASE_BLOCK_CACHE_FIXED_SIZE_DEFAULT);
     if (cachePercentage <= 0.0001f) {
       return -1;
     }
@@ -231,10 +228,13 @@ public class MemorySizeUtil {
     if (usage != null) {
       max = usage.getMax();
     }
-
+    float onHeapCacheFixedSize = (float) conf
+      .getLong(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY,
+        HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT) / max;
     // Calculate the amount of heap to give the heap.
-    return (fixedCacheSize > 0L && fixedCacheSize < max) ?
-      fixedCacheSize : (long) (max * cachePercentage);
+    return (onHeapCacheFixedSize > 0 && onHeapCacheFixedSize < cachePercentage) ?
+      (long) (max * onHeapCacheFixedSize) :
+      (long) (max * cachePercentage);
   }
 
   /**

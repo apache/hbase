@@ -31,13 +31,4 @@ public interface ResizableBlockCache extends BlockCache {
    * @param size The max heap size.
    */
   void setMaxSize(long size);
-
-  /**
-   * Check if block type is meta or index block
-   * @param blockType block type of a given HFile block
-   * @return true if block type is non-data block
-   */
-  default boolean isMetaBlock(BlockType blockType) {
-    return blockType.getCategory() != BlockType.BlockCategory.DATA;
-  }
 }
