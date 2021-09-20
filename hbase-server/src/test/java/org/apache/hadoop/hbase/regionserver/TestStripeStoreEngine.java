@@ -125,6 +125,8 @@ public class TestStripeStoreEngine {
     when(store.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
     when(store.getHRegion()).thenReturn(region);
     CellComparatorImpl kvComparator = mock(CellComparatorImpl.class);
+    StoreContext context = new StoreContext.Builder().build();
+    when(store.getStoreContext()).thenReturn(context);
     return (TestStoreEngine) StoreEngine.create(store, conf, kvComparator);
   }
 

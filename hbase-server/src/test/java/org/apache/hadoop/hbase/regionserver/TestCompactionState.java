@@ -191,7 +191,7 @@ public class TestCompactionState {
         }
       }
       long curt = System.currentTimeMillis();
-      long waitTime = 5000;
+      long waitTime = 15000;
       long endt = curt + waitTime;
       CompactionState state = getCompactionState(stateSource, master, admin, table);
       while (state == CompactionState.NONE && curt < endt) {

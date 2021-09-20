@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -65,11 +67,13 @@ public class TestDefaultStoreEngine {
         DummyCompactionPolicy.class.getName());
     conf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
         DummyStoreFlusher.class.getName());
-    HRegion mockRegion = Mockito.mock(HRegion.class);
-    HStore mockStore = Mockito.mock(HStore.class);
+    HRegion mockRegion = mock(HRegion.class);
+    HStore mockStore = mock(HStore.class);
     mockStore.conf = conf;
-    Mockito.when(mockStore.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    Mockito.when(mockStore.getHRegion()).thenReturn(mockRegion);
+    when(mockStore.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    when(mockStore.getHRegion()).thenReturn(mockRegion);
+    StoreContext context = new StoreContext.Builder().build();
+    when(mockStore.getStoreContext()).thenReturn(context);
     StoreEngine<?, ?, ?, ?> se =
       StoreEngine.create(mockStore, conf, CellComparatorImpl.COMPARATOR);
     Assert.assertTrue(se instanceof DefaultStoreEngine);

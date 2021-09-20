@@ -226,7 +226,8 @@ public class TestMinorCompaction {
     // Check that we did compact
     assertTrue("Number of store files should go down", numFiles1 > numFiles2);
     // Check that it was a minor compaction.
-    assertTrue("Was not supposed to be a major compaction", numFiles2 > 1);
+    assertTrue("Was not supposed to be a major compaction",
+      !compaction.get().getRequest().isMajor());
 
     // Make sure that we have only deleted family2 from secondRowBytes
     result = r.get(new Get(secondRowBytes).addColumn(fam2, col2).setMaxVersions(100));

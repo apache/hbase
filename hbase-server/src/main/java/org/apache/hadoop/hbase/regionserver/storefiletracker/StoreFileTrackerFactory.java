@@ -116,7 +116,9 @@ public final class StoreFileTrackerFactory {
     ColumnFamilyDescriptorBuilder fDescBuilder =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family));
     StoreContext ctx = StoreContext.getBuilder().withColumnFamilyDescriptor(fDescBuilder.build())
-      .withRegionFileSystem(regionFs).build();
+      .withRegionFileSystem(regionFs)
+      .withFamilyStoreDirectoryPath(regionFs.getStoreDir(family))
+      .build();
     return StoreFileTrackerFactory.create(conf, isPrimaryReplica, ctx);
   }
 

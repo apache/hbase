@@ -172,7 +172,8 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
         .withOutputDir(outputDir).withBloomType(ctx.getBloomFilterType())
         .withMaxKeyCount(params.maxKeyCount()).withFavoredNodes(ctx.getFavoredNodes())
         .withFileContext(hFileContext).withShouldDropCacheBehind(params.shouldDropBehind())
-        .withCompactedFilesSupplier(ctx.getCompactedFilesSupplier());
+        .withCompactedFilesSupplier(ctx.getCompactedFilesSupplier())
+        .withComparator(ctx.getComparator());
     return builder.build();
   }
 
