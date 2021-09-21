@@ -133,19 +133,20 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
         hriPrimary.getEndKey(), hriPrimary.isSplit(), hriPrimary.getRegionId(), 1);
 
     // No master
-    TestRegionServerNoMaster.stopMasterAndAssignMeta(HTU);
+    TestRegionServerNoMaster.stopMasterAndCacheMetaLocation(HTU);
     rs0 = HTU.getMiniHBaseCluster().getRegionServer(0);
     rs1 = HTU.getMiniHBaseCluster().getRegionServer(1);
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
+    HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
     table.close();
     HTU.shutdownMiniCluster();
   }
 
   @Before
-  public void before() throws Exception{
+  public void before() throws Exception {
     entries.clear();
   }
 
