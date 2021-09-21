@@ -189,6 +189,8 @@ public class TestTableSnapshotScanner {
 
       verifyScanner(scanner, bbb, yyy);
       scanner.close();
+    } catch (Exception e) {
+      e.printStackTrace();
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);

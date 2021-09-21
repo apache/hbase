@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -437,6 +438,39 @@ public class AssignmentManager {
       return Collections.emptyList();
     }
     return serverInfo.getRegionInfoList();
+  }
+
+  private RegionInfo getRegionInfo(RegionStateNode rsn) {
+    if (rsn.isSplit() && !rsn.getRegionInfo().isSplit()) {
+      // see the comments in markRegionAsSplit on why we need to do this converting.
+      return RegionInfoBuilder.newBuilder(rsn.getRegionInfo()).setSplit(true).setOffline(true)
+        .build();
+    } else {
+      return rsn.getRegionInfo();
+    }
+  }
+
+  private Stream<RegionStateNode> getRegionStateNodes(TableName tableName,
+    boolean excludeOfflinedSplitParents) {
+    Stream<RegionStateNode> stream = regionStates.getTableRegionStateNodes(tableName).stream();
+    if (excludeOfflinedSplitParents) {
+      return stream.filter(rsn -> !rsn.isSplit());
+    } else {
+      return stream;
+    }
+  }
+
+  public List<RegionInfo> getTableRegions(TableName tableName,
+    boolean excludeOfflinedSplitParents) {
+    return getRegionStateNodes(tableName, excludeOfflinedSplitParents)
+      .map(this::getRegionInfo).collect(Collectors.toList());
+  }
+
+  public List<Pair<RegionInfo, ServerName>> getTableRegionsAndLocations(TableName tableName,
+    boolean excludeOfflinedSplitParents) {
+    return getRegionStateNodes(tableName, excludeOfflinedSplitParents)
+      .map(rsn -> Pair.newPair(getRegionInfo(rsn), rsn.getRegionLocation()))
+      .collect(Collectors.toList());
   }
 
   public RegionStateStore getRegionStateStore() {
