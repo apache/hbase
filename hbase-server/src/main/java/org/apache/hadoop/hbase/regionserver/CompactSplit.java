@@ -277,6 +277,9 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
         !region.getTableDescriptor().isCompactionEnabled())) {
       return;
     }
+    if (region.getCoprocessorHost() != null) {
+      region.getCoprocessorHost().preRequestCompaction();
+    }
     RegionServerSpaceQuotaManager spaceQuotaManager =
         this.server.getRegionServerSpaceQuotaManager();
 

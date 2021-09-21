@@ -1562,9 +1562,6 @@ public class RSRpcServices extends AbstractRpcServices implements
       checkOpen();
       requestCount.increment();
       HRegion region = getRegion(request.getRegion());
-      if (region.getCoprocessorHost() != null) {
-        region.getCoprocessorHost().preRequestCompaction();
-      }
       // Quota support is enabled, the requesting user is not system/super user
       // and a quota policy is enforced that disables compactions.
       if (QuotaUtil.isQuotaEnabled(getConfiguration()) &&
