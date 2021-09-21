@@ -317,7 +317,7 @@
                                     RegionInfoBuilder.FIRST_META_REGIONINFO, j);
             //If a metaLocation is null, All of its info would be empty here to be displayed.
             RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
-              .getRegionStateNode(RegionInfoBuilder.FIRST_META_REGIONINFO);
+              .getRegionStateNode(meta);
             ServerName metaLocation = rsn != null ? rsn.getRegionLocation() : null;
             for (int i = 0; i < 1; i++) {
               //If metaLocation is null, default value below would be displayed in UI.
@@ -386,7 +386,7 @@
                                      RegionInfoBuilder.FIRST_META_REGIONINFO, j);
              //If a metaLocation is null, All of its info would be empty here to be displayed.
              RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
-              .getRegionStateNode(RegionInfoBuilder.FIRST_META_REGIONINFO);
+              .getRegionStateNode(meta);
              ServerName metaLocation = rsn != null ? rsn.getRegionLocation() : null;
              for (int i = 0; i < 1; i++) {
                //If metaLocation is null, default value below would be displayed in UI.
@@ -438,7 +438,7 @@
                                     RegionInfoBuilder.FIRST_META_REGIONINFO, j);
             //If a metaLocation is null, All of its info would be empty here to be displayed.
             RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
-              .getRegionStateNode(RegionInfoBuilder.FIRST_META_REGIONINFO);
+              .getRegionStateNode(meta);
             ServerName metaLocation = rsn != null ? rsn.getRegionLocation() : null;
             for (int i = 0; i < 1; i++) {
               //If metaLocation is null, default value below would be displayed in UI.
