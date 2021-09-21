@@ -213,25 +213,26 @@ public class ConnectionFactory {
    */
   public static Connection createConnection(Configuration conf, ExecutorService pool,
     final User user) throws IOException {
-    String className = conf.get(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL,
-      ConnectionImplementation.class.getName());
-    Class<?> clazz;
-    try {
-      clazz = Class.forName(className);
-    } catch (ClassNotFoundException e) {
-      throw new IOException(e);
-    }
-    try {
-      // Default HCM#HCI is not accessible; make it so before invoking.
-      Constructor<?> constructor = clazz.getDeclaredConstructor(Configuration.class,
-        ExecutorService.class, User.class);
-      constructor.setAccessible(true);
-      return user.runAs(
-        (PrivilegedExceptionAction<Connection>)() ->
-          (Connection) constructor.newInstance(conf, pool, user));
-    } catch (Exception e) {
-      throw new IOException(e);
-    }
+    return TraceUtil.trace(() -> {
+      String className = conf.get(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL,
+        ConnectionImplementation.class.getName());
+      Class<?> clazz;
+      try {
+        clazz = Class.forName(className);
+      } catch (ClassNotFoundException e) {
+        throw new IOException(e);
+      }
+      try {
+        // Default HCM#HCI is not accessible; make it so before invoking.
+        Constructor<?> constructor =
+          clazz.getDeclaredConstructor(Configuration.class, ExecutorService.class, User.class);
+        constructor.setAccessible(true);
+        return user.runAs((PrivilegedExceptionAction<Connection>) () -> (Connection) constructor
+          .newInstance(conf, pool, user));
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+    }, () -> TraceUtil.createSpan(ConnectionFactory.class.getSimpleName() + ".createConnection"));
   }
 
   /**

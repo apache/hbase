@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -60,33 +61,42 @@ public class HRegionLocator implements RegionLocator {
 
   @Override
   public HRegionLocation getRegionLocation(byte[] row, int replicaId, boolean reload)
-      throws IOException {
-    return connection.locateRegion(tableName, row, !reload, true, replicaId)
-      .getRegionLocation(replicaId);
+    throws IOException {
+    return TraceUtil.trace(() -> connection.locateRegion(tableName, row, !reload, true, replicaId)
+      .getRegionLocation(replicaId), () -> TraceUtil
+      .createTableSpan(getClass().getSimpleName() + ".getRegionLocation", tableName));
   }
 
   @Override
   public List<HRegionLocation> getRegionLocations(byte[] row, boolean reload) throws IOException {
-    RegionLocations locs =
-      connection.locateRegion(tableName, row, !reload, true, RegionInfo.DEFAULT_REPLICA_ID);
-    return Arrays.asList(locs.getRegionLocations());
+    return TraceUtil.trace(() -> {
+      RegionLocations locs =
+        connection.locateRegion(tableName, row, !reload, true, RegionInfo.DEFAULT_REPLICA_ID);
+      return Arrays.asList(locs.getRegionLocations());
+    }, () -> TraceUtil
+      .createTableSpan(getClass().getSimpleName() + ".getRegionLocations", tableName));
   }
 
   @Override
   public List<HRegionLocation> getAllRegionLocations() throws IOException {
-    ArrayList<HRegionLocation> regions = new ArrayList<>();
-    for (RegionLocations locations : listRegionLocations()) {
-      for (HRegionLocation location : locations.getRegionLocations()) {
-        regions.add(location);
+    return TraceUtil.trace(() -> {
+      ArrayList<HRegionLocation> regions = new ArrayList<>();
+      for (RegionLocations locations : listRegionLocations()) {
+        for (HRegionLocation location : locations.getRegionLocations()) {
+          regions.add(location);
+        }
+        connection.cacheLocation(tableName, locations);
       }
-      connection.cacheLocation(tableName, locations);
-    }
-    return regions;
+      return regions;
+    }, () -> TraceUtil
+      .createTableSpan(getClass().getSimpleName() + ".getAllRegionLocations", tableName));
   }
 
   @Override
   public void clearRegionLocationCache() {
-    connection.clearRegionCache(tableName);
+    TraceUtil.trace(() ->
+      connection.clearRegionCache(tableName), () -> TraceUtil
+      .createTableSpan(this.getClass().getSimpleName() + ".clearRegionLocationCache", tableName));
   }
 
   @Override

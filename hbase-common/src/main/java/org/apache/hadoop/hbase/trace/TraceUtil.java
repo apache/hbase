@@ -226,4 +226,23 @@ public final class TraceUtil {
       span.end();
     }
   }
+
+  @FunctionalInterface
+  public interface IOExceptionRunnable {
+    void run() throws IOException;
+  }
+
+  public static void traceWithIOException(IOExceptionRunnable runnable,
+    Supplier<Span> creator) throws IOException {
+    Span span = creator.get();
+    try (Scope scope = span.makeCurrent()) {
+      runnable.run();
+      span.setStatus(StatusCode.OK);
+    } catch (Throwable e) {
+      setError(span, e);
+      throw e;
+    } finally {
+      span.end();
+    }
+  }
 }

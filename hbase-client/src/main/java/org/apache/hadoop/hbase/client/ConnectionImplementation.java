@@ -34,8 +34,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -130,6 +128,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Remov
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -462,24 +461,30 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public Hbck getHbck() throws IOException {
-    return getHbck(get(registry.getActiveMaster()));
+    ServerName masterServer = get(registry.getActiveMaster());
+    return TraceUtil.trace(() -> getHbck(masterServer),
+      () -> TraceUtil.createSpan(this.getClass().getSimpleName() + ".getHbck")
+        .setAttribute(TraceUtil.SERVER_NAME_KEY, masterServer.getServerName()));
   }
 
   @Override
   public Hbck getHbck(ServerName masterServer) throws IOException {
-    checkClosed();
-    if (isDeadServer(masterServer)) {
-      throw new RegionServerStoppedException(masterServer + " is dead.");
-    }
-    String key = getStubKey(MasterProtos.HbckService.BlockingInterface.class.getName(),
-      masterServer);
+    return TraceUtil.trace(() -> {
+      checkClosed();
+      if (isDeadServer(masterServer)) {
+        throw new RegionServerStoppedException(masterServer + " is dead.");
+      }
+      String key =
+        getStubKey(MasterProtos.HbckService.BlockingInterface.class.getName(), masterServer);
 
-    return new HBaseHbck(
-      (MasterProtos.HbckService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
-        BlockingRpcChannel channel =
-          this.rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout);
-        return MasterProtos.HbckService.newBlockingStub(channel);
-      }), rpcControllerFactory);
+      return new HBaseHbck(
+        (MasterProtos.HbckService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
+          BlockingRpcChannel channel =
+            this.rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout);
+          return MasterProtos.HbckService.newBlockingStub(channel);
+        }), rpcControllerFactory);
+    }, () -> TraceUtil.createSpan(this.getClass().getSimpleName() + ".getHbck")
+      .setAttribute(TraceUtil.SERVER_NAME_KEY, masterServer.getServerName()));
   }
 
   @Override
@@ -2104,28 +2109,30 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public void close() {
-    if (this.closed) {
-      return;
-    }
-    closeMaster();
-    shutdownPools();
-    if (this.metrics != null) {
-      this.metrics.shutdown();
-    }
-    this.closed = true;
-    if (this.registry != null) {
-      registry.close();
-    }
-    this.stubs.clear();
-    if (clusterStatusListener != null) {
-      clusterStatusListener.close();
-    }
-    if (rpcClient != null) {
-      rpcClient.close();
-    }
-    if (choreService != null) {
-      choreService.shutdown();
-    }
+    TraceUtil.trace(() -> {
+      if (this.closed) {
+        return;
+      }
+      closeMaster();
+      shutdownPools();
+      if (this.metrics != null) {
+        this.metrics.shutdown();
+      }
+      this.closed = true;
+      if (this.registry != null) {
+        registry.close();
+      }
+      this.stubs.clear();
+      if (clusterStatusListener != null) {
+        clusterStatusListener.close();
+      }
+      if (rpcClient != null) {
+        rpcClient.close();
+      }
+      if (choreService != null) {
+        choreService.shutdown();
+      }
+    }, this.getClass().getSimpleName() + ".close");
   }
 
   /**
