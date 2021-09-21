@@ -57,6 +57,7 @@
   import="org.apache.hadoop.hbase.http.InfoServer"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.master.RegionState"
+  import="org.apache.hadoop.hbase.master.assignment.RegionStateNode"
   import="org.apache.hadoop.hbase.master.assignment.RegionStates"
   import="org.apache.hadoop.hbase.master.http.MetaBrowser"
   import="org.apache.hadoop.hbase.master.http.RegionReplicaInfo"
@@ -67,7 +68,6 @@
 <%@ page import="org.apache.hadoop.hbase.quotas.ThrottleSettings" %>
 <%@ page import="org.apache.hadoop.hbase.util.Bytes" %>
 <%@ page import="org.apache.hadoop.hbase.util.FSUtils" %>
-<%@ page import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator" %>
 <%@ page import="org.apache.hadoop.util.StringUtils" %>
 <%@ page import="org.apache.hbase.thirdparty.com.google.protobuf.ByteString" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos" %>
@@ -270,13 +270,9 @@
                 RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
                         RegionInfoBuilder.FIRST_META_REGIONINFO, j);
                 //If a metaLocation is null, All of its info would be empty here to be displayed.
-                ServerName metaLocation = null;
-                try {
-                  metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
-                } catch (NotAllMetaRegionsOnlineException e) {
-                  //Region in transition state here throw a NotAllMetaRegionsOnlineException causes
-                  //the UI crash.
-                }
+                RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
+                  .getRegionStateNode(meta);
+                ServerName metaLocation = rsn != null ? rsn.getRegionLocation() : null;
                 for (int i = 0; i < 1; i++) {
                   //If metaLocation is null, default value below would be displayed in UI.
                   String hostAndPort = "";
@@ -348,13 +344,9 @@
                  RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
                                          RegionInfoBuilder.FIRST_META_REGIONINFO, j);
                  //If a metaLocation is null, All of its info would be empty here to be displayed.
-                 ServerName metaLocation = null;
-                 try {
-                   metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
-                 } catch (NotAllMetaRegionsOnlineException e) {
-                   //Region in transition state here throw a NotAllMetaRegionsOnlineException causes
-                   //the UI crash.
-                 }
+                 RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
+                   .getRegionStateNode(meta);
+                 ServerName metaLocation = rsn != null ? rsn.getRegionLocation() : null;
                  for (int i = 0; i < 1; i++) {
                    //If metaLocation is null, default value below would be displayed in UI.
                    String hostAndPort = "";
@@ -403,13 +395,9 @@
                 RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
                         RegionInfoBuilder.FIRST_META_REGIONINFO, j);
                 //If a metaLocation is null, All of its info would be empty here to be displayed.
-                ServerName metaLocation = null;
-                try {
-                  metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
-                } catch (NotAllMetaRegionsOnlineException e) {
-                  //Region in transition state here throw a NotAllMetaRegionsOnlineException causes
-                  //the UI crash.
-                }
+                RegionStateNode rsn = master.getAssignmentManager().getRegionStates()
+                  .getRegionStateNode(meta);
+                ServerName metaLocation = rsn != null ? rsn.getRegionLocation() : null;
                 for (int i = 0; i < 1; i++) {
                   //If metaLocation is null, default value below would be displayed in UI.
                   String hostAndPort = "";

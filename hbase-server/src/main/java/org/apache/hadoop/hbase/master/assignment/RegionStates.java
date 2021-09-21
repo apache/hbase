@@ -122,7 +122,7 @@ public class RegionStates {
     return node != null ? node : createRegionStateNode(regionInfo);
   }
 
-  RegionStateNode getRegionStateNodeFromName(byte[] regionName) {
+  public RegionStateNode getRegionStateNodeFromName(byte[] regionName) {
     return regionsMap.get(regionName);
   }
 
