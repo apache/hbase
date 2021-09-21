@@ -31,7 +31,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.IntStream;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -61,6 +60,8 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 @Category({ MediumTests.class, ClientTests.class })
 public class TestZKConnectionRegistry {
 
@@ -85,7 +86,7 @@ public class TestZKConnectionRegistry {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    IOUtils.closeQuietly(REGISTRY);
+    Closeables.close(REGISTRY, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
