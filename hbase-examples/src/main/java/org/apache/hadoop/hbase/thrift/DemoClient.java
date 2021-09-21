@@ -124,6 +124,7 @@ public class DemoClient {
     Hbase.Client client = new Hbase.Client(protocol);
 
     byte[] t = bytes("demo_table");
+    ByteBuffer disabledTable = ByteBuffer.wrap(bytes("disabled_table"));
 
     // Scan all tables, look for the demo table and delete it.
     System.out.println("scanning tables...");
@@ -131,7 +132,7 @@ public class DemoClient {
     for (ByteBuffer name : client.getTableNames()) {
       System.out.println("  found: " + ClientUtils.utf8(name.array()));
 
-      if (ClientUtils.utf8(name.array()).equals(ClientUtils.utf8(t))) {
+      if (ClientUtils.utf8(name.array()).equals(ClientUtils.utf8(t)) || name.equals(disabledTable)) {
         if (client.isTableEnabled(name)) {
           System.out.println("    disabling table: " + ClientUtils.utf8(name.array()));
           client.disableTable(name);
@@ -159,6 +160,7 @@ public class DemoClient {
 
     try {
       client.createTable(ByteBuffer.wrap(t), columns);
+      client.createTable(disabledTable, columns);
     } catch (AlreadyExists ae) {
       System.out.println("WARN: " + ae.message);
     }
@@ -169,6 +171,17 @@ public class DemoClient {
     for (ColumnDescriptor col2 : columnMap.values()) {
       System.out.println("  column: " + ClientUtils.utf8(col2.name.array()) + ", maxVer: "
           + col2.maxVersions);
+    }
+
+    if (client.isTableEnabled(disabledTable)){
+      client.disableTable(disabledTable);
+    }
+    System.out.println("list tables with enabled statuses : ");
+    Map<ByteBuffer, Boolean> statusMap = client.getTableNamesWithIsTableEnabled();
+
+    for (Map.Entry<ByteBuffer, Boolean> entry : statusMap.entrySet()) {
+      System.out.println(" Table: " + ClientUtils.utf8(entry.getKey().array()) +
+                          ", is enabled: " + entry.getValue());
     }
 
     Map<ByteBuffer, ByteBuffer> dummyAttributes = null;
