@@ -22,7 +22,6 @@ import java.util.Iterator;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 
 /**
@@ -69,10 +68,6 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
     cacheBlock(cacheKey, buf, false);
-  }
-
-  private boolean isMetaBlock(BlockType blockType) {
-    return blockType.getCategory() != BlockCategory.DATA;
   }
 
   @Override
