@@ -22,7 +22,6 @@ import java.util.Iterator;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
