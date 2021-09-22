@@ -18,9 +18,11 @@
 package org.apache.hadoop.hbase.compactionserver;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.LongAdder;
+import javax.servlet.http.HttpServlet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AbstractServer;
@@ -39,6 +41,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
@@ -88,7 +91,7 @@ public class HCompactionServer extends AbstractServer implements RegionCoprocess
 
   // Stub to do compaction server status calls against the master.
   private volatile CompactionServerStatusService.BlockingInterface cssStub;
-  CompactionThreadManager compactionThreadManager;
+  public CompactionThreadManager compactionThreadManager;
   /**
    * Get the current master from ZooKeeper and open the RPC connection to it. To get a fresh
    * connection, the current cssStub must be null. Method will block until a master is available.
@@ -136,6 +139,40 @@ public class HCompactionServer extends AbstractServer implements RegionCoprocess
     this.choreService = new ChoreService(getName(), true);
     this.compactionThreadManager = new CompactionThreadManager(conf, this);
     this.rpcServices.start();
+    putUpWebUI();
+  }
+
+  // Web UI
+  private void putUpWebUI() throws IOException {
+    int port = this.conf.getInt(HConstants.COMPACTION_SERVER_INFO_PORT,
+      HConstants.DEFAULT_COMPACTION_SERVER_INFOPORT);
+    String addr = this.conf.get("hbase.compaction.server.info.bindAddress", "0.0.0.0");
+    // -1 is for disabling info server
+    if (port < 0) {
+      return;
+    }
+    if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
+      String msg = "Failed to start http info server. Address " + addr
+          + " does not belong to this host. Correct configuration parameter: "
+          + "hbase.compaction.server.info.bindAddress";
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
+
+    // check if auto port bind enabled
+    boolean auto = this.conf.getBoolean(HConstants.COMPACTION_SERVER_INFO_PORT_AUTO, false);
+    tryCreateInfoServer(port, addr, auto);
+    port = this.infoServer.getPort();
+    conf.setInt(HConstants.COMPACTION_SERVER_INFO_PORT, port);
+  }
+
+  protected Class<? extends HttpServlet> getDumpServlet() {
+    return CSDumpServlet.class;
+  }
+
+  protected void configureInfoServer() {
+    infoServer.addServlet("cs-status", "/cs-status", CSStatusServlet.class);
+    infoServer.setAttribute(COMPACTIONSERVER, this);
   }
 
   @Override

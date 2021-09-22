@@ -25,8 +25,10 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.servlet.http.HttpServlet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,6 +37,7 @@ import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -114,6 +117,12 @@ public abstract class AbstractServer extends Thread implements Server {
   protected MasterAddressTracker masterAddressTracker;
   // Cluster Status Tracker
   protected ClusterStatusTracker clusterStatusTracker;
+
+  // Info server. Default access so can be used by unit tests. REGIONSERVER/COMPACTIONSERVER
+  // is name of the webapp and the attribute name used stuffing this instance
+  // into web context.
+  protected InfoServer infoServer;
+
   /**
    * Setup our cluster connection if not already initialized.
    */
@@ -146,6 +155,13 @@ public abstract class AbstractServer extends Thread implements Server {
 
   public String getClusterId() {
     return this.clusterId;
+  }
+
+  /**
+   * @return time stamp in millis of when this region server was started
+   */
+  public long getStartcode() {
+    return this.startcode;
   }
 
   /**
@@ -436,6 +452,10 @@ public abstract class AbstractServer extends Thread implements Server {
 
   protected abstract String getProcessName();
 
+  public InfoServer getInfoServer() {
+    return infoServer;
+  }
+
   public ServerType getServerType() {
     String processName = getProcessName();
     if (processName.equals(MASTER)) {
@@ -448,5 +468,30 @@ public abstract class AbstractServer extends Thread implements Server {
       return ServerType.CompactionServer;
     }
     return ServerType.ReplicationServer;
+  }
+
+  protected abstract void configureInfoServer();
+
+  protected abstract Class<? extends HttpServlet> getDumpServlet();
+
+  protected void tryCreateInfoServer(int port, String addr, boolean auto) throws IOException {
+    while (true) {
+      try {
+        this.infoServer = new InfoServer(getProcessName(), addr, port, false, this.conf);
+        infoServer.addPrivilegedServlet("dump", "/dump", getDumpServlet());
+        configureInfoServer();
+        this.infoServer.start();
+        break;
+      } catch (BindException e) {
+        if (!auto) {
+          // auto bind disabled throw BindException
+          LOG.error("Failed binding http info server to port: " + port);
+          throw e;
+        }
+        // auto bind enabled, try to use another port
+        LOG.info("Failed binding http info server to port: " + port);
+        port++;
+      }
+    }
   }
 }

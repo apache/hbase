@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 import java.lang.reflect.Constructor;
-import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.time.Duration;
@@ -361,10 +360,6 @@ public class HRegionServer extends AbstractServer implements
 
   private UncaughtExceptionHandler uncaughtExceptionHandler;
 
-  // Info server. Default access so can be used by unit tests. REGIONSERVER
-  // is name of the webapp and the attribute name used stuffing this instance
-  // into web context.
-  protected InfoServer infoServer;
   private JvmPauseMonitor pauseMonitor;
 
   /** region server process name */
@@ -2110,24 +2105,7 @@ public class HRegionServer extends AbstractServer implements
     }
     // check if auto port bind enabled
     boolean auto = this.conf.getBoolean(HConstants.REGIONSERVER_INFO_PORT_AUTO, false);
-    while (true) {
-      try {
-        this.infoServer = new InfoServer(getProcessName(), addr, port, false, this.conf);
-        infoServer.addPrivilegedServlet("dump", "/dump", getDumpServlet());
-        configureInfoServer();
-        this.infoServer.start();
-        break;
-      } catch (BindException e) {
-        if (!auto) {
-          // auto bind disabled throw BindException
-          LOG.error("Failed binding http info server to port: " + port);
-          throw e;
-        }
-        // auto bind enabled, try to use another port
-        LOG.info("Failed binding http info server to port: " + port);
-        port++;
-      }
-    }
+    tryCreateInfoServer(port, addr, auto);
     port = this.infoServer.getPort();
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, port);
     int masterInfoPort = conf.getInt(HConstants.MASTER_INFO_PORT,
@@ -2800,13 +2778,6 @@ public class HRegionServer extends AbstractServer implements
       addRegion(sortedRegions, region, region.getMemStoreHeapSize());
     }
     return sortedRegions;
-  }
-
-  /**
-   * @return time stamp in millis of when this region server was started
-   */
-  public long getStartcode() {
-    return this.startcode;
   }
 
   /** @return reference to FlushRequester */

@@ -1812,7 +1812,8 @@ public class RSRpcServices extends AbstractRpcServices implements
       throw new ServiceException(ie);
     }
     requestCount.increment();
-    int infoPort = regionServer.infoServer != null ? regionServer.infoServer.getPort() : -1;
+    int infoPort =
+        regionServer.getInfoServer() != null ? regionServer.getInfoServer().getPort() : -1;
     return ResponseConverter.buildGetServerInfoResponse(regionServer.getServerName(), infoPort);
   }
 
