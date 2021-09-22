@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.backup.FailedArchiveException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.ReadOnlyConfiguration;
@@ -246,14 +247,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   protected HStore(final HRegion region, final ColumnFamilyDescriptor family,
       final Configuration confParam, boolean warmup) throws IOException {
 
-    // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
-    // CompoundConfiguration will look for keys in reverse order of addition, so we'd
-    // add global config first, then table and cf overrides, then cf metadata.
-    this.conf = new CompoundConfiguration()
-      .add(confParam)
-      .addBytesMap(region.getTableDescriptor().getValues())
-      .addStringMap(family.getConfiguration())
-      .addBytesMap(family.getValues());
+    this.conf = StoreUtils.createStoreConfiguration(confParam, region.getTableDescriptor(), family);
 
     this.region = region;
     this.storeContext = initializeStoreContext(family);
@@ -2622,14 +2616,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     return this.offPeakHours;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public void onConfigurationChange(Configuration conf) {
-    this.conf = new CompoundConfiguration()
-            .add(conf)
-            .addBytesMap(getColumnFamilyDescriptor().getValues());
+    this.conf = StoreUtils.createStoreConfiguration(conf, region.getTableDescriptor(),
+      getColumnFamilyDescriptor());
     this.storeEngine.compactionPolicy.setConf(conf);
     this.offPeakHours = OffPeakHours.getInstance(conf);
   }
