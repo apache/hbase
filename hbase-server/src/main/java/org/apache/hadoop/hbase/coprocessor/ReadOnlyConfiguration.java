@@ -44,10 +44,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Wraps a Configuration to make it read-only.
  */
 @InterfaceAudience.Private
-public class ReadOnlyConfiguration extends Configuration {
+class ReadOnlyConfiguration extends Configuration {
   private final Configuration conf;
 
-  public ReadOnlyConfiguration(final Configuration conf) {
+  ReadOnlyConfiguration(final Configuration conf) {
     this.conf = conf;
   }
 

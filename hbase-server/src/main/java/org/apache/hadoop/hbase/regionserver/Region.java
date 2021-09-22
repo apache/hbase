@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -598,10 +597,4 @@ public interface Region extends ConfigurationObserver {
    * max wait time period.
    */
   boolean waitForFlushes(long timeout);
-
-  /**
-   * @return a read only configuration of this region; throws {@link UnsupportedOperationException}
-   *         if you try to set a configuration.
-   */
-  Configuration getReadOnlyConfiguration();
 }
