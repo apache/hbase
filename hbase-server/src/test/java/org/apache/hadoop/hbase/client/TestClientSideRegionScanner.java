@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -45,7 +45,7 @@ public class TestClientSideRegionScanner {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestClientSideRegionScanner.class);
 
-  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private Configuration conf;
   private Path rootDir;
