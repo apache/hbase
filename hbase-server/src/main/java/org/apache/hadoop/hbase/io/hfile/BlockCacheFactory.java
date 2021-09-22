@@ -43,7 +43,7 @@ public final class BlockCacheFactory {
    */
 
   /**
-   * Configuration key to cache block policy (Lru, TinyLfu).
+   * Configuration key to cache block policy (Lru, TinyLfu, AdaptiveLRU, IndexOnlyLRU).
    */
   public static final String BLOCKCACHE_POLICY_KEY = "hfile.block.cache.policy";
   public static final String BLOCKCACHE_POLICY_DEFAULT = "LRU";
@@ -129,6 +129,8 @@ public final class BlockCacheFactory {
         StringUtils.byteDesc(cacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
     if (policy.equalsIgnoreCase("LRU")) {
       return new LruBlockCache(cacheSize, blockSize, true, c);
+    } else if (policy.equalsIgnoreCase("IndexOnlyLRU")) {
+      return new IndexOnlyLruBlockCache(cacheSize, blockSize, true, c);
     } else if (policy.equalsIgnoreCase("TinyLFU")) {
       return new TinyLfuBlockCache(cacheSize, blockSize, ForkJoinPool.commonPool(), c);
     } else if (policy.equalsIgnoreCase("AdaptiveLRU")) {
