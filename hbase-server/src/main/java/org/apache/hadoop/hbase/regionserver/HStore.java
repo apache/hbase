@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
+import org.apache.hadoop.hbase.coprocessor.ReadOnlyConfiguration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -2798,6 +2799,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   @Override
   public long getMixedRowReadsCount() {
     return mixedRowReadsCount.sum();
+  }
+
+  @Override
+  public Configuration getReadOnlyConfiguration() {
+    return new ReadOnlyConfiguration(this.conf);
   }
 
   void updateMetricsStore(boolean memstoreRead) {
