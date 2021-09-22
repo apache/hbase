@@ -24,9 +24,13 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompoundConfiguration;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -135,5 +139,13 @@ public class StoreUtils {
     Optional<HStoreFile> largestFile = StoreUtils.getLargestFile(storefiles);
     return largestFile.isPresent() ? StoreUtils.getFileSplitPoint(largestFile.get(), comparator)
         : Optional.empty();
+  }
+
+  public static Configuration createStoreConfiguration(Configuration conf, TableDescriptor td,
+    ColumnFamilyDescriptor cfd) {
+    // CompoundConfiguration will look for keys in reverse order of addition, so we'd
+    // add global config first, then table and cf overrides, then cf metadata.
+    return new CompoundConfiguration().add(conf).addBytesMap(td.getValues())
+      .addStringMap(cfd.getConfiguration()).addBytesMap(cfd.getValues());
   }
 }

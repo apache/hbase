@@ -259,14 +259,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     fs.createStoreDir(family.getNameAsString());
     this.region = region;
     this.family = family;
-    // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
-    // CompoundConfiguration will look for keys in reverse order of addition, so we'd
-    // add global config first, then table and cf overrides, then cf metadata.
-    this.conf = new CompoundConfiguration()
-      .add(confParam)
-      .addBytesMap(region.getTableDescriptor().getValues())
-      .addStringMap(family.getConfiguration())
-      .addBytesMap(family.getValues());
+    this.conf = StoreUtils.createStoreConfiguration(confParam, region.getTableDescriptor(), family);
     this.blocksize = family.getBlocksize();
 
     // set block storage policy for store directory
@@ -2623,14 +2616,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     return this.offPeakHours;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public void onConfigurationChange(Configuration conf) {
-    this.conf = new CompoundConfiguration()
-            .add(conf)
-            .addBytesMap(family.getValues());
+    this.conf = StoreUtils.createStoreConfiguration(conf, region.getTableDescriptor(),
+      getColumnFamilyDescriptor());
     this.storeEngine.compactionPolicy.setConf(conf);
     this.offPeakHours = OffPeakHours.getInstance(conf);
   }
