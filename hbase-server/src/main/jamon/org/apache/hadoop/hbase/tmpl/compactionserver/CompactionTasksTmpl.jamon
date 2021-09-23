@@ -38,7 +38,7 @@ HCompactionServer compactionServer;
 
 
 <%java>
-ConcurrentHashMap<String, CompactionTask> tasks = compactionServer.compactionThreadManager.getRunningCompactionTasks();
+ConcurrentHashMap<String, CompactionTask> tasks = compactionServer.getCompactionThreadManager().getRunningCompactionTasks();
 </%java>
 <table class="table table-striped">
     <tr>

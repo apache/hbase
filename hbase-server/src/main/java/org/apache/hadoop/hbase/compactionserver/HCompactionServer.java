@@ -87,11 +87,15 @@ public class HCompactionServer extends AbstractServer implements RegionCoprocess
     return choreService;
   }
 
+  public CompactionThreadManager getCompactionThreadManager() {
+    return compactionThreadManager;
+  }
+
   protected final CSRpcServices rpcServices;
 
   // Stub to do compaction server status calls against the master.
   private volatile CompactionServerStatusService.BlockingInterface cssStub;
-  public CompactionThreadManager compactionThreadManager;
+  CompactionThreadManager compactionThreadManager;
   /**
    * Get the current master from ZooKeeper and open the RPC connection to it. To get a fresh
    * connection, the current cssStub must be null. Method will block until a master is available.
