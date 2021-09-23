@@ -175,15 +175,12 @@ public class TestHTableTracing extends TestTracingBase {
 
     conn =
       spy(new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent()) {
-      @Override
-      public RegionLocator getRegionLocator(TableName tableName) throws IOException {
-        RegionLocator locator = mock(HRegionLocator.class);
-        Answer<HRegionLocation> answer =
-          new Answer<HRegionLocation>() {
+        @Override
+        public RegionLocator getRegionLocator(TableName tableName) throws IOException {
+          RegionLocator locator = mock(HRegionLocator.class);
+          Answer<HRegionLocation> answer = new Answer<HRegionLocation>() {
 
-            @Override
-            public HRegionLocation answer(InvocationOnMock invocation)
-              throws Throwable {
+            @Override public HRegionLocation answer(InvocationOnMock invocation) throws Throwable {
               TableName tableName = TableName.META_TABLE_NAME;
               RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
               ServerName serverName = MASTER_HOST;
@@ -191,17 +188,19 @@ public class TestHTableTracing extends TestTracingBase {
               return loc;
             }
           };
-        doAnswer(answer).when(locator).getRegionLocation(any(byte[].class), anyInt(), anyBoolean());
-        doAnswer(answer).when(locator).getRegionLocation(any(byte[].class));
-        doAnswer(answer).when(locator).getRegionLocation(any(byte[].class), anyInt());
-        doAnswer(answer).when(locator).getRegionLocation(any(byte[].class), anyBoolean());
-        return locator;
-      }
+          doAnswer(answer).when(locator)
+            .getRegionLocation(any(byte[].class), anyInt(), anyBoolean());
+          doAnswer(answer).when(locator).getRegionLocation(any(byte[].class));
+          doAnswer(answer).when(locator).getRegionLocation(any(byte[].class), anyInt());
+          doAnswer(answer).when(locator).getRegionLocation(any(byte[].class), anyBoolean());
+          return locator;
+        }
 
-      @Override
-      public ClientService.BlockingInterface getClient(ServerName serverName) throws IOException {
-        return stub;
-      }
+        @Override
+        public ClientService.BlockingInterface getClient(ServerName serverName)
+          throws IOException {
+          return stub;
+        }
     });
     // this setup of AsyncProcess is for MultiResponse
     AsyncProcess asyncProcess = mock(AsyncProcess.class);
