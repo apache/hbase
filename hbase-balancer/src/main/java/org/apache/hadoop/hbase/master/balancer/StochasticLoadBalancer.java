@@ -117,6 +117,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       "hbase.master.balancer.stochastic.minCostNeedBalance";
   protected static final String COST_FUNCTIONS_COST_FUNCTIONS_KEY =
           "hbase.master.balancer.stochastic.additionalCostFunctions";
+  public static final String OVERALL_COST_FUNCTION_NAME = "Overall";
 
   Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<>();
 
@@ -151,6 +152,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    */
   public StochasticLoadBalancer() {
     super(new MetricsStochasticBalancer());
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  public StochasticLoadBalancer(MetricsStochasticBalancer metricsStochasticBalancer) {
+    super(metricsStochasticBalancer);
   }
 
   private static CostFunction createCostFunction(Class<? extends CostFunction> clazz,
@@ -560,7 +567,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       MetricsStochasticBalancer balancer = (MetricsStochasticBalancer) metricsBalancer;
       // overall cost
       balancer.updateStochasticCost(tableName.getNameAsString(),
-        "Overall", "Overall cost", overall);
+        OVERALL_COST_FUNCTION_NAME, "Overall cost", overall);
 
       // each cost function
       for (int i = 0; i < costFunctions.size(); i++) {
