@@ -461,10 +461,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public Hbck getHbck() throws IOException {
-    ServerName masterServer = get(registry.getActiveMaster());
-    return TraceUtil.trace(() -> getHbck(masterServer),
-      () -> TraceUtil.createSpan(this.getClass().getSimpleName() + ".getHbck")
-        .setAttribute(TraceUtil.SERVER_NAME_KEY, masterServer.getServerName()));
+    return TraceUtil.trace(
+      () -> getHbck(get(registry.getActiveMaster())),
+        () -> TraceUtil.createSpan(this.getClass().getSimpleName() + ".getHbck"));
   }
 
   @Override

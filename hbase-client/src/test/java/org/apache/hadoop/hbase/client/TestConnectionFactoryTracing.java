@@ -43,6 +43,7 @@ public class TestConnectionFactoryTracing extends TestTracingBase {
   private User currentUser;
   private Object connection;
 
+  @Override
   @Before
   public void setUp() throws Exception {
     super.setUp();

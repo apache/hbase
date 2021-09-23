@@ -39,6 +39,7 @@ public class TestRegionLocatorTracing extends TestTracingBase {
 
   ConnectionImplementation conn;
 
+  @Override
   @Before
   public void setUp() throws Exception {
     super.setUp();

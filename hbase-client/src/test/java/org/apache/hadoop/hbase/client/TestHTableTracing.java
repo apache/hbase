@@ -30,7 +30,6 @@ import java.util.Arrays;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -51,7 +50,6 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
@@ -78,6 +76,7 @@ public class TestHTableTracing extends TestTracingBase {
   private ConnectionImplementation conn;
   private Table table;
 
+  @Override
   @Before
   public void setUp() throws Exception {
     super.setUp();
@@ -90,7 +89,6 @@ public class TestHTableTracing extends TestTracingBase {
       @Override
       public ScanResponse answer(InvocationOnMock invocation) throws Throwable {
         ScanRequest req = invocation.getArgument(1);
-        RpcCallback<ScanResponse> done = invocation.getArgument(2);
         if (!req.hasScannerId()) {
           return ScanResponse.newBuilder().setScannerId(1).setTtl(800)
             .setMoreResultsInRegion(true).setMoreResults(true).build();
@@ -99,7 +97,7 @@ public class TestHTableTracing extends TestTracingBase {
             return ScanResponse.getDefaultInstance();
           } else {
             Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-              .setType(Type.Put)
+              .setType(Cell.Type.Put)
               .setRow(Bytes.toBytes(scanNextCalled.incrementAndGet()))
               .setFamily(Bytes.toBytes("cf"))
               .setQualifier(Bytes.toBytes("cq"))
@@ -140,7 +138,7 @@ public class TestHTableTracing extends TestTracingBase {
             ColumnValue value = req.getColumnValue(0);
             QualifierValue qvalue = value.getQualifierValue(0);
             Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-              .setType(Type.Put)
+              .setType(Cell.Type.Put)
               .setRow(req.getRow().toByteArray())
               .setFamily(value.getFamily().toByteArray())
               .setQualifier(qvalue.getQualifier().toByteArray())
@@ -164,7 +162,7 @@ public class TestHTableTracing extends TestTracingBase {
         ColumnValue value = ColumnValue.getDefaultInstance();
         QualifierValue qvalue = QualifierValue.getDefaultInstance();
         Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-          .setType(Type.Put)
+          .setType(Cell.Type.Put)
           .setRow(req.getRow().toByteArray())
           .setFamily(value.getFamily().toByteArray())
           .setQualifier(qvalue.getQualifier().toByteArray())
