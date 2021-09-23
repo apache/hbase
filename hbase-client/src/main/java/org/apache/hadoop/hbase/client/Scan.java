@@ -1009,7 +1009,7 @@ public class Scan extends Query {
    * if setting it true, we would do openScanner,next,closeScanner in one RPC call. It means the
    * better performance for small scan. [HBASE-9488]. Generally, if the scan range is within one
    * data block(64KB), it could be considered as a small scan.
-   * @param small
+   * @param small set if that should use read type of PREAD
    * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #setLimit(int)} and
    *   {@link #setReadType(ReadType)} instead. And for the one rpc optimization, now we will also
    *   fetch data when openScanner, and if the number of rows reaches the limit then we will close

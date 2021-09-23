@@ -173,7 +173,8 @@ public class TestHTableTracing extends TestTracingBase {
       }
     }).when(stub).get(any(HBaseRpcController.class), any(GetRequest.class));
 
-    conn = spy(new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent()) {
+    conn =
+      spy(new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent()) {
       @Override
       public RegionLocator getRegionLocator(TableName tableName) throws IOException {
         RegionLocator locator = mock(HRegionLocator.class);
@@ -282,7 +283,8 @@ public class TestHTableTracing extends TestTracingBase {
     table.checkAndMutate(Arrays.asList(CheckAndMutate.newBuilder(Bytes.toBytes(0))
       .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
       .build(new Delete(Bytes.toBytes(0)))));
-    assertTrace(HTable.class.getSimpleName(), "checkAndMutateList", null, TableName.META_TABLE_NAME);
+    assertTrace(HTable.class.getSimpleName(), "checkAndMutateList", null,
+      TableName.META_TABLE_NAME);
   }
 
   @Test
@@ -290,7 +292,8 @@ public class TestHTableTracing extends TestTracingBase {
     table.checkAndMutate(Arrays.asList(CheckAndMutate.newBuilder(Bytes.toBytes(0))
       .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
       .build(new Delete(Bytes.toBytes(0)))));
-    assertTrace(HTable.class.getSimpleName(), "checkAndMutateList", null, TableName.META_TABLE_NAME);
+    assertTrace(HTable.class.getSimpleName(), "checkAndMutateList", null,
+      TableName.META_TABLE_NAME);
   }
 
   @Test
