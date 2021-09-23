@@ -220,7 +220,7 @@ public class TestTaskMonitor {
     task.enableStatusJournal(true);
     // check existing status entered in journal
     assertEquals("status1", task.getStatusJournal().get(0).getStatus());
-    assertTrue(task.getStatusJournal().get(0).getTimeStamp() > 0);
+    assertTrue(task.getStatusJournal().get(0).getStartTimeStamp() > 0);
     task.disableStatusJournal();
     task.setStatus("status2");
     // check status 2 not added since disabled

@@ -163,6 +163,8 @@ import org.apache.hadoop.hbase.master.replication.TransitPeerSyncReplicationStat
 import org.apache.hadoop.hbase.master.replication.UpdatePeerConfigProcedure;
 import org.apache.hadoop.hbase.master.slowlog.SlowLogMasterService;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.master.startupprogress.Phase;
+import org.apache.hadoop.hbase.master.startupprogress.StartupProgressView;
 import org.apache.hadoop.hbase.master.zksyncer.MasterAddressSyncer;
 import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.mob.MobFileCleanerChore;
@@ -427,6 +429,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   // Cached clusterId on stand by masters to serve clusterID requests from clients.
   private final CachedClusterId cachedClusterId;
+  private MonitoredTask startupStatusTask;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -437,7 +440,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
    * </ol>
    * <p>
    * Remaining steps of initialization occur in
-   * {@link #finishActiveMasterInitialization(MonitoredTask)} after the master becomes the
+   * {@link #finishActiveMasterInitialization()} after the master becomes the
    * active one.
    */
   public HMaster(final Configuration conf) throws IOException {
@@ -855,12 +858,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
    * Notice that now we will not schedule a special procedure to make meta online(unless the first
    * time where meta has not been created yet), we will rely on SCP to bring meta online.
    */
-  private void finishActiveMasterInitialization(MonitoredTask status) throws IOException,
+  private void finishActiveMasterInitialization() throws IOException,
           InterruptedException, KeeperException, ReplicationException {
     /*
      * We are active master now... go initialize components we need to run.
      */
-    status.setStatus("Initializing Master file system");
+    startupStatusTask.setStatus("Initializing Master file system");
 
     this.masterActiveTime = EnvironmentEdgeManager.currentTime();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
@@ -873,7 +876,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     // warm-up HTDs cache on master initialization
     if (preLoadTableDescriptors) {
-      status.setStatus("Pre-loading table descriptors");
+      startupStatusTask.setStatus("Pre-loading table descriptors");
       this.tableDescriptors.getAll();
     }
 
@@ -881,7 +884,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // only after it has checked in with the Master. At least a few tests ask Master for clusterId
     // before it has called its run method and before RegionServer has done the reportForDuty.
     ClusterId clusterId = fileSystemManager.getClusterId();
-    status.setStatus("Publishing Cluster ID " + clusterId + " in ZooKeeper");
+    startupStatusTask.setStatus("Publishing Cluster ID " + clusterId + " in ZooKeeper");
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
     this.clusterId = clusterId.toString();
 
@@ -900,7 +903,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       }
     }
 
-    status.setStatus("Initialize ServerManager and schedule SCP for crash servers");
+    startupStatusTask.setStatus("Initialize ServerManager");
     // The below two managers must be created before loading procedures, as they will be used during
     // loading.
     this.serverManager = createServerManager(this);
@@ -913,6 +916,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // initialize master local region
     masterRegion = MasterRegionFactory.create(this);
 
+    startupStatusTask.setStatus("Migrate Meta Locations From Zookeeper");
     tryMigrateMetaLocationsFromZooKeeper();
 
     createProcedureExecutor();
@@ -921,6 +925,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         .collect(Collectors.groupingBy(p -> p.getClass()));
 
     // Create Assignment Manager
+    startupStatusTask.setStatus("Create Assignment Manager");
     this.assignmentManager = createAssignmentManager(this, masterRegion);
     this.assignmentManager.start();
     // TODO: TRSP can perform as the sub procedure for other procedures, so even if it is marked as
@@ -937,6 +942,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // filesystem that COULD BE 'alive' (we'll schedule SCPs for each and let SCP figure it out).
     // We also pass dirs that are already 'splitting'... so we can do some checks down in tracker.
     // TODO: Generate the splitting and live Set in one pass instead of two as we currently do.
+    startupStatusTask.setStatus("Schedule SCP for crash servers");
     this.regionServerTracker.upgrade(
       procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
         .map(p -> (ServerCrashProcedure) p).map(p -> p.getServerName()).collect(Collectors.toSet()),
@@ -944,9 +950,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // This manager must be accessed AFTER hbase:meta is confirmed on line..
     this.tableStateManager = new TableStateManager(this);
 
-    status.setStatus("Initializing ZK system trackers");
+    startupStatusTask.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
-    status.setStatus("Loading last flushed sequence id of regions");
+    startupStatusTask.setStatus("Loading last flushed sequence id of regions");
     try {
       this.serverManager.loadLastFlushedSequenceIds();
     } catch (IOException e) {
@@ -969,7 +975,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         updateConfigurationForQuotasObserver(conf);
       }
       // initialize master side coprocessors before we start handling requests
-      status.setStatus("Initializing master coprocessors");
+      startupStatusTask.setStatus("Initializing master coprocessors");
       this.cpHost = new MasterCoprocessorHost(this, this.conf);
     } else {
       // start an in process region server for carrying system regions
@@ -979,7 +985,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
 
     // Checking if meta needs initializing.
-    status.setStatus("Initializing meta table if this is a new deploy");
+    startupStatusTask.setStatus("Initializing meta table if this is a new deploy");
     InitMetaProcedure initMetaProc = null;
     // Print out state of hbase:meta on startup; helps debugging.
     if (!this.assignmentManager.getRegionStates().hasTableRegionStates(TableName.META_TABLE_NAME)) {
@@ -999,7 +1005,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
     // start up all service threads.
-    status.setStatus("Initializing master service threads");
+    startupStatusTask.setStatus("Initializing master service threads");
     startServiceThreads();
     // wait meta to be initialized after we start procedure executor
     if (initMetaProc != null) {
@@ -1012,16 +1018,15 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // With this as part of master initialization, it precludes our being able to start a single
     // server that is both Master and RegionServer. Needs more thought. TODO.
     String statusStr = "Wait for region servers to report in";
-    status.setStatus(statusStr);
-    LOG.info(Objects.toString(status));
-    waitForRegionServers(status);
+    LOG.info(Objects.toString(startupStatusTask));
+    waitForRegionServers(startupStatusTask);
 
     // Check if master is shutting down because issue initializing regionservers or balancer.
     if (isStopped()) {
       return;
     }
 
-    status.setStatus("Starting assignment manager");
+    startupStatusTask.setStatus("Starting assignment manager");
     // FIRST HBASE:META READ!!!!
     // The below cannot make progress w/o hbase:meta being online.
     // This is the FIRST attempt at going to hbase:meta. Meta on-lining is going on in background
@@ -1087,7 +1092,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
     // Start balancer and meta catalog janitor after meta and regions have been assigned.
-    status.setStatus("Starting balancer and catalog janitor");
+    startupStatusTask.setStatus("Starting balancer and catalog janitor");
     this.clusterStatusChore = new ClusterStatusChore(this, balancer);
     getChoreService().scheduleChore(clusterStatusChore);
     this.balancerChore = new BalancerChore(this);
@@ -1105,7 +1110,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (!waitForNamespaceOnline()) {
       return;
     }
-    status.setStatus("Starting cluster schema service");
+    startupStatusTask.setStatus("Starting cluster schema service");
     try {
       initClusterSchemaService();
     } catch (IllegalStateException e) {
@@ -1126,7 +1131,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       }
     }
 
-    status.markComplete("Initialization successful");
+    startupStatusTask.setStatus("Initialization successful");
     LOG.info(String.format("Master has completed initialization %.3fsec",
        (EnvironmentEdgeManager.currentTime() - masterActiveTime) / 1000.0f));
     this.masterFinishedInitializationTime = EnvironmentEdgeManager.currentTime();
@@ -1167,7 +1172,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
 
     assignmentManager.checkIfShouldMoveSystemRegionAsync();
-    status.setStatus("Starting quota manager");
+    startupStatusTask.setStatus("Starting quota manager");
     initQuotaManager();
     if (QuotaUtil.isQuotaEnabled(conf)) {
       // Create the quota snapshot notifier
@@ -1190,13 +1195,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     this.serverManager.clearDeadServersWithSameHostNameAndPortOfOnlineServer();
 
     // Check and set the znode ACLs if needed in case we are overtaking a non-secure configuration
-    status.setStatus("Checking ZNode ACLs");
+    startupStatusTask.setStatus("Checking ZNode ACLs");
     zooKeeper.checkAndSetZNodeAcls();
 
-    status.setStatus("Initializing MOB Cleaner");
+    startupStatusTask.setStatus("Initializing MOB Cleaner");
     initMobCleaner();
 
-    status.setStatus("Calling postStartMaster coprocessors");
+    startupStatusTask.setStatus("Calling postStartMaster coprocessors");
     if (this.cpHost != null) {
       // don't let cp initialization errors kill the master
       try {
@@ -1212,11 +1217,25 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
      * After master has started up, lets do balancer post startup initialization. Since this runs
      * in activeMasterManager thread, it should be fine.
      */
+    startupStatusTask.setStatus("Calling postMasterStartup Balancer");
     long start = EnvironmentEdgeManager.currentTime();
     this.balancer.postMasterStartupInitialize();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Balancer post startup initialization complete, took " + (
           (EnvironmentEdgeManager.currentTime() - start) / 1000) + " seconds");
+    }
+    startupStatusTask.markComplete("Startup Complete");
+  }
+
+  /*
+    Get all the completed/running phases.
+   */
+  public List<Phase> getStartupPhases() {
+    if (startupStatusTask != null) {
+      return new StartupProgressView(startupStatusTask).getPhaseStatus();
+    } else {
+      // Startup hasn't started yet.
+      return Collections.emptyList();
     }
   }
 
@@ -2271,14 +2290,16 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         Threads.sleep(timeout);
       }
     }
-    MonitoredTask status = TaskMonitor.get().createStatus("Master startup");
-    status.setDescription("Master startup");
+    startupStatusTask = TaskMonitor.get().createStatus("Master startup");
+    startupStatusTask.setDescription("Master startup");
+    // Enabling status journal for Startup Progress UI
+    startupStatusTask.enableStatusJournal(false);
     try {
-      if (activeMasterManager.blockUntilBecomingActiveMaster(timeout, status)) {
-        finishActiveMasterInitialization(status);
+      if (activeMasterManager.blockUntilBecomingActiveMaster(timeout, startupStatusTask)) {
+        finishActiveMasterInitialization();
       }
     } catch (Throwable t) {
-      status.setStatus("Failed to become active: " + t.getMessage());
+      startupStatusTask.setStatus("Failed to become active: " + t.getMessage());
       LOG.error(HBaseMarkers.FATAL, "Failed to become active master", t);
       // HBASE-5680: Likely hadoop23 vs hadoop 20.x/1.x incompatibility
       if (t instanceof NoClassDefFoundError && t.getMessage().
@@ -2291,7 +2312,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         abort("Unhandled exception. Starting shutdown.", t);
       }
     } finally {
-      status.cleanup();
+      startupStatusTask.cleanup();
     }
   }
 
