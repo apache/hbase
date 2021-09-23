@@ -201,7 +201,7 @@ public class TestHTableTracing extends TestTracingBase {
           throws IOException {
           return stub;
         }
-    });
+      });
     // this setup of AsyncProcess is for MultiResponse
     AsyncProcess asyncProcess = mock(AsyncProcess.class);
     AsyncRequestFuture asyncRequestFuture = mock(AsyncRequestFuture.class);
