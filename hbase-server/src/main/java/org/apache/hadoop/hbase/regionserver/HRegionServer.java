@@ -743,11 +743,13 @@ public class HRegionServer extends AbstractServer implements
     return new RSRpcServices(this);
   }
 
+  @Override
   protected void configureInfoServer() {
     infoServer.addUnprivilegedServlet("rs-status", "/rs-status", RSStatusServlet.class);
     infoServer.setAttribute(REGIONSERVER, this);
   }
 
+  @Override
   protected Class<? extends HttpServlet> getDumpServlet() {
     return RSDumpServlet.class;
   }
@@ -2704,11 +2706,6 @@ public class HRegionServer extends AbstractServer implements
     } finally {
       this.onlineRegionsLock.writeLock().unlock();
     }
-  }
-
-  /** @return the info server */
-  public InfoServer getInfoServer() {
-    return infoServer;
   }
 
   @Override

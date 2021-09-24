@@ -170,10 +170,12 @@ public class HCompactionServer extends AbstractServer implements RegionCoprocess
     conf.setInt(HConstants.COMPACTION_SERVER_INFO_PORT, port);
   }
 
+  @Override
   protected Class<? extends HttpServlet> getDumpServlet() {
     return CSDumpServlet.class;
   }
 
+  @Override
   protected void configureInfoServer() {
     infoServer.addServlet("cs-status", "/cs-status", CSStatusServlet.class);
     infoServer.setAttribute(COMPACTIONSERVER, this);
@@ -209,6 +211,11 @@ public class HCompactionServer extends AbstractServer implements RegionCoprocess
     serverLoad.setTotalNumberOfRequests(requestCount.sum());
     serverLoad.setReportStartTime(reportStartTime);
     serverLoad.setReportEndTime(reportEndTime);
+    if (this.infoServer != null) {
+      serverLoad.setInfoServerPort(this.infoServer.getPort());
+    } else {
+      serverLoad.setInfoServerPort(-1);
+    }
     return serverLoad.build();
   }
 
