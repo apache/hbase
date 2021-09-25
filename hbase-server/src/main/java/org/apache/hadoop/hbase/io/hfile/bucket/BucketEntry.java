@@ -180,13 +180,19 @@ class BucketEntry implements HBaseReferenceCounted {
   }
 
   /**
-   * Check whether have some RPC patch referring this block. There're two case: <br>
+   * Check whether have some RPC patch referring this block.<br/>
+   * For {@link IOEngine#usesSharedMemory()} is true(eg.{@link ByteBufferIOEngine}), there're two
+   * case: <br>
    * 1. If current refCnt is greater than 1, there must be at least one referring RPC path; <br>
    * 2. If current refCnt is equal to 1 and the markedAtEvicted is true, the it means backingMap has
    * released its reference, the remaining reference can only be from RPC path. <br>
    * We use this check to decide whether we can free the block area: when cached size exceed the
    * acceptable size, our eviction policy will choose those stale blocks without any RPC reference
-   * and the RPC referred block will be excluded.
+   * and the RPC referred block will be excluded. <br/>
+   * <br/>
+   * For {@link IOEngine#usesSharedMemory()} is false(eg.{@link FileIOEngine}),
+   * {@link BucketEntry#refCnt} is always 1 until it is evicted from {@link BucketCache#backingMap},
+   * so {@link BucketEntry#isRpcRef()} is always return false.
    * @return true to indicate there're some RPC referring the block.
    */
   boolean isRpcRef() {

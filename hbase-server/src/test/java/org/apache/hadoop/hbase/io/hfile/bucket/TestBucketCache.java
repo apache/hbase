@@ -699,7 +699,7 @@ public class TestBucketCache {
    * {@link BucketCache}.
    */
   @Test
-  public void testBucketEntryNoRecyclerRestoredFromFile() throws Exception {
+  public void testFreeBucketEntryRestoredFromFile() throws Exception {
     try {
       final Path dataTestDir = createAndGetTestDir();
 
