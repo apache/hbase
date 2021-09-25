@@ -21,41 +21,12 @@ package org.apache.hadoop.hbase.client;
 // DO NOT MAKE USE OF THESE IMPORTS! THEY ARE HERE FOR COPROCESSOR ENDPOINTS ONLY.
 // Internally, we use shaded protobuf. This below are part of our public API.
 //SEE ABOVE NOTE!
+
+import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -71,8 +42,38 @@ import java.util.concurrent.Future;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
 
 /**
  * An implementation of {@link Table}. Used to communicate with a single HBase table.
@@ -353,7 +354,9 @@ public class HTable implements Table {
 
   @Override
   public Result get(final Get get) throws IOException {
-    return get(get, get.isCheckExistenceOnly());
+    return TraceUtil.trace(
+      () -> get(get, get.isCheckExistenceOnly()),
+      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".get", tableName));
   }
 
   private Result get(Get get, final boolean checkExistenceOnly) throws IOException {
@@ -393,45 +396,53 @@ public class HTable implements Table {
 
   @Override
   public Result[] get(List<Get> gets) throws IOException {
-    if (gets.size() == 1) {
-      return new Result[]{get(gets.get(0))};
-    }
-    try {
-      Object[] r1 = new Object[gets.size()];
-      batch((List<? extends Row>)gets, r1, readRpcTimeoutMs);
-      // Translate.
-      Result [] results = new Result[r1.length];
-      int i = 0;
-      for (Object obj: r1) {
-        // Batch ensures if there is a failure we get an exception instead
-        results[i++] = (Result)obj;
+    return TraceUtil.trace(() -> {
+      if (gets.size() == 1) {
+        return new Result[] { get(gets.get(0)) };
       }
-      return results;
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
-    }
+      try {
+        Object[] r1 = new Object[gets.size()];
+        batch((List<? extends Row>) gets, r1, readRpcTimeoutMs);
+        // Translate.
+        Result[] results = new Result[r1.length];
+        int i = 0;
+        for (Object obj : r1) {
+          // Batch ensures if there is a failure we get an exception instead
+          results[i++] = (Result) obj;
+        }
+        return results;
+      } catch (InterruptedException e) {
+        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+      }
+    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".getList", tableName));
   }
 
   @Override
   public void batch(final List<? extends Row> actions, final Object[] results)
       throws InterruptedException, IOException {
-    int rpcTimeout = writeRpcTimeoutMs;
-    boolean hasRead = false;
-    boolean hasWrite = false;
-    for (Row action : actions) {
-      if (action instanceof Mutation) {
-        hasWrite = true;
-      } else {
-        hasRead = true;
+    TraceUtil.traceWithIOException(() -> {
+      int rpcTimeout = writeRpcTimeoutMs;
+      boolean hasRead = false;
+      boolean hasWrite = false;
+      for (Row action : actions) {
+        if (action instanceof Mutation) {
+          hasWrite = true;
+        } else {
+          hasRead = true;
+        }
+        if (hasRead && hasWrite) {
+          break;
+        }
       }
-      if (hasRead && hasWrite) {
-        break;
+      if (hasRead && !hasWrite) {
+        rpcTimeout = readRpcTimeoutMs;
       }
-    }
-    if (hasRead && !hasWrite) {
-      rpcTimeout = readRpcTimeoutMs;
-    }
-    batch(actions, results, rpcTimeout);
+      try {
+        batch(actions, results, rpcTimeout);
+      } catch (InterruptedException e) {
+        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+      }
+    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".batch", tableName));
   }
 
   public void batch(final List<? extends Row> actions, final Object[] results, int rpcTimeout)
@@ -484,115 +495,125 @@ public class HTable implements Table {
 
   @Override
   public void delete(final Delete delete) throws IOException {
-    ClientServiceCallable<Void> callable =
+    TraceUtil.traceWithIOException(() -> {
+      ClientServiceCallable<Void> callable =
         new ClientServiceCallable<Void>(this.connection, getName(), delete.getRow(),
-            this.rpcControllerFactory.newController(), delete.getPriority()) {
-      @Override
-      protected Void rpcCall() throws Exception {
-        MutateRequest request = RequestConverter
-            .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), delete);
-        doMutate(request);
-        return null;
-      }
-    };
-    rpcCallerFactory.<Void>newCaller(this.writeRpcTimeoutMs)
+          this.rpcControllerFactory.newController(), delete.getPriority()) {
+          @Override
+          protected Void rpcCall() throws Exception {
+            MutateRequest request = RequestConverter
+              .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), delete);
+            doMutate(request);
+            return null;
+          }
+        };
+      rpcCallerFactory.<Void>newCaller(this.writeRpcTimeoutMs)
         .callWithRetries(callable, this.operationTimeoutMs);
+    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".delete", tableName));
   }
 
   @Override
   public void delete(final List<Delete> deletes)
   throws IOException {
-    Object[] results = new Object[deletes.size()];
-    try {
-      batch(deletes, results, writeRpcTimeoutMs);
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
-    } finally {
-      // TODO: to be consistent with batch put(), do not modify input list
-      // mutate list so that it is empty for complete success, or contains only failed records
-      // results are returned in the same order as the requests in list walk the list backwards,
-      // so we can remove from list without impacting the indexes of earlier members
-      for (int i = results.length - 1; i>=0; i--) {
-        // if result is not null, it succeeded
-        if (results[i] instanceof Result) {
-          deletes.remove(i);
+    TraceUtil.traceWithIOException(() -> {
+      Object[] results = new Object[deletes.size()];
+      try {
+        batch(deletes, results, writeRpcTimeoutMs);
+      } catch (InterruptedException e) {
+        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+      } finally {
+        // TODO: to be consistent with batch put(), do not modify input list
+        // mutate list so that it is empty for complete success, or contains only failed records
+        // results are returned in the same order as the requests in list walk the list backwards,
+        // so we can remove from list without impacting the indexes of earlier members
+        for (int i = results.length - 1; i >= 0; i--) {
+          // if result is not null, it succeeded
+          if (results[i] instanceof Result) {
+            deletes.remove(i);
+          }
         }
       }
-    }
+    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".deleteList", tableName));
   }
 
   @Override
   public void put(final Put put) throws IOException {
-    validatePut(put);
-    ClientServiceCallable<Void> callable =
+    TraceUtil.traceWithIOException(() -> {
+      validatePut(put);
+      ClientServiceCallable<Void> callable =
         new ClientServiceCallable<Void>(this.connection, getName(), put.getRow(),
-            this.rpcControllerFactory.newController(), put.getPriority()) {
-      @Override
-      protected Void rpcCall() throws Exception {
-        MutateRequest request =
-            RequestConverter.buildMutateRequest(getLocation().getRegionInfo().getRegionName(), put);
-        doMutate(request);
-        return null;
-      }
-    };
-    rpcCallerFactory.<Void> newCaller(this.writeRpcTimeoutMs).callWithRetries(callable,
-        this.operationTimeoutMs);
+          this.rpcControllerFactory.newController(), put.getPriority()) {
+          @Override
+          protected Void rpcCall() throws Exception {
+            MutateRequest request = RequestConverter
+              .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), put);
+            doMutate(request);
+            return null;
+          }
+        };
+      rpcCallerFactory.<Void>newCaller(this.writeRpcTimeoutMs)
+        .callWithRetries(callable, this.operationTimeoutMs);
+    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".put", tableName));
   }
 
   @Override
   public void put(final List<Put> puts) throws IOException {
-    for (Put put : puts) {
-      validatePut(put);
-    }
-    Object[] results = new Object[puts.size()];
-    try {
-      batch(puts, results, writeRpcTimeoutMs);
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-    }
+    TraceUtil.traceWithIOException(() -> {
+      for (Put put : puts) {
+        validatePut(put);
+      }
+      Object[] results = new Object[puts.size()];
+      try {
+        batch(puts, results, writeRpcTimeoutMs);
+      } catch (InterruptedException e) {
+        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+      }
+    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".putList", tableName));
   }
 
   @Override
   public Result mutateRow(final RowMutations rm) throws IOException {
-    long nonceGroup = getNonceGroup();
-    long nonce = getNonce();
-    CancellableRegionServerCallable<MultiResponse> callable =
-      new CancellableRegionServerCallable<MultiResponse>(this.connection, getName(), rm.getRow(),
-          rpcControllerFactory.newController(), writeRpcTimeoutMs,
-          new RetryingTimeTracker().start(), rm.getMaxPriority()) {
-      @Override
-      protected MultiResponse rpcCall() throws Exception {
-        MultiRequest request = RequestConverter.buildMultiRequest(
-          getLocation().getRegionInfo().getRegionName(), rm, nonceGroup, nonce);
-        ClientProtos.MultiResponse response = doMulti(request);
-        ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
-        if (res.hasException()) {
-          Throwable ex = ProtobufUtil.toException(res.getException());
-          if (ex instanceof IOException) {
-            throw (IOException) ex;
+    return TraceUtil.trace(() -> {
+      long nonceGroup = getNonceGroup();
+      long nonce = getNonce();
+      CancellableRegionServerCallable<MultiResponse> callable =
+        new CancellableRegionServerCallable<MultiResponse>(this.connection, getName(), rm.getRow(),
+            rpcControllerFactory.newController(), writeRpcTimeoutMs,
+            new RetryingTimeTracker().start(), rm.getMaxPriority()) {
+        @Override
+        protected MultiResponse rpcCall() throws Exception {
+          MultiRequest request = RequestConverter.buildMultiRequest(
+            getLocation().getRegionInfo().getRegionName(), rm, nonceGroup, nonce);
+          ClientProtos.MultiResponse response = doMulti(request);
+          ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
+          if (res.hasException()) {
+            Throwable ex = ProtobufUtil.toException(res.getException());
+            if (ex instanceof IOException) {
+              throw (IOException) ex;
+            }
+            throw new IOException("Failed to mutate row: " + Bytes.toStringBinary(rm.getRow()), ex);
           }
-          throw new IOException("Failed to mutate row: " + Bytes.toStringBinary(rm.getRow()), ex);
+          return ResponseConverter.getResults(request, response, getRpcControllerCellScanner());
         }
-        return ResponseConverter.getResults(request, response, getRpcControllerCellScanner());
+      };
+      Object[] results = new Object[rm.getMutations().size()];
+      AsyncProcessTask task = AsyncProcessTask.newBuilder()
+        .setPool(pool)
+        .setTableName(tableName)
+        .setRowAccess(rm.getMutations())
+        .setCallable(callable)
+        .setRpcTimeout(writeRpcTimeoutMs)
+        .setOperationTimeout(operationTimeoutMs)
+        .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+        .setResults(results)
+        .build();
+      AsyncRequestFuture ars = multiAp.submit(task);
+      ars.waitUntilDone();
+      if (ars.hasError()) {
+        throw ars.getErrors();
       }
-    };
-    Object[] results = new Object[rm.getMutations().size()];
-    AsyncProcessTask task = AsyncProcessTask.newBuilder()
-      .setPool(pool)
-      .setTableName(tableName)
-      .setRowAccess(rm.getMutations())
-      .setCallable(callable)
-      .setRpcTimeout(writeRpcTimeoutMs)
-      .setOperationTimeout(operationTimeoutMs)
-      .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
-      .setResults(results)
-      .build();
-    AsyncRequestFuture ars = multiAp.submit(task);
-    ars.waitUntilDone();
-    if (ars.hasError()) {
-      throw ars.getErrors();
-    }
-    return (Result) results[0];
+      return (Result) results[0];
+    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".mutateRow", tableName));
   }
 
   private long getNonceGroup() {
@@ -605,129 +626,150 @@ public class HTable implements Table {
 
   @Override
   public Result append(final Append append) throws IOException {
-    checkHasFamilies(append);
-    NoncedRegionServerCallable<Result> callable =
-        new NoncedRegionServerCallable<Result>(this.connection, getName(), append.getRow(),
-            this.rpcControllerFactory.newController(), append.getPriority()) {
-      @Override
-      protected Result rpcCall() throws Exception {
-        MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), append, super.getNonceGroup(),
-          super.getNonce());
-        MutateResponse response = doMutate(request);
-        if (!response.hasResult()) return null;
-        return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
-      }
-    };
-    return rpcCallerFactory.<Result> newCaller(this.writeRpcTimeoutMs).
-        callWithRetries(callable, this.operationTimeoutMs);
+    return TraceUtil.trace(() -> {
+      checkHasFamilies(append);
+      NoncedRegionServerCallable<Result> callable =
+          new NoncedRegionServerCallable<Result>(this.connection, getName(), append.getRow(),
+              this.rpcControllerFactory.newController(), append.getPriority()) {
+        @Override
+        protected Result rpcCall() throws Exception {
+          MutateRequest request = RequestConverter.buildMutateRequest(
+            getLocation().getRegionInfo().getRegionName(), append, super.getNonceGroup(),
+            super.getNonce());
+          MutateResponse response = doMutate(request);
+          if (!response.hasResult()) {
+            return null;
+          }
+          return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
+        }
+      };
+      return rpcCallerFactory.<Result> newCaller(this.writeRpcTimeoutMs).
+          callWithRetries(callable, this.operationTimeoutMs);
+    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".append", tableName));
   }
 
   @Override
   public Result increment(final Increment increment) throws IOException {
-    checkHasFamilies(increment);
-    NoncedRegionServerCallable<Result> callable =
-        new NoncedRegionServerCallable<Result>(this.connection, getName(), increment.getRow(),
-            this.rpcControllerFactory.newController(), increment.getPriority()) {
-      @Override
-      protected Result rpcCall() throws Exception {
-        MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), increment, super.getNonceGroup(),
-          super.getNonce());
-        MutateResponse response = doMutate(request);
-        // Should this check for null like append does?
-        return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
-      }
-    };
-    return rpcCallerFactory.<Result> newCaller(writeRpcTimeoutMs).callWithRetries(callable,
-        this.operationTimeoutMs);
+    return TraceUtil.trace(() -> {
+      checkHasFamilies(increment);
+      NoncedRegionServerCallable<Result> callable =
+          new NoncedRegionServerCallable<Result>(this.connection, getName(), increment.getRow(),
+              this.rpcControllerFactory.newController(), increment.getPriority()) {
+        @Override
+        protected Result rpcCall() throws Exception {
+          MutateRequest request = RequestConverter.buildMutateRequest(
+            getLocation().getRegionInfo().getRegionName(), increment, super.getNonceGroup(),
+            super.getNonce());
+          MutateResponse response = doMutate(request);
+          // Should this check for null like append does?
+          return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
+        }
+      };
+      return rpcCallerFactory.<Result> newCaller(writeRpcTimeoutMs).callWithRetries(callable,
+          this.operationTimeoutMs);
+    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".increment", tableName));
   }
 
   @Override
   public long incrementColumnValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final long amount)
   throws IOException {
-    return incrementColumnValue(row, family, qualifier, amount, Durability.SYNC_WAL);
+    return TraceUtil.trace(
+      () -> incrementColumnValue(row, family, qualifier, amount, Durability.SYNC_WAL),
+      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".increment", tableName));
   }
 
   @Override
   public long incrementColumnValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final long amount, final Durability durability)
   throws IOException {
-    NullPointerException npe = null;
-    if (row == null) {
-      npe = new NullPointerException("row is null");
-    } else if (family == null) {
-      npe = new NullPointerException("family is null");
-    }
-    if (npe != null) {
-      throw new IOException(
-          "Invalid arguments to incrementColumnValue", npe);
-    }
-
-    NoncedRegionServerCallable<Long> callable =
-        new NoncedRegionServerCallable<Long>(this.connection, getName(), row,
-            this.rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
-      @Override
-      protected Long rpcCall() throws Exception {
-        MutateRequest request = RequestConverter.buildIncrementRequest(
-          getLocation().getRegionInfo().getRegionName(), row, family,
-          qualifier, amount, durability, super.getNonceGroup(), super.getNonce());
-        MutateResponse response = doMutate(request);
-        Result result = ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
-        return Long.valueOf(Bytes.toLong(result.getValue(family, qualifier)));
+    return TraceUtil.trace(() -> {
+      NullPointerException npe = null;
+      if (row == null) {
+        npe = new NullPointerException("row is null");
+      } else if (family == null) {
+        npe = new NullPointerException("family is null");
       }
-    };
-    return rpcCallerFactory.<Long> newCaller(this.writeRpcTimeoutMs).
-        callWithRetries(callable, this.operationTimeoutMs);
+      if (npe != null) {
+        throw new IOException(
+            "Invalid arguments to incrementColumnValue", npe);
+      }
+
+      NoncedRegionServerCallable<Long> callable =
+          new NoncedRegionServerCallable<Long>(this.connection, getName(), row,
+              this.rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
+        @Override
+        protected Long rpcCall() throws Exception {
+          MutateRequest request = RequestConverter.buildIncrementRequest(
+            getLocation().getRegionInfo().getRegionName(), row, family,
+            qualifier, amount, durability, super.getNonceGroup(), super.getNonce());
+          MutateResponse response = doMutate(request);
+          Result result =
+            ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
+          return Long.valueOf(Bytes.toLong(result.getValue(family, qualifier)));
+        }
+      };
+      return rpcCallerFactory.<Long> newCaller(this.writeRpcTimeoutMs).
+          callWithRetries(callable, this.operationTimeoutMs);
+    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".increment", tableName));
   }
 
   @Override
   @Deprecated
   public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
       final byte [] value, final Put put) throws IOException {
-    return doCheckAndMutate(row, family, qualifier, CompareOperator.EQUAL, value, null, null,
-      put).isSuccess();
+    return TraceUtil.trace(
+      () -> doCheckAndMutate(row, family, qualifier, CompareOperator.EQUAL, value, null, null, put)
+        .isSuccess(),
+      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndPut", tableName));
   }
 
   @Override
   @Deprecated
   public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final byte [] value, final Put put) throws IOException {
-    return doCheckAndMutate(row, family, qualifier, toCompareOperator(compareOp), value, null,
-      null, put).isSuccess();
+    return TraceUtil.trace(
+      () -> doCheckAndMutate(row, family, qualifier, toCompareOperator(compareOp), value, null,
+        null, put).isSuccess(),
+      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndPut", tableName));
   }
 
   @Override
   @Deprecated
   public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOperator op, final byte [] value, final Put put) throws IOException {
-    // The name of the operators in CompareOperator are intentionally those of the
-    // operators in the filter's CompareOp enum.
-    return doCheckAndMutate(row, family, qualifier, op, value, null, null, put).isSuccess();
+    return TraceUtil.trace(
+      () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, put).isSuccess(),
+      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndPut", tableName));
   }
 
   @Override
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
     final byte[] value, final Delete delete) throws IOException {
-    return doCheckAndMutate(row, family, qualifier, CompareOperator.EQUAL, value, null,
-      null, delete).isSuccess();
+    return TraceUtil.trace(
+      () -> doCheckAndMutate(row, family, qualifier, CompareOperator.EQUAL, value, null, null,
+        delete).isSuccess(),
+      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndDelete", tableName));
   }
 
   @Override
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
     final CompareOp compareOp, final byte[] value, final Delete delete) throws IOException {
-    return doCheckAndMutate(row, family, qualifier, toCompareOperator(compareOp), value, null,
-      null, delete).isSuccess();
+    return TraceUtil.trace(
+      () -> doCheckAndMutate(row, family, qualifier, toCompareOperator(compareOp), value, null,
+        null, delete).isSuccess(),
+      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndDelete", tableName));
   }
 
   @Override
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
     final CompareOperator op, final byte[] value, final Delete delete) throws IOException {
-    return doCheckAndMutate(row, family, qualifier, op, value, null, null, delete).isSuccess();
+    return TraceUtil.trace(
+      () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, delete).isSuccess(),
+      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndDelete", tableName));
   }
 
   @Override
@@ -798,35 +840,43 @@ public class HTable implements Table {
   @Override
   @Deprecated
   public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
-    final CompareOp compareOp, final byte [] value, final RowMutations rm)
-  throws IOException {
-    return doCheckAndMutate(row, family, qualifier, toCompareOperator(compareOp), value, null,
-      null, rm).isSuccess();
+    final CompareOp compareOp, final byte [] value, final RowMutations rm) throws IOException {
+    return TraceUtil.trace(
+      () -> doCheckAndMutate(row, family, qualifier, toCompareOperator(compareOp), value, null,
+        null, rm).isSuccess(),
+      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndMutate",
+        tableName));
   }
 
   @Override
   @Deprecated
   public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOperator op, final byte [] value, final RowMutations rm) throws IOException {
-    return doCheckAndMutate(row, family, qualifier, op, value, null, null, rm).isSuccess();
+    return TraceUtil.trace(
+      () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, rm).isSuccess(),
+      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndMutate",
+        tableName));
   }
 
   @Override
   public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
-    Row action = checkAndMutate.getAction();
-    if (action instanceof Put || action instanceof Delete || action instanceof Increment ||
-      action instanceof Append) {
-      if (action instanceof Put) {
-        validatePut((Put) action);
+    return TraceUtil.trace(() -> {
+      Row action = checkAndMutate.getAction();
+      if (action instanceof Put || action instanceof Delete || action instanceof Increment ||
+        action instanceof Append) {
+        if (action instanceof Put) {
+          validatePut((Put) action);
+        }
+        return doCheckAndMutate(checkAndMutate.getRow(), checkAndMutate.getFamily(),
+          checkAndMutate.getQualifier(), checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
+          checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), (Mutation) action);
+      } else {
+        return doCheckAndMutate(checkAndMutate.getRow(), checkAndMutate.getFamily(),
+          checkAndMutate.getQualifier(), checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
+          checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), (RowMutations) action);
       }
-      return doCheckAndMutate(checkAndMutate.getRow(), checkAndMutate.getFamily(),
-        checkAndMutate.getQualifier(), checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
-        checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), (Mutation) action);
-    } else {
-      return doCheckAndMutate(checkAndMutate.getRow(), checkAndMutate.getFamily(),
-        checkAndMutate.getQualifier(), checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
-        checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), (RowMutations) action);
-    }
+    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndMutate",
+      tableName));
   }
 
   private CheckAndMutateResult doCheckAndMutate(final byte[] row, final byte[] family,
@@ -857,27 +907,30 @@ public class HTable implements Table {
   @Override
   public List<CheckAndMutateResult> checkAndMutate(List<CheckAndMutate> checkAndMutates)
     throws IOException {
-    if (checkAndMutates.isEmpty()) {
-      return Collections.emptyList();
-    }
-    if (checkAndMutates.size() == 1) {
-      return Collections.singletonList(checkAndMutate(checkAndMutates.get(0)));
-    }
+    return TraceUtil.trace(() -> {
+      if (checkAndMutates.isEmpty()) {
+        return Collections.emptyList();
+      }
+      if (checkAndMutates.size() == 1) {
+        return Collections.singletonList(checkAndMutate(checkAndMutates.get(0)));
+      }
 
-    Object[] results = new Object[checkAndMutates.size()];
-    try {
-      batch(checkAndMutates, results, writeRpcTimeoutMs);
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-    }
+      Object[] results = new Object[checkAndMutates.size()];
+      try {
+        batch(checkAndMutates, results, writeRpcTimeoutMs);
+      } catch (InterruptedException e) {
+        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+      }
 
-    // translate.
-    List<CheckAndMutateResult> ret = new ArrayList<>(results.length);
-    for (Object r : results) {
-      // Batch ensures if there is a failure we get an exception instead
-      ret.add((CheckAndMutateResult) r);
-    }
-    return ret;
+      // translate.
+      List<CheckAndMutateResult> ret = new ArrayList<>(results.length);
+      for (Object r : results) {
+        // Batch ensures if there is a failure we get an exception instead
+        ret.add((CheckAndMutateResult) r);
+      }
+      return ret;
+    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndMutateList",
+      tableName));
   }
 
   private CompareOperator toCompareOperator(CompareOp compareOp) {
@@ -910,39 +963,47 @@ public class HTable implements Table {
 
   @Override
   public boolean exists(final Get get) throws IOException {
-    Result r = get(get, true);
-    assert r.getExists() != null;
-    return r.getExists();
+    return TraceUtil.trace(() -> {
+      Result r = get(get, true);
+      assert r.getExists() != null;
+      return r.getExists();
+    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".get", tableName));
   }
 
   @Override
   public boolean[] exists(List<Get> gets) throws IOException {
-    if (gets.isEmpty()) return new boolean[]{};
-    if (gets.size() == 1) return new boolean[]{exists(gets.get(0))};
+    return TraceUtil.trace(() -> {
+      if (gets.isEmpty()) {
+        return new boolean[] {};
+      }
+      if (gets.size() == 1) {
+        return new boolean[] { exists(gets.get(0)) };
+      }
 
-    ArrayList<Get> exists = new ArrayList<>(gets.size());
-    for (Get g: gets){
-      Get ge = new Get(g);
-      ge.setCheckExistenceOnly(true);
-      exists.add(ge);
-    }
+      ArrayList<Get> exists = new ArrayList<>(gets.size());
+      for (Get g : gets) {
+        Get ge = new Get(g);
+        ge.setCheckExistenceOnly(true);
+        exists.add(ge);
+      }
 
-    Object[] r1= new Object[exists.size()];
-    try {
-      batch(exists, r1, readRpcTimeoutMs);
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
-    }
+      Object[] r1 = new Object[exists.size()];
+      try {
+        batch(exists, r1, readRpcTimeoutMs);
+      } catch (InterruptedException e) {
+        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+      }
 
-    // translate.
-    boolean[] results = new boolean[r1.length];
-    int i = 0;
-    for (Object o : r1) {
-      // batch ensures if there is a failure we get an exception instead
-      results[i++] = ((Result)o).getExists();
-    }
+      // translate.
+      boolean[] results = new boolean[r1.length];
+      int i = 0;
+      for (Object o : r1) {
+        // batch ensures if there is a failure we get an exception instead
+        results[i++] = ((Result) o).getExists();
+      }
 
-    return results;
+      return results;
+    },  () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".getList", tableName));
   }
 
   /**
@@ -964,23 +1025,25 @@ public class HTable implements Table {
 
   @Override
   public void close() throws IOException {
-    if (this.closed) {
-      return;
-    }
-    if (cleanupPoolOnClose) {
-      this.pool.shutdown();
-      try {
-        boolean terminated = false;
-        do {
-          // wait until the pool has terminated
-          terminated = this.pool.awaitTermination(60, TimeUnit.SECONDS);
-        } while (!terminated);
-      } catch (InterruptedException e) {
-        this.pool.shutdownNow();
-        LOG.warn("waitForTermination interrupted");
+    TraceUtil.traceWithIOException(() -> {
+      if (this.closed) {
+        return;
       }
-    }
-    this.closed = true;
+      if (cleanupPoolOnClose) {
+        this.pool.shutdown();
+        try {
+          boolean terminated = false;
+          do {
+            // wait until the pool has terminated
+            terminated = this.pool.awaitTermination(60, TimeUnit.SECONDS);
+          } while (!terminated);
+        } catch (InterruptedException e) {
+          this.pool.shutdownNow();
+          LOG.warn("waitForTermination interrupted");
+        }
+      }
+      this.closed = true;
+    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".close", tableName));
   }
 
   // validate for well-formedness
@@ -1310,24 +1373,30 @@ public class HTable implements Table {
 
     @Override
     public boolean thenPut(Put put) throws IOException {
-      validatePut(put);
-      preCheck();
-      return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, put)
-        .isSuccess();
+      return TraceUtil.trace(() -> {
+        validatePut(put);
+        preCheck();
+        return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, put)
+          .isSuccess();
+      }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".thenPut", tableName));
     }
 
     @Override
     public boolean thenDelete(Delete delete) throws IOException {
-      preCheck();
-      return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, delete)
-        .isSuccess();
+      return TraceUtil.trace(() -> {
+        preCheck();
+        return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, delete)
+          .isSuccess();
+      }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".thenDelete", tableName));
     }
 
     @Override
     public boolean thenMutate(RowMutations mutation) throws IOException {
-      preCheck();
-      return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange,
-        mutation).isSuccess();
+      return TraceUtil.trace(() -> {
+        preCheck();
+        return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, mutation)
+          .isSuccess();
+      }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".thenMutate", tableName));
     }
   }
 
@@ -1350,19 +1419,26 @@ public class HTable implements Table {
 
     @Override
     public boolean thenPut(Put put) throws IOException {
-      validatePut(put);
-      return doCheckAndMutate(row, null, null, null, null, filter, timeRange, put).isSuccess();
+      return TraceUtil.trace(() -> {
+        validatePut(put);
+        return doCheckAndMutate(row, null, null, null, null, filter, timeRange, put)
+          .isSuccess();
+      }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".thenPut", tableName));
     }
 
     @Override
     public boolean thenDelete(Delete delete) throws IOException {
-      return doCheckAndMutate(row, null, null, null, null, filter, timeRange, delete).isSuccess();
+      return TraceUtil.trace(
+        () -> doCheckAndMutate(row, null, null, null, null, filter, timeRange, delete).isSuccess(),
+        () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".thenDelete", tableName));
     }
 
     @Override
     public boolean thenMutate(RowMutations mutation) throws IOException {
-      return doCheckAndMutate(row, null, null, null, null, filter, timeRange, mutation)
-        .isSuccess();
+      return TraceUtil.trace(
+        () -> doCheckAndMutate(row, null, null, null, null, filter, timeRange, mutation)
+          .isSuccess(),
+        () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".thenMutate", tableName));
     }
   }
 }
