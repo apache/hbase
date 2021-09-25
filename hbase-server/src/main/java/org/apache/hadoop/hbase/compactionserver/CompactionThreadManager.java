@@ -376,7 +376,7 @@ public class CompactionThreadManager implements ThroughputControllerService {
     return server.getAsyncClusterConnection().getRegionServerAdmin(sn);
   }
 
-  ConcurrentHashMap<String, CompactionTask> getRunningCompactionTasks() {
+  public ConcurrentHashMap<String, CompactionTask> getRunningCompactionTasks() {
     return runningCompactionTasks;
   }
 
