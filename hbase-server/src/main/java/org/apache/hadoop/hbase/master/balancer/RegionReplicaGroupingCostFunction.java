@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.agrona.collections.Hashing;
+import org.agrona.collections.Int2IntCounterMap;
+
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -27,7 +31,6 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 abstract class RegionReplicaGroupingCostFunction extends CostFunction {
-
   protected long maxCost = 0;
   protected long[] costsPerGroup; // group is either server, host or rack
 
@@ -44,14 +47,13 @@ abstract class RegionReplicaGroupingCostFunction extends CostFunction {
 
   protected final long getMaxCost(BalancerClusterState cluster) {
     // max cost is the case where every region replica is hosted together regardless of host
-    int[] primariesOfRegions = new int[cluster.numRegions];
-    System.arraycopy(cluster.regionIndexToPrimaryIndex, 0, primariesOfRegions, 0,
-      cluster.regions.length);
-
-    Arrays.sort(primariesOfRegions);
-
+    Int2IntCounterMap colocatedReplicaCounts = new Int2IntCounterMap(cluster.numRegions,
+      Hashing.DEFAULT_LOAD_FACTOR, 0);
+    for (int i = 0; i < cluster.regionIndexToPrimaryIndex.length; i++) {
+      colocatedReplicaCounts.getAndIncrement(cluster.regionIndexToPrimaryIndex[i]);
+    }
     // compute numReplicas from the sorted array
-    return costPerGroup(primariesOfRegions);
+    return costPerGroup(colocatedReplicaCounts);
   }
 
   @Override
@@ -77,28 +79,18 @@ abstract class RegionReplicaGroupingCostFunction extends CostFunction {
    * and returns a sum of numReplicas-1 squared. For example, if the server hosts regions a, b, c,
    * d, e, f where a and b are same replicas, and c,d,e are same replicas, it returns (2-1) * (2-1)
    * + (3-1) * (3-1) + (1-1) * (1-1).
-   * @param primariesOfRegions a sorted array of primary regions ids for the regions hosted
+   * @param colocatedReplicaCounts a sorted array of primary regions ids for the regions hosted
    * @return a sum of numReplicas-1 squared for each primary region in the group.
    */
-  protected final long costPerGroup(int[] primariesOfRegions) {
-    long cost = 0;
-    int currentPrimary = -1;
-    int currentPrimaryIndex = -1;
-    // primariesOfRegions is a sorted array of primary ids of regions. Replicas of regions
+  protected final long costPerGroup(Int2IntCounterMap colocatedReplicaCounts) {
+    final AtomicLong cost = new AtomicLong(0);
+    // colocatedReplicaCounts is a sorted array of primary ids of regions. Replicas of regions
     // sharing the same primary will have consecutive numbers in the array.
-    for (int j = 0; j <= primariesOfRegions.length; j++) {
-      int primary = j < primariesOfRegions.length ? primariesOfRegions[j] : -1;
-      if (primary != currentPrimary) { // we see a new primary
-        int numReplicas = j - currentPrimaryIndex;
-        // square the cost
-        if (numReplicas > 1) { // means consecutive primaries, indicating co-location
-          cost += (numReplicas - 1) * (numReplicas - 1);
-        }
-        currentPrimary = primary;
-        currentPrimaryIndex = j;
+    colocatedReplicaCounts.forEach((primary,count) -> {
+      if (count > 1) { // means consecutive primaries, indicating co-location
+        cost.getAndAdd((count - 1) * (count - 1));
       }
-    }
-
-    return cost;
+    });
+    return cost.longValue();
   }
 }
