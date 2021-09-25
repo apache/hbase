@@ -4003,12 +4003,16 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   @Override
-  public Iterator<ServerName> getRegionServers() {
+  public Iterator<ServerName> getBootstrapNodes() {
     return regionServerTracker.getRegionServers().iterator();
   }
 
   @Override
   public List<HRegionLocation> getMetaLocations() {
     return metaRegionLocationCache.getMetaRegionLocations();
+  }
+
+  public Collection<ServerName> getLiveRegionServers() {
+    return regionServerTracker.getRegionServers();
   }
 }

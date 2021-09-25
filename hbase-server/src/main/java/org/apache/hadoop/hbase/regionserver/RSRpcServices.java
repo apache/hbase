@@ -196,6 +196,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavor
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.BootstrapNodeProtos.BootstrapNodeService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.BootstrapNodeProtos.GetAllBootstrapNodesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.BootstrapNodeProtos.GetAllBootstrapNodesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Action;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
@@ -244,7 +247,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
  */
 @InterfaceAudience.Private
 public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
-  implements ClientService.BlockingInterface {
+  implements ClientService.BlockingInterface, BootstrapNodeService.BlockingInterface {
 
   private static final Logger LOG = LoggerFactory.getLogger(RSRpcServices.class);
 
@@ -3838,5 +3841,14 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  public GetAllBootstrapNodesResponse getAllBootstrapNodes(RpcController controller,
+    GetAllBootstrapNodesRequest request) throws ServiceException {
+    GetAllBootstrapNodesResponse.Builder builder = GetAllBootstrapNodesResponse.newBuilder();
+    server.getBootstrapNodes()
+      .forEachRemaining(server -> builder.addNode(ProtobufUtil.toServerName(server)));
+    return builder.build();
   }
 }

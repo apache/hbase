@@ -151,7 +151,6 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.RegionServerAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -352,11 +351,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   // master address tracker
   private final MasterAddressTracker masterAddressTracker;
 
-  /**
-   * Cache for all the region servers in the cluster. Used for serving ClientMetaService.
-   */
-  private final RegionServerAddressTracker regionServerAddressTracker;
-
   // Log Splitting Worker
   private SplitLogWorker splitLogWorker;
 
@@ -447,6 +441,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   private FileSystemUtilizationChore fsUtilizationChore;
 
+  private BootstrapNodeManager bootstrapNodeManager;
+
   /**
    * True if this RegionServer is coming up in a cluster where there is no Master;
    * means it needs to just come up and make do without a Master to talk to: e.g. in test or
@@ -511,7 +507,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         masterAddressTracker = null;
       }
       this.rpcServices.start(zooKeeper);
-      this.regionServerAddressTracker = new RegionServerAddressTracker(zooKeeper, this);
     } catch (Throwable t) {
       // Make sure we log the exception. HRegionServer is often started via reflection and the
       // cause of failed startup is lost.
@@ -644,6 +639,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     try {
       initializeZooKeeper();
       setupClusterConnection();
+      bootstrapNodeManager = new BootstrapNodeManager(asyncClusterConnection, masterAddressTracker);
       // Setup RPC client for master communication
       this.rpcClient = asyncClusterConnection.getRpcClient();
     } catch (Throwable t) {
@@ -2277,6 +2273,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   protected void stopServiceThreads() {
     // clean up the scheduled chores
     stopChoreService();
+    if (bootstrapNodeManager != null) {
+      bootstrapNodeManager.stop();
+    }
     if (this.cacheFlusher != null) {
       this.cacheFlusher.join();
     }
@@ -3430,8 +3429,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   }
 
   @Override
-  public Iterator<ServerName> getRegionServers() {
-    return regionServerAddressTracker.getRegionServers().iterator();
+  public Iterator<ServerName> getBootstrapNodes() {
+    return bootstrapNodeManager.getBootstrapNodes().iterator();
   }
 
   @Override

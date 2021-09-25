@@ -46,9 +46,9 @@ public interface ConnectionRegistryEndpoint {
   List<ServerName> getBackupMasters();
 
   /**
-   * Get a iterator of the region servers which could be used as bootstrap nodes.
+   * Get a iterator of the available bootstrap nodes.
    */
-  Iterator<ServerName> getRegionServers();
+  Iterator<ServerName> getBootstrapNodes();
 
   /**
    * Get the location of meta regions.

@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
@@ -380,6 +381,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
@@ -3476,5 +3479,17 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   public ExecuteProceduresResponse executeProcedures(RpcController controller,
     ExecuteProceduresRequest request) throws ServiceException {
     throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
+  public GetLiveRegionServersResponse getLiveRegionServers(RpcController controller,
+    GetLiveRegionServersRequest request) throws ServiceException {
+    List<ServerName> regionServers = new ArrayList<>(server.getLiveRegionServers());
+    Collections.shuffle(regionServers, ThreadLocalRandom.current());
+    GetLiveRegionServersResponse.Builder builder =
+      GetLiveRegionServersResponse.newBuilder().setTotal(regionServers.size());
+    regionServers.stream().limit(request.getCount()).map(ProtobufUtil::toServerName)
+      .forEach(builder::addServer);
+    return builder.build();
   }
 }
