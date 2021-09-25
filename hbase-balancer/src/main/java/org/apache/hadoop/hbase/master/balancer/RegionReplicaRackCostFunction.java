@@ -45,8 +45,8 @@ class RegionReplicaRackCostFunction extends RegionReplicaGroupingCostFunction {
     // max cost is the case where every region replica is hosted together regardless of rack
     maxCost = getMaxCost(cluster);
     costsPerGroup = new long[cluster.numRacks];
-    for (int i = 0; i < cluster.primariesOfRegionsPerRack.length; i++) {
-      costsPerGroup[i] = costPerGroup(cluster.primariesOfRegionsPerRack[i]);
+    for (int i = 0; i < cluster.colocatedReplicaCountsPerRack.length; i++) {
+      costsPerGroup[i] = costPerGroup(cluster.colocatedReplicaCountsPerRack[i]);
     }
   }
 
@@ -58,8 +58,8 @@ class RegionReplicaRackCostFunction extends RegionReplicaGroupingCostFunction {
     int oldRack = cluster.serverIndexToRackIndex[oldServer];
     int newRack = cluster.serverIndexToRackIndex[newServer];
     if (newRack != oldRack) {
-      costsPerGroup[oldRack] = costPerGroup(cluster.primariesOfRegionsPerRack[oldRack]);
-      costsPerGroup[newRack] = costPerGroup(cluster.primariesOfRegionsPerRack[newRack]);
+      costsPerGroup[oldRack] = costPerGroup(cluster.colocatedReplicaCountsPerRack[oldRack]);
+      costsPerGroup[newRack] = costPerGroup(cluster.colocatedReplicaCountsPerRack[newRack]);
     }
   }
 }
