@@ -70,7 +70,8 @@ class BucketEntry implements HBaseReferenceCounted {
    * The RefCnt means how many paths are referring the {@link BucketEntry}, there are two cases:
    * 1.If the {@link IOEngine#usesSharedMemory()} is false(eg.{@link FileIOEngine}),the refCnt is
    *   always 1 until this {@link BucketEntry} is evicted from {@link BucketCache#backingMap}.Even
-   *   if the corresponding {@link HFileBlock} is referenced by RPC reading, the refCnt not increase.
+   *   if the corresponding {@link HFileBlock} is referenced by RPC reading, the refCnt should not
+   *   increase.
    *
    * 2.If the {@link IOEngine#usesSharedMemory()} is true(eg.{@link ByteBufferIOEngine}),each RPC
    *   reading path is considering as one path, the {@link BucketCache#backingMap} reference is
