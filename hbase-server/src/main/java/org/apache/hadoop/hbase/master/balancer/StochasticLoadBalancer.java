@@ -313,11 +313,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   @Override
   protected synchronized boolean areSomeRegionReplicasColocated(Cluster c) {
     regionReplicaHostCostFunction.init(c);
-    if (regionReplicaHostCostFunction.cost() > 0) {
+    if (Math.abs(regionReplicaHostCostFunction.cost()) > CostFunction.COST_EPSILON) {
       return true;
     }
     regionReplicaRackCostFunction.init(c);
-    if (regionReplicaRackCostFunction.cost() > 0) {
+    if (Math.abs(regionReplicaRackCostFunction.cost()) > CostFunction.COST_EPSILON) {
       return true;
     }
     return false;
@@ -811,6 +811,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Base class of StochasticLoadBalancer's Cost Functions.
    */
   public abstract static class CostFunction {
+
+    public static final double COST_EPSILON = 0.0001;
+
     private float multiplier = 0;
 
     protected Cluster cluster;
