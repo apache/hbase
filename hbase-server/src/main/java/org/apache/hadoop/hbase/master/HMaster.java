@@ -193,6 +193,7 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotNotifier;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotNotifierFactory;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -1218,6 +1219,32 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       LOG.debug("Balancer post startup initialization complete, took " + (
           (EnvironmentEdgeManager.currentTime() - start) / 1000) + " seconds");
     }
+
+    /*
+      A background thread to update all TableDescriptors that do not contain
+      StoreFileTracker implementation configuration. see HBASE-26263.
+    */
+    Thread STFChecking = new Thread(() -> {
+      try {
+        tableDescriptors.getAll().forEach((tableName, htd) -> {
+          if (StringUtils.isEmpty(htd.getValue(StoreFileTrackerFactory.TRACKER_IMPL))) {
+            TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(htd);
+            StoreFileTrackerFactory.persistTrackerConfig(this.conf, builder);
+            try {
+              tableDescriptors.update(builder.build());
+              LOG.info("Persist StoreFileTracker configurations to TableDescriptor for table {}",
+                tableName);
+            } catch (IOException ioe) {
+              LOG.warn("Failed to persist StoreFileTracker to table {}", tableName, ioe);
+            }
+          }
+        });
+      } catch (IOException e) {
+        LOG.error("Failed to run StoreFileTracker checking thread for existing tables!", e);
+      }
+    }, "StoreFileTrackerChecking");
+    STFChecking.setDaemon(true);
+    STFChecking.start();
   }
 
   private void createMissingCFsInMetaDuringUpgrade(
