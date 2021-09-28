@@ -778,14 +778,35 @@ public class Result implements CellScannable, CellScanner {
    * @throws Exception Every difference is throwing an exception
    */
   public static void compareResults(Result res1, Result res2)
+    throws Exception{
+    compareResults(res1, res2, true);
+  }
+
+  /**
+   * Does a deep comparison of two Results, down to the byte arrays.
+   * @param res1 first result to compare
+   * @param res2 second result to compare
+   * @param verbose includes string representation for all cells in the exception if true;
+   *                otherwise include rowkey only
+   * @throws Exception Every difference is throwing an exception
+   */
+  public static void compareResults(Result res1, Result res2, boolean verbose)
       throws Exception {
     if (res2 == null) {
       throw new Exception("There wasn't enough rows, we stopped at "
           + Bytes.toStringBinary(res1.getRow()));
     }
     if (res1.size() != res2.size()) {
-      throw new Exception("This row doesn't have the same number of KVs: "
-          + res1.toString() + " compared to " + res2.toString());
+      if (verbose) {
+        throw new Exception(
+          "This row doesn't have the same number of KVs: "
+            + res1 + " compared to " + res2);
+      } else {
+        throw new Exception(
+          "This row doesn't have the same number of KVs: row="
+            + Bytes.toStringBinary(res1.getRow())
+            + ", " + res1.size() + " cells are compared to " + res2.size() + " cells");
+      }
     }
     Cell[] ourKVs = res1.rawCells();
     Cell[] replicatedKVs = res2.rawCells();
@@ -793,8 +814,13 @@ public class Result implements CellScannable, CellScanner {
       if (!ourKVs[i].equals(replicatedKVs[i]) ||
           !CellUtil.matchingValue(ourKVs[i], replicatedKVs[i]) ||
           !CellUtil.matchingTags(ourKVs[i], replicatedKVs[i])) {
-        throw new Exception("This result was different: "
-            + res1.toString() + " compared to " + res2.toString());
+        if (verbose) {
+          throw new Exception("This result was different: "
+            + res1 + " compared to " + res2);
+        } else {
+          throw new Exception("This result was different: row="
+            + Bytes.toStringBinary(res1.getRow()));
+        }
       }
     }
   }
