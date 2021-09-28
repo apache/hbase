@@ -121,6 +121,7 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.balancer.MaintenanceLoadBalancer;
+import org.apache.hadoop.hbase.master.migrate.RollingUpgradeChore;
 import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
@@ -193,7 +194,6 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotNotifier;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotNotifierFactory;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
-import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -374,6 +374,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private ReplicationBarrierCleaner replicationBarrierCleaner;
   private MobFileCleanerChore mobFileCleanerChore;
   private MobFileCompactionChore mobFileCompactionChore;
+  private RollingUpgradeChore rollingUpgradeChore;
   // used to synchronize the mobCompactionStates
   private final IdLock mobCompactionLock = new IdLock();
   // save the information of mob compactions in tables.
@@ -1220,31 +1221,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           (EnvironmentEdgeManager.currentTime() - start) / 1000) + " seconds");
     }
 
-    /*
-      A background thread to update all TableDescriptors that do not contain
-      StoreFileTracker implementation configuration. see HBASE-26263.
-    */
-    Thread STFChecking = new Thread(() -> {
-      try {
-        tableDescriptors.getAll().forEach((tableName, htd) -> {
-          if (StringUtils.isEmpty(htd.getValue(StoreFileTrackerFactory.TRACKER_IMPL))) {
-            TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(htd);
-            StoreFileTrackerFactory.persistTrackerConfig(this.conf, builder);
-            try {
-              tableDescriptors.update(builder.build());
-              LOG.info("Persist StoreFileTracker configurations to TableDescriptor for table {}",
-                tableName);
-            } catch (IOException ioe) {
-              LOG.warn("Failed to persist StoreFileTracker to table {}", tableName, ioe);
-            }
-          }
-        });
-      } catch (IOException e) {
-        LOG.error("Failed to run StoreFileTracker checking thread for existing tables!", e);
-      }
-    }, "StoreFileTrackerChecking");
-    STFChecking.setDaemon(true);
-    STFChecking.start();
+    boolean isRollingUpgradeChoreEnabled = conf
+      .getBoolean(RollingUpgradeChore.ROLLING_UPGRADE_CHORE_ENABLED_KEY,
+        RollingUpgradeChore.DEFAULT_ROLLING_UPGRADE_CHORE_ENABLED);
+    if (isRollingUpgradeChoreEnabled) {
+      this.rollingUpgradeChore = new RollingUpgradeChore(this);
+      getChoreService().scheduleChore(rollingUpgradeChore);
+    }
   }
 
   private void createMissingCFsInMetaDuringUpgrade(
@@ -1729,6 +1712,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     shutdownChore(snapshotCleanerChore);
     shutdownChore(hbckChore);
     shutdownChore(regionsRecoveryChore);
+    shutdownChore(rollingUpgradeChore);
   }
 
   /**
