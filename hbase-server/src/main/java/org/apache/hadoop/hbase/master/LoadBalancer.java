@@ -171,6 +171,15 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
   void updateBalancerStatus(boolean status);
 
   /**
+   * In some scenarios, Balancer needs to update internal status or information according to the
+   * current tables load
+   *
+   * @param loadOfAllTable region load of servers for all table
+   */
+  default void updateBalancerLoadInfo(Map<TableName, Map<ServerName, List<RegionInfo>>>
+    loadOfAllTable){}
+
+  /**
    * @return true if Master carries regions
    * @deprecated since 2.4.0, will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>

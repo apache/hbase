@@ -68,6 +68,9 @@ public class BalancerTestBase {
   protected static Configuration conf;
   protected static StochasticLoadBalancer loadBalancer;
 
+  protected static DummyMetricsStochasticBalancer dummyMetricsStochasticBalancer =
+    new DummyMetricsStochasticBalancer();
+
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     conf = HBaseConfiguration.create();
@@ -75,7 +78,7 @@ public class BalancerTestBase {
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
     conf.setFloat("hbase.regions.slop", 0.0f);
     conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
-    loadBalancer = new StochasticLoadBalancer();
+    loadBalancer = new StochasticLoadBalancer(dummyMetricsStochasticBalancer);
     MasterServices services = mock(MasterServices.class);
     when(services.getConfiguration()).thenReturn(conf);
     loadBalancer.setMasterServices(services);
