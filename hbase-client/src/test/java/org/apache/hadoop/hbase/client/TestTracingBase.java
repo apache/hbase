@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
 import io.opentelemetry.sdk.trace.data.SpanData;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -33,7 +35,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.ClassRule;
 
 public class TestTracingBase {
 
@@ -43,8 +45,8 @@ public class TestTracingBase {
 
   protected Configuration conf;
 
-  @Rule
-  public OpenTelemetryRule traceRule = OpenTelemetryRule.create();
+  @ClassRule
+  public static OpenTelemetryRule TRACE_RULE = OpenTelemetryRule.create();
 
   @Before
   public void setUp() throws Exception {
@@ -57,15 +59,19 @@ public class TestTracingBase {
     TableName tableName) {
     String expectedSpanName = String.format("%s.%s", className, methodName);
     Waiter.waitFor(conf, 1000,
-      () -> traceRule.getSpans().stream()
+      () -> TRACE_RULE.getSpans().stream()
         .anyMatch(span -> span.getName().equals(expectedSpanName) &&
           span.getKind() == SpanKind.INTERNAL && span.hasEnded()));
-    SpanData data = traceRule.getSpans().stream()
+    SpanData data = TRACE_RULE.getSpans().stream()
       .filter(s -> s.getName().equals(expectedSpanName)).findFirst().get();
     assertEquals(StatusCode.OK, data.getStatus().getStatusCode());
 
     if (serverName != null) {
-      assertEquals(serverName.getServerName(), data.getAttributes().get(TraceUtil.SERVER_NAME_KEY));
+      Optional<SpanData> foundServerName =
+        TRACE_RULE.getSpans().stream().filter(s -> s.getName().equals(expectedSpanName)).filter(
+          s -> serverName.getServerName().equals(s.getAttributes().get(TraceUtil.SERVER_NAME_KEY)))
+          .findAny();
+      assertTrue(foundServerName.isPresent());
     }
 
     if (tableName != null) {
