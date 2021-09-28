@@ -41,7 +41,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -144,6 +143,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ReservoirSample;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -4073,12 +4073,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   public final GetBootstrapNodesResponse getBootstrapNodes(RpcController controller,
     GetBootstrapNodesRequest request) throws ServiceException {
-    List<ServerName> bootstrapNodes = new ArrayList<>(regionServer.getRegionServers());
-    Collections.shuffle(bootstrapNodes, ThreadLocalRandom.current());
     int maxNodeCount = regionServer.getConfiguration().getInt(CLIENT_BOOTSTRAP_NODE_LIMIT,
       DEFAULT_CLIENT_BOOTSTRAP_NODE_LIMIT);
+    ReservoirSample<ServerName> sample = new ReservoirSample<>(maxNodeCount);
+    sample.add(regionServer.getRegionServers());
+
     GetBootstrapNodesResponse.Builder builder = GetBootstrapNodesResponse.newBuilder();
-    bootstrapNodes.stream().limit(maxNodeCount).map(ProtobufUtil::toServerName)
+    sample.getSamplingResult().stream().map(ProtobufUtil::toServerName)
       .forEach(builder::addServerName);
     return builder.build();
   }

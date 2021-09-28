@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -3983,8 +3984,8 @@ public class HRegionServer extends Thread implements
     return masterAddressTracker.getBackupMasters();
   }
 
-  public Collection<ServerName> getRegionServers() {
-    return regionServerAddressTracker.getRegionServers();
+  public Iterator<ServerName> getRegionServers() {
+    return regionServerAddressTracker.getRegionServers().iterator();
   }
 
   public MetaRegionLocationCache getMetaRegionLocationCache() {
