@@ -1786,6 +1786,30 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   /**
+   *  Trigger a normal balance, see {@link HMaster#balance()} . If the balance is not executed
+   *  this time, the metrics related to the balance will be updated.
+   *
+   *  When balance is running, related metrics will be updated at the same time. But if some
+   *  checking logic failed and cause the balancer exit early, we lost the chance to update
+   *  balancer metrics. This will lead to user missing the latest balancer info.
+   * */
+  public BalanceResponse balanceOrUpdateMetrics() throws IOException{
+    synchronized (this.balancer) {
+      BalanceResponse response = balance();
+      if (!response.isBalancerRan()) {
+        Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
+          this.assignmentManager.getRegionStates().getAssignmentsForBalancer(this.tableStateManager,
+            this.serverManager.getOnlineServersList());
+        for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
+          serverMap.keySet().removeAll(this.serverManager.getDrainingServersList());
+        }
+        this.balancer.updateBalancerLoadInfo(assignments);
+      }
+      return response;
+    }
+  }
+
+  /**
    * Checks master state before initiating action over region topology.
    * @param action the name of the action under consideration, for logging.
    * @return {@code true} when the caller should exit early, {@code false} otherwise.
