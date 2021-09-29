@@ -301,7 +301,7 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     int maxNodeCount = server.getConfiguration().getInt(CLIENT_BOOTSTRAP_NODE_LIMIT,
       DEFAULT_CLIENT_BOOTSTRAP_NODE_LIMIT);
     ReservoirSample<ServerName> sample = new ReservoirSample<>(maxNodeCount);
-    sample.add(server.getRegionServers());
+    sample.add(server.getBootstrapNodes());
 
     GetBootstrapNodesResponse.Builder builder = GetBootstrapNodesResponse.newBuilder();
     sample.getSamplingResult().stream().map(ProtobufUtil::toServerName)
