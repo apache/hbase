@@ -174,13 +174,15 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
         dummyMetricsStochasticBalancer.clearDummyMetrics();
         loadBalancer.updateBalancerLoadInfo(LoadOfAllTable);
         assertTrue("Metrics should be recorded!",
-          dummyMetricsStochasticBalancer.getDummyCostsMap() != null && !dummyMetricsStochasticBalancer.getDummyCostsMap().isEmpty());
+          dummyMetricsStochasticBalancer.getDummyCostsMap() != null
+            && !dummyMetricsStochasticBalancer.getDummyCostsMap().isEmpty());
 
         String metricRecordKey;
         if (isByTable) {
           metricRecordKey = "table1#" + StochasticLoadBalancer.OVERALL_COST_FUNCTION_NAME;
         } else {
-          metricRecordKey = HConstants.ENSEMBLE_TABLE_NAME + "#" + StochasticLoadBalancer.OVERALL_COST_FUNCTION_NAME;
+          metricRecordKey = HConstants.ENSEMBLE_TABLE_NAME + "#"
+            + StochasticLoadBalancer.OVERALL_COST_FUNCTION_NAME;
         }
         double curOverallCost = loadBalancer.computeCost(clusterState, Double.MAX_VALUE);
         double curOverallCostInMetrics =
@@ -204,7 +206,8 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, false);
       loadBalancer.onConfigurationChange(conf);
       dummyMetricsStochasticBalancer.clearDummyMetrics();
-      List<RegionPlan> plans = loadBalancer.balanceCluster((Map)mockClusterServersWithTables(servers));
+      List<RegionPlan> plans =
+        loadBalancer.balanceCluster((Map) mockClusterServersWithTables(servers));
 
       assertTrue("Balance plan should not be empty!", plans != null && !plans.isEmpty());
       assertTrue("There should be metrics record in MetricsStochasticBalancer",
@@ -233,7 +236,8 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, false);
       loadBalancer.onConfigurationChange(conf);
       dummyMetricsStochasticBalancer.clearDummyMetrics();
-      List<RegionPlan> plans = loadBalancer.balanceCluster( (Map) mockClusterServersWithTables(servers));
+      List<RegionPlan> plans =
+        loadBalancer.balanceCluster((Map) mockClusterServersWithTables(servers));
 
       assertTrue("Balance plan should be empty!", plans == null || plans.isEmpty());
       assertTrue("There should be metrics record in MetricsStochasticBalancer!",

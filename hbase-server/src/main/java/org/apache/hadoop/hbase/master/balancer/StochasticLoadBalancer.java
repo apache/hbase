@@ -290,7 +290,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
   }
 
-  private void updateBalancerTableLoadInfo(TableName tableName, Map<ServerName, List<RegionInfo>> loadOfOneTable) {
+  private void updateBalancerTableLoadInfo(TableName tableName,
+    Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     RegionLocationFinder finder = null;
     if ((this.localityCost != null && this.localityCost.getMultiplier() > 0)
       || (this.rackLocalityCost != null && this.rackLocalityCost.getMultiplier() > 0)) {
@@ -313,7 +314,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         updateBalancerTableLoadInfo(tableName, loadOfOneTable);
       });
     } else {
-      updateBalancerTableLoadInfo(HConstants.ENSEMBLE_TABLE_NAME, toEnsumbleTableLoad(loadOfAllTable));
+      updateBalancerTableLoadInfo(HConstants.ENSEMBLE_TABLE_NAME,
+        toEnsumbleTableLoad(loadOfAllTable));
     }
   }
 
