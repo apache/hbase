@@ -637,22 +637,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           case INCLUDE:
           case INCLUDE_AND_SEEK_NEXT_ROW:
           case INCLUDE_AND_SEEK_NEXT_COL:
-
             Filter f = matcher.getFilter();
             if (f != null) {
               cell = f.transformCell(cell);
             }
             this.countPerRow++;
-            if (storeLimit > -1 && this.countPerRow > (storeLimit + storeOffset)) {
-              // do what SEEK_NEXT_ROW does.
-              if (!matcher.moreRowsMayExistAfter(cell)) {
-                close(false);// Do all cleanup except heap.close()
-                return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
-              }
-              matcher.clearCurrentRow();
-              seekToNextRow(cell);
-              break LOOP;
-            }
 
             // add to results only if we have skipped #storeOffset kvs
             // also update metric accordingly
@@ -680,6 +669,17 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
                     + store.getHRegion().getRegionInfo().getRegionNameAsString();
                 LOG.warn(message);
                 throw new RowTooBigException(message);
+              }
+
+              if (storeLimit > -1 && this.countPerRow >= (storeLimit + storeOffset)) {
+                // do what SEEK_NEXT_ROW does.
+                if (!matcher.moreRowsMayExistAfter(cell)) {
+                  close(false);// Do all cleanup except heap.close()
+                  return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
+                }
+                matcher.clearCurrentRow();
+                seekToNextRow(cell);
+                break LOOP;
               }
             }
 
