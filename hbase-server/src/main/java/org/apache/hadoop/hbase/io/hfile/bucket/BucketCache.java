@@ -1030,6 +1030,7 @@ public class BucketCache implements BlockCache, HeapSize {
         if (ramCache.containsKey(cacheKey)) {
           blocksByHFile.add(cacheKey);
         }
+
         BucketEntry bucketEntry = re.writeToCache(ioEngine, bucketAllocator, realCacheSize,
           (entry) -> createRecycler(entry));
         // Successfully added. Up index and add bucketEntry. Clear io exceptions.
