@@ -248,16 +248,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     curFunctionCosts = new double[costFunctions.size()];
     tempFunctionCosts = new double[costFunctions.size()];
 
-    sumMultiplier = 0;
-    for (CostFunction c : costFunctions) {
-      float multiplier = c.getMultiplier();
-      sumMultiplier += multiplier;
-    }
-    if (sumMultiplier <= 0) {
-      LOG.error("At least one cost function needs a multiplier > 0. For example, set "
-        + "hbase.master.balancer.stochastic.regionCountCost to a positive value or default");
-    }
-
     LOG.info(
       "Loaded config; maxSteps=" + maxSteps + ", runMaxSteps=" + runMaxSteps +
         ", stepsPerRegion=" + stepsPerRegion +
@@ -356,15 +346,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return false;
     }
     if (areSomeRegionReplicasColocated(cluster)) {
-      LOG.info("Running balancer because at least one server hosts replicas of the same region. "
-        + "function cost={}", functionCost());
+      LOG.info("Running balancer because at least one server hosts replicas of the same region." +
+        " function cost={}", functionCost());
       return true;
     }
 
     if (idleRegionServerExist(cluster)){
       LOG.info("Running balancer because at least one server hosts replicas of the same region." +
         "regionReplicaRackCostFunction={}", regionReplicaRackCostFunction.cost());
-      LOG.info("Running balancer because cluster has idle server(s).");
+      LOG.info("Running balancer because cluster has idle server(s)."+
+        " function cost={}", functionCost());
       return true;
     }
 
@@ -438,6 +429,18 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     long startTime = EnvironmentEdgeManager.currentTime();
 
     initCosts(cluster);
+
+    sumMultiplier = 0;
+    for (CostFunction c : costFunctions) {
+      if(c.isNeeded()) {
+        sumMultiplier += c.getMultiplier();
+      }
+    }
+    if (sumMultiplier <= 0) {
+      LOG.error("At least one cost function needs a multiplier > 0. For example, set "
+        + "hbase.master.balancer.stochastic.regionCountCost to a positive value or default");
+      return null;
+    }
 
     double currentCost = computeCost(cluster, Double.MAX_VALUE);
     curOverallCost = currentCost;
