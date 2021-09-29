@@ -634,7 +634,7 @@ public class BucketCache implements BlockCache, HeapSize {
    *   it is {@link ByteBuffAllocator#putbackBuffer}.
    * </pre>
    */
-  protected Recycler createRecycler(final BucketEntry bucketEntry) {
+  private Recycler createRecycler(final BucketEntry bucketEntry) {
     return () -> {
       freeBucketEntry(bucketEntry);
       return;
@@ -1017,7 +1017,7 @@ public class BucketCache implements BlockCache, HeapSize {
           continue;
         }
         BucketEntry bucketEntry = re.writeToCache(ioEngine, bucketAllocator, realCacheSize,
-          (entry) -> createRecycler(entry));
+          this::createRecycler);
         // Successfully added. Up index and add bucketEntry. Clear io exceptions.
         bucketEntries[index] = bucketEntry;
         if (ioErrorStartTime > 0) {
@@ -1217,7 +1217,8 @@ public class BucketCache implements BlockCache, HeapSize {
       LOG.info("Persistent file is old format, it does not support verifying file integrity!");
     }
     verifyCapacityAndClasses(proto.getCacheCapacity(), proto.getIoClass(), proto.getMapClass());
-    backingMap = BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap());
+    backingMap = BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap(),
+      this::createRecycler);
   }
 
   /**
