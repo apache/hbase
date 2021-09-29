@@ -1821,6 +1821,7 @@
     <xz.version>1.9</xz.version>
     <zstd-jni.version>1.5.0-4</zstd-jni.version>
     <hbase-thirdparty.version>4.0.1</hbase-thirdparty.version>
+    <nimbusds.version>9.15</nimbusds.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -3205,6 +3206,10 @@
                <artifactId>json-smart</artifactId>
              </exclusion>
              <exclusion>
+               <groupId>com.nimbusds</groupId>
+               <artifactId>nimbus-jose-jwt</artifactId>
+             </exclusion>
+             <exclusion>
                <groupId>org.slf4j</groupId>
                <artifactId>slf4j-log4j12</artifactId>
              </exclusion>
@@ -3414,11 +3419,15 @@
            <artifactId>hadoop-distcp</artifactId>
            <version>${hadoop-three.version}</version>
          </dependency>
-
          <dependency>
            <groupId>org.apache.hadoop</groupId>
            <artifactId>hadoop-hdfs-client</artifactId>
            <version>${hadoop-three.version}</version>
+         </dependency>
+         <dependency>
+           <groupId>com.nimbusds</groupId>
+           <artifactId>nimbus-jose-jwt</artifactId>
+           <version>${nimbusds.version}</version>
          </dependency>
        </dependencies>
      </dependencyManagement>
