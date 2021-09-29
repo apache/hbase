@@ -23,7 +23,7 @@ module IRB
 
   # Subclass of IRB so can intercept methods
   class HIRB < Irb
-    def initialize
+    def initialize(workspace = nil, input_method = nil)
       # This is ugly.  Our 'help' method above provokes the following message
       # on irb construction: 'irb: warn: can't alias help from irb_help.'
       # Below, we reset the output so its pointed at /dev/null during irb
@@ -44,7 +44,7 @@ module IRB
       # The stderr is an input to stty to re-adjust the terminal for the error('stdin isnt a terminal')
       # incase the command is piped with hbase shell(eg - >echo 'list' | bin/hbase shell)
       `stty icrnl <&2`
-      super
+      super(workspace, input_method)
     ensure
       f.close
       $stdout = STDOUT
@@ -57,4 +57,41 @@ module IRB
       super unless @context.last_value.nil?
     end
   end
+
+  ##
+  # HBaseLoader serves a similar purpose to IRB::IrbLoader, but with a different separation of
+  # concerns. This loader allows us to directly get the path for a filename in ruby's load path,
+  # and then use that in IRB::Irb
+  module HBaseLoader
+    ##
+    # Determine the loadable path for a given filename by searching through $LOAD_PATH
+    #
+    # This serves a similar purpose to IRB::IrbLoader#search_file_from_ruby_path, but uses JRuby's
+    # loader, which allows us to find special paths like "uri:classloader" inside of a Jar.
+    #
+    # @param [String] filename
+    # @return [String] path
+    def self.path_for_load(filename)
+      return File.absolute_path(filename) if File.exist? filename
+
+      # Get JRuby's LoadService from the global (singleton) instance of the runtime
+      # (org.jruby.Ruby), which allows us to use JRuby's tools for searching the load path.
+      runtime = org.jruby.Ruby.getGlobalRuntime
+      loader = runtime.getLoadService
+      search_state = loader.findFileForLoad filename
+      raise LoadError, "no such file to load -- #{filename}" if search_state.library.nil?
+
+      search_state.loadName
+    end
+
+    ##
+    # Return a file handle for the given file found in the load path
+    #
+    # @param [String] filename
+    # @return [FileInputMethod] InputMethod for passing to IRB session
+    def self.file_for_load(filename)
+      FileInputMethod.new(File.new(path_for_load(filename)))
+    end
+  end
+
 end
