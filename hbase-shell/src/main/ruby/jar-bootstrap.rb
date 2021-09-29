@@ -105,6 +105,7 @@ script2run = nil
 log_level = org.apache.log4j.Level::ERROR
 @shell_debug = false
 interactive = true
+full_backtrace = false
 top_level_definitions = false
 
 opts.each do |opt, arg|
@@ -116,7 +117,7 @@ opts.each do |opt, arg|
     conf_from_cli = add_to_configuration(conf_from_cli, arg)
   when '--debug'
     log_level = org.apache.log4j.Level::DEBUG
-    $fullBackTrace = true
+    full_backtrace = true
     @shell_debug = true
     puts 'Setting DEBUG log level...'
   when '--noninteractive'
@@ -185,61 +186,39 @@ end
 # instance variables (@hbase and @shell) onto Ruby's top-level receiver object known as "main".
 @shell.export_all(self) if top_level_definitions
 
+require 'irb'
+require 'irb/ext/change-ws'
+require 'irb/hirb'
+
+# Configure IRB
+IRB.setup(nil)
+IRB.conf[:PROMPT][:CUSTOM] = {
+  PROMPT_I: '%N:%03n:%i> ',
+  PROMPT_S: '%N:%03n:%i%l ',
+  PROMPT_C: '%N:%03n:%i* ',
+  RETURN: "=> %s\n"
+}
+
+IRB.conf[:IRB_NAME] = 'hbase'
+IRB.conf[:AP_NAME] = 'hbase'
+IRB.conf[:PROMPT_MODE] = :CUSTOM
+IRB.conf[:BACK_TRACE_LIMIT] = 0 unless full_backtrace
+
+# Create a workspace we'll use across sessions.
+workspace = @shell.get_workspace
+
 # If script2run, try running it.  If we're in interactive mode, will go on to run the shell unless
 # script calls 'exit' or 'exit 0' or 'exit errcode'.
-require 'shell/hbase_loader'
 if script2run
-  ::Shell::Shell.exception_handler(!$fullBackTrace) { @shell.eval_io(Hbase::Loader.file_for_load(script2run), filename = script2run) }
+  ::Shell::Shell.exception_handler(!full_backtrace) do
+    IRB::HIRB.new(workspace, IRB::HBaseLoader.file_for_load(script2run)).run
+  end
+  exit @shell.exit_code unless @shell.exit_code.nil?
 end
-
-# If we are not running interactively, evaluate standard input
-::Shell::Shell.exception_handler(!$fullBackTrace) { @shell.eval_io(STDIN) } unless interactive
 
 if interactive
   # Output a banner message that tells users where to go for help
   @shell.print_banner
-
-  require 'irb'
-  require 'irb/ext/change-ws'
-  require 'irb/hirb'
-
-  module IRB
-    # Override of the default IRB.start
-    def self.start(ap_path = nil)
-      $0 = File.basename(ap_path, '.rb') if ap_path
-
-      IRB.setup(ap_path)
-      IRB.conf[:PROMPT][:CUSTOM] = {
-        :PROMPT_I => "%N:%03n:%i> ",
-        :PROMPT_S => "%N:%03n:%i%l ",
-        :PROMPT_C => "%N:%03n:%i* ",
-        :RETURN => "=> %s\n"
-      }
-
-      @CONF[:IRB_NAME] = 'hbase'
-      @CONF[:AP_NAME] = 'hbase'
-      @CONF[:PROMPT_MODE] = :CUSTOM
-      @CONF[:BACK_TRACE_LIMIT] = 0 unless $fullBackTrace
-
-      hirb = if @CONF[:SCRIPT]
-               HIRB.new(nil, @CONF[:SCRIPT])
-             else
-               HIRB.new
-             end
-
-      shl = TOPLEVEL_BINDING.receiver.instance_variable_get :'@shell'
-      hirb.context.change_workspace shl.get_workspace
-
-      @CONF[:IRB_RC].call(hirb.context) if @CONF[:IRB_RC]
-      # Storing our current HBase IRB Context as the main context is imperative for several reasons,
-      # including auto-completion.
-      @CONF[:MAIN_CONTEXT] = hirb.context
-
-      catch(:IRB_EXIT) do
-        hirb.eval_input
-      end
-    end
-  end
-
-  IRB.start
 end
+IRB::HIRB.new(workspace).run
+exit @shell.exit_code unless interactive || @shell.exit_code.nil?
