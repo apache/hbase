@@ -100,6 +100,11 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   }
 
   @Override
+  public synchronized void updateBalancerLoadInfo(Map<TableName, Map<ServerName, List<RegionInfo>>>
+    loadOfAllTable){
+    internalBalancer.updateBalancerLoadInfo(loadOfAllTable);
+  }
+
   public void setMasterServices(MasterServices masterServices) {
     this.masterServices = masterServices;
   }
