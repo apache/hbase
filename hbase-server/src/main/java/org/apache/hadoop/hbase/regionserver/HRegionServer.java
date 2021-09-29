@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.Timer;
@@ -454,6 +455,8 @@ public class HRegionServer extends Thread implements
 
   /** The nonce manager chore. */
   private ScheduledChore nonceManagerChore;
+
+  private DirectHFileCleaner directHFileCleaner;
 
   private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
@@ -2135,6 +2138,9 @@ public class HRegionServer extends Thread implements
     if (this.slowLogTableOpsChore != null) {
       choreService.scheduleChore(slowLogTableOpsChore);
     }
+    if(this.directHFileCleaner != null) {
+      choreService.scheduleChore(directHFileCleaner);
+    }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
@@ -2214,6 +2220,22 @@ public class HRegionServer extends Thread implements
       this.storefileRefresher = new StorefileRefresherChore(storefileRefreshPeriod,
           onlyMetaRefresh, this, this);
     }
+
+    int directHFileCleanerPeriod  = conf.getInt(
+      DirectHFileCleaner.DIRECT_HFILE_CLEANER_PERIOD,
+      DirectHFileCleaner.DEFAULT_DIRECT_HFILE_CLEANER_PERIOD);
+    int directHFileCleanerDelay  = conf.getInt(
+      DirectHFileCleaner.DIRECT_HFILE_CLEANER_DELAY,
+      DirectHFileCleaner.DEFAULT_DIRECT_HFILE_CLEANER_DELAY);
+    double directHFileCleanerDelayJitter = conf.getDouble(
+      DirectHFileCleaner.DIRECT_HFILE_CLEANER_DELAY_JITTER,
+      DirectHFileCleaner.DEFAULT_DIRECT_HFILE_CLEANER_DELAY_JITTER);
+
+    double jitterRate = (new Random().nextDouble() - 0.5D) * directHFileCleanerDelayJitter;
+    long jitterValue = Math.round(directHFileCleanerDelay * jitterRate);
+    this.directHFileCleaner = new DirectHFileCleaner((int)(directHFileCleanerDelay + jitterValue), directHFileCleanerPeriod,
+      this, conf, this);
+
     registerConfigurationObservers();
   }
 
@@ -2694,6 +2716,7 @@ public class HRegionServer extends Thread implements
       shutdownChore(storefileRefresher);
       shutdownChore(fsUtilizationChore);
       shutdownChore(slowLogTableOpsChore);
+      shutdownChore(directHFileCleaner);
       // cancel the remaining scheduled chores (in case we missed out any)
       // TODO: cancel will not cleanup the chores, so we need make sure we do not miss any
       choreService.shutdown();
@@ -3984,5 +4007,10 @@ public class HRegionServer extends Thread implements
   @InterfaceAudience.Private
   public long getRetryPauseTime() {
     return this.retryPauseTime;
+  }
+
+  @InterfaceAudience.Private
+  public DirectHFileCleaner getDirectHFileCleaner(){
+    return directHFileCleaner;
   }
 }

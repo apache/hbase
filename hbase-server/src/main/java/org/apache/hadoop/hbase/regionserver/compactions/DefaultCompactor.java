@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -104,6 +105,9 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
       LOG.warn(
         "Failed to delete the leftover file " + leftoverFile + " after an unfinished compaction.",
         e);
+    }
+    finally {
+      filesDone(Arrays.asList(leftoverFile));
     }
   }
 

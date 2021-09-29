@@ -1569,6 +1569,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         filesCompacting.removeAll(compactedFiles);
       }
 
+      this.getStoreEngine().getCompactor()
+        .filesDone(result.stream().map(sf -> sf.getPath()).collect(Collectors.toList()));
+
       // These may be null when the RS is shutting down. The space quota Chores will fix the Region
       // sizes later so it's not super-critical if we miss these.
       RegionServerServices rsServices = region.getRegionServerServices();

@@ -108,8 +108,6 @@ public abstract class Compactor<T extends CellSink> {
     this.dropCacheMinor = conf.getBoolean(MINOR_COMPACTION_DROP_CACHE, true);
   }
 
-
-
   protected interface CellSinkFactory<S> {
     S createWriter(InternalScanner scanner, FileDetails fd, boolean shouldDropBehind, boolean major)
         throws IOException;
@@ -609,5 +607,9 @@ public abstract class Compactor<T extends CellSink> {
   @FunctionalInterface
   public interface StoreFileProvider {
     HStoreFile createFile(Path path) throws IOException;
+  }
+
+  public void filesDone(Collection<Path> result) {
+    //only used for DirectStoreCompactor
   }
 }

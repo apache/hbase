@@ -20,8 +20,12 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.function.Function;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -30,7 +34,10 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Alternative Compactor implementation that writes compacted files straight
@@ -43,6 +50,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class DirectStoreCompactor extends DefaultCompactor {
+  private static final Logger LOG = LoggerFactory.getLogger(DirectStoreCompactor.class);
+
+  private final List<Path> compactionPaths = new ArrayList<>();
+
   public DirectStoreCompactor(Configuration conf, HStore store) {
     super(conf, store);
   }
@@ -61,10 +72,14 @@ public class DirectStoreCompactor extends DefaultCompactor {
     throws IOException {
     // When all MVCC readpoints are 0, don't write them.
     // See HBASE-8166, HBASE-12600, and HBASE-13389.
-    return createWriterInStoreDir(fd.maxKeyCount,
+    StoreFileWriter writer = createWriterInStoreDir(fd.maxKeyCount,
       major ? majorCompactionCompression : minorCompactionCompression,
       fd.maxMVCCReadpoint > 0, fd.maxTagsLength > 0,
       shouldDropBehind, fd.getTotalCompactedFilesSize());
+    synchronized (compactionPaths){
+        compactionPaths.add(writer.getPath());
+      }
+    return writer;
   }
 
   private StoreFileWriter createWriterInStoreDir(long maxKeyCount,
@@ -103,5 +118,24 @@ public class DirectStoreCompactor extends DefaultCompactor {
   protected HStoreFile createFileInStoreDir(Path newFile, StoreFileProvider fileProvider)
       throws IOException {
     return fileProvider.createFile(newFile);
+  }
+
+  /**
+   * Removes finalized or deleted compaction target files from current list
+   * @param result
+   */
+  @Override public void filesDone(Collection<Path> result) {
+    synchronized (compactionPaths) {
+      compactionPaths.removeAll(result);
+      //this should not happen
+      if (!compactionPaths.isEmpty()) {
+        LOG.warn("Unfinished compaction files: {}", StringUtils.join(compactionPaths, ", "));
+        compactionPaths.clear();
+      }
+    }
+  }
+
+  public List<Path> getCompactionPaths(){
+    return Lists.newArrayList(compactionPaths);
   }
 }
