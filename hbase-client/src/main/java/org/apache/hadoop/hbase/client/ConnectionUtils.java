@@ -24,8 +24,6 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
@@ -50,6 +48,18 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.DNS;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.apache.hbase.thirdparty.io.netty.util.Timer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
@@ -57,16 +67,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.net.DNS;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-import org.apache.hbase.thirdparty.io.netty.util.Timer;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Utility used by client connections.
@@ -141,10 +141,10 @@ public final class ConnectionUtils {
     private final AdminService.BlockingInterface localHostAdmin;
     private final ClientService.BlockingInterface localHostClient;
 
-    private ShortCircuitingClusterConnection(Configuration conf, ExecutorService pool, User user,
+    private ShortCircuitingClusterConnection(Configuration conf, User user,
         ServerName serverName, AdminService.BlockingInterface admin,
-        ClientService.BlockingInterface client) throws IOException {
-      super(conf, pool, user);
+        ClientService.BlockingInterface client, ConnectionRegistry registry) throws IOException {
+      super(conf, null, user, registry);
       this.serverName = serverName;
       this.localHostAdmin = admin;
       this.localHostClient = client;
@@ -174,22 +174,21 @@ public final class ConnectionUtils {
    * Creates a short-circuit connection that can bypass the RPC layer (serialization,
    * deserialization, networking, etc..) when talking to a local server.
    * @param conf the current configuration
-   * @param pool the thread pool to use for batch operations
    * @param user the user the connection is for
    * @param serverName the local server name
    * @param admin the admin interface of the local server
    * @param client the client interface of the local server
+   * @param registry the connection registry to be used, can be null
    * @return an short-circuit connection.
    * @throws IOException if IO failure occurred
    */
-  public static ClusterConnection createShortCircuitConnection(final Configuration conf,
-      ExecutorService pool, User user, final ServerName serverName,
-      final AdminService.BlockingInterface admin, final ClientService.BlockingInterface client)
-      throws IOException {
+  public static ClusterConnection createShortCircuitConnection(final Configuration conf, User user,
+    final ServerName serverName, final AdminService.BlockingInterface admin,
+    final ClientService.BlockingInterface client, ConnectionRegistry registry) throws IOException {
     if (user == null) {
       user = UserProvider.instantiate(conf).getCurrent();
     }
-    return new ShortCircuitingClusterConnection(conf, pool, user, serverName, admin, client);
+    return new ShortCircuitingClusterConnection(conf, user, serverName, admin, client, registry);
   }
 
   /**
