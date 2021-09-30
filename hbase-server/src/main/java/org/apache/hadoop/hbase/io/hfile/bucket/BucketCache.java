@@ -1005,6 +1005,25 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
+   * Prepare and return a warning message for Bucket Allocator Exception
+   * @param re The RAMQueueEntry for which the exception was thrown.
+   * @return A warning message created from the input RAMQueueEntry object.
+   */
+  private String getWarningMessage (RAMQueueEntry re) {
+    if (re != null && re.getData() instanceof HFileBlock) {
+      HFileBlock    failBlock         = (HFileBlock) re.getData();
+      HFileContext  failFileContext   = failBlock.getHFileContext();
+      String        failHFileName     = failFileContext.getHFileName();
+      String        failColumnFamily  = Bytes.toString(failFileContext.getColumnFamily());
+      String        failTableName     = Bytes.toString(failFileContext.getTableName());
+      return ("Most recent failed allocation in " + ALLOCATION_FAIL_LOG_TIME_PERIOD
+            + " milliseconds; Key: " + re.getKey() + ", TableName = " + failTableName
+            + ", ColumnFamily = " + failColumnFamily + ", HFileName : " + failHFileName);
+    }
+    return ("Failed allocation for " + (re == null ? "" : re.getKey()) + "; ");
+  }
+
+  /**
    * Flush the entries in ramCache to IOEngine and add bucket entry to backingMap. Process all that
    * are passed in even if failure being sure to remove from ramCache else we'll never undo the
    * references and we'll OOME.
@@ -1052,24 +1071,7 @@ public class BucketCache implements BlockCache, HeapSize {
         long currTs = System.currentTimeMillis(); // Current time since Epoch in milliseconds.
         cacheStats.allocationFailed(); // Record the warning.
         if (allocFailLogPrevTs == 0 || (currTs - allocFailLogPrevTs) > ALLOCATION_FAIL_LOG_TIME_PERIOD) {
-          String failHFileName    = "";
-          String failColumnFamily = "";
-          String failTableName    = "";
-          if (re != null) {
-            Cacheable failData = re.getData();
-            if (failData instanceof HFileBlock) {
-              HFileBlock    failBlock       = (HFileBlock) failData;
-              HFileContext  failFileContext = failBlock.getHFileContext();
-              failHFileName                 = failFileContext.getHFileName();
-              failColumnFamily              = Bytes.toString(failFileContext.getColumnFamily());
-              failTableName                 = Bytes.toString(failFileContext.getTableName());
-            }
-          }
-          LOG.warn("Most recent failed allocation in " + ALLOCATION_FAIL_LOG_TIME_PERIOD +
-              " milliseconds; Key: " + (re == null ? "" : re.getKey()) +
-              ", TableName = " + failTableName + ", ColumnFamily = " + failColumnFamily +
-              ", HFileName : " + failHFileName
-              , fle);
+          LOG.warn (getWarningMessage(re), fle);
           allocFailLogPrevTs = currTs;
         }
         // Presume can't add. Too big? Move index on. Entry will be cleared from ramCache below.
