@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -39,6 +40,8 @@ public class TestStochasticLoadBalancerRegionReplicaWithRacks extends Stochastic
   private static class ForTestRackManager extends RackManager {
 
     int numRacks;
+    Map<String, Integer> serverIndexes = new HashMap<String, Integer>();
+    int numServers = 0;
 
     public ForTestRackManager(int numRacks) {
       this.numRacks = numRacks;
@@ -69,7 +72,6 @@ public class TestStochasticLoadBalancerRegionReplicaWithRacks extends Stochastic
     Map<ServerName, List<RegionInfo>> serverMap =
         createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
     RackManager rm = new ForTestRackManager(numRacks);
-
     testWithClusterWithIteration(serverMap, rm, true, true);
   }
 
