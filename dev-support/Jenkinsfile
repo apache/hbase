@@ -53,6 +53,7 @@ pipeline {
       // TODO does hadoopcheck need to be jdk specific?
     SHALLOW_CHECKS = 'all,-shadedjars,-unit' // run by the 'yetus general check'
     DEEP_CHECKS = 'compile,htmlout,javac,maven,mvninstall,shadedjars,unit' // run by 'yetus jdkX (HadoopY) checks'
+    ASF_NIGHTLIES = 'https://nightlies.apache.org'
   }
   parameters {
     booleanParam(name: 'USE_YETUS_PRERELEASE', defaultValue: false, description: '''Check to use the current HEAD of apache/yetus rather than our configured release.
@@ -320,6 +321,25 @@ pipeline {
                   echo "No archiver directory, skipping compressing."
                 fi
 '''
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "${env.OUTPUT_DIR_RELATIVE}/test_logs.zip"
+                    )
+                  ]
+                )
+              ])
+              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              sh '''#!/bin/bash -e
+                if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
+                  echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
+                  rm -rf "${OUTPUT_DIR}/test_logs.zip"
+                  echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}/test_logs.zip" > "${OUTPUT_DIR}/test_logs.txt"
+                else
+                  echo "No test_logs.zip, skipping"
+                fi
+'''
               // Has to be relative to WORKSPACE.
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
@@ -399,6 +419,25 @@ pipeline {
                   fi
                 else
                   echo "No archiver directory, skipping compressing."
+                fi
+'''
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "${env.OUTPUT_DIR_RELATIVE}/test_logs.zip"
+                    )
+                  ]
+                )
+              ])
+              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              sh '''#!/bin/bash -e
+                if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
+                  echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
+                  rm -rf "${OUTPUT_DIR}/test_logs.zip"
+                  echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}/test_logs.zip" > "${OUTPUT_DIR}/test_logs.txt"
+                else
+                  echo "No test_logs.zip, skipping"
                 fi
 '''
               // Has to be relative to WORKSPACE.
@@ -486,6 +525,25 @@ pipeline {
                   echo "No archiver directory, skipping compressing."
                 fi
 '''
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "${env.OUTPUT_DIR_RELATIVE}/test_logs.zip"
+                    )
+                  ]
+                )
+              ])
+              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              sh '''#!/bin/bash -e
+                if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
+                  echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
+                  rm -rf "${OUTPUT_DIR}/test_logs.zip"
+                  echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}/test_logs.zip" > "${OUTPUT_DIR}/test_logs.txt"
+                else
+                  echo "No test_logs.zip, skipping"
+                fi
+'''
               // Has to be relative to WORKSPACE.
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
@@ -571,6 +629,25 @@ pipeline {
                   fi
                 else
                   echo "No archiver directory, skipping compressing."
+                fi
+'''
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "${env.OUTPUT_DIR_RELATIVE}/test_logs.zip"
+                    )
+                  ]
+                )
+              ])
+              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              sh '''#!/bin/bash -e
+                if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
+                  echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
+                  rm -rf "${OUTPUT_DIR}/test_logs.zip"
+                  echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}/test_logs.zip" > "${OUTPUT_DIR}/test_logs.txt"
+                else
+                  echo "No test_logs.zip, skipping"
                 fi
 '''
               // Has to be relative to WORKSPACE.
