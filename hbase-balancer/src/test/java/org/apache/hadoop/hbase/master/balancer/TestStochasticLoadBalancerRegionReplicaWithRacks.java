@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
@@ -37,7 +38,10 @@ public class TestStochasticLoadBalancerRegionReplicaWithRacks extends Stochastic
       HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplicaWithRacks.class);
 
   private static class ForTestRackManager extends RackManager {
+
     int numRacks;
+    Map<String, Integer> serverIndexes = new HashMap<String, Integer>();
+    int numServers = 0;
 
     public ForTestRackManager(int numRacks) {
       this.numRacks = numRacks;
@@ -45,7 +49,11 @@ public class TestStochasticLoadBalancerRegionReplicaWithRacks extends Stochastic
 
     @Override
     public String getRack(ServerName server) {
-      return "rack_" + (server.hashCode() % numRacks);
+      String key = server.getServerName();
+      if (!serverIndexes.containsKey(key)) {
+        serverIndexes.put(key, numServers++);
+      }
+      return "rack_" + serverIndexes.get(key) % numRacks;
     }
   }
 
