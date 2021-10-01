@@ -100,11 +100,17 @@ public final class StoreFileTrackerFactory {
     }
   }
 
-  public static StoreFileTracker create(Configuration conf, boolean isPrimaryReplica,
+  private static StoreFileTracker getInstance(Configuration conf, boolean isPrimaryReplica,
     StoreContext ctx) {
     Class<? extends StoreFileTracker> tracker = getTrackerClass(conf);
     LOG.info("instantiating StoreFileTracker impl {}", tracker.getName());
     return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
+  }
+
+  public static StoreFileTracker create(Configuration conf, boolean isPrimaryReplica,
+    StoreContext ctx) {
+    StoreFileTracker trackerImpl = getInstance(conf, isPrimaryReplica, ctx);
+    return trackerImpl;
   }
 
   /**
@@ -159,12 +165,12 @@ public final class StoreFileTrackerFactory {
     return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
   }
 
-  public static void persistTrackerConfig(Configuration conf, TableDescriptorBuilder builder) {
+  public static void updateDescriptor(Configuration conf, TableDescriptorBuilder builder) {
     TableDescriptor tableDescriptor = builder.build();
     ColumnFamilyDescriptor cfDesc = tableDescriptor.getColumnFamilies()[0];
     StoreContext context = StoreContext.getBuilder().withColumnFamilyDescriptor(cfDesc).build();
-    StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true, context);
-    tracker.persistConfiguration(builder);
+    StoreFileTracker tracker = StoreFileTrackerFactory.getInstance(conf, true, context);
+    tracker.updateDescriptor(builder);
   }
 
   // should not use MigrationStoreFileTracker for new family

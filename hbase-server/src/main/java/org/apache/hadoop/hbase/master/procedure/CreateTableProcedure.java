@@ -291,7 +291,7 @@ public class CreateTableProcedure
     }
 
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
-    StoreFileTrackerFactory.persistTrackerConfig(env.getMasterConfiguration(), builder);
+    StoreFileTrackerFactory.updateDescriptor(env.getMasterConfiguration(), builder);
     tableDescriptor = builder.build();
 
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();

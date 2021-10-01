@@ -89,8 +89,8 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
   }
 
   @Override
-  public void persistConfiguration(TableDescriptorBuilder builder) {
-    super.persistConfiguration(builder);
+  public void updateDescriptor(TableDescriptorBuilder builder) {
+    super.updateDescriptor(builder);
     if (StringUtils.isEmpty(builder.getValue(SRC_IMPL))) {
       builder.setValue(SRC_IMPL, src.getTrackerName());
     }
