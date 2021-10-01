@@ -545,7 +545,6 @@ public class BucketCache implements BlockCache, HeapSize {
     } else {
       this.blockNumber.increment();
       this.heapSize.add(cachedItem.heapSize());
-      blocksByHFile.add(cacheKey);
     }
   }
 
