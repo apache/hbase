@@ -486,7 +486,6 @@ public class BucketCache implements BlockCache, HeapSize {
     } else {
       this.blockNumber.increment();
       this.heapSize.add(cachedItem.heapSize());
-      blocksByHFile.add(cacheKey);
     }
   }
 
@@ -1027,6 +1026,11 @@ public class BucketCache implements BlockCache, HeapSize {
           index++;
           continue;
         }
+        BlockCacheKey cacheKey = re.getKey();
+        if (ramCache.containsKey(cacheKey)) {
+          blocksByHFile.add(cacheKey);
+        }
+
         BucketEntry bucketEntry = re.writeToCache(ioEngine, bucketAllocator, realCacheSize,
           this::createRecycler);
         // Successfully added. Up index and add bucketEntry. Clear io exceptions.
