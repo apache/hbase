@@ -105,7 +105,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
-import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.security.Superusers;
@@ -890,8 +889,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preCompact(ObserverContextImpl.createAndPrepare(RCP_ENV), null, null,
-          ScanType.COMPACT_RETAIN_DELETES, null, null);
+        ACCESS_CONTROLLER.preRequestCompaction(ObserverContextImpl.createAndPrepare(RCP_ENV));
         return null;
       }
     };

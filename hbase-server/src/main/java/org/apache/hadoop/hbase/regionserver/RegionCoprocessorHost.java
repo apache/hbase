@@ -565,6 +565,18 @@ public class RegionCoprocessorHost
     }
   }
 
+  void preRequestCompaction() throws IOException {
+    if (coprocEnvironments.isEmpty()) {
+      return;
+    }
+    execOperation(new RegionObserverOperationWithoutResult() {
+      @Override
+      public void call(RegionObserver observer) throws IOException {
+        observer.preRequestCompaction(this);
+      }
+    });
+  }
+
   /**
    * Called prior to selecting the {@link HStoreFile}s for compaction from the list of currently
    * available candidates.
