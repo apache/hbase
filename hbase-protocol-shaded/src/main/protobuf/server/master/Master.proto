@@ -437,10 +437,14 @@ message IsCleanerChoreEnabledResponse {
 
 message SnapshotRequest {
   required SnapshotDescription snapshot = 1;
+  optional bool zkCoordinated = 2 [default = true];
+  optional uint64 nonce_group = 3 [default = 0];
+  optional uint64 nonce = 4 [default = 0];
 }
 
 message SnapshotResponse {
   required int64 expected_timeout = 1;
+  optional int64 proc_id = 2;
 }
 
 message GetCompletedSnapshotsRequest {

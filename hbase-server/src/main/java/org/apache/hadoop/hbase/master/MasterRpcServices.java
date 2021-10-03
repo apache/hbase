@@ -1706,12 +1706,22 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       // get the snapshot information
       SnapshotDescription snapshot = SnapshotDescriptionUtils.validate(
         request.getSnapshot(), server.getConfiguration());
-      server.snapshotManager.takeSnapshot(snapshot);
 
       // send back the max amount of time the client should wait for the snapshot to complete
-      long waitTime = SnapshotDescriptionUtils.getMaxMasterTimeout(server.getConfiguration(),
-        snapshot.getType(), SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
-      return SnapshotResponse.newBuilder().setExpectedTimeout(waitTime).build();
+      long waitTime = SnapshotDescriptionUtils
+        .getMaxMasterTimeout(server.getConfiguration(), snapshot.getType(),
+          SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
+      SnapshotResponse.Builder builder = SnapshotResponse.newBuilder();
+      builder.setExpectedTimeout(waitTime);
+
+      if (request.hasZkCoordinated() && !request.getZkCoordinated()) {
+        long procId = server.snapshotManager
+          .takeSnapshot(snapshot, request.getNonceGroup(), request.getNonce());
+        return builder.setProcId(procId).build();
+      } else {
+        server.snapshotManager.takeSnapshot(snapshot);
+        return builder.build();
+      }
     } catch (ForeignException e) {
       throw new ServiceException(e.getCause());
     } catch (IOException e) {

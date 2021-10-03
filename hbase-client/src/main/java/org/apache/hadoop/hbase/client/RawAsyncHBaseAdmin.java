@@ -1870,50 +1870,62 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     } catch (IllegalArgumentException e) {
       return failedFuture(e);
     }
-    CompletableFuture<Void> future = new CompletableFuture<>();
-    final SnapshotRequest request = SnapshotRequest.newBuilder().setSnapshot(snapshot).build();
-    addListener(this.<Long> newMasterCaller()
-      .action((controller, stub) -> this.<SnapshotRequest, SnapshotResponse, Long> call(controller,
-        stub, request, (s, c, req, done) -> s.snapshot(c, req, done),
-        resp -> resp.getExpectedTimeout()))
-      .call(), (expectedTimeout, err) -> {
-        if (err != null) {
-          future.completeExceptionally(err);
-          return;
-        }
-        TimerTask pollingTask = new TimerTask() {
-          int tries = 0;
-          long startTime = EnvironmentEdgeManager.currentTime();
-          long endTime = startTime + expectedTimeout;
-          long maxPauseTime = expectedTimeout / maxAttempts;
 
-          @Override
-          public void run(Timeout timeout) throws Exception {
-            if (EnvironmentEdgeManager.currentTime() < endTime) {
-              addListener(isSnapshotFinished(snapshotDesc), (done, err2) -> {
-                if (err2 != null) {
-                  future.completeExceptionally(err2);
-                } else if (done) {
-                  future.complete(null);
-                } else {
-                  // retry again after pauseTime.
-                  long pauseTime =
-                    ConnectionUtils.getPauseTime(TimeUnit.NANOSECONDS.toMillis(pauseNs), ++tries);
-                  pauseTime = Math.min(pauseTime, maxPauseTime);
-                  AsyncConnectionImpl.RETRY_TIMER.newTimeout(this, pauseTime,
-                    TimeUnit.MILLISECONDS);
-                }
-              });
-            } else {
-              future.completeExceptionally(
-                new SnapshotCreationException("Snapshot '" + snapshot.getName() +
-                  "' wasn't completed in expectedTime:" + expectedTimeout + " ms", snapshotDesc));
-            }
+    boolean zkCoordinated = connection.getConfiguration()
+      .getBoolean("hbase.snapshot.zk.coordinated", true);
+    if (zkCoordinated) {
+      CompletableFuture<Void> future = new CompletableFuture<>();
+      final SnapshotRequest request = SnapshotRequest.newBuilder().setSnapshot(snapshot).build();
+      addListener(this.<Long> newMasterCaller()
+        .action((controller, stub) -> this.<SnapshotRequest, SnapshotResponse, Long> call(controller,
+          stub, request, (s, c, req, done) -> s.snapshot(c, req, done),
+          resp -> resp.getExpectedTimeout()))
+        .call(), (expectedTimeout, err) -> {
+          if (err != null) {
+            future.completeExceptionally(err);
+            return;
           }
-        };
-        AsyncConnectionImpl.RETRY_TIMER.newTimeout(pollingTask, 1, TimeUnit.MILLISECONDS);
-      });
-    return future;
+          TimerTask pollingTask = new TimerTask() {
+            int tries = 0;
+            long startTime = EnvironmentEdgeManager.currentTime();
+            long endTime = startTime + expectedTimeout;
+            long maxPauseTime = expectedTimeout / maxAttempts;
+
+            @Override
+            public void run(Timeout timeout) throws Exception {
+              if (EnvironmentEdgeManager.currentTime() < endTime) {
+                addListener(isSnapshotFinished(snapshotDesc), (done, err2) -> {
+                  if (err2 != null) {
+                    future.completeExceptionally(err2);
+                  } else if (done) {
+                    future.complete(null);
+                  } else {
+                    // retry again after pauseTime.
+                    long pauseTime =
+                      ConnectionUtils.getPauseTime(TimeUnit.NANOSECONDS.toMillis(pauseNs), ++tries);
+                    pauseTime = Math.min(pauseTime, maxPauseTime);
+                    AsyncConnectionImpl.RETRY_TIMER.newTimeout(this, pauseTime,
+                      TimeUnit.MILLISECONDS);
+                  }
+                });
+              } else {
+                future.completeExceptionally(
+                  new SnapshotCreationException("Snapshot '" + snapshot.getName() +
+                    "' wasn't completed in expectedTime:" + expectedTimeout + " ms", snapshotDesc));
+              }
+            }
+          };
+          AsyncConnectionImpl.RETRY_TIMER.newTimeout(pollingTask, 1, TimeUnit.MILLISECONDS);
+        });
+      return future;
+    } else {
+      SnapshotRequest snapshotRequest = SnapshotRequest.newBuilder()
+        .setSnapshot(snapshot).setZkCoordinated(false)
+        .setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce()).build();
+      return this.<SnapshotRequest, SnapshotResponse> procedureCall(snapshotRequest,
+        (s, c, req, done) -> s.snapshot(c, req, done), (resp) -> resp.getProcId(),
+        new SnapshotProcedureBiConsumer(TableName.valueOf(snapshot.getTable())));
+    }
   }
 
   @Override
@@ -2735,6 +2747,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     @Override
     String getOperationType() {
       return "SPLIT_REGION";
+    }
+  }
+
+  private static class SnapshotProcedureBiConsumer extends TableProcedureBiConsumer {
+    SnapshotProcedureBiConsumer(TableName tableName) {
+      super(tableName);
+    }
+
+    @Override
+    String getOperationType() {
+      return "SNAPSHOT";
     }
   }
 

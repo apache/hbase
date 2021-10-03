@@ -1783,6 +1783,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       conf.getInt("hbase.regionserver.executor.claim.replication.queue.threads", 1);
     executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
         ExecutorType.RS_CLAIM_REPLICATION_QUEUE).setCorePoolSize(claimReplicationQueueThreads));
+    final int rsSnapshotOperationThreads =
+      conf.getInt("hbase.regionserver.executor.snapshot.operations.threads", 3);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+      ExecutorType.RS_SNAPSHOT_OPERATIONS).setCorePoolSize(rsSnapshotOperationThreads));
 
     Threads.setDaemonThreadRunning(this.walRoller, getName() + ".logRoller",
         uncaughtExceptionHandler);

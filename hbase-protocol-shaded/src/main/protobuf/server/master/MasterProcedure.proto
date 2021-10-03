@@ -191,6 +191,39 @@ message RestoreParentToChildRegionsPair {
   required string child2_region_name = 3;
 }
 
+enum SnapshotState {
+  SNAPSHOT_PREPARE = 1;
+  SNAPSHOT_PRE_OPERATION = 2;
+  SNAPSHOT_WRITE_SNAPSHOT_INFO = 3;
+  SNAPSHOT_SNAPSHOT_ONLINE_REGIONS = 4;
+  SNAPSHOT_SNAPSHOT_OFFLINE_REGIONS = 5;
+  SNAPSHOT_SNAPSHOT_MOB_REGION = 6;
+  SNAPSHOT_CONSOLIDATE_SNAPSHOT = 7;
+  SNAPSHOT_VERIFIER_SNAPSHOT = 8;
+  SNAPSHOT_COMPLETE_SNAPSHOT = 9;
+  SNAPSHOT_POST_OPERATION = 10;
+}
+
+message SnapshotProcedureStateData {
+  required SnapshotDescription snapshot = 1;
+}
+
+message SnapshotRegionProcedureStateData {
+  required RegionInfo region = 1;
+  required SnapshotDescription snapshot = 2;
+}
+
+message SnapshotVerifyProcedureStateData {
+  required SnapshotDescription snapshot = 1;
+  repeated RegionInfo region = 2;
+  required ServerName target_server = 3;
+}
+
+message SnapshotVerifyParameter {
+  required SnapshotDescription snapshot = 1;
+  repeated RegionInfo region = 2;
+}
+
 enum CloneSnapshotState {
   CLONE_SNAPSHOT_PRE_OPERATION = 1;
   CLONE_SNAPSHOT_WRITE_FS_LAYOUT = 2;
