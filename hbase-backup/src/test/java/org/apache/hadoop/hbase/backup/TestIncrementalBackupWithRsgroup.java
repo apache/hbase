@@ -37,11 +37,11 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -54,23 +54,32 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 @RunWith(Parameterized.class)
-public class TestIncrementalBackup extends TestBackupBase {
+public class TestIncrementalBackupWithRsgroup extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIncrementalBackup.class);
+    HBaseClassTestRule.forClass(TestIncrementalBackupWithRsgroup.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestIncrementalBackup.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestIncrementalBackupWithRsgroup.class);
+
+  public TestIncrementalBackupWithRsgroup(Boolean b) {
+  }
 
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
-    provider = "multiwal";
     List<Object[]> params = new ArrayList<>();
     params.add(new Object[] { Boolean.TRUE });
     return params;
   }
 
-  public TestIncrementalBackup(Boolean b) {
+  @BeforeClass
+  public static void setUp() throws Exception {
+    TEST_UTIL = new HBaseTestingUtil();
+    conf1 = TEST_UTIL.getConfiguration();
+    enableRSgroup = true;
+    autoRestoreOnFailure = true;
+    useSecondCluster = false;
+    setUpHelper();
   }
 
   // implement all test cases in 1 test since incremental
@@ -81,11 +90,12 @@ public class TestIncrementalBackup extends TestBackupBase {
 
     // #1 - create full backup for all tables
     LOG.info("create full backup image for all tables");
-    List<TableName> tables = Lists.newArrayList(table1, table2);
+    List<TableName> tables = Lists.newArrayList(RSGROUP_TABLE_1, RSGROUP_TABLE_2);
     final byte[] fam3Name = Bytes.toBytes("f3");
     final byte[] mobName = Bytes.toBytes("mob");
 
-    TableDescriptor newTable1Desc = TableDescriptorBuilder.newBuilder(table1Desc)
+    TableDescriptor newTable1Desc = TableDescriptorBuilder.newBuilder(RSGROUP_TABLE_1)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(famName))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam3Name))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(mobName).setMobEnabled(true)
         .setMobThreshold(5L).build())
@@ -94,8 +104,8 @@ public class TestIncrementalBackup extends TestBackupBase {
 
     try (Connection conn = ConnectionFactory.createConnection(conf1)) {
       int NB_ROWS_FAM3 = 6;
-      insertIntoTable(conn, table1, fam3Name, 3, NB_ROWS_FAM3).close();
-      insertIntoTable(conn, table1, mobName, 3, NB_ROWS_FAM3).close();
+      insertIntoTable(conn, RSGROUP_TABLE_1, fam3Name, 3, NB_ROWS_FAM3).close();
+      insertIntoTable(conn, RSGROUP_TABLE_1, mobName, 3, NB_ROWS_FAM3).close();
       Admin admin = conn.getAdmin();
       BackupAdminImpl client = new BackupAdminImpl(conn);
       BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
@@ -103,19 +113,19 @@ public class TestIncrementalBackup extends TestBackupBase {
       assertTrue(checkSucceeded(backupIdFull));
 
       // #2 - insert some data to table
-      Table t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
-      LOG.debug("writing " + ADD_ROWS + " rows to " + table1);
+      Table t1 = insertIntoTable(conn, RSGROUP_TABLE_1, famName, 1, ADD_ROWS);
+      LOG.debug("writing " + ADD_ROWS + " rows to " + RSGROUP_TABLE_1);
       Assert.assertEquals(HBaseTestingUtil.countRows(t1),
         NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_FAM3);
-      LOG.debug("written " + ADD_ROWS + " rows to " + table1);
+      LOG.debug("written " + ADD_ROWS + " rows to " + RSGROUP_TABLE_1);
       // additionally, insert rows to MOB cf
       int NB_ROWS_MOB = 111;
-      insertIntoTable(conn, table1, mobName, 3, NB_ROWS_MOB);
-      LOG.debug("written " + NB_ROWS_MOB + " rows to " + table1 + " to Mob enabled CF");
+      insertIntoTable(conn, RSGROUP_TABLE_1, mobName, 3, NB_ROWS_MOB);
+      LOG.debug("written " + NB_ROWS_MOB + " rows to " + RSGROUP_TABLE_1 + " to Mob enabled CF");
       t1.close();
       Assert.assertEquals(HBaseTestingUtil.countRows(t1),
         NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_MOB);
-      Table t2 = conn.getTable(table2);
+      Table t2 = conn.getTable(RSGROUP_TABLE_2);
       Put p2;
       for (int i = 0; i < 5; i++) {
         p2 = new Put(Bytes.toBytes("row-t2" + i));
@@ -124,10 +134,10 @@ public class TestIncrementalBackup extends TestBackupBase {
       }
       Assert.assertEquals(NB_ROWS_IN_BATCH + 5, HBaseTestingUtil.countRows(t2));
       t2.close();
-      LOG.debug("written " + 5 + " rows to " + table2);
-      // split table1
+      LOG.debug("written " + 5 + " rows to " + RSGROUP_TABLE_2);
+      // split RSGROUP_TABLE_1
       SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-      List<HRegion> regions = cluster.getRegions(table1);
+      List<HRegion> regions = cluster.getRegions(RSGROUP_TABLE_1);
       byte[] name = regions.get(0).getRegionInfo().getRegionName();
       long startSplitTime = EnvironmentEdgeManager.currentTime();
       try {
@@ -137,7 +147,7 @@ public class TestIncrementalBackup extends TestBackupBase {
         // exception will be thrown.
         LOG.debug("region is not splittable, because " + e);
       }
-      while (!admin.isTableAvailable(table1)) {
+      while (!admin.isTableAvailable(RSGROUP_TABLE_1)) {
         Thread.sleep(100);
       }
       long endSplitTime = EnvironmentEdgeManager.currentTime();
@@ -145,15 +155,14 @@ public class TestIncrementalBackup extends TestBackupBase {
       LOG.debug("split finished in =" + (endSplitTime - startSplitTime));
 
       // #3 - incremental backup for multiple tables
-      tables = Lists.newArrayList(table1, table2);
+      tables = Lists.newArrayList(RSGROUP_TABLE_1, RSGROUP_TABLE_2);
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
       BackupInfo backupInfoIncMultiple = client.backupTables(request);
       String backupIdIncMultiple = backupInfoIncMultiple.getBackupId();
       assertTrue(checkSucceeded(backupIdIncMultiple));
-      checkIfWALFilesBelongToRsgroup(backupInfoIncMultiple.getIncrBackupFileList(),
-        RSGroupInfo.DEFAULT_GROUP);
+      checkIfWALFilesBelongToRsgroup(backupInfoIncMultiple.getIncrBackupFileList(), RSGROUP_NAME);
 
-      // add column family f2 to table1
+      // add column family f2 to RSGROUP_TABLE_1
       // drop column family f3
       final byte[] fam2Name = Bytes.toBytes("f2");
       newTable1Desc = TableDescriptorBuilder.newBuilder(newTable1Desc)
@@ -162,7 +171,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       TEST_UTIL.getAdmin().modifyTable(newTable1Desc);
 
       int NB_ROWS_FAM2 = 7;
-      Table t3 = insertIntoTable(conn, table1, fam2Name, 2, NB_ROWS_FAM2);
+      Table t3 = insertIntoTable(conn, RSGROUP_TABLE_1, fam2Name, 2, NB_ROWS_FAM2);
       t3.close();
 
       // Wait for 5 sec to make sure that old WALs were deleted
@@ -173,11 +182,10 @@ public class TestIncrementalBackup extends TestBackupBase {
       BackupInfo backupInfoIncMultiple2 = client.backupTables(request);
       String backupIdIncMultiple2 = backupInfoIncMultiple2.getBackupId();
       assertTrue(checkSucceeded(backupIdIncMultiple2));
-      checkIfWALFilesBelongToRsgroup(backupInfoIncMultiple2.getIncrBackupFileList(),
-        RSGroupInfo.DEFAULT_GROUP);
+      checkIfWALFilesBelongToRsgroup(backupInfoIncMultiple2.getIncrBackupFileList(), RSGROUP_NAME);
 
       // #5 - restore full backup for all tables
-      TableName[] tablesRestoreFull = new TableName[] { table1, table2 };
+      TableName[] tablesRestoreFull = new TableName[] { RSGROUP_TABLE_1, RSGROUP_TABLE_2 };
       TableName[] tablesMapFull = new TableName[] { table1_restore, table2_restore };
 
       LOG.debug("Restoring full " + backupIdFull);
@@ -200,7 +208,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       hTable.close();
 
       // #7 - restore incremental backup for multiple tables, with overwrite
-      TableName[] tablesRestoreIncMultiple = new TableName[] { table1, table2 };
+      TableName[] tablesRestoreIncMultiple = new TableName[] { RSGROUP_TABLE_1, RSGROUP_TABLE_2 };
       TableName[] tablesMapIncMultiple = new TableName[] { table1_restore, table2_restore };
       client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupIdIncMultiple2, false,
         tablesRestoreIncMultiple, tablesMapIncMultiple, true));

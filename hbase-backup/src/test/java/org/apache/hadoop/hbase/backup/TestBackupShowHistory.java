@@ -68,7 +68,7 @@ public class TestBackupShowHistory extends TestBackupBase {
     LOG.info("test backup history on a single table with data");
 
     List<TableName> tableList = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tableList);
+    String backupId = fullTableBackup(tableList).getBackupId();
     assertTrue(checkSucceeded(backupId));
     LOG.info("backup complete");
 
@@ -92,7 +92,7 @@ public class TestBackupShowHistory extends TestBackupBase {
     assertTrue(output.indexOf(backupId) > 0);
 
     tableList = Lists.newArrayList(table2);
-    String backupId2 = fullTableBackup(tableList);
+    String backupId2 = fullTableBackup(tableList).getBackupId();
     assertTrue(checkSucceeded(backupId2));
     LOG.info("backup complete: " + table2);
     BackupInfo.Filter tableNameFilter = image -> {

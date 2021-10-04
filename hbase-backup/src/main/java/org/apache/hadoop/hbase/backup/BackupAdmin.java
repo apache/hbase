@@ -42,7 +42,7 @@ public interface BackupAdmin extends Closeable {
    * @return the backup Id
    */
 
-  String backupTables(final BackupRequest userRequest) throws IOException;
+  BackupInfo backupTables(final BackupRequest userRequest) throws IOException;
 
   /**
    * Restore backup

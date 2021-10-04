@@ -58,7 +58,7 @@ public class TestBackupDelete extends TestBackupBase {
   public void testBackupDelete() throws Exception {
     LOG.info("test backup delete on a single table with data");
     List<TableName> tableList = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tableList);
+    String backupId = fullTableBackup(tableList).getBackupId();
     assertTrue(checkSucceeded(backupId));
     LOG.info("backup complete");
     String[] backupIds = new String[] { backupId };
@@ -85,7 +85,7 @@ public class TestBackupDelete extends TestBackupBase {
   public void testBackupDeleteCommand() throws Exception {
     LOG.info("test backup delete on a single table with data: command-line");
     List<TableName> tableList = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tableList);
+    String backupId = fullTableBackup(tableList).getBackupId();
     assertTrue(checkSucceeded(backupId));
     LOG.info("backup complete");
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -117,7 +117,7 @@ public class TestBackupDelete extends TestBackupBase {
         return System.currentTimeMillis() - 2 * 24 * 3600 * 1000;
       }
     });
-    String backupId = fullTableBackup(tableList);
+    String backupId = fullTableBackup(tableList).getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     EnvironmentEdgeManager.reset();

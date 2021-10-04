@@ -342,8 +342,9 @@ public final class BackupCommands {
             tables != null ? Lists.newArrayList(BackupUtils.parseTableNames(tables)) : null)
           .withTargetRootDir(targetBackupDir).withTotalTasks(workers)
           .withBandwidthPerTasks(bandwidth).withBackupSetName(setName).build();
-        String backupId = admin.backupTables(request);
-        System.out.println("Backup session " + backupId + " finished. Status: SUCCESS");
+        BackupInfo backupInfo = admin.backupTables(request);
+        System.out
+          .println("Backup session " + backupInfo.getBackupId() + " finished. Status: SUCCESS");
       } catch (IOException e) {
         System.out.println("Backup session finished. Status: FAILURE");
         throw e;
