@@ -239,7 +239,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
     BackupAdminImpl client = new BackupAdminImpl(conn);
 
     BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
-    String backupIdFull = client.backupTables(request);
+    String backupIdFull = client.backupTables(request).getBackupId();
 
     assertTrue(checkSucceeded(backupIdFull));
 
@@ -260,7 +260,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
     // #3 - incremental backup for multiple tables
     tables = Lists.newArrayList(table1, table2);
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-    String backupIdIncMultiple = client.backupTables(request);
+    String backupIdIncMultiple = client.backupTables(request).getBackupId();
 
     assertTrue(checkSucceeded(backupIdIncMultiple));
 
@@ -272,7 +272,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
 
     // #3 - incremental backup for multiple tables
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-    String backupIdIncMultiple2 = client.backupTables(request);
+    String backupIdIncMultiple2 = client.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(backupIdIncMultiple2));
         // #4 Merge backup images with failures
 
