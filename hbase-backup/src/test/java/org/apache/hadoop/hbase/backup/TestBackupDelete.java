@@ -60,7 +60,7 @@ public class TestBackupDelete extends TestBackupBase {
   public void testBackupDelete() throws Exception {
     LOG.info("test backup delete on a single table with data");
     List<TableName> tableList = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tableList);
+    String backupId = fullTableBackup(tableList).getBackupId();
     assertTrue(checkSucceeded(backupId));
     LOG.info("backup complete");
     String[] backupIds = new String[] { backupId };
@@ -87,7 +87,7 @@ public class TestBackupDelete extends TestBackupBase {
   public void testBackupDeleteCommand() throws Exception {
     LOG.info("test backup delete on a single table with data: command-line");
     List<TableName> tableList = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tableList);
+    String backupId = fullTableBackup(tableList).getBackupId();
     assertTrue(checkSucceeded(backupId));
     LOG.info("backup complete");
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -119,7 +119,7 @@ public class TestBackupDelete extends TestBackupBase {
         return System.currentTimeMillis() - 2 * 24 * 3600 * 1000;
       }
     });
-    String backupId = fullTableBackup(tableList);
+    String backupId = fullTableBackup(tableList).getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     EnvironmentEdgeManager.reset();
@@ -169,12 +169,12 @@ public class TestBackupDelete extends TestBackupBase {
     LOG.info("Test backup delete updates the incremental backup set");
     BackupSystemTable backupSystemTable = new BackupSystemTable(TEST_UTIL.getConnection());
 
-    String backupId1 = fullTableBackup(Lists.newArrayList(table1, table2));
+    String backupId1 = fullTableBackup(Lists.newArrayList(table1, table2)).getBackupId();
     assertTrue(checkSucceeded(backupId1));
     assertEquals(Sets.newHashSet(table1, table2),
       backupSystemTable.getIncrementalBackupTableSet(BACKUP_ROOT_DIR));
 
-    String backupId2 = fullTableBackup(Lists.newArrayList(table3));
+    String backupId2 = fullTableBackup(Lists.newArrayList(table3)).getBackupId();
     assertTrue(checkSucceeded(backupId2));
     assertEquals(Sets.newHashSet(table1, table2, table3),
       backupSystemTable.getIncrementalBackupTableSet(BACKUP_ROOT_DIR));

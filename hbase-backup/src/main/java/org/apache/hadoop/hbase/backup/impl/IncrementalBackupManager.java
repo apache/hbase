@@ -20,8 +20,11 @@ package org.apache.hadoop.hbase.backup.impl;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,7 +36,9 @@ import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -93,11 +98,34 @@ public class IncrementalBackupManager extends BackupManager {
     }
     newTimestamps = readRegionServerLastLogRollResult();
 
-    logList = getLogFilesForNewBackup(previousTimestampMins, newTimestamps, conf, savedStartCode);
+    logList = getLogFilesForNewBackup(previousTimestampMins, newTimestamps, conf, savedStartCode,
+      getParticipatingServerNames(backupInfo.getTables()));
     logList = excludeProcV2WALs(logList);
     backupInfo.setIncrBackupFileList(logList);
 
     return newTimestamps;
+  }
+
+  private Set<String> getParticipatingServerNames(Set<TableName> tables) throws IOException {
+    Set<Address> participatingServers = new HashSet<>();
+    boolean flag = false;
+    for (TableName table : tables) {
+      RSGroupInfo rsGroupInfo = conn.getAdmin().getRSGroup(table);
+      if (rsGroupInfo != null && !rsGroupInfo.getServers().isEmpty()) {
+        LOG.info("Participating servers for table {}, rsgroup Name: {} are: {}", table,
+          rsGroupInfo.getName(), rsGroupInfo.getServers());
+        participatingServers.addAll(rsGroupInfo.getServers());
+      } else {
+        LOG.warn(
+          "Rsgroup isn't available for table {}, all servers in the cluster will be participating ",
+          table);
+        flag = true;
+      }
+    }
+
+    return flag
+      ? new HashSet<>()
+      : participatingServers.stream().map(a -> a.toString()).collect(Collectors.toSet());
   }
 
   private List<String> excludeProcV2WALs(List<String> logList) {
@@ -126,8 +154,8 @@ public class IncrementalBackupManager extends BackupManager {
    * @throws IOException exception
    */
   private List<String> getLogFilesForNewBackup(Map<String, Long> olderTimestamps,
-    Map<String, Long> newestTimestamps, Configuration conf, String savedStartCode)
-    throws IOException {
+    Map<String, Long> newestTimestamps, Configuration conf, String savedStartCode,
+    Set<String> servers) throws IOException {
     LOG.debug("In getLogFilesForNewBackup()\n" + "olderTimestamps: " + olderTimestamps
       + "\n newestTimestamps: " + newestTimestamps);
 
@@ -160,7 +188,7 @@ public class IncrementalBackupManager extends BackupManager {
     for (FileStatus rs : rss) {
       p = rs.getPath();
       host = BackupUtils.parseHostNameFromLogFile(p);
-      if (host == null) {
+      if (host == null || (!servers.isEmpty() && !servers.contains(host))) {
         continue;
       }
       FileStatus[] logs;
@@ -215,7 +243,7 @@ public class IncrementalBackupManager extends BackupManager {
         continue;
       }
       host = BackupUtils.parseHostFromOldLog(p);
-      if (host == null) {
+      if (host == null || (!servers.isEmpty() && !servers.contains(host))) {
         continue;
       }
       currentLogTS = BackupUtils.getCreationTime(p);

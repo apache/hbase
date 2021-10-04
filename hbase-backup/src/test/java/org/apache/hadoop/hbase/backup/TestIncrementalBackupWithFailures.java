@@ -95,7 +95,7 @@ public class TestIncrementalBackupWithFailures extends TestBackupBase {
     BackupAdminImpl client = new BackupAdminImpl(conn);
 
     BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
-    String backupIdFull = client.backupTables(request);
+    String backupIdFull = client.backupTables(request).getBackupId();
 
     assertTrue(checkSucceeded(backupIdFull));
 

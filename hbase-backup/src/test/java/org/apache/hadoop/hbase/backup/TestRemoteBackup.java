@@ -116,7 +116,8 @@ public class TestRemoteBackup extends TestBackupBase {
 
     latch.countDown();
     String backupId =
-      backupTables(BackupType.FULL, Lists.newArrayList(table1), BACKUP_REMOTE_ROOT_DIR);
+      backupTables(BackupType.FULL, Lists.newArrayList(table1), BACKUP_REMOTE_ROOT_DIR)
+        .getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     LOG.info("backup complete " + backupId);

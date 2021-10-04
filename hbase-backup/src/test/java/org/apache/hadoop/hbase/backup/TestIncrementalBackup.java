@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.LogRoller;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -202,8 +203,12 @@ public class TestIncrementalBackup extends TestBackupBase {
       // #3 - incremental backup for multiple tables
       tables = Lists.newArrayList(table1, table2);
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-      String backupIdIncMultiple = client.backupTables(request);
+      BackupInfo backupInfoIncMultiple = client.backupTables(request);
+      String backupIdIncMultiple = backupInfoIncMultiple.getBackupId();
       assertTrue(checkSucceeded(backupIdIncMultiple));
+      checkIfWALFilesBelongToRsgroup(backupInfoIncMultiple.getIncrBackupFileList(),
+        RSGroupInfo.DEFAULT_GROUP);
+
       BackupManifest manifest =
         HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR), backupIdIncMultiple);
       assertEquals(Sets.newHashSet(table1, table2), new HashSet<>(manifest.getTableList()));
@@ -233,8 +238,11 @@ public class TestIncrementalBackup extends TestBackupBase {
 
       // #4 - additional incremental backup for multiple tables
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-      String backupIdIncMultiple2 = client.backupTables(request);
+      BackupInfo backupInfoIncMultiple2 = client.backupTables(request);
+      String backupIdIncMultiple2 = backupInfoIncMultiple2.getBackupId();
       assertTrue(checkSucceeded(backupIdIncMultiple2));
+      checkIfWALFilesBelongToRsgroup(backupInfoIncMultiple2.getIncrBackupFileList(),
+        RSGroupInfo.DEFAULT_GROUP);
       validateRootPathCanBeOverridden(BACKUP_ROOT_DIR, backupIdIncMultiple2);
 
       // #5 - restore full backup for all tables
@@ -301,7 +309,7 @@ public class TestIncrementalBackup extends TestBackupBase {
     Connection conn = TEST_UTIL.getConnection();
     BackupAdminImpl backupAdmin = new BackupAdminImpl(conn);
     BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
-    String fullBackupId = backupAdmin.backupTables(request);
+    String fullBackupId = backupAdmin.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(fullBackupId));
 
     TableName[] fromTables = new TableName[] { table1 };
@@ -334,7 +342,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       assertNotEquals(currentRegions, TEST_UTIL.getHBaseCluster().getRegions(table1));
 
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-      String incrementalBackupId = backupAdmin.backupTables(request);
+      String incrementalBackupId = backupAdmin.backupTables(request).getBackupId();
       assertTrue(checkSucceeded(incrementalBackupId));
       preRestoreBackupFiles = getBackupFiles();
       backupAdmin.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, incrementalBackupId,
@@ -366,7 +374,7 @@ public class TestIncrementalBackup extends TestBackupBase {
       }
 
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-      incrementalBackupId = backupAdmin.backupTables(request);
+      incrementalBackupId = backupAdmin.backupTables(request).getBackupId();
       assertTrue(checkSucceeded(incrementalBackupId));
 
       preRestoreBackupFiles = getBackupFiles();
@@ -406,7 +414,7 @@ public class TestIncrementalBackup extends TestBackupBase {
 
       BackupRequest request =
         createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR, true);
-      String incrementalBackupId = admin.backupTables(request);
+      String incrementalBackupId = admin.backupTables(request).getBackupId();
       assertTrue(checkSucceeded(incrementalBackupId));
 
       TableName[] fromTable = new TableName[] { table1 };
@@ -485,7 +493,7 @@ public class TestIncrementalBackup extends TestBackupBase {
 
       BackupRequest request =
         createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR, true);
-      String incrementalBackupId = admin.backupTables(request);
+      String incrementalBackupId = admin.backupTables(request).getBackupId();
       assertTrue(checkSucceeded(incrementalBackupId));
 
       TableName[] fromTable = new TableName[] { table1 };
@@ -516,7 +524,7 @@ public class TestIncrementalBackup extends TestBackupBase {
     boolean noChecksumVerify) throws IOException {
     BackupRequest req =
       createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR, noChecksumVerify);
-    String backupId = backupAdmin.backupTables(req);
+    String backupId = backupAdmin.backupTables(req).getBackupId();
     checkSucceeded(backupId);
     return backupId;
   }

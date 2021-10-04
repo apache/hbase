@@ -21,8 +21,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -98,10 +101,26 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
 
     // This map tracks, for every backup root, the most recent created backup (= highest timestamp)
     Map<String, BackupInfo> newestBackupPerRootDir = new HashMap<>();
+    Set<Address> servers = new HashSet<>();
     for (BackupInfo backup : backups) {
       BackupInfo existingEntry = newestBackupPerRootDir.get(backup.getBackupRootDir());
       if (existingEntry == null || existingEntry.getStartTs() < backup.getStartTs()) {
         newestBackupPerRootDir.put(backup.getBackupRootDir(), backup);
+      }
+    }
+
+    for (BackupInfo backup : backups) {
+      for (TableName table : backup.getTables()) {
+        RSGroupInfo rsGroupInfo = conn.getAdmin().getRSGroup(table);
+        if (
+          rsGroupInfo != null && rsGroupInfo.getServers() != null
+            && !rsGroupInfo.getServers().isEmpty()
+        ) {
+          servers.addAll(rsGroupInfo.getServers());
+        } else {
+          servers.addAll(conn.getAdmin().getRegionServers().stream().map(s -> s.getAddress())
+            .collect(Collectors.toList()));
+        }
       }
     }
 
@@ -124,7 +143,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
           .entrySet()) {
           Address address = Address.fromString(entry.getKey());
           Long storedTs = boundaries.get(address);
-          if (storedTs == null || entry.getValue() < storedTs) {
+          if ((storedTs == null || entry.getValue() < storedTs) && servers.contains(address)) {
             boundaries.put(address, entry.getValue());
           }
         }
