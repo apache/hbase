@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.junit.Assert.assertTrue;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -63,7 +62,8 @@ public class TestRemoteRestore extends TestBackupBase {
   public void testFullRestoreRemote() throws Exception {
     LOG.info("test remote full backup on a single table");
     String backupId =
-        backupTables(BackupType.FULL, toList(table1.getNameAsString()), BACKUP_REMOTE_ROOT_DIR);
+      backupTables(BackupType.FULL, toList(table1.getNameAsString()), BACKUP_REMOTE_ROOT_DIR)
+        .getBackupId();
     LOG.info("backup complete");
     TableName[] tableset = new TableName[] { table1 };
     TableName[] tablemap = new TableName[] { table1_restore };

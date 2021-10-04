@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -45,7 +44,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
@@ -118,7 +116,8 @@ public class TestRemoteBackup extends TestBackupBase {
 
     latch.countDown();
     String backupId =
-        backupTables(BackupType.FULL, Lists.newArrayList(table1), BACKUP_REMOTE_ROOT_DIR);
+      backupTables(BackupType.FULL, Lists.newArrayList(table1), BACKUP_REMOTE_ROOT_DIR)
+        .getBackupId();
     assertTrue(checkSucceeded(backupId));
 
     LOG.info("backup complete " + backupId);

@@ -54,7 +54,7 @@ public class TestBackupStatusProgress extends TestBackupBase {
     LOG.info("test backup status/progress on a single table with data");
 
     List<TableName> tableList = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tableList);
+    String backupId = fullTableBackup(tableList).getBackupId();
     LOG.info("backup complete");
     assertTrue(checkSucceeded(backupId));
 
@@ -71,7 +71,7 @@ public class TestBackupStatusProgress extends TestBackupBase {
     LOG.info("test backup status/progress on a single table with data: command-line");
 
     List<TableName> tableList = Lists.newArrayList(table1);
-    String backupId = fullTableBackup(tableList);
+    String backupId = fullTableBackup(tableList).getBackupId();
     LOG.info("backup complete");
     assertTrue(checkSucceeded(backupId));
     ByteArrayOutputStream baos = new ByteArrayOutputStream();

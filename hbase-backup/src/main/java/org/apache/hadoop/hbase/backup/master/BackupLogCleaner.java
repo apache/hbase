@@ -22,8 +22,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -39,6 +42,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -85,6 +89,20 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     Map<Address, Long> serverAddressToLastBackupMap = new HashMap<>();
 
     Map<TableName, Long> tableNameBackupInfoMap = new HashMap<>();
+    Set<Address> servers = new HashSet<>();
+    for (BackupInfo backupInfo : backups) {
+      for (TableName table : backupInfo.getTables()) {
+        RSGroupInfo rsGroupInfo = conn.getAdmin().getRSGroup(table);
+        if (rsGroupInfo != null && rsGroupInfo.getServers() != null && !rsGroupInfo.getServers()
+          .isEmpty()) {
+          servers.addAll(rsGroupInfo.getServers());
+        } else {
+          servers.addAll(conn.getAdmin().getRegionServers().stream().map(s -> s.getAddress())
+            .collect(Collectors.toList()));
+        }
+      }
+    }
+
     for (BackupInfo backupInfo : backups) {
       for (TableName table : backupInfo.getTables()) {
         tableNameBackupInfoMap.putIfAbsent(table, backupInfo.getStartTs());
@@ -92,7 +110,10 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
           tableNameBackupInfoMap.put(table, backupInfo.getStartTs());
           for (Map.Entry<String, Long> entry : backupInfo.getTableSetTimestampMap().get(table)
             .entrySet()) {
-            serverAddressToLastBackupMap.put(Address.fromString(entry.getKey()), entry.getValue());
+            if (servers.contains(Address.fromString(entry.getKey()))) {
+              serverAddressToLastBackupMap
+                .put(Address.fromString(entry.getKey()), entry.getValue());
+            }
           }
         }
       }

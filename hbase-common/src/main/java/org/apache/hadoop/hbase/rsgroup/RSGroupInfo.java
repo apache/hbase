@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -40,7 +41,7 @@ public class RSGroupInfo {
 
   private final String name;
   // Keep servers in a sorted set so has an expected ordering when displayed.
-  private final SortedSet<Address> servers;
+  private final NavigableSet<Address> servers;
   // Keep tables sorted too.
 
   /**
@@ -111,7 +112,7 @@ public class RSGroupInfo {
   /**
    * Get list of servers.
    */
-  public SortedSet<Address> getServers() {
+  public NavigableSet<Address> getServers() {
     return servers;
   }
 
