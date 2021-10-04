@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -391,6 +392,34 @@ public class MiniHBaseCluster extends HBaseCluster {
       throw new IOException("Interrupted adding regionserver to cluster", ie);
     }
     return t;
+  }
+
+  /**
+   * Starts a region server thread and waits until its processed by master. Throws an exception
+   * when it can't start a region server or when the region server is not processed by master
+   * within the timeout.
+   *
+   * @return New RegionServerThread
+   */
+  public JVMClusterUtil.RegionServerThread startRegionServerAndWait(long timeout)
+    throws IOException {
+
+    JVMClusterUtil.RegionServerThread t =  startRegionServer();
+    ServerName rsServerName = t.getRegionServer().getServerName();
+
+    long start = EnvironmentEdgeManager.currentTime();
+    while ((EnvironmentEdgeManager.currentTime() - start) < timeout) {
+      ClusterStatus clusterStatus = getMaster().getClusterStatus();
+      if (clusterStatus != null && clusterStatus.getLiveServersLoad().containsKey(rsServerName)) {
+        return t;
+      }
+      Threads.sleep(100);
+    }
+    if (t.getRegionServer().isOnline()) {
+      throw new IOException("RS: " + rsServerName + " online, but not processed by master");
+    } else {
+      throw new IOException("RS: " + rsServerName + " is offline");
+    }
   }
 
   /**

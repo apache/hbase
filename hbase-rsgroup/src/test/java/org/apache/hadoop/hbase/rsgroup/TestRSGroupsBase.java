@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 
 public abstract class TestRSGroupsBase {
   protected static final Log LOG = LogFactory.getLog(TestRSGroupsBase.class);
@@ -102,6 +103,7 @@ public abstract class TestRSGroupsBase {
     admin = TEST_UTIL.getHBaseAdmin();
     cluster = TEST_UTIL.getHBaseCluster();
     master = ((MiniHBaseCluster)cluster).getMaster();
+    master.balanceSwitch(true);
 
     //wait for balancer to come online
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
@@ -275,6 +277,21 @@ public abstract class TestRSGroupsBase {
 
   protected String getGroupName(String baseName) {
     return groupPrefix+"_"+baseName+"_"+rand.nextInt(Integer.MAX_VALUE);
+  }
+
+  /**
+   * The server name in group does not contain the start code, this method will find out the start
+   * code and construct the ServerName object.
+   */
+  protected final ServerName getServerName(Address addr) {
+    for (JVMClusterUtil.RegionServerThread rsThread:
+      TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads()) {
+      ServerName sn = rsThread.getRegionServer().getServerName();
+      if (sn.getAddress().equals(addr)) {
+        return sn;
+      }
+    }
+    return null;
   }
 
   public static class CPMasterObserver extends BaseMasterObserver {

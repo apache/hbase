@@ -1958,6 +1958,11 @@ public class AssignmentManager extends ZooKeeperListener {
           // Can be a socket timeout, EOF, NoRouteToHost, etc
           LOG.info("Unable to communicate with " + destination
             + " in order to assign regions, ", e);
+          for (HRegionInfo region : regions) {
+            if (!regionStates.isRegionOnline(region)) {
+              invokeAssign(region);
+            }
+          }
           return false;
         }
       } finally {
@@ -2588,7 +2593,7 @@ public class AssignmentManager extends ZooKeeperListener {
       serverList.add(new Pair<>(s, server.getRegionServerVersion(s)));
     }
     if (serverList.isEmpty()) {
-      return Collections.emptyList();
+      return new ArrayList<>();
     }
     String highestVersion = Collections.max(serverList,
         new Comparator<Pair<ServerName, String>>() {
@@ -2601,7 +2606,7 @@ public class AssignmentManager extends ZooKeeperListener {
       int comparedValue = VersionInfo.compareVersion(minVersionToMoveSysTables,
           highestVersion);
       if (comparedValue > 0) {
-        return Collections.emptyList();
+        return new ArrayList<>();
       }
     }
     List<ServerName> res = new ArrayList<>();
