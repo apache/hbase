@@ -89,11 +89,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
@@ -243,6 +245,14 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    * @param conf Configuration object
    */
   ConnectionImplementation(Configuration conf, ExecutorService pool, User user) throws IOException {
+    this(conf, pool, user, null);
+  }
+
+  /**
+   * Constructor, for creating cluster connection with provided ConnectionRegistry.
+   */
+  ConnectionImplementation(Configuration conf, ExecutorService pool, User user,
+    ConnectionRegistry registry) throws IOException {
     this.conf = conf;
     this.user = user;
     if (user != null && user.isLoginFromKeytab()) {
@@ -306,7 +316,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         this.conf.get(BufferedMutator.CLASSNAME_KEY);
 
     try {
-      this.registry = ConnectionRegistryFactory.getRegistry(conf);
+      if (registry == null) {
+        this.registry = ConnectionRegistryFactory.getRegistry(conf);
+      } else {
+        this.registry = registry;
+      }
       retrieveClusterId();
 
       this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics);
@@ -348,7 +362,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           replicaSelectorClass, META_TABLE_NAME, getChoreService(), () -> {
             int numOfReplicas = 1;
             try {
-              RegionLocations metaLocations = registry.getMetaRegionLocations().get(
+              RegionLocations metaLocations = this.registry.getMetaRegionLocations().get(
                 connectionConfig.getReadRpcTimeout(), TimeUnit.MILLISECONDS);
               numOfReplicas = metaLocations.size();
             } catch (Exception e) {

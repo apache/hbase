@@ -94,6 +94,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionServerRegistry;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.client.locking.LockServiceClient;
@@ -876,27 +877,11 @@ public class HRegionServer extends Thread implements
   }
 
   protected ClusterConnection createClusterConnection() throws IOException {
-    Configuration conf = this.conf;
-    // We use ZKConnectionRegistry for all the internal communication, primarily for these reasons:
-    // - Decouples RS and master life cycles. RegionServers can continue be up independent of
-    //   masters' availability.
-    // - Configuration management for region servers (cluster internal) is much simpler when adding
-    //   new masters or removing existing masters, since only clients' config needs to be updated.
-    // - We need to retain ZKConnectionRegistry for replication use anyway, so we just extend it for
-    //   other internal connections too.
-    conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
-        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
-    if (conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM) != null) {
-      // Use server ZK cluster for server-issued connections, so we clone
-      // the conf and unset the client ZK related properties
-      conf = new Configuration(this.conf);
-      conf.unset(HConstants.CLIENT_ZOOKEEPER_QUORUM);
-    }
     // Create a cluster connection that when appropriate, can short-circuit and go directly to the
     // local server if the request is to the local server bypassing RPC. Can be used for both local
     // and remote invocations.
-    return ConnectionUtils.createShortCircuitConnection(conf, null, userProvider.getCurrent(),
-      serverName, rpcServices, rpcServices);
+    return ConnectionUtils.createShortCircuitConnection(conf, userProvider.getCurrent(),
+      serverName, rpcServices, rpcServices, new RegionServerRegistry(this));
   }
 
   /**
@@ -922,7 +907,6 @@ public class HRegionServer extends Thread implements
 
   /**
    * Setup our cluster connection if not already initialized.
-   * @throws IOException
    */
   protected synchronized void setupClusterConnection() throws IOException {
     if (clusterConnection == null) {
@@ -3863,8 +3847,8 @@ public class HRegionServer extends Thread implements
   @Override
   public Connection createConnection(Configuration conf) throws IOException {
     User user = UserProvider.instantiate(conf).getCurrent();
-    return ConnectionUtils.createShortCircuitConnection(conf, null, user, this.serverName,
-        this.rpcServices, this.rpcServices);
+    return ConnectionUtils.createShortCircuitConnection(conf, user, this.serverName,
+      this.rpcServices, this.rpcServices, new RegionServerRegistry(this));
   }
 
   void executeProcedure(long procId, RSProcedureCallable callable) {
