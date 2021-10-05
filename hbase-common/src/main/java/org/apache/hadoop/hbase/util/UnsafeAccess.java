@@ -311,11 +311,11 @@ public final class UnsafeAccess {
   // APIs to copy data. This will be direct memory location copy and will be much faster
   /**
    * Copies the bytes from given array's offset to length part into the given buffer.
-   * @param src
-   * @param srcOffset
-   * @param dest
-   * @param destOffset
-   * @param length
+   * @param src source array
+   * @param srcOffset offset into source buffer
+   * @param dest destination buffer
+   * @param destOffset offset into destination buffer
+   * @param length length of data to copy
    */
   public static void copy(byte[] src, int srcOffset, ByteBuffer dest, int destOffset, int length) {
     long destAddress = destOffset;
@@ -344,11 +344,11 @@ public final class UnsafeAccess {
    * Copies specified number of bytes from given offset of {@code src} ByteBuffer to the
    * {@code dest} array.
    *
-   * @param src
-   * @param srcOffset
-   * @param dest
-   * @param destOffset
-   * @param length
+   * @param src source buffer
+   * @param srcOffset offset into source buffer
+   * @param dest destination array
+   * @param destOffset offset into destination buffer
+   * @param length length of data to copy
    */
   public static void copy(ByteBuffer src, int srcOffset, byte[] dest, int destOffset,
       int length) {
@@ -368,11 +368,11 @@ public final class UnsafeAccess {
    * Copies specified number of bytes from given offset of {@code src} buffer into the {@code dest}
    * buffer.
    *
-   * @param src
-   * @param srcOffset
-   * @param dest
-   * @param destOffset
-   * @param length
+   * @param src source buffer
+   * @param srcOffset offset into source buffer
+   * @param dest destination buffer
+   * @param destOffset offset into destination buffer
+   * @param length length of data to copy
    */
   public static void copy(ByteBuffer src, int srcOffset, ByteBuffer dest, int destOffset,
       int length) {
@@ -471,4 +471,5 @@ public final class UnsafeAccess {
   public static byte toByte(Object ref, long offset) {
     return theUnsafe.getByte(ref, offset);
   }
+
 }

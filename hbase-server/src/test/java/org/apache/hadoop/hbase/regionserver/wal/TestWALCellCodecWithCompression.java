@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -45,13 +46,28 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 @Category({RegionServerTests.class, SmallTests.class})
+@RunWith(Parameterized.class)
 public class TestWALCellCodecWithCompression {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestWALCellCodecWithCompression.class);
+
+  private Compression.Algorithm compression;
+
+  public TestWALCellCodecWithCompression(Compression.Algorithm algo) {
+    this.compression = algo;
+  }
+
+  @Parameters
+  public static List<Object[]> params() {
+    return HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS_PARAMETERIZED;
+  }
 
   @Test
   public void testEncodeDecodeKVsWithTags() throws Exception {
@@ -93,7 +109,7 @@ public class TestWALCellCodecWithCompression {
 
     Configuration conf = new Configuration(false);
     WALCellCodec codec = new WALCellCodec(conf, new CompressionContext(LRUDictionary.class,
-      false, true, true, Compression.Algorithm.GZ));
+      false, true, true, compression));
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     Encoder encoder = codec.getEncoder(bos);
     encoder.write(createKV(row_1, value_1, 0));
@@ -102,7 +118,6 @@ public class TestWALCellCodecWithCompression {
     encoder.write(createOffheapKV(row_4, value_4, 0));
     encoder.write(createKV(row_5, value_5, 0));
     encoder.flush();
-
     try (InputStream is = new ByteArrayInputStream(bos.toByteArray())) {
       Decoder decoder = codec.getDecoder(is);
       decoder.advance();
