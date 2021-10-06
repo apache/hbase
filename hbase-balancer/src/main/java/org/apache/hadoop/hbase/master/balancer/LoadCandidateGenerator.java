@@ -51,13 +51,11 @@ class LoadCandidateGenerator extends CandidateGenerator {
       // using reservoir sampling (http://gregable.com/2007/10/reservoir-sampling.html)
       double currentRandom = ThreadLocalRandom.current().nextDouble();
       if (currentRandom > currentLargestRandom) {
-        if (selectedIndex != -1) {
-          selectedIndex = i;
-          currentLargestRandom = currentRandom;
-        }
+        selectedIndex = i;
+        currentLargestRandom = currentRandom;
       }
-      return selectedIndex == -1 ? -1 : servers[selectedIndex];
     }
+    return selectedIndex == -1 ? -1 : servers[selectedIndex];
   }
 
   private int pickMostLoadedServer(final BalancerClusterState cluster, int thisServer) {
