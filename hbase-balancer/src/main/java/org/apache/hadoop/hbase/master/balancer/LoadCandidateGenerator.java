@@ -38,12 +38,12 @@ class LoadCandidateGenerator extends CandidateGenerator {
 
     int selectedIndex = -1;
     double currentLargestRandom = -1;
-    for (int i = 0; i < servers.length; i++){
+    for (int i = 0; i < servers.length; i++) {
       if (servers[i] == null || servers[i] == thisServer) {
         continue;
       }
-      if (selectedIndex != -1 &&cluster.numRegionsComparator.compare(servers[i],
-        servers[selectedIndex]) != 0) {
+      if (selectedIndex != -1
+        && cluster.numRegionsComparator.compare(servers[i], servers[selectedIndex]) != 0) {
         // Exhausted servers of the same region count
         break;
       }
@@ -51,12 +51,13 @@ class LoadCandidateGenerator extends CandidateGenerator {
       // using reservoir sampling (http://gregable.com/2007/10/reservoir-sampling.html)
       double currentRandom = ThreadLocalRandom.current().nextDouble();
       if (currentRandom > currentLargestRandom) {
-        if(selectedIndex != -1) {
-        selectedIndex = i;
-        currentLargestRandom = currentRandom;
+        if (selectedIndex != -1) {
+          selectedIndex = i;
+          currentLargestRandom = currentRandom;
+        }
       }
+      return selectedIndex == -1 ? -1 : servers[selectedIndex];
     }
-    return selectedIndex == -1? -1 : servers[selectedIndex];
   }
 
   private int pickMostLoadedServer(final BalancerClusterState cluster, int thisServer) {
