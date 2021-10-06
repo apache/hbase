@@ -175,6 +175,15 @@ message FileArchiveNotificationRequest {
 message FileArchiveNotificationResponse {
 }
 
+message GetLiveRegionServersRequest {
+  required uint32 count = 1;
+}
+
+message GetLiveRegionServersResponse {
+  repeated ServerName server = 1;
+  required uint32 total = 2;
+}
+
 service RegionServerStatusService {
   /** Called when a region server first starts. */
   rpc RegionServerStartup(RegionServerStartupRequest)
@@ -217,4 +226,8 @@ service RegionServerStatusService {
   /** Reports files that were moved to the archive directory for space quotas */
   rpc ReportFileArchival(FileArchiveNotificationRequest)
     returns(FileArchiveNotificationResponse);
+
+  /** Get some live region servers to be used as seed for bootstrap nodes */
+  rpc GetLiveRegionServers(GetLiveRegionServersRequest)
+    returns(GetLiveRegionServersResponse);
 }

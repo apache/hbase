@@ -181,7 +181,6 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.RegionServerAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -432,10 +431,6 @@ public class HRegionServer extends Thread implements
    * entries. Used for serving ClientMetaService.
    */
   private final MetaRegionLocationCache metaRegionLocationCache;
-  /**
-   * Cache for all the region servers in the cluster. Used for serving ClientMetaService.
-   */
-  private final RegionServerAddressTracker regionServerAddressTracker;
 
   // Cluster Status Tracker
   protected final ClusterStatusTracker clusterStatusTracker;
@@ -567,6 +562,8 @@ public class HRegionServer extends Thread implements
    */
   private NamedQueueRecorder namedQueueRecorder = null;
 
+  private BootstrapNodeManager bootstrapNodeManager;
+
   /**
    * True if this RegionServer is coming up in a cluster where there is no Master;
    * means it needs to just come up and make do without a Master to talk to: e.g. in test or
@@ -688,12 +685,6 @@ public class HRegionServer extends Thread implements
       }
       this.rpcServices.start(zooKeeper);
       this.metaRegionLocationCache = new MetaRegionLocationCache(zooKeeper);
-      if (!(this instanceof HMaster)) {
-        // do not create this field for HMaster, we have another region server tracker for HMaster.
-        this.regionServerAddressTracker = new RegionServerAddressTracker(zooKeeper, this);
-      } else {
-        this.regionServerAddressTracker = null;
-      }
       // This violates 'no starting stuff in Constructor' but Master depends on the below chore
       // and executor being created and takes a different startup route. Lots of overlap between HRS
       // and M (An M IS A HRS now). Need to refactor so less duplication between M and its super
@@ -923,6 +914,9 @@ public class HRegionServer extends Thread implements
     try {
       initializeZooKeeper();
       setupClusterConnection();
+      if (!(this instanceof HMaster)) {
+        bootstrapNodeManager = new BootstrapNodeManager(clusterConnection, masterAddressTracker);
+      }
       // Setup RPC client for master communication
       this.rpcClient = RpcClientFactory.createClient(conf, clusterId, new InetSocketAddress(
           this.rpcServices.isa.getAddress(), 0), clusterConnection.getConnectionMetrics());
@@ -2683,7 +2677,9 @@ public class HRegionServer extends Thread implements
       // TODO: cancel will not cleanup the chores, so we need make sure we do not miss any
       choreService.shutdown();
     }
-
+    if (bootstrapNodeManager != null) {
+      bootstrapNodeManager.stop();
+    }
     if (this.cacheFlusher != null) {
       this.cacheFlusher.join();
     }
@@ -3968,8 +3964,8 @@ public class HRegionServer extends Thread implements
     return masterAddressTracker.getBackupMasters();
   }
 
-  public Iterator<ServerName> getRegionServers() {
-    return regionServerAddressTracker.getRegionServers().iterator();
+  public Iterator<ServerName> getBootstrapNodes() {
+    return bootstrapNodeManager.getBootstrapNodes().iterator();
   }
 
   public MetaRegionLocationCache getMetaRegionLocationCache() {
