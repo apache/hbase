@@ -113,7 +113,8 @@ public class TestHFileEncryption {
     HFileBlock b = hbr.readBlockData(pos, -1, false, false, true);
     assertEquals(0, HFile.getAndResetChecksumFailuresCount());
     b.sanityCheck();
-    assertFalse(b.isUnpacked());
+    assertFalse((b.getHFileContext().getCompression() != Compression.Algorithm.NONE)
+      && b.isUnpacked());
     b = b.unpack(ctx, hbr);
     LOG.info("Read a block at " + pos + " with" +
         " onDiskSizeWithHeader=" + b.getOnDiskSizeWithHeader() +
@@ -136,7 +137,7 @@ public class TestHFileEncryption {
     for (int i = 0; i < blocks; i++) {
       blockSizes[i] = (1024 + RNG.nextInt(1024 * 63)) / Bytes.SIZEOF_INT;
     }
-    for (Compression.Algorithm compression : TestHFileBlock.COMPRESSION_ALGORITHMS) {
+    for (Compression.Algorithm compression : HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
       Path path = new Path(TEST_UTIL.getDataTestDir(), "block_v3_" + compression + "_AES");
       LOG.info("testDataBlockEncryption: encryption=AES compression=" + compression);
       long totalSize = 0;
@@ -218,7 +219,7 @@ public class TestHFileEncryption {
     Configuration conf = TEST_UTIL.getConfiguration();
     CacheConfig cacheConf = new CacheConfig(conf);
     for (DataBlockEncoding encoding: DataBlockEncoding.values()) {
-      for (Compression.Algorithm compression: TestHFileBlock.COMPRESSION_ALGORITHMS) {
+      for (Compression.Algorithm compression: HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
         HFileContext fileContext = new HFileContextBuilder()
           .withBlockSize(4096) // small blocks
           .withEncryptionContext(cryptoContext)
@@ -228,7 +229,7 @@ public class TestHFileEncryption {
         // write a new test HFile
         LOG.info("Writing with " + fileContext);
         Path path = new Path(TEST_UTIL.getDataTestDir(),
-                        TEST_UTIL.getRandomUUID().toString() + ".hfile");
+          HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
         FSDataOutputStream out = fs.create(path);
         HFile.Writer writer = HFile.getWriterFactory(conf, cacheConf)
           .withOutputStream(out)
