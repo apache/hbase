@@ -51,7 +51,6 @@ public class TestStochasticLoadBalancerBalanceCluster extends StochasticBalancer
    */
   @Test
   public void testBalanceCluster() throws Exception {
-    conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     loadBalancer.onConfigurationChange(conf);
     for (int[] mockCluster : clusterStateMocks) {
       Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);

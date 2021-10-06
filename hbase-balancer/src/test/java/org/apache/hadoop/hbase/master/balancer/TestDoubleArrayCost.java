@@ -62,6 +62,6 @@ public class TestDoubleArrayCost {
       }
       costs[100] = 100;
     });
-    assertEquals(0.5, cost.cost(), 0.01);
+    assertEquals(0.0708, cost.cost(), 0.01);
   }
 }
