@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -64,7 +69,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
-import static org.junit.Assert.*;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestSnapshotProcedure {
@@ -327,40 +331,6 @@ public class TestSnapshotProcedure {
     SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotProto2, TABLE_NAME, CF);
   }
 
-  @Test
-  public void testHandleSnapshotCorrupted() throws Exception {
-    ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
-    MasterProcedureEnv env = procExec.getEnvironment();
-    SnapshotProcedure sp = new SnapshotProcedure(env, snapshotProto);
-    SnapshotProcedure spySp = getDelayedOnSpecificStateSnapshotProcedure(sp,
-      procExec.getEnvironment(), SnapshotState.SNAPSHOT_CONSOLIDATE_SNAPSHOT);
-    long procId = procExec.submitProcedure(spySp);
-    TEST_UTIL.waitFor(60000, () -> spySp.getCurrentStateId() ==
-      SnapshotState.SNAPSHOT_CONSOLIDATE_SNAPSHOT_VALUE);
-
-    // delete some store files to trigger a CorruptedSnapshotException when verifying
-    Optional<HRegion> regionOpt = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream()
-      .filter(r -> r.getStore(CF).getSize() > 0).findFirst();
-    assertTrue(regionOpt.isPresent());
-    HRegion region = regionOpt.get();
-    FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    region.getStore(CF).getStorefiles().forEach(sf -> {
-      try {
-        fs.delete(sf.getPath(), true);
-        LOG.info("Successfully delete storeFile {}", sf.getPath());
-      } catch (IOException e) {
-        LOG.warn("Failed delete storeFile {}", sf.getPath(), e);
-      }
-    });
-
-    // update region store files list cache in memory
-    region.getStore(CF).getStoreEngine().getStoreFileManager().clearFiles();
-    assertTrue(region.getStoreFileList(new byte[][] {CF}).isEmpty());
-
-    ProcedureTestingUtility.waitProcedure(procExec, procId);
-    SnapshotTestingUtils.assertOneSnapshotThatMatches(TEST_UTIL.getAdmin(), snapshotProto);
-    SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotProto, TABLE_NAME, CF);
-  }
 
   private SnapshotProcedure getDelayedOnSpecificStateSnapshotProcedure(
       SnapshotProcedure sp, MasterProcedureEnv env, SnapshotState state)

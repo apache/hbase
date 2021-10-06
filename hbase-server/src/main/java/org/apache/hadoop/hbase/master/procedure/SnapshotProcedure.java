@@ -180,16 +180,10 @@ public class SnapshotProcedure
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (Exception e) {
-      if (e instanceof CorruptedSnapshotException) {
-        setNextState(SnapshotState.SNAPSHOT_PREPARE);
-        LOG.warn("{} looks got a corrupted snapshot, set next state to {} to retry", this,
-          SnapshotState.SNAPSHOT_PREPARE);
-        return Flow.HAS_MORE_STATE;
-      } else {
-        setFailure("master-snapshot", e);
-        LOG.warn("unexpected exception while execute {}", this, e);
-        return Flow.NO_MORE_STATE;
-      }
+      setFailure("master-snapshot", e);
+      LOG.warn("unexpected exception while execute {}. Mark procedure Failed.", this, e);
+      status.abort("Abort Snapshot " + snapshot.getName() + " on Table " + snapshotTable);
+      return Flow.NO_MORE_STATE;
     }
   }
 
@@ -390,18 +384,12 @@ public class SnapshotProcedure
 
   synchronized void reportSnapshotCorrupted(SnapshotVerifyProcedure subProc,
       CorruptedSnapshotException e) {
-    if (getCurrentState() == SnapshotState.SNAPSHOT_PREPARE) {
-      LOG.warn("Sub procedure {} reports corrupted snapshot. Some procedures have already "
-        + "reported snapshot corrupted before. reset state will be skipped.", subProc);
-      return;
-    }
-    if (getCurrentState() == SnapshotState.SNAPSHOT_COMPLETE_SNAPSHOT) {
-      setNextState(SnapshotState.SNAPSHOT_PREPARE);
-      LOG.warn("Sub procedure {} reports snapshot corrupted. Set next state to {} to start over.",
-        subProc, SnapshotState.SNAPSHOT_PREPARE, e);
+    if (isFailed()) {
+      LOG.warn("Sub procedure {} reports snapshot corrupted while Parent procedure {} has been"
+        + " marked as failed before.", subProc, this, e);
     } else {
-      LOG.warn("Sub procedure {} reports snapshot corrupted while parent procedure pid={} in "
-          + "unexpected state {}", subProc, getProcId(), getCurrentState());
+      LOG.warn("Sub procedure {} reports snapshot corrupted. Mark {} as failed.", subProc, this, e);
+      setFailure("master-snapshot", e);
     }
   }
 }

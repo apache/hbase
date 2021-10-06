@@ -265,6 +265,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ShutdownRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterRequest;
@@ -1871,61 +1873,67 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return failedFuture(e);
     }
 
-    boolean zkCoordinated = connection.getConfiguration()
-      .getBoolean("hbase.snapshot.zk.coordinated", true);
-    if (zkCoordinated) {
-      CompletableFuture<Void> future = new CompletableFuture<>();
-      final SnapshotRequest request = SnapshotRequest.newBuilder().setSnapshot(snapshot).build();
-      addListener(this.<Long> newMasterCaller()
-        .action((controller, stub) -> this.<SnapshotRequest, SnapshotResponse, Long> call(controller,
-          stub, request, (s, c, req, done) -> s.snapshot(c, req, done),
-          resp -> resp.getExpectedTimeout()))
-        .call(), (expectedTimeout, err) -> {
-          if (err != null) {
-            future.completeExceptionally(err);
-            return;
-          }
-          TimerTask pollingTask = new TimerTask() {
-            int tries = 0;
-            long startTime = EnvironmentEdgeManager.currentTime();
-            long endTime = startTime + expectedTimeout;
-            long maxPauseTime = expectedTimeout / maxAttempts;
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    final SnapshotRequest request = SnapshotRequest.newBuilder().setSnapshot(snapshot).build();
+    addListener(this.<Long> newMasterCaller()
+      .action((controller, stub) -> this.<SnapshotRequest, SnapshotResponse, Long> call(
+        controller, stub, request, (s, c, req, done) -> s.snapshot(c, req, done),
+        resp -> resp.getExpectedTimeout()))
+      .call(), (expectedTimeout, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+          return;
+        }
+        TimerTask pollingTask = new TimerTask() {
+          int tries = 0;
+          long startTime = EnvironmentEdgeManager.currentTime();
+          long endTime = startTime + expectedTimeout;
+          long maxPauseTime = expectedTimeout / maxAttempts;
 
-            @Override
-            public void run(Timeout timeout) throws Exception {
-              if (EnvironmentEdgeManager.currentTime() < endTime) {
-                addListener(isSnapshotFinished(snapshotDesc), (done, err2) -> {
-                  if (err2 != null) {
-                    future.completeExceptionally(err2);
-                  } else if (done) {
-                    future.complete(null);
-                  } else {
-                    // retry again after pauseTime.
-                    long pauseTime =
-                      ConnectionUtils.getPauseTime(TimeUnit.NANOSECONDS.toMillis(pauseNs), ++tries);
-                    pauseTime = Math.min(pauseTime, maxPauseTime);
-                    AsyncConnectionImpl.RETRY_TIMER.newTimeout(this, pauseTime,
-                      TimeUnit.MILLISECONDS);
-                  }
-                });
-              } else {
-                future.completeExceptionally(
-                  new SnapshotCreationException("Snapshot '" + snapshot.getName() +
-                    "' wasn't completed in expectedTime:" + expectedTimeout + " ms", snapshotDesc));
-              }
+          @Override
+          public void run(Timeout timeout) throws Exception {
+            if (EnvironmentEdgeManager.currentTime() < endTime) {
+              addListener(isSnapshotFinished(snapshotDesc), (done, err2) -> {
+                if (err2 != null) {
+                  future.completeExceptionally(err2);
+                } else if (done) {
+                  future.complete(null);
+                } else {
+                  // retry again after pauseTime.
+                  long pauseTime =
+                    ConnectionUtils.getPauseTime(TimeUnit.NANOSECONDS.toMillis(pauseNs), ++tries);
+                  pauseTime = Math.min(pauseTime, maxPauseTime);
+                  AsyncConnectionImpl.RETRY_TIMER.newTimeout(this, pauseTime,
+                    TimeUnit.MILLISECONDS);
+                }
+              });
+            } else {
+              future.completeExceptionally(
+                new SnapshotCreationException("Snapshot '" + snapshot.getName() +
+                  "' wasn't completed in expectedTime:" + expectedTimeout + " ms", snapshotDesc));
             }
-          };
-          AsyncConnectionImpl.RETRY_TIMER.newTimeout(pollingTask, 1, TimeUnit.MILLISECONDS);
-        });
-      return future;
-    } else {
-      SnapshotRequest snapshotRequest = SnapshotRequest.newBuilder()
-        .setSnapshot(snapshot).setZkCoordinated(false)
-        .setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce()).build();
-      return this.<SnapshotRequest, SnapshotResponse> procedureCall(snapshotRequest,
-        (s, c, req, done) -> s.snapshot(c, req, done), (resp) -> resp.getProcId(),
-        new SnapshotProcedureBiConsumer(TableName.valueOf(snapshot.getTable())));
+          }
+        };
+        AsyncConnectionImpl.RETRY_TIMER.newTimeout(pollingTask, 1, TimeUnit.MILLISECONDS);
+      });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> snapshotTable(SnapshotDescription snapshotDesc) {
+    SnapshotProtos.SnapshotDescription snapshot =
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotDesc);
+    try {
+      ClientSnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
+    } catch (IllegalArgumentException e) {
+      return failedFuture(e);
     }
+
+    SnapshotTableRequest snapshotTableRequest = SnapshotTableRequest.newBuilder()
+      .setSnapshot(snapshot).setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce()).build();
+    return this.<SnapshotTableRequest, SnapshotTableResponse> procedureCall(snapshotTableRequest,
+      (s, c, req, done) -> s.snapshotTable(c, req, done), (resp) -> resp.getProcId(),
+      new SnapshotTableProcedureBiConsumer(TableName.valueOf(snapshot.getTable())));
   }
 
   @Override
@@ -2750,8 +2758,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
   }
 
-  private static class SnapshotProcedureBiConsumer extends TableProcedureBiConsumer {
-    SnapshotProcedureBiConsumer(TableName tableName) {
+  private static class SnapshotTableProcedureBiConsumer extends TableProcedureBiConsumer {
+    SnapshotTableProcedureBiConsumer(TableName tableName) {
       super(tableName);
     }
 

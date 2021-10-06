@@ -68,7 +68,7 @@ public final class MasterSnapshotVerifier {
    */
   public void verifySnapshot(Path snapshotDir, Set<String> snapshotServers)
     throws CorruptedSnapshotException, IOException {
-    verifySnapshot( true);
+    verifySnapshot(true);
   }
 
   public void verifySnapshot(boolean verifyRegionDetails)

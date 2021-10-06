@@ -826,6 +826,20 @@ public interface AsyncAdmin {
   CompletableFuture<Void> snapshot(SnapshotDescription snapshot);
 
   /**
+   *  Take a snapshot and wait for the server to complete that snapshot asynchronously.
+   */
+  default CompletableFuture<Void> snapshotTable(String snapshotName, TableName tableName) {
+    return snapshot(new SnapshotDescription(snapshotName, tableName, SnapshotType.FLUSH));
+  }
+
+  default CompletableFuture<Void> snapshotTable(String snapshotName, TableName tableName,
+      SnapshotType type) {
+    return snapshot(new SnapshotDescription(snapshotName, tableName, type));
+  }
+
+  CompletableFuture<Void> snapshotTable(SnapshotDescription snapshot);
+
+  /**
    * Check the current state of the passed snapshot. There are three possible states:
    * <ol>
    * <li>running - returns <tt>false</tt></li>

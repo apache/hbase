@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -26,15 +29,13 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 /**
  * General snapshot verification.
@@ -69,6 +70,8 @@ import java.util.Map;
 public class SnapshotVerifyUtil {
   private static final Logger LOG = LoggerFactory.getLogger(SnapshotVerifyUtil.class);
 
+  private SnapshotVerifyUtil() {}
+
   /**
    *  Check that the snapshot description written in the filesystem matches the current snapshot
    * @param conf configuration of service
@@ -80,8 +83,6 @@ public class SnapshotVerifyUtil {
    *                regions.
    * @param verifyTableDetails true if need to verify table info
    * @param verifyRegionDetails true if need to verify region info and store files
-   * @throws CorruptedSnapshotException
-   * @throws IOException
    */
   public static void verifySnapshot(Configuration conf, SnapshotDescription snapshot,
       TableName tableName, List<RegionInfo> regions, boolean verifyTableDetails,
@@ -177,7 +178,9 @@ public class SnapshotVerifyUtil {
         if (regionManifest == null) {
           // could happen due to a move or split race.
           String mesg = " No snapshot region directory found for region:" + region;
-          if (errorMsg.isEmpty()) errorMsg = mesg;
+          if (errorMsg.isEmpty()) {
+            errorMsg = mesg;
+          }
           LOG.error(mesg);
           continue;
         }
@@ -189,7 +192,8 @@ public class SnapshotVerifyUtil {
         throw new CorruptedSnapshotException(errorMsg);
       }
 
-      verifyStoreFiles(conf, manifest, regions, fs, snapshot, snapshotDir);
+      verifyStoreFiles(conf, manifest, regions, CommonFSUtils.getRootDirFileSystem(conf),
+        snapshot, snapshotDir);
     }
   }
 

@@ -477,6 +477,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> snapshotTable(SnapshotDescription snapshot) {
+    return wrap(rawAdmin.snapshotTable(snapshot));
+  }
+
+  @Override
   public CompletableFuture<Boolean> isSnapshotFinished(SnapshotDescription snapshot) {
     return wrap(rawAdmin.isSnapshotFinished(snapshot));
   }

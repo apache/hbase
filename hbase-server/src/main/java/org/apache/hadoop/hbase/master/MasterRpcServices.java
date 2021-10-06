@@ -329,6 +329,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ShutdownRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterRequest;
@@ -1706,22 +1708,33 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       // get the snapshot information
       SnapshotDescription snapshot = SnapshotDescriptionUtils.validate(
         request.getSnapshot(), server.getConfiguration());
+      server.snapshotManager.takeSnapshot(snapshot);
 
       // send back the max amount of time the client should wait for the snapshot to complete
-      long waitTime = SnapshotDescriptionUtils
-        .getMaxMasterTimeout(server.getConfiguration(), snapshot.getType(),
-          SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
-      SnapshotResponse.Builder builder = SnapshotResponse.newBuilder();
-      builder.setExpectedTimeout(waitTime);
+      long waitTime = SnapshotDescriptionUtils.getMaxMasterTimeout(server.getConfiguration(),
+        snapshot.getType(), SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
+      return SnapshotResponse.newBuilder().setExpectedTimeout(waitTime).build();
+    } catch (ForeignException e) {
+      throw new ServiceException(e.getCause());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
 
-      if (request.hasZkCoordinated() && !request.getZkCoordinated()) {
-        long procId = server.snapshotManager
-          .takeSnapshot(snapshot, request.getNonceGroup(), request.getNonce());
-        return builder.setProcId(procId).build();
-      } else {
-        server.snapshotManager.takeSnapshot(snapshot);
-        return builder.build();
-      }
+  @Override
+  public SnapshotTableResponse snapshotTable(RpcController controller,
+      SnapshotTableRequest request) throws ServiceException {
+    try {
+      server.checkInitialized();
+      server.snapshotManager.checkSnapshotSupport();
+      LOG.info(server.getClientIdAuditPrefix() + " snapshot request for:" +
+        ClientSnapshotDescriptionUtils.toString(request.getSnapshot()));
+
+      SnapshotDescription snapshot = SnapshotDescriptionUtils.validate(
+        request.getSnapshot(), server.getConfiguration());
+      long procId = server.snapshotManager
+        .takeSnapshot(snapshot, request.getNonceGroup(), request.getNonce());
+      return SnapshotTableResponse.newBuilder().setProcId(procId).build();
     } catch (ForeignException e) {
       throw new ServiceException(e.getCause());
     } catch (IOException e) {
