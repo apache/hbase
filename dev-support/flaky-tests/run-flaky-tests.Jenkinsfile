@@ -29,6 +29,9 @@ pipeline {
     timeout (time: 2, unit: 'HOURS')
     timestamps()
   }
+  environment {
+    ASF_NIGHTLIES = 'https://nightlies.apache.org'
+  }
   parameters {
     booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
   }
@@ -72,8 +75,19 @@ pipeline {
   post {
     always {
       junit testResults: "**/surefire-reports/*.xml", allowEmptyResults: true
-      // TODO compress these logs
-      archiveArtifacts artifacts: 'includes.txt,**/surefire-reports/*,**/test-data/*,target/machine/*'
+      sshPublisher(publishers: [
+        sshPublisherDesc(configName: 'Nightlies',
+          transfers: [
+            sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+              sourceFiles: "**/surefire-reports/*,**/test-data/*"
+            )
+          ]
+        )
+      ])
+      sh '''#!/bin/bash -e
+        echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}" > "test_logs.txt"
+      '''
+      archiveArtifacts artifacts: 'includes.txt,test_logs.txt,target/machine/*'
     }
   }
 }
