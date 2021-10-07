@@ -161,7 +161,7 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
     map.put(s2, regionsOnS2);
     // add another server so that the cluster has some host on another rack
     map.put(ServerName.valueOf("host2", 1000, 11111), randomRegions(1));
-    assertTrue(
+    assertFalse(
       loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
         new BalancerClusterState(map, null, null, new ForTestRackManagerOne())));
   }
