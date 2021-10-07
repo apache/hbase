@@ -792,7 +792,11 @@ class BalancerClusterState {
     return Arrays.binarySearch(arr, val) >= 0;
   }
 
-  public Comparator<Integer> numRegionsComparator = Comparator.comparingInt(this::getNumRegions);
+  private Comparator<Integer> numRegionsComparator = Comparator.comparingInt(this::getNumRegions);
+
+  public Comparator<Integer> getNumRegionsComparator() {
+    return numRegionsComparator;
+  }
 
   int getLowestLocalityRegionOnServer(int serverIndex) {
     if (regionFinder != null) {

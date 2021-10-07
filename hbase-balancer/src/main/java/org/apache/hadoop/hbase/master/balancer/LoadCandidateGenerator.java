@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -43,7 +42,7 @@ class LoadCandidateGenerator extends CandidateGenerator {
         continue;
       }
       if (selectedIndex != -1
-        && cluster.numRegionsComparator.compare(servers[i], servers[selectedIndex]) != 0) {
+        && cluster.getNumRegionsComparator().compare(servers[i], servers[selectedIndex]) != 0) {
         // Exhausted servers of the same region count
         break;
       }
@@ -67,7 +66,7 @@ class LoadCandidateGenerator extends CandidateGenerator {
       if (servers[i] == null || servers[i] == thisServer) {
         continue;
       }
-      if (selectedIndex != -1 && cluster.numRegionsComparator.compare(servers[i],
+      if (selectedIndex != -1 && cluster.getNumRegionsComparator().compare(servers[i],
         servers[selectedIndex]) != 0) {
         // Exhausted servers of the same region count
         break;
