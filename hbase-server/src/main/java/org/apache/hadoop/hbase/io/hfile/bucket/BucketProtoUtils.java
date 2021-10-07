@@ -23,7 +23,10 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -127,7 +130,8 @@ final class BucketProtoUtils {
   }
 
   static ConcurrentHashMap<BlockCacheKey, BucketEntry> fromPB(
-      Map<Integer, String> deserializers, BucketCacheProtos.BackingMap backingMap)
+      Map<Integer, String> deserializers, BucketCacheProtos.BackingMap backingMap,
+      Function<BucketEntry, Recycler> createRecycler)
       throws IOException {
     ConcurrentHashMap<BlockCacheKey, BucketEntry> result = new ConcurrentHashMap<>();
     for (BucketCacheProtos.BackingMapEntry entry : backingMap.getEntryList()) {
@@ -135,11 +139,14 @@ final class BucketProtoUtils {
       BlockCacheKey key = new BlockCacheKey(protoKey.getHfilename(), protoKey.getOffset(),
           protoKey.getPrimaryReplicaBlock(), fromPb(protoKey.getBlockType()));
       BucketCacheProtos.BucketEntry protoValue = entry.getValue();
+      // TODO:We use ByteBuffAllocator.HEAP here, because we could not get the ByteBuffAllocator
+      // which created by RpcServer elegantly.
       BucketEntry value = new BucketEntry(
           protoValue.getOffset(),
           protoValue.getLength(),
           protoValue.getAccessCounter(),
-          protoValue.getPriority() == BucketCacheProtos.BlockPriority.memory);
+          protoValue.getPriority() == BucketCacheProtos.BlockPriority.memory, createRecycler,
+          ByteBuffAllocator.HEAP);
       // This is the deserializer that we stored
       int oldIndex = protoValue.getDeserialiserIndex();
       String deserializerClass = deserializers.get(oldIndex);

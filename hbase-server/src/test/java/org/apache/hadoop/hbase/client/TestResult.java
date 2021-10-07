@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.assertArrayEquals;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -38,6 +42,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.hamcrest.MatcherAssert;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -366,6 +371,36 @@ public class TestResult extends TestCase {
       fail();
     } catch (Exception e) {
       // Expected
+    }
+  }
+
+  public void testCompareResultMemoryUsage() {
+    List<Cell> cells1 = new ArrayList<>();
+    for (long i = 0; i < 100; i++) {
+      cells1.add(new KeyValue(row, family, Bytes.toBytes(i), value));
+    }
+
+    List<Cell> cells2 = new ArrayList<>();
+    for (long i = 0; i < 100; i++) {
+      cells2.add(new KeyValue(row, family, Bytes.toBytes(i), Bytes.toBytes(i)));
+    }
+
+    Result r1 = Result.create(cells1);
+    Result r2 = Result.create(cells2);
+    try {
+      Result.compareResults(r1, r2);
+      fail();
+    } catch (Exception x) {
+      assertTrue(x.getMessage().startsWith("This result was different:"));
+      assertThat(x.getMessage().length(), is(greaterThan(100)));
+    }
+
+    try {
+      Result.compareResults(r1, r2, false);
+      fail();
+    } catch (Exception x) {
+      assertEquals("This result was different: row=row", x.getMessage());
+      assertThat(x.getMessage().length(), is(lessThan(100)));
     }
   }
 

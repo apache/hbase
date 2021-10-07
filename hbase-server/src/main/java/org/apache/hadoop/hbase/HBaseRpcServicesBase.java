@@ -22,11 +22,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
@@ -53,6 +51,7 @@ import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.OOMEChecker;
+import org.apache.hadoop.hbase.util.ReservoirSample;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -299,12 +298,13 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   @Override
   public final GetBootstrapNodesResponse getBootstrapNodes(RpcController controller,
     GetBootstrapNodesRequest request) throws ServiceException {
-    List<ServerName> bootstrapNodes = new ArrayList<>(server.getRegionServers());
-    Collections.shuffle(bootstrapNodes, ThreadLocalRandom.current());
     int maxNodeCount = server.getConfiguration().getInt(CLIENT_BOOTSTRAP_NODE_LIMIT,
       DEFAULT_CLIENT_BOOTSTRAP_NODE_LIMIT);
+    ReservoirSample<ServerName> sample = new ReservoirSample<>(maxNodeCount);
+    sample.add(server.getBootstrapNodes());
+
     GetBootstrapNodesResponse.Builder builder = GetBootstrapNodesResponse.newBuilder();
-    bootstrapNodes.stream().limit(maxNodeCount).map(ProtobufUtil::toServerName)
+    sample.getSamplingResult().stream().map(ProtobufUtil::toServerName)
       .forEach(builder::addServerName);
     return builder.build();
   }

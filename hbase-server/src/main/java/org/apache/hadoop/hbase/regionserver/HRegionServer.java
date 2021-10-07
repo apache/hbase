@@ -34,6 +34,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -103,7 +104,6 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
-import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
@@ -151,8 +151,6 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.RegionServerAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -353,11 +351,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   // master address tracker
   private final MasterAddressTracker masterAddressTracker;
 
-  /**
-   * Cache for all the region servers in the cluster. Used for serving ClientMetaService.
-   */
-  private final RegionServerAddressTracker regionServerAddressTracker;
-
   // Log Splitting Worker
   private SplitLogWorker splitLogWorker;
 
@@ -448,6 +441,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   private FileSystemUtilizationChore fsUtilizationChore;
 
+  private BootstrapNodeManager bootstrapNodeManager;
+
   /**
    * True if this RegionServer is coming up in a cluster where there is no Master;
    * means it needs to just come up and make do without a Master to talk to: e.g. in test or
@@ -512,7 +507,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         masterAddressTracker = null;
       }
       this.rpcServices.start(zooKeeper);
-      this.regionServerAddressTracker = new RegionServerAddressTracker(zooKeeper, this);
     } catch (Throwable t) {
       // Make sure we log the exception. HRegionServer is often started via reflection and the
       // cause of failed startup is lost.
@@ -645,6 +639,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     try {
       initializeZooKeeper();
       setupClusterConnection();
+      bootstrapNodeManager = new BootstrapNodeManager(asyncClusterConnection, masterAddressTracker);
       // Setup RPC client for master communication
       this.rpcClient = asyncClusterConnection.getRpcClient();
     } catch (Throwable t) {
@@ -2048,13 +2043,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     if (code == TransitionCode.OPENED) {
       Preconditions.checkArgument(hris != null && hris.length == 1);
       if (hris[0].isMetaRegion()) {
-        try {
-          MetaTableLocator.setMetaLocation(getZooKeeper(), serverName,
-              hris[0].getReplicaId(), RegionState.State.OPEN);
-        } catch (KeeperException e) {
-          LOG.info("Failed to update meta location", e);
-          return false;
-        }
+        LOG.warn(
+          "meta table location is stored in master local store, so we can not skip reporting");
+        return false;
       } else {
         try {
           MetaTableAccessor.updateRegionLocation(asyncClusterConnection.toConnection(), hris[0],
@@ -2282,6 +2273,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   protected void stopServiceThreads() {
     // clean up the scheduled chores
     stopChoreService();
+    if (bootstrapNodeManager != null) {
+      bootstrapNodeManager.stop();
+    }
     if (this.cacheFlusher != null) {
       this.cacheFlusher.join();
     }
@@ -3435,8 +3429,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   }
 
   @Override
-  public Collection<ServerName> getRegionServers() {
-    return regionServerAddressTracker.getRegionServers();
+  public Iterator<ServerName> getBootstrapNodes() {
+    return bootstrapNodeManager.getBootstrapNodes().iterator();
   }
 
   @Override

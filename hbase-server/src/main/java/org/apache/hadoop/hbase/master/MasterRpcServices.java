@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
@@ -48,7 +49,6 @@ import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.janitor.MetaFixer;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
@@ -114,7 +115,6 @@ import org.apache.hadoop.hbase.util.DNS.ServerType;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -381,6 +381,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
@@ -1752,17 +1754,13 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         LOG.warn("unassignRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
           + " actual: " + type);
       }
-      Pair<RegionInfo, ServerName> pair =
-        MetaTableAccessor.getRegion(server.getConnection(), regionName);
-      if (Bytes.equals(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName(), regionName)) {
-        pair = new Pair<>(RegionInfoBuilder.FIRST_META_REGIONINFO,
-          MetaTableLocator.getMetaRegionLocation(server.getZooKeeper()));
-      }
-      if (pair == null) {
+      RegionStateNode rsn =
+        server.getAssignmentManager().getRegionStates().getRegionStateNodeFromName(regionName);
+      if (rsn == null) {
         throw new UnknownRegionException(Bytes.toString(regionName));
       }
 
-      RegionInfo hri = pair.getFirst();
+      RegionInfo hri = rsn.getRegionInfo();
       if (server.cpHost != null) {
         server.cpHost.preUnassign(hri);
       }
@@ -3481,5 +3479,17 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   public ExecuteProceduresResponse executeProcedures(RpcController controller,
     ExecuteProceduresRequest request) throws ServiceException {
     throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
+  public GetLiveRegionServersResponse getLiveRegionServers(RpcController controller,
+    GetLiveRegionServersRequest request) throws ServiceException {
+    List<ServerName> regionServers = new ArrayList<>(server.getLiveRegionServers());
+    Collections.shuffle(regionServers, ThreadLocalRandom.current());
+    GetLiveRegionServersResponse.Builder builder =
+      GetLiveRegionServersResponse.newBuilder().setTotal(regionServers.size());
+    regionServers.stream().limit(request.getCount()).map(ProtobufUtil::toServerName)
+      .forEach(builder::addServer);
+    return builder.build();
   }
 }

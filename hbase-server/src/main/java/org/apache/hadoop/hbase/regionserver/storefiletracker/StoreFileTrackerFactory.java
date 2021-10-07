@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
+
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -127,8 +129,7 @@ public final class StoreFileTrackerFactory {
 
   private static Configuration mergeConfigurations(Configuration global, TableDescriptor table,
     ColumnFamilyDescriptor family) {
-    return new CompoundConfiguration().add(global).addBytesMap(table.getValues())
-      .addStringMap(family.getConfiguration()).addBytesMap(family.getValues());
+    return StoreUtils.createStoreConfiguration(global, table, family);
   }
 
   static Class<? extends StoreFileTrackerBase>

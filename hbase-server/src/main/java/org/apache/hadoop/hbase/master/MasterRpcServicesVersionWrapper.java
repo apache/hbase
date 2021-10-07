@@ -25,6 +25,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersResponse;
 
 /**
  * A wrapper class for MasterRpcServices shortcut that ensures a client version is available
@@ -107,5 +109,11 @@ public class MasterRpcServicesVersionWrapper
       RpcController controller, RegionServerStatusProtos.FileArchiveNotificationRequest request)
       throws ServiceException {
     return masterRpcServices.reportFileArchival(controller, request);
+  }
+
+  @Override
+  public GetLiveRegionServersResponse getLiveRegionServers(RpcController controller,
+    GetLiveRegionServersRequest request) throws ServiceException {
+    return masterRpcServices.getLiveRegionServers(controller, request);
   }
 }

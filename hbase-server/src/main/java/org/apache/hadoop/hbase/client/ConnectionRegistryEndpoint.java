@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -46,9 +46,9 @@ public interface ConnectionRegistryEndpoint {
   List<ServerName> getBackupMasters();
 
   /**
-   * Get all the region servers address.
+   * Get a iterator of the available bootstrap nodes.
    */
-  Collection<ServerName> getRegionServers();
+  Iterator<ServerName> getBootstrapNodes();
 
   /**
    * Get the location of meta regions.

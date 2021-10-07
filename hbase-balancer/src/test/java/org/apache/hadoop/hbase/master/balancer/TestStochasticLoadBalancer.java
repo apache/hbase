@@ -235,6 +235,98 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
   }
 
   @Test
+  public void testUpdateBalancerLoadInfo(){
+    int[] cluster = new int[] { 10, 0 };
+    Map<ServerName, List<RegionInfo>> servers = mockClusterServers(cluster);
+    BalancerClusterState clusterState = mockCluster(cluster);
+    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
+      (Map) mockClusterServersWithTables(servers);
+    try {
+      boolean[] perTableBalancerConfigs = { true, false };
+      for (boolean isByTable : perTableBalancerConfigs) {
+        conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
+        loadBalancer.onConfigurationChange(conf);
+        dummyMetricsStochasticBalancer.clearDummyMetrics();
+        loadBalancer.updateBalancerLoadInfo(LoadOfAllTable);
+        assertTrue("Metrics should be recorded!",
+          dummyMetricsStochasticBalancer.getDummyCostsMap() != null && !dummyMetricsStochasticBalancer.getDummyCostsMap().isEmpty());
+
+        String metricRecordKey;
+        if (isByTable) {
+          metricRecordKey = "table1#" + StochasticLoadBalancer.OVERALL_COST_FUNCTION_NAME;
+        } else {
+          metricRecordKey = HConstants.ENSEMBLE_TABLE_NAME + "#" + StochasticLoadBalancer.OVERALL_COST_FUNCTION_NAME;
+        }
+        double curOverallCost = loadBalancer.computeCost(clusterState, Double.MAX_VALUE);
+        double curOverallCostInMetrics =
+          dummyMetricsStochasticBalancer.getDummyCostsMap().get(metricRecordKey);
+        assertEquals(curOverallCost, curOverallCostInMetrics, 0.001);
+      }
+    }finally {
+      conf.unset(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE);
+      loadBalancer.onConfigurationChange(conf);
+    }
+  }
+
+  @Test
+  public void testUpdateStochasticCosts() {
+    float minCost = conf.getFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
+    try {
+      int[] cluster = new int[] { 10, 0 };
+      Map<ServerName, List<RegionInfo>> servers = mockClusterServers(cluster);
+      BalancerClusterState clusterState = mockCluster(cluster);
+      conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 1.0f);
+      conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, false);
+      loadBalancer.onConfigurationChange(conf);
+      dummyMetricsStochasticBalancer.clearDummyMetrics();
+      List<RegionPlan> plans = loadBalancer.balanceCluster((Map)mockClusterServersWithTables(servers));
+
+      assertTrue("Balance plan should not be empty!", plans != null && !plans.isEmpty());
+      assertTrue("There should be metrics record in MetricsStochasticBalancer",
+        !dummyMetricsStochasticBalancer.getDummyCostsMap().isEmpty());
+
+      double overallCostOfCluster = loadBalancer.computeCost(clusterState, Double.MAX_VALUE);
+      double overallCostInMetrics = dummyMetricsStochasticBalancer.getDummyCostsMap().get(
+        HConstants.ENSEMBLE_TABLE_NAME + "#" + StochasticLoadBalancer.OVERALL_COST_FUNCTION_NAME);
+      assertEquals(overallCostOfCluster, overallCostInMetrics, 0.001);
+    } finally {
+      //reset config
+      conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", minCost);
+      conf.unset(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE);
+      loadBalancer.onConfigurationChange(conf);
+    }
+  }
+
+  @Test
+  public void testUpdateStochasticCostsIfBalanceNotRan() {
+    float minCost = conf.getFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
+    try {
+      int[] cluster = new int[] { 10, 10 };
+      Map<ServerName, List<RegionInfo>> servers = mockClusterServers(cluster);
+      BalancerClusterState clusterState = mockCluster(cluster);
+      conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", Float.MAX_VALUE);
+      conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, false);
+      loadBalancer.onConfigurationChange(conf);
+      dummyMetricsStochasticBalancer.clearDummyMetrics();
+      List<RegionPlan> plans = loadBalancer.balanceCluster( (Map) mockClusterServersWithTables(servers));
+
+      assertTrue("Balance plan should be empty!", plans == null || plans.isEmpty());
+      assertTrue("There should be metrics record in MetricsStochasticBalancer!",
+        !dummyMetricsStochasticBalancer.getDummyCostsMap().isEmpty());
+
+      double overallCostOfCluster = loadBalancer.computeCost(clusterState, Double.MAX_VALUE);
+      double overallCostInMetrics = dummyMetricsStochasticBalancer.getDummyCostsMap().get(
+        HConstants.ENSEMBLE_TABLE_NAME + "#" + StochasticLoadBalancer.OVERALL_COST_FUNCTION_NAME);
+      assertEquals(overallCostOfCluster, overallCostInMetrics, 0.001);
+    } finally {
+      //reset config
+      conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", minCost);
+      conf.unset(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE);
+      loadBalancer.onConfigurationChange(conf);
+    }
+  }
+
+  @Test
   public void testNeedBalance() {
     float minCost = conf.getFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
     conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 1.0f);

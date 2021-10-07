@@ -66,8 +66,10 @@ import org.apache.hadoop.hbase.backup.FailedArchiveException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
+import org.apache.hadoop.hbase.coprocessor.ReadOnlyConfiguration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -131,8 +133,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       "hbase.server.compactchecker.interval.multiplier";
   public static final String BLOCKING_STOREFILES_KEY = "hbase.hstore.blockingStoreFiles";
   public static final String BLOCK_STORAGE_POLICY_KEY = "hbase.hstore.block.storage.policy";
-  // keep in accordance with HDFS default storage policy
-  public static final String DEFAULT_BLOCK_STORAGE_POLICY = "HOT";
+  // "NONE" is not a valid storage policy and means we defer the policy to HDFS
+  public static final String DEFAULT_BLOCK_STORAGE_POLICY = "NONE";
   public static final int DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER = 1000;
   public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 16;
 
@@ -223,14 +225,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   protected HStore(final HRegion region, final ColumnFamilyDescriptor family,
       final Configuration confParam, boolean warmup) throws IOException {
 
-    // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
-    // CompoundConfiguration will look for keys in reverse order of addition, so we'd
-    // add global config first, then table and cf overrides, then cf metadata.
-    this.conf = new CompoundConfiguration()
-      .add(confParam)
-      .addBytesMap(region.getTableDescriptor().getValues())
-      .addStringMap(family.getConfiguration())
-      .addBytesMap(family.getValues());
+    this.conf = StoreUtils.createStoreConfiguration(confParam, region.getTableDescriptor(), family);
 
     this.region = region;
     this.storeContext = initializeStoreContext(family);
@@ -2128,14 +2123,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     return this.offPeakHours;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public void onConfigurationChange(Configuration conf) {
-    this.conf = new CompoundConfiguration()
-            .add(conf)
-            .addBytesMap(getColumnFamilyDescriptor().getValues());
+    this.conf = StoreUtils.createStoreConfiguration(conf, region.getTableDescriptor(),
+      getColumnFamilyDescriptor());
     this.storeEngine.compactionPolicy.setConf(conf);
     this.offPeakHours = OffPeakHours.getInstance(conf);
   }
@@ -2400,6 +2391,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   @Override
   public long getMixedRowReadsCount() {
     return mixedRowReadsCount.sum();
+  }
+
+  @Override
+  public Configuration getReadOnlyConfiguration() {
+    return new ReadOnlyConfiguration(this.conf);
   }
 
   void updateMetricsStore(boolean memstoreRead) {

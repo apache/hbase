@@ -25,8 +25,10 @@ import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
 
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
@@ -64,19 +66,27 @@ class BucketEntry implements HBaseReferenceCounted {
   private BlockPriority priority;
 
   /**
-   * The RefCnt means how many paths are referring the {@link BucketEntry}, each RPC reading path is
-   * considering as one path, the {@link BucketCache#backingMap} reference is also considered a
-   * path. NOTICE that if two read RPC path hit the same {@link BucketEntry}, then the HFileBlocks
-   * the two RPC referred will share the same refCnt instance with the BucketEntry. so the refCnt
-   * will increase or decrease as the following: <br>
-   * 1. when writerThread flush the block into IOEngine and add the bucketEntry into backingMap, the
-   * refCnt ++; <br>
-   * 2. If BucketCache evict the block and move the bucketEntry out of backingMap, the refCnt--; it
-   * usually happen when HFile is closing or someone call the clearBucketCache by force. <br>
-   * 3. The read RPC path start to refer the block which is backend by the memory area in
-   * bucketEntry, then refCnt ++ ; <br>
-   * 4. The read RPC patch shipped the response, and release the block. then refCnt--; <br>
-   * Once the refCnt decrease to zero, then the {@link BucketAllocator} will free the block area.
+   * <pre>
+   * The RefCnt means how many paths are referring the {@link BucketEntry}, there are two cases:
+   * 1.If the {@link IOEngine#usesSharedMemory()} is false(eg.{@link FileIOEngine}),the refCnt is
+   *   always 1 until this {@link BucketEntry} is evicted from {@link BucketCache#backingMap}.Even
+   *   if the corresponding {@link HFileBlock} is referenced by RPC reading, the refCnt should not
+   *   increase.
+   *
+   * 2.If the {@link IOEngine#usesSharedMemory()} is true(eg.{@link ByteBufferIOEngine}),each RPC
+   *   reading path is considering as one path, the {@link BucketCache#backingMap} reference is
+   *   also considered a path. NOTICE that if two read RPC path hit the same {@link BucketEntry},
+   *   then the {@link HFileBlock}s the two RPC referred will share the same refCnt instance with
+   *   the {@link BucketEntry},so the refCnt will increase or decrease as the following:
+   *   (1) when writerThread flush the block into IOEngine and add the bucketEntry into backingMap,
+   *       the refCnt ++;
+   *   (2) If BucketCache evict the block and move the bucketEntry out of backingMap, the refCnt--;
+   *       it usually happen when HFile is closing or someone call the clearBucketCache by force.
+   *   (3) The read RPC path start to refer the block which is backend by the memory area in
+   *       bucketEntry, then refCnt ++ ;
+   *   (4) The read RPC patch shipped the response, and release the block. then refCnt--;
+   *    Once the refCnt decrease to zero, then the {@link BucketAllocator} will free the block area.
+   * </pre>
    */
   private final RefCnt refCnt;
   final AtomicBoolean markedAsEvicted;
@@ -87,17 +97,22 @@ class BucketEntry implements HBaseReferenceCounted {
    */
   private final long cachedTime = System.nanoTime();
 
-  BucketEntry(long offset, int length, long accessCounter, boolean inMemory) {
-    this(offset, length, accessCounter, inMemory, RefCnt.create(), ByteBuffAllocator.HEAP);
-  }
-
-  BucketEntry(long offset, int length, long accessCounter, boolean inMemory, RefCnt refCnt,
+  /**
+   * @param createRecycler used to free this {@link BucketEntry} when {@link BucketEntry#refCnt}
+   *          becoming 0. NOTICE that {@link ByteBuffAllocator#NONE} could only be used for test.
+   */
+  BucketEntry(long offset, int length, long accessCounter, boolean inMemory,
+      Function<BucketEntry, Recycler> createRecycler,
       ByteBuffAllocator allocator) {
+    if (createRecycler == null) {
+      throw new IllegalArgumentException("createRecycler could not be null!");
+    }
     setOffset(offset);
     this.length = length;
     this.accessCounter = accessCounter;
     this.priority = inMemory ? BlockPriority.MEMORY : BlockPriority.MULTI;
-    this.refCnt = refCnt;
+    this.refCnt = RefCnt.create(createRecycler.apply(this));
+
     this.markedAsEvicted = new AtomicBoolean(false);
     this.allocator = allocator;
   }
@@ -166,26 +181,19 @@ class BucketEntry implements HBaseReferenceCounted {
   }
 
   /**
-   * Mark as evicted only when NO RPC references. Mainly used for eviction when cache size exceed
-   * the max acceptable size.
-   * @return true if we deallocate this entry successfully.
-   */
-  boolean markStaleAsEvicted() {
-    if (!markedAsEvicted.get() && this.refCnt() == 1) {
-      // The only reference was coming from backingMap, now release the stale entry.
-      return this.markAsEvicted();
-    }
-    return false;
-  }
-
-  /**
-   * Check whether have some RPC patch referring this block. There're two case: <br>
+   * Check whether have some RPC patch referring this block.<br/>
+   * For {@link IOEngine#usesSharedMemory()} is true(eg.{@link ByteBufferIOEngine}), there're two
+   * case: <br>
    * 1. If current refCnt is greater than 1, there must be at least one referring RPC path; <br>
    * 2. If current refCnt is equal to 1 and the markedAtEvicted is true, the it means backingMap has
    * released its reference, the remaining reference can only be from RPC path. <br>
    * We use this check to decide whether we can free the block area: when cached size exceed the
    * acceptable size, our eviction policy will choose those stale blocks without any RPC reference
-   * and the RPC referred block will be excluded.
+   * and the RPC referred block will be excluded. <br/>
+   * <br/>
+   * For {@link IOEngine#usesSharedMemory()} is false(eg.{@link FileIOEngine}),
+   * {@link BucketEntry#refCnt} is always 1 until it is evicted from {@link BucketCache#backingMap},
+   * so {@link BucketEntry#isRpcRef()} is always return false.
    * @return true to indicate there're some RPC referring the block.
    */
   boolean isRpcRef() {

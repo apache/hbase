@@ -101,6 +101,11 @@
       <artifactId>slf4j-api</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.agrona</groupId>
+      <artifactId>agrona</artifactId>
+      <version>1.12.0</version>
+    </dependency>
+    <dependency>
       <groupId>com.github.stephenc.findbugs</groupId>
       <artifactId>findbugs-annotations</artifactId>
       <scope>compile</scope>

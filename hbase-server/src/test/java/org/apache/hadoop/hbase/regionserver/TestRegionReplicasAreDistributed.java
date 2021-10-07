@@ -67,7 +67,7 @@ public class TestRegionReplicasAreDistributed {
 
   @BeforeClass
   public static void before() throws Exception {
-    HTU.getConfiguration().setInt(">hbase.master.wait.on.regionservers.mintostart", 3);
+    HTU.getConfiguration().setInt("hbase.master.wait.on.regionservers.mintostart", 3);
 
     HTU.startMiniCluster(NB_SERVERS);
     Thread.sleep(3000);

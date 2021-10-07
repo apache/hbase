@@ -147,4 +147,13 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
 
   /*Updates balancer status tag reported to JMX*/
   void updateBalancerStatus(boolean status);
+
+  /**
+   * In some scenarios, Balancer needs to update internal status or information according to the
+   * current tables load
+   *
+   * @param loadOfAllTable region load of servers for all table
+   */
+  default void updateBalancerLoadInfo(Map<TableName, Map<ServerName, List<RegionInfo>>>
+    loadOfAllTable){}
 }

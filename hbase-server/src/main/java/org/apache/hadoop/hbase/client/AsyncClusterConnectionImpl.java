@@ -20,21 +20,26 @@ package org.apache.hadoop.hbase.client;
 import java.net.SocketAddress;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.BootstrapNodeProtos.BootstrapNodeService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.BootstrapNodeProtos.GetAllBootstrapNodesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
@@ -43,6 +48,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBul
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
 
 /**
  * The implementation of AsyncClusterConnection.
@@ -131,5 +138,42 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
             return CleanupBulkLoadRequest.newBuilder().setRegion(region).setBulkToken(bt).build();
           }, (s, c, req, done) -> s.cleanupBulkLoad(c, req, done), (c, resp) -> null))
       .call();
+  }
+
+  @Override
+  public CompletableFuture<List<ServerName>>
+    getLiveRegionServers(MasterAddressTracker masterAddrTracker, int count) {
+    CompletableFuture<List<ServerName>> future = new CompletableFuture<>();
+    RegionServerStatusService.Interface stub = RegionServerStatusService
+      .newStub(rpcClient.createRpcChannel(masterAddrTracker.getMasterAddress(), user, rpcTimeout));
+    HBaseRpcController controller = rpcControllerFactory.newController();
+    stub.getLiveRegionServers(controller,
+      GetLiveRegionServersRequest.newBuilder().setCount(count).build(), resp -> {
+        if (controller.failed()) {
+          future.completeExceptionally(controller.getFailed());
+        } else {
+          future.complete(resp.getServerList().stream().map(ProtobufUtil::toServerName)
+            .collect(Collectors.toList()));
+        }
+      });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<List<ServerName>> getAllBootstrapNodes(ServerName regionServer) {
+    CompletableFuture<List<ServerName>> future = new CompletableFuture<>();
+    BootstrapNodeService.Interface stub =
+      BootstrapNodeService.newStub(rpcClient.createRpcChannel(regionServer, user, rpcTimeout));
+    HBaseRpcController controller = rpcControllerFactory.newController();
+    stub.getAllBootstrapNodes(controller, GetAllBootstrapNodesRequest.getDefaultInstance(),
+      resp -> {
+        if (controller.failed()) {
+          future.completeExceptionally(controller.getFailed());
+        } else {
+          future.complete(resp.getNodeList().stream().map(ProtobufUtil::toServerName)
+            .collect(Collectors.toList()));
+        }
+      });
+    return future;
   }
 }

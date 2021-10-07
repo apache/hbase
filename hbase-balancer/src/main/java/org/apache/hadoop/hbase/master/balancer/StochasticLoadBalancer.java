@@ -31,6 +31,7 @@ import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -116,6 +117,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       "hbase.master.balancer.stochastic.minCostNeedBalance";
   protected static final String COST_FUNCTIONS_COST_FUNCTIONS_KEY =
           "hbase.master.balancer.stochastic.additionalCostFunctions";
+  public static final String OVERALL_COST_FUNCTION_NAME = "Overall";
 
   Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<>();
 
@@ -150,6 +152,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    */
   public StochasticLoadBalancer() {
     super(new MetricsStochasticBalancer());
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  public StochasticLoadBalancer(MetricsStochasticBalancer metricsStochasticBalancer) {
+    super(metricsStochasticBalancer);
   }
 
   private static CostFunction createCostFunction(Class<? extends CostFunction> clazz,
@@ -263,6 +271,32 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
   }
 
+  private void updateBalancerTableLoadInfo(TableName tableName, Map<ServerName, List<RegionInfo>> loadOfOneTable) {
+    RegionHDFSBlockLocationFinder finder = null;
+    if ((this.localityCost != null) || (this.rackLocalityCost != null)) {
+      finder = this.regionFinder;
+    }
+    BalancerClusterState cluster =
+      new BalancerClusterState(loadOfOneTable, loads, finder, rackManager);
+
+    initCosts(cluster);
+    curOverallCost = computeCost(cluster, Double.MAX_VALUE);
+    System.arraycopy(tempFunctionCosts, 0, curFunctionCosts, 0, curFunctionCosts.length);
+    updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
+  }
+
+  @Override
+  public void updateBalancerLoadInfo(
+    Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+    if (isByTable) {
+      loadOfAllTable.forEach((tableName, loadOfOneTable) -> {
+        updateBalancerTableLoadInfo(tableName, loadOfOneTable);
+      });
+    } else {
+      updateBalancerTableLoadInfo(HConstants.ENSEMBLE_TABLE_NAME, toEnsumbleTableLoad(loadOfAllTable));
+    }
+  }
+
   /**
    * Update the number of metrics that are reported to JMX
    */
@@ -276,11 +310,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   private boolean areSomeRegionReplicasColocated(BalancerClusterState c) {
     regionReplicaHostCostFunction.prepare(c);
-    if (regionReplicaHostCostFunction.cost() > 0) {
+    if (Math.abs(regionReplicaHostCostFunction.cost()) > CostFunction.COST_EPSILON) {
       return true;
     }
     regionReplicaRackCostFunction.prepare(c);
-    if (regionReplicaRackCostFunction.cost() > 0) {
+    if (Math.abs(regionReplicaRackCostFunction.cost()) > CostFunction.COST_EPSILON) {
       return true;
     }
     return false;
@@ -401,15 +435,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     initCosts(cluster);
 
-    if (!needsBalance(tableName, cluster)) {
-      return null;
-    }
-
     double currentCost = computeCost(cluster, Double.MAX_VALUE);
     curOverallCost = currentCost;
     System.arraycopy(tempFunctionCosts, 0, curFunctionCosts, 0, curFunctionCosts.length);
+    updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
     double initCost = currentCost;
     double newCost;
+
+    if (!needsBalance(tableName, cluster)) {
+      return null;
+    }
 
     long computedMaxSteps;
     if (runMaxSteps) {
@@ -469,9 +504,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     metricsBalancer.balanceCluster(endTime - startTime);
 
-    // update costs metrics
-    updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
     if (initCost > currentCost) {
+      updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
       List<RegionPlan> plans = createRegionPlans(cluster);
       LOG.info("Finished computing new moving plan. Computation took {} ms" +
           " to try {} different iterations.  Found a solution that moves " +
@@ -533,7 +567,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       MetricsStochasticBalancer balancer = (MetricsStochasticBalancer) metricsBalancer;
       // overall cost
       balancer.updateStochasticCost(tableName.getNameAsString(),
-        "Overall", "Overall cost", overall);
+        OVERALL_COST_FUNCTION_NAME, "Overall cost", overall);
 
       // each cost function
       for (int i = 0; i < costFunctions.size(); i++) {
