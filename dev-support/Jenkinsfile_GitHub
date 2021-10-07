@@ -52,6 +52,7 @@ pipeline {
         WORKDIR_REL_GENERAL_CHECK = 'yetus-general-check'
         WORKDIR_REL_JDK8_HADOOP2_CHECK = 'yetus-jdk8-hadoop2-check'
         WORKDIR_REL_JDK11_HADOOP3_CHECK = 'yetus-jdk11-hadoop3-check'
+        ASF_NIGHTLIES = 'https://nightlies.apache.org'
     }
 
     parameters {
@@ -213,6 +214,25 @@ pipeline {
                                   echo "No archiver directory, skipping compressing."
                                 fi
                             '''
+                            sshPublisher(publishers: [
+                              sshPublisherDesc(configName: 'Nightlies',
+                                transfers: [
+                                  sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                                    sourceFiles: "${env.WORKDIR_REL}/${env.PATCH_REL}/test_logs.zip"
+                                  )
+                                ]
+                              )
+                            ])
+                            // remove the big test logs zip file, store the nightlies url in test_logs.txt
+                            sh '''#!/bin/bash -e
+                            if [ -f "${PATCHDIR}/test_logs.zip" ]; then
+                              echo "Remove ${PATCHDIR}/test_logs.zip for saving space"
+                              rm -rf "${PATCHDIR}/test_logs.zip"
+                              echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${WORKDIR_REL}/${PATCH_REL}/test_logs.zip" > "${PATCHDIR}/test_logs.txt"
+                            else
+                              echo "No test_logs.zip, skipping"
+                            fi
+                            '''
                             // Has to be relative to WORKSPACE.
                             archiveArtifacts artifacts: "${WORKDIR_REL}/${PATCH_REL}/*", excludes: "${WORKDIR_REL}/${PATCH_REL}/precommit"
                             archiveArtifacts artifacts: "${WORKDIR_REL}/${PATCH_REL}/**/*", excludes: "${WORKDIR_REL}/${PATCH_REL}/precommit/**/*"
@@ -314,6 +334,25 @@ pipeline {
                                 else
                                   echo "No archiver directory, skipping compressing."
                                 fi
+                            '''
+                            sshPublisher(publishers: [
+                              sshPublisherDesc(configName: 'Nightlies',
+                                transfers: [
+                                  sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                                    sourceFiles: "${env.WORKDIR_REL}/${env.PATCH_REL}/test_logs.zip"
+                                  )
+                                ]
+                              )
+                            ])
+                            // remove the big test logs zip file, store the nightlies url in test_logs.txt
+                            sh '''#!/bin/bash -e
+                            if [ -f "${PATCHDIR}/test_logs.zip" ]; then
+                              echo "Remove ${PATCHDIR}/test_logs.zip for saving space"
+                              rm -rf "${PATCHDIR}/test_logs.zip"
+                              echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${WORKDIR_REL}/${PATCH_REL}/test_logs.zip" > "${PATCHDIR}/test_logs.txt"
+                            else
+                              echo "No test_logs.zip, skipping"
+                            fi
                             '''
                             // Has to be relative to WORKSPACE.
                             archiveArtifacts artifacts: "${WORKDIR_REL}/${PATCH_REL}/*", excludes: "${WORKDIR_REL}/${PATCH_REL}/precommit"
