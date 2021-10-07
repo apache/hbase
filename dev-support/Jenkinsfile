@@ -49,6 +49,7 @@ pipeline {
     // These tests currently have known failures. Once they burn down to 0, remove from here so that new problems will cause a failure.
     TESTS_FILTER = 'cc,checkstyle,javac,javadoc,pylint,shellcheck,whitespace,perlcritic,ruby-lint,rubocop,mvnsite,xml'
     EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/output/excludes"
+    ASF_NIGHTLIES = 'https://nightlies.apache.org'
   }
   parameters {
     booleanParam(name: 'USE_YETUS_PRERELEASE', defaultValue: false, description: '''Check to use the current HEAD of apache/yetus rather than our configured release.
@@ -259,6 +260,25 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                   echo "No archiver directory, skipping compressing."
                 fi
 '''
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "${env.OUTPUT_DIR_RELATIVE}/test_logs.zip"
+                    )
+                  ]
+                )
+              ])
+              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              sh '''#!/bin/bash -e
+                if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
+                  echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
+                  rm -rf "${OUTPUT_DIR}/test_logs.zip"
+                  echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}/test_logs.zip" > "${OUTPUT_DIR}/test_logs.txt"
+                else
+                  echo "No test_logs.zip, skipping"
+                fi
+'''
               // Has to be relative to WORKSPACE.
               archiveArtifacts "${env.OUTPUT_DIR_RELATIVE}/*"
               archiveArtifacts "${env.OUTPUT_DIR_RELATIVE}/**/*"
@@ -336,6 +356,25 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                   fi
                 else
                   echo "No archiver directory, skipping compressing."
+                fi
+'''
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "${env.OUTPUT_DIR_RELATIVE}/test_logs.zip"
+                    )
+                  ]
+                )
+              ])
+              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              sh '''#!/bin/bash -e
+                if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
+                  echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
+                  rm -rf "${OUTPUT_DIR}/test_logs.zip"
+                  echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}/test_logs.zip" > "${OUTPUT_DIR}/test_logs.txt"
+                else
+                  echo "No test_logs.zip, skipping"
                 fi
 '''
               // Has to be relative to WORKSPACE.
@@ -422,6 +461,25 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                   fi
                 else
                   echo "No archiver directory, skipping compressing."
+                fi
+'''
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "${env.OUTPUT_DIR_RELATIVE}/test_logs.zip"
+                    )
+                  ]
+                )
+              ])
+              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              sh '''#!/bin/bash -e
+                if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
+                  echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
+                  rm -rf "${OUTPUT_DIR}/test_logs.zip"
+                  echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}/test_logs.zip" > "${OUTPUT_DIR}/test_logs.txt"
+                else
+                  echo "No test_logs.zip, skipping"
                 fi
 '''
               // Has to be relative to WORKSPACE.
