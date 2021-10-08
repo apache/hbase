@@ -102,12 +102,23 @@ pipeline {
                                   passwordVariable: 'GITHUB_PASSWORD',
                                   usernameVariable: 'GITHUB_USER'
                                 )]) {
-                                sh label: 'test-patch', script: '''#!/bin/bash -e
-                                    hostname -a ; pwd ; ls -la
-                                    printenv 2>&1 | sort
-                                    echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
-                                    "${YETUS_DRIVER}"
-                                '''
+                                script {
+                                  def ret = sh(
+                                    label: 'test-patch',
+                                    returnStatus: true,
+                                    script: '''#!/bin/bash -e
+                                      hostname -a ; pwd ; ls -la
+                                      printenv 2>&1 | sort
+                                      echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
+                                      "${YETUS_DRIVER}"
+                                    '''
+                                  )
+                                  if (ret != 0) {
+                                    // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                                    // test output. See HBASE-26339 for more details.
+                                    currentBuild.result = 'UNSTABLE'
+                                  }
+                                }
                             }
                         }
                     }
@@ -189,12 +200,23 @@ pipeline {
                                 passwordVariable: 'GITHUB_PASSWORD',
                                 usernameVariable: 'GITHUB_USER'
                               )]) {
-                                sh label: 'test-patch', script: '''#!/bin/bash -e
-                                    hostname -a ; pwd ; ls -la
-                                    printenv 2>&1 | sort
-                                    echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
-                                    "${YETUS_DRIVER}"
-                                '''
+                                script {
+                                  def ret = sh(
+                                    label: 'test-patch',
+                                    returnStatus: true,
+                                    script: '''#!/bin/bash -e
+                                      hostname -a ; pwd ; ls -la
+                                      printenv 2>&1 | sort
+                                      echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
+                                      "${YETUS_DRIVER}"
+                                    '''
+                                  )
+                                  if (ret != 0) {
+                                    // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                                    // test output. See HBASE-26339 for more details.
+                                    currentBuild.result = 'UNSTABLE'
+                                  }
+                                }
                             }
                         }
                     }
@@ -309,12 +331,23 @@ pipeline {
                                 passwordVariable: 'GITHUB_PASSWORD',
                                 usernameVariable: 'GITHUB_USER'
                               )]) {
-                                sh label: 'test-patch', script: '''#!/bin/bash -e
-                                    hostname -a ; pwd ; ls -la
-                                    printenv 2>&1 | sort
-                                    echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
-                                    "${YETUS_DRIVER}"
-                                '''
+                                script {
+                                  def ret = sh(
+                                    label: 'test-patch',
+                                    returnStatus: true,
+                                    script: '''#!/bin/bash -e
+                                      hostname -a ; pwd ; ls -la
+                                      printenv 2>&1 | sort
+                                      echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
+                                      "${YETUS_DRIVER}"
+                                    '''
+                                  )
+                                  if (ret != 0) {
+                                    // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                                    // test output. See HBASE-26339 for more details.
+                                    currentBuild.result = 'UNSTABLE'
+                                  }
+                                }
                             }
                         }
                     }
