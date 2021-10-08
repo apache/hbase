@@ -548,6 +548,7 @@ public class TestCellUtil {
     byte[] byteArray = os.toByteArray();
     KeyValue res = new KeyValue(byteArray);
     assertTrue(CellUtil.equals(kv, res));
+    fail("test unstable");
   }
 
   // Workaround for jdk 11 - reflective access to interface default methods for testGetType
