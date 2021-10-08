@@ -157,7 +157,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
   protected static byte[] RECORD_ID_QUALIFIER = Bytes.toBytes("r");
   protected static byte[] TARGET_URI_QUALIFIER = Bytes.toBytes("u");
 
-  public static final int VERIFICATION_READ_RETRIES = 5;
+  private static final int VERIFICATION_READ_RETRIES = 10;
 
   public static enum Counts {
     REFERENCED, UNREFERENCED, CORRUPT
