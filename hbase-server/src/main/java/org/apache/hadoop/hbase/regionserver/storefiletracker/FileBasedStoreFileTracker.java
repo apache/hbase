@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.StoreFileTrackerProtos.
 @InterfaceAudience.Private
 class FileBasedStoreFileTracker extends StoreFileTrackerBase {
 
-  private StoreFileListFile backedFile;
+  private final StoreFileListFile backedFile;
 
   private final Map<String, StoreFileInfo> storefiles = new HashMap<>();
 
@@ -58,6 +58,8 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
     super(conf, isPrimaryReplica, ctx);
     if (ctx != null && ctx.getFamilyStoreDirectoryPath() != null) {
       backedFile = new StoreFileListFile(ctx);
+    } else {
+      backedFile = null;
     }
   }
 

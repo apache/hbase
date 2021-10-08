@@ -20,7 +20,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -102,17 +101,11 @@ public final class StoreFileTrackerFactory {
     }
   }
 
-  private static StoreFileTracker getInstance(Configuration conf, boolean isPrimaryReplica,
+  public static StoreFileTracker create(Configuration conf, boolean isPrimaryReplica,
     StoreContext ctx) {
     Class<? extends StoreFileTracker> tracker = getTrackerClass(conf);
     LOG.info("instantiating StoreFileTracker impl {}", tracker.getName());
     return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
-  }
-
-  public static StoreFileTracker create(Configuration conf, boolean isPrimaryReplica,
-    StoreContext ctx) {
-    StoreFileTracker trackerImpl = getInstance(conf, isPrimaryReplica, ctx);
-    return trackerImpl;
   }
 
   /**
@@ -167,10 +160,7 @@ public final class StoreFileTrackerFactory {
   }
 
   public static void updateDescriptor(Configuration conf, TableDescriptorBuilder builder) {
-    TableDescriptor tableDescriptor = builder.build();
-    ColumnFamilyDescriptor cfDesc = tableDescriptor.getColumnFamilies()[0];
-    StoreContext context = StoreContext.getBuilder().withColumnFamilyDescriptor(cfDesc).build();
-    StoreFileTracker tracker = StoreFileTrackerFactory.getInstance(conf, true, context);
+    StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true, null);
     tracker.updateWithTrackerConfigs(builder);
   }
 
