@@ -137,6 +137,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private double curOverallCost = 0d;
   private double[] tempFunctionCosts;
   private double[] curFunctionCosts;
+  private double[] weightOfGenerator;
 
   // Keep locality based picker and cost function to alert them
   // when new services are offered
@@ -145,6 +146,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private RackLocalityCostFunction rackLocalityCost;
   private RegionReplicaHostCostFunction regionReplicaHostCostFunction;
   private RegionReplicaRackCostFunction regionReplicaRackCostFunction;
+
+  public enum GeneratorType {
+    RANDOM, LOAD, LOCALITY, RACK,
+  }
 
   /**
    * The constructor that pass a MetricsStochasticBalancer to BaseLoadBalancer to replace its
@@ -204,10 +209,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   protected List<CandidateGenerator> createCandidateGenerators() {
     List<CandidateGenerator> candidateGenerators = new ArrayList<CandidateGenerator>(4);
-    candidateGenerators.add(new RandomCandidateGenerator());
-    candidateGenerators.add(new LoadCandidateGenerator());
-    candidateGenerators.add(localityCandidateGenerator);
-    candidateGenerators.add(new RegionReplicaRackCandidateGenerator());
+    candidateGenerators.add(GeneratorType.RANDOM.ordinal(), new RandomCandidateGenerator());
+    candidateGenerators.add(GeneratorType.LOAD.ordinal(), new LoadCandidateGenerator());
+    candidateGenerators.add(GeneratorType.LOCALITY.ordinal(), localityCandidateGenerator);
+    candidateGenerators.add(GeneratorType.RACK.ordinal(),
+      new RegionReplicaRackCandidateGenerator());
     return candidateGenerators;
   }
 
@@ -384,6 +390,27 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       .generate(cluster);
   }
 
+  private CandidateGenerator getRandomGenerate() {
+    double sum = 0;
+    for (int i = 0; i < weightOfGenerator.length; i++) {
+      sum += weightOfGenerator[i];
+      weightOfGenerator[i] = sum;
+    }
+    if (sum == 0) {
+      return candidateGenerators.get(0);
+    }
+    for (int i = 0; i < weightOfGenerator.length; i++) {
+      weightOfGenerator[i] /= sum;
+    }
+    double rand = ThreadLocalRandom.current().nextDouble();
+    for (int i = 0; i < weightOfGenerator.length; i++) {
+      if (rand <= weightOfGenerator[i]) {
+        return candidateGenerators.get(i);
+      }
+    }
+    return candidateGenerators.get(candidateGenerators.size() - 1);
+  }
+
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
     allowedOnPath = ".*/src/test/.*")
   void setRackManager(RackManager rackManager) {
@@ -467,6 +494,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     long step;
 
     for (step = 0; step < computedMaxSteps; step++) {
+      // Initialize the weights of generator every time
+      weightOfGenerator = new double[this.candidateGenerators.size()];
       BalanceAction action = nextAction(cluster);
 
       if (action.getType() == BalanceAction.Type.NULL) {

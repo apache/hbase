@@ -83,6 +83,8 @@ abstract class CostFunction {
 
   protected abstract double cost();
 
+  protected abstract void updateWeight(double[] weights);
+
   /**
    * Scale the value between 0 and 1.
    * @param min Min value
