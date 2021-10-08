@@ -40,9 +40,9 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
 
   public static final String DST_IMPL = "hbase.store.file-tracker.migration.dst.impl";
 
-  private final StoreFileTrackerBase src;
+  final StoreFileTrackerBase src;
 
-  private final StoreFileTrackerBase dst;
+  final StoreFileTrackerBase dst;
 
   public MigrationStoreFileTracker(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
     super(conf, isPrimaryReplica, ctx);

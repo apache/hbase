@@ -326,7 +326,7 @@ public class HFileLink extends FileLink {
    * @return true if the file is created, otherwise the file exists.
    * @throws IOException on file or parent directory creation failure
    */
-  public static boolean create(final Configuration conf, final FileSystem fs,
+  public static String create(final Configuration conf, final FileSystem fs,
       final Path dstFamilyPath, final RegionInfo hfileRegionInfo,
       final String hfileName) throws IOException {
     return create(conf, fs, dstFamilyPath, hfileRegionInfo, hfileName, true);
@@ -347,7 +347,7 @@ public class HFileLink extends FileLink {
    * @return true if the file is created, otherwise the file exists.
    * @throws IOException on file or parent directory creation failure
    */
-  public static boolean create(final Configuration conf, final FileSystem fs,
+  public static String create(final Configuration conf, final FileSystem fs,
       final Path dstFamilyPath, final RegionInfo hfileRegionInfo,
       final String hfileName, final boolean createBackRef) throws IOException {
     TableName linkedTable = hfileRegionInfo.getTable();
@@ -370,7 +370,7 @@ public class HFileLink extends FileLink {
    * @return true if the file is created, otherwise the file exists.
    * @throws IOException on file or parent directory creation failure
    */
-  public static boolean create(final Configuration conf, final FileSystem fs,
+  public static String create(final Configuration conf, final FileSystem fs,
       final Path dstFamilyPath, final TableName linkedTable, final String linkedRegion,
       final String hfileName) throws IOException {
     return create(conf, fs, dstFamilyPath, linkedTable, linkedRegion, hfileName, true);
@@ -392,7 +392,7 @@ public class HFileLink extends FileLink {
    * @return true if the file is created, otherwise the file exists.
    * @throws IOException on file or parent directory creation failure
    */
-  public static boolean create(final Configuration conf, final FileSystem fs,
+  public static String create(final Configuration conf, final FileSystem fs,
       final Path dstFamilyPath, final TableName linkedTable, final String linkedRegion,
       final String hfileName, final boolean createBackRef) throws IOException {
     String familyName = dstFamilyPath.getName();
@@ -420,7 +420,9 @@ public class HFileLink extends FileLink {
     }
     try {
       // Create the link
-      return fs.createNewFile(new Path(dstFamilyPath, name));
+      if(fs.createNewFile(new Path(dstFamilyPath, name))){
+        return name;
+      }
     } catch (IOException e) {
       LOG.error("couldn't create the link=" + name + " for " + dstFamilyPath, e);
       // Revert the reference if the link creation failed
@@ -429,25 +431,7 @@ public class HFileLink extends FileLink {
       }
       throw e;
     }
-  }
-
-  /**
-   * Create a new HFileLink starting from a hfileLink name
-   *
-   * <p>It also adds a back-reference to the hfile back-reference directory
-   * to simplify the reference-count and the cleaning process.
-   *
-   * @param conf {@link Configuration} to read for the archive directory name
-   * @param fs {@link FileSystem} on which to write the HFileLink
-   * @param dstFamilyPath - Destination path (table/region/cf/)
-   * @param hfileLinkName - HFileLink name (it contains hfile-region-table)
-   * @return true if the file is created, otherwise the file exists.
-   * @throws IOException on file or parent directory creation failure
-   */
-  public static boolean createFromHFileLink(final Configuration conf, final FileSystem fs,
-      final Path dstFamilyPath, final String hfileLinkName)
-          throws IOException {
-    return createFromHFileLink(conf, fs, dstFamilyPath, hfileLinkName, true);
+    throw new IOException("File link=" + name + " already exists.");
   }
 
   /**
@@ -464,7 +448,7 @@ public class HFileLink extends FileLink {
    * @return true if the file is created, otherwise the file exists.
    * @throws IOException on file or parent directory creation failure
    */
-  public static boolean createFromHFileLink(final Configuration conf, final FileSystem fs,
+  public static String createFromHFileLink(final Configuration conf, final FileSystem fs,
       final Path dstFamilyPath, final String hfileLinkName, final boolean createBackRef)
           throws IOException {
     Matcher m = LINK_NAME_PATTERN.matcher(hfileLinkName);
