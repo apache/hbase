@@ -160,6 +160,9 @@ public final class StoreFileTrackerFactory {
   }
 
   public static void updateDescriptor(Configuration conf, TableDescriptorBuilder builder) {
+    //CreateTableProcedure needs to instantiate the configured SFT impl, in order to update table
+    //descriptors with the SFT impl specific configs. By the time this happens, the table has no
+    //regions nor stores yet, so it can't create a proper StoreContext.
     StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true, null);
     tracker.updateWithTrackerConfigs(builder);
   }
