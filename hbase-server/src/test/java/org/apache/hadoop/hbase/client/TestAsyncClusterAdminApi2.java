@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -36,6 +35,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
  * Only used to test stopMaster/stopRegionServer/shutdown methods.
@@ -71,7 +72,7 @@ public class TestAsyncClusterAdminApi2 extends TestAsyncAdminBase {
   @After
   @Override
   public void tearDown() throws Exception {
-    IOUtils.closeQuietly(ASYNC_CONN);
+    Closeables.close(ASYNC_CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
