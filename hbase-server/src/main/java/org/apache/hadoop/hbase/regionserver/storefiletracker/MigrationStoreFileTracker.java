@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
@@ -89,14 +90,16 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
   }
 
   @Override
-  public void updateWithTrackerConfigs(TableDescriptorBuilder builder) {
-    super.updateWithTrackerConfigs(builder);
-    if (StringUtils.isEmpty(builder.getValue(SRC_IMPL))) {
+  public TableDescriptor updateWithTrackerConfigs(TableDescriptor descriptor) {
+    descriptor = super.updateWithTrackerConfigs(descriptor);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(descriptor);
+    if (StringUtils.isEmpty(descriptor.getValue(SRC_IMPL))) {
       builder.setValue(SRC_IMPL, src.getTrackerName());
     }
-    if (StringUtils.isEmpty(builder.getValue(DST_IMPL))) {
+    if (StringUtils.isEmpty(descriptor.getValue(DST_IMPL))) {
       builder.setValue(DST_IMPL, dst.getTrackerName());
     }
+    return builder.build();
   }
 
   static Class<? extends StoreFileTracker> getSrcTrackerClass(Configuration conf) {

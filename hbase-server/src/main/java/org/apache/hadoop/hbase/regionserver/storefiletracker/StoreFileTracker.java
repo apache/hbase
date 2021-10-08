@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -81,7 +81,7 @@ public interface StoreFileTracker {
    * implementation, and also possible misconfiguration between master and region servers.
    * <p/>
    * See HBASE-26246 for more details.
-   * @param builder The table descriptor builder for the given table.
+   * @param descriptor The table descriptor for the given table.
    */
-  void updateWithTrackerConfigs(TableDescriptorBuilder builder);
+  TableDescriptor updateWithTrackerConfigs(TableDescriptor descriptor);
 }

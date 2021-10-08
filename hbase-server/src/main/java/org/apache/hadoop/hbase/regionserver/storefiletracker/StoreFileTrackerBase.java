@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -83,10 +84,13 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
   }
 
   @Override
-  public void updateWithTrackerConfigs(TableDescriptorBuilder builder) {
-    if (StringUtils.isEmpty(builder.getValue(TRACKER_IMPL))) {
+  public TableDescriptor updateWithTrackerConfigs(TableDescriptor descriptor) {
+    if (StringUtils.isEmpty(descriptor.getValue(TRACKER_IMPL))) {
+      TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(descriptor);
       builder.setValue(TRACKER_IMPL, getTrackerName());
+      descriptor = builder.build();
     }
+    return descriptor;
   }
 
   protected final String getTrackerName() {
