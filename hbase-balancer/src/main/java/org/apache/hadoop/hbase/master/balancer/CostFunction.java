@@ -83,7 +83,9 @@ abstract class CostFunction {
 
   protected abstract double cost();
 
-  protected abstract void updateWeight(double[] weights);
+  protected void updateWeight(double[] weights) {
+    weights[StochasticLoadBalancer.GeneratorType.RANDOM.ordinal()] += cost();
+  }
 
   /**
    * Scale the value between 0 and 1.

@@ -70,11 +70,6 @@ abstract class CostFromRegionLoadFunction extends CostFunction {
     return cost.cost();
   }
 
-  @Override
-  protected final void updateWeight(double[] weights) {
-    weights[StochasticLoadBalancer.GeneratorType.RANDOM.ordinal()] += cost.cost();
-  }
-
   protected double getRegionLoadCost(Collection<BalancerRegionLoad> regionLoadList) {
     double cost = 0;
     for (BalancerRegionLoad rl : regionLoadList) {
