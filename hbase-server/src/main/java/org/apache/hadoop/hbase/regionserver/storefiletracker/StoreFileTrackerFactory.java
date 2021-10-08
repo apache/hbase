@@ -171,7 +171,7 @@ public final class StoreFileTrackerFactory {
     ColumnFamilyDescriptor cfDesc = tableDescriptor.getColumnFamilies()[0];
     StoreContext context = StoreContext.getBuilder().withColumnFamilyDescriptor(cfDesc).build();
     StoreFileTracker tracker = StoreFileTrackerFactory.getInstance(conf, true, context);
-    tracker.updateDescriptor(builder);
+    tracker.updateWithTrackerConfigs(builder);
   }
 
   // should not use MigrationStoreFileTracker for new family

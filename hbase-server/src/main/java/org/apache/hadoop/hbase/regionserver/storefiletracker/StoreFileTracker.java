@@ -83,5 +83,5 @@ public interface StoreFileTracker {
    * See HBASE-26246 for more details.
    * @param builder The table descriptor builder for the given table.
    */
-  void updateDescriptor(TableDescriptorBuilder builder);
+  void updateWithTrackerConfigs(TableDescriptorBuilder builder);
 }
