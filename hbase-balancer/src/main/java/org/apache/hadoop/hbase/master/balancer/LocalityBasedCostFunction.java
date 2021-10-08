@@ -88,4 +88,8 @@ abstract class LocalityBasedCostFunction extends CostFunction {
     return cluster.getOrComputeWeightedLocality(region, entity, type);
   }
 
+  @Override
+  public final void updateWeight(double[] weights) {
+    weights[StochasticLoadBalancer.GeneratorType.LOCALITY.ordinal()] += cost();
+  }
 }
