@@ -149,7 +149,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               echo '(x) {color:red}-1 general checks{color}' >"${OUTPUT_DIR}/commentfile"
               echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
-'''
+            '''
             unstash 'yetus'
             dir('component') {
               checkout scm
@@ -160,20 +160,30 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
               echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
               ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
-'''
-            // TODO roll this into the hbase_nightly_yetus script
-            sh '''#!/usr/bin/env bash
-              set -e
-              declare -i status=0
-              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                echo '(/) {color:green}+1 general checks{color}' > "${OUTPUT_DIR}/commentfile"
-              else
-                echo '(x) {color:red}-1 general checks{color}' > "${OUTPUT_DIR}/commentfile"
-                status=1
-              fi
-              echo "-- For more information [see general report|${BUILD_URL}/General_Nightly_Build_Report/]" >> "${OUTPUT_DIR}/commentfile"
-              exit "${status}"
             '''
+            // TODO roll this into the hbase_nightly_yetus script
+            script {
+              def ret = sh(
+                returnStatus: true,
+                script: '''#!/usr/bin/env bash
+                  set -e
+                  declare -i status=0
+                  if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                    echo '(/) {color:green}+1 general checks{color}' > "${OUTPUT_DIR}/commentfile"
+                  else
+                    echo '(x) {color:red}-1 general checks{color}' > "${OUTPUT_DIR}/commentfile"
+                    status=1
+                  fi
+                  echo "-- For more information [see general report|${BUILD_URL}/General_Nightly_Build_Report/]" >> "${OUTPUT_DIR}/commentfile"
+                  exit "${status}"
+                '''
+              )
+              if (ret != 0) {
+                // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                // test output. See HBASE-26339 for more details.
+                currentBuild.result = 'UNSTABLE'
+              }
+            }
           }
           post {
             always {
@@ -217,7 +227,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               echo '(x) {color:red}-1 jdk7 checks{color}' >"${OUTPUT_DIR}/commentfile"
               echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
-'''
+            '''
             unstash 'yetus'
             dir('component') {
               checkout scm
@@ -228,19 +238,29 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
               echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
               ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
-'''
-            sh '''#!/usr/bin/env bash
-              set -e
-              declare -i status=0
-              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                echo '(/) {color:green}+1 jdk7 checks{color}' > "${OUTPUT_DIR}/commentfile"
-              else
-                echo '(x) {color:red}-1 jdk7 checks{color}' > "${OUTPUT_DIR}/commentfile"
-                status=1
-              fi
-              echo "-- For more information [see jdk7 report|${BUILD_URL}/JDK7_Nightly_Build_Report/]" >> "${OUTPUT_DIR}/commentfile"
-              exit "${status}"
             '''
+            script {
+              def ret = sh(
+                returnStatus: true,
+                script: '''#!/usr/bin/env bash
+                  set -e
+                  declare -i status=0
+                  if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                    echo '(/) {color:green}+1 jdk7 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                  else
+                    echo '(x) {color:red}-1 jdk7 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                    status=1
+                  fi
+                  echo "-- For more information [see jdk7 report|${BUILD_URL}/JDK7_Nightly_Build_Report/]" >> "${OUTPUT_DIR}/commentfile"
+                  exit "${status}"
+                '''
+              )
+              if (ret != 0) {
+                // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                // test output. See HBASE-26339 for more details.
+                currentBuild.result = 'UNSTABLE'
+              }
+            }
           }
           post {
             always {
@@ -315,7 +335,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               echo '(x) {color:red}-1 jdk8 hadoop2 checks{color}' >"${OUTPUT_DIR}/commentfile"
               echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
-'''
+            '''
             unstash 'yetus'
             dir('component') {
               checkout scm
@@ -326,19 +346,29 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
               echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
               ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
-'''
-            sh '''#!/usr/bin/env bash
-              set -e
-              declare -i status=0
-              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                echo '(/) {color:green}+1 jdk8 hadoop2 checks{color}' > "${OUTPUT_DIR}/commentfile"
-              else
-                echo '(x) {color:red}-1 jdk8 hadoop2 checks{color}' > "${OUTPUT_DIR}/commentfile"
-                status=1
-              fi
-              echo "-- For more information [see jdk8 (hadoop2) report|${BUILD_URL}/JDK8_Nightly_Build_Report_(Hadoop2)/]" >> "${OUTPUT_DIR}/commentfile"
-              exit "${status}"
             '''
+            script {
+              def ret = sh(
+                returnStatus: true,
+                script: '''#!/usr/bin/env bash
+                  set -e
+                  declare -i status=0
+                  if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                    echo '(/) {color:green}+1 jdk8 hadoop2 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                  else
+                    echo '(x) {color:red}-1 jdk8 hadoop2 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                    status=1
+                  fi
+                  echo "-- For more information [see jdk8 (hadoop2) report|${BUILD_URL}/JDK8_Nightly_Build_Report_(Hadoop2)/]" >> "${OUTPUT_DIR}/commentfile"
+                  exit "${status}"
+                '''
+              )
+              if (ret != 0) {
+                // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                // test output. See HBASE-26339 for more details.
+                currentBuild.result = 'UNSTABLE'
+              }
+            }
           }
           post {
             always {
@@ -420,7 +450,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               echo '(x) {color:red}-1 jdk8 hadoop3 checks{color}' >"${OUTPUT_DIR}/commentfile"
               echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
-'''
+            '''
             unstash 'yetus'
             dir('component') {
               checkout scm
@@ -431,19 +461,29 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
               echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
               ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
-'''
-            sh '''#!/usr/bin/env bash
-              set -e
-              declare -i status=0
-              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                echo '(/) {color:green}+1 jdk8 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
-              else
-                echo '(x) {color:red}-1 jdk8 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
-                status=1
-              fi
-              echo "-- For more information [see jdk8 (hadoop3) report|${BUILD_URL}/JDK8_Nightly_Build_Report_(Hadoop3)/]" >> "${OUTPUT_DIR}/commentfile"
-              exit "${status}"
             '''
+            script {
+              def ret = sh(
+                returnStatus: true,
+                script: '''#!/usr/bin/env bash
+                  set -e
+                  declare -i status=0
+                  if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                    echo '(/) {color:green}+1 jdk8 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                  else
+                    echo '(x) {color:red}-1 jdk8 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                    status=1
+                  fi
+                  echo "-- For more information [see jdk8 (hadoop3) report|${BUILD_URL}/JDK8_Nightly_Build_Report_(Hadoop3)/]" >> "${OUTPUT_DIR}/commentfile"
+                  exit "${status}"
+                '''
+              )
+              if (ret != 0) {
+                // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                // test output. See HBASE-26339 for more details.
+                currentBuild.result = 'UNSTABLE'
+              }
+            }
           }
           post {
             always {
