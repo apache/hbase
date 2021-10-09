@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.master;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
+import static org.apache.hadoop.hbase.master.cleaner.HFileCleaner.CUSTOM_POOL_SIZE;
 import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
-
 import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -78,6 +79,7 @@ import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.PleaseRestartMasterException;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ServerTask;
@@ -249,7 +251,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
@@ -262,7 +263,6 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.webapp.WebAppContext;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
-
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
@@ -384,6 +384,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private DirScanPool logCleanerPool;
   private LogCleaner logCleaner;
   private HFileCleaner hfileCleaner;
+  private HFileCleaner[] customHFileCleaners;
+  private Path[] customHFilePaths;
+  private DirScanPool customHFileCleanerPool;
   private ReplicationBarrierCleaner replicationBarrierCleaner;
   private MobFileCleanerChore mobFileCleanerChore;
   private MobFileCompactionChore mobFileCompactionChore;
@@ -1163,6 +1166,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     configurationManager.registerObserver(this.hfileCleaner);
     configurationManager.registerObserver(this.logCleaner);
     configurationManager.registerObserver(this.regionsRecoveryConfigManager);
+    if (this.customHFileCleanerPool != null) {
+      configurationManager.registerObserver(this.customHFileCleanerPool);
+    }
+    if (this.customHFileCleaners != null) {
+      for (HFileCleaner cleaner : customHFileCleaners) {
+        configurationManager.registerObserver(cleaner);
+      }
+    }
     // Set master as 'initialized'.
     setInitialized(true);
 
@@ -1539,12 +1550,44 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         getMasterWalManager().getOldLogDir(), logCleanerPool, params);
     getChoreService().scheduleChore(logCleaner);
 
-    // start the hfile archive cleaner thread
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
+
+    // Create custom archive hfile cleaner thread pool
+    if (conf.getBoolean(HFileCleaner.HFILE_CLEANER_ENABLE_CUSTOM_PATHS, false)) {
+      String[] paths = conf.getStrings(HFileCleaner.HFILE_CLEANER_CUSTOM_PATHS);
+      if (paths != null && paths.length > 0) {
+        if (conf.getStrings(HFileCleaner.HFILE_CLEANER_CUSTOM_PATHS_PLUGINS) == null) {
+          Set<String> cleanerClasses = new HashSet<>();
+          String[] cleaners = conf.getStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
+          if (cleaners != null) {
+            Collections.addAll(cleanerClasses, cleaners);
+          }
+          conf.setStrings(HFileCleaner.HFILE_CLEANER_CUSTOM_PATHS_PLUGINS,
+            cleanerClasses.toArray(new String[cleanerClasses.size()]));
+          LOG.info("Archive custom cleaner paths: {}, plugins: {}", Arrays.asList(paths),
+            cleanerClasses);
+        }
+        customHFileCleanerPool = DirScanPool.getHFileCleanerScanPool(
+          conf.get(CUSTOM_POOL_SIZE, "6"));
+        customHFilePaths = new Path[paths.length];
+        customHFileCleaners = new HFileCleaner[paths.length];
+        for (int i = 0; i < paths.length; i++) {
+          Path path = new Path(paths[i].trim());
+          customHFilePaths[i] = path;
+          HFileCleaner cleaner =
+            new HFileCleaner("ArchiveCustomHFileCleaner-" + path.getName(), cleanerInterval,
+              this, conf, getMasterFileSystem().getFileSystem(), new Path(archiveDir, path),
+              HFileCleaner.HFILE_CLEANER_CUSTOM_PATHS_PLUGINS, customHFileCleanerPool, params, null);
+          customHFileCleaners[i] = cleaner;
+          getChoreService().scheduleChore(cleaner);
+        }
+      }
+    }
+
     // Create archive cleaner thread pool
     hfileCleanerPool = DirScanPool.getHFileCleanerScanPool(conf);
     this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf,
-      getMasterFileSystem().getFileSystem(), archiveDir, hfileCleanerPool, params);
+      getMasterFileSystem().getFileSystem(), archiveDir, hfileCleanerPool, params, customHFilePaths);
     getChoreService().scheduleChore(hfileCleaner);
 
     // Regions Reopen based on very high storeFileRefCount is considered enabled
@@ -1600,6 +1643,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (logCleanerPool != null) {
       logCleanerPool.shutdownNow();
       logCleanerPool = null;
+    }
+    if (customHFileCleanerPool != null) {
+      customHFileCleanerPool.shutdownNow();
+      customHFileCleanerPool = null;
     }
     if (maintenanceRegionServer != null) {
       maintenanceRegionServer.getRegionServer().stop(HBASE_MASTER_CLEANER_INTERVAL);
@@ -1736,6 +1783,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     shutdownChore(snapshotQuotaChore);
     shutdownChore(logCleaner);
     shutdownChore(hfileCleaner);
+    if (customHFileCleaners != null) {
+      for (ScheduledChore chore : customHFileCleaners) {
+        chore.shutdown();
+      }
+      customHFileCleaners = null;
+    }
     shutdownChore(replicationBarrierCleaner);
     shutdownChore(snapshotCleanerChore);
     shutdownChore(hbckChore);
