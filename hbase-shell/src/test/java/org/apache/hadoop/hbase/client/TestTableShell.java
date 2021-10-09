@@ -35,6 +35,6 @@ public class TestTableShell extends AbstractTestShell {
 
   @Override
   protected String getIncludeList() {
-    return "test_table.rb";
+    return "table_test.rb";
   }
 }
