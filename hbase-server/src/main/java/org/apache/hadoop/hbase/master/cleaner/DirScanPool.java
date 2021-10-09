@@ -24,10 +24,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The thread pool used for scan directories
@@ -41,7 +42,10 @@ public class DirScanPool implements ConfigurationObserver {
   private boolean reconfigNotification;
 
   public DirScanPool(Configuration conf) {
-    String poolSize = conf.get(CleanerChore.CHORE_POOL_SIZE, CleanerChore.DEFAULT_CHORE_POOL_SIZE);
+    this(conf.get(CleanerChore.CHORE_POOL_SIZE, CleanerChore.DEFAULT_CHORE_POOL_SIZE));
+  }
+
+  public DirScanPool(String poolSize) {
     size = CleanerChore.calculatePoolSize(poolSize);
     // poolSize may be 0 or 0.0 from a careless configuration,
     // double check to make sure.
