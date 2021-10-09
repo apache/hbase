@@ -20,6 +20,51 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.4.7 - 2021-10-15
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26270](https://issues.apache.org/jira/browse/HBASE-26270) | Provide getConfiguration method for Region and Store interface |  Minor | . |
+| [HBASE-26273](https://issues.apache.org/jira/browse/HBASE-26273) | TableSnapshotInputFormat/TableSnapshotInputFormatImpl should use ReadType.STREAM for scanning HFiles |  Major | mapreduce |
+| [HBASE-26276](https://issues.apache.org/jira/browse/HBASE-26276) | Allow HashTable/SyncTable to perform rawScan when comparing cells |  Major | . |
+| [HBASE-26255](https://issues.apache.org/jira/browse/HBASE-26255) | Add an option to use region location from meta table in TableSnapshotInputFormat |  Major | mapreduce |
+| [HBASE-26243](https://issues.apache.org/jira/browse/HBASE-26243) | Fix typo for file 'hbase-server/src/main/java/org/apache/hadoop/hbase/util/HBaseFsck.java' |  Trivial | . |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26295](https://issues.apache.org/jira/browse/HBASE-26295) | BucketCache could not free BucketEntry which restored from persistence file |  Major | BucketCache |
+| [HBASE-26289](https://issues.apache.org/jira/browse/HBASE-26289) | Hbase scan setMaxResultsPerColumnFamily not giving right results |  Major | regionserver |
+| [HBASE-26238](https://issues.apache.org/jira/browse/HBASE-26238) | OOME in VerifyReplication for the table contains rows with 10M+ cells |  Major | Client, Replication |
+| [HBASE-26297](https://issues.apache.org/jira/browse/HBASE-26297) | Balancer run is improperly triggered by accuracy error of double comparison |  Major | Balancer |
+| [HBASE-26274](https://issues.apache.org/jira/browse/HBASE-26274) | Create an option to reintroduce BlockCache to mapreduce job |  Major | BlockCache, HFile, mapreduce |
+| [HBASE-26261](https://issues.apache.org/jira/browse/HBASE-26261) | Store configuration loss when use update\_config |  Minor | . |
+| [HBASE-26281](https://issues.apache.org/jira/browse/HBASE-26281) | DBB got from BucketCache would be freed unexpectedly before RPC completed |  Critical | BucketCache |
+| [HBASE-26197](https://issues.apache.org/jira/browse/HBASE-26197) | Fix some obvious bugs in MultiByteBuff.put |  Major | . |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26272](https://issues.apache.org/jira/browse/HBASE-26272) | TestTableMapReduceUtil failure in branch-2 |  Major | test |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26317](https://issues.apache.org/jira/browse/HBASE-26317) | Publish the test logs for pre commit jenkins job to nightlies |  Major | jenkins, scripts |
+| [HBASE-26313](https://issues.apache.org/jira/browse/HBASE-26313) | Publish the test logs for our nightly jobs to nightlies.apache.org |  Major | jenkins, scripts |
+| [HBASE-26318](https://issues.apache.org/jira/browse/HBASE-26318) | Publish test logs for flaky jobs to nightlies |  Major | flakies, jenkins |
+
+
 ## Release 2.4.6 - 2021-09-10
 
 
