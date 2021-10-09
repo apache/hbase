@@ -20,6 +20,40 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.4.7 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-26274](https://issues.apache.org/jira/browse/HBASE-26274) | *Major* | **Create an option to reintroduce BlockCache to mapreduce job**
+
+Introduce \`hfile.onheap.block.cache.fixed.size\` and default to disable. When using ClientSideRegionScanner, it will be enabled with a fixed size for caching INDEX/LEAF\_INDEX block when a client, e.g. snapshot scanner, scans the entire HFile and does not need to seek/reseek to index block multiple times.
+
+
+---
+
+* [HBASE-26270](https://issues.apache.org/jira/browse/HBASE-26270) | *Minor* | **Provide getConfiguration method for Region and Store interface**
+
+Provide 'getReadOnlyConfiguration' method for Store and Region interface
+
+
+---
+
+* [HBASE-26273](https://issues.apache.org/jira/browse/HBASE-26273) | *Major* | **TableSnapshotInputFormat/TableSnapshotInputFormatImpl should use ReadType.STREAM for scanning HFiles**
+
+HBase's MapReduce API which can operate over HBase snapshots will now default to using ReadType.STREAM instead of ReadType.DEFAULT (which is PREAD) as a result of this change. HBase developers expect that STREAM will perform significantly better for average Snapshot-based batch jobs. Users can restore the previous functionality (using PREAD) by updating their code to explicitly set a value of \`ReadType.PREAD\` on the \`Scan\` object they provide to TableSnapshotInputFormat, or by setting the configuration property "hbase.TableSnapshotInputFormat.scanner.readtype" to "PREAD" in hbase-site.xml.
+
+
+---
+
+* [HBASE-26276](https://issues.apache.org/jira/browse/HBASE-26276) | *Major* | **Allow HashTable/SyncTable to perform rawScan when comparing cells**
+
+Added --rawScan option to HashTable job, which allows HashTable/SyncTable to perform raw scans. If this property is omitted, it defaults to false. When used together with --versions set to a high value, SyncTable will fabricate delete markers to all old versions still hanging (not cleaned yet by major compaction), avoiding the inconsistencies reported in HBASE-21596.
+
+
+
 # HBASE  2.4.6 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
