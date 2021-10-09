@@ -556,7 +556,7 @@ EOF
         end
 
         scan.setScanMetricsEnabled(enablemetrics) if enablemetrics
-        scan.setTimeStamp(timestamp) if timestamp
+        scan.setTimestamp(timestamp) if timestamp
         scan.setCacheBlocks(cache_blocks)
         scan.setReversed(reversed)
         scan.setCaching(cache) if cache > 0
