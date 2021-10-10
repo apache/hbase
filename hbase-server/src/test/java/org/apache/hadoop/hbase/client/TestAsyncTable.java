@@ -41,7 +41,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -70,6 +69,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @RunWith(Parameterized.class)
 @Category({ MediumTests.class, ClientTests.class })
@@ -128,7 +129,7 @@ public class TestAsyncTable {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    IOUtils.closeQuietly(ASYNC_CONN);
+    Closeables.close(ASYNC_CONN, true);
     assertTrue(ASYNC_CONN.isClosed());
     TEST_UTIL.shutdownMiniCluster();
   }

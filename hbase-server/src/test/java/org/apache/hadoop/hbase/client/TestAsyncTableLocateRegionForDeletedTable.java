@@ -21,7 +21,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -33,6 +32,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
  * Fix an infinite loop in {@link AsyncNonMetaRegionLocator}, see the comments on HBASE-21943 for
@@ -69,7 +70,7 @@ public class TestAsyncTableLocateRegionForDeletedTable {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    IOUtils.closeQuietly(ASYNC_CONN);
+    Closeables.close(ASYNC_CONN, true);
     assertTrue(ASYNC_CONN.isClosed());
     TEST_UTIL.shutdownMiniCluster();
   }
