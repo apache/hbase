@@ -726,6 +726,7 @@ public class MultiByteBuff extends ByteBuff {
   /**
    * Writes a byte to this MBB at the given index and won't affect the position of any of the
    * buffers.
+   * @return this object
    * @throws IndexOutOfBoundsException If <tt>index</tt> is negative or not smaller than the
    *           {@link MultiByteBuff#limit}
    */
