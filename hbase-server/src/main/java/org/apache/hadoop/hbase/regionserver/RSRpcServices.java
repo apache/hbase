@@ -218,6 +218,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavor
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.BootstrapNodeProtos.BootstrapNodeService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.BootstrapNodeProtos.GetAllBootstrapNodesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.BootstrapNodeProtos.GetAllBootstrapNodesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Action;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
@@ -280,9 +283,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
-public class RSRpcServices implements HBaseRPCErrorHandler,
-    AdminService.BlockingInterface, ClientService.BlockingInterface,
-    ClientMetaService.BlockingInterface, PriorityFunction, ConfigurationObserver {
+public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.BlockingInterface,
+  ClientService.BlockingInterface, ClientMetaService.BlockingInterface,
+  BootstrapNodeService.BlockingInterface, PriorityFunction, ConfigurationObserver {
   protected static final Logger LOG = LoggerFactory.getLogger(RSRpcServices.class);
 
   /** RPC scheduler to use for the region server. */
@@ -4076,11 +4079,20 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     int maxNodeCount = regionServer.getConfiguration().getInt(CLIENT_BOOTSTRAP_NODE_LIMIT,
       DEFAULT_CLIENT_BOOTSTRAP_NODE_LIMIT);
     ReservoirSample<ServerName> sample = new ReservoirSample<>(maxNodeCount);
-    sample.add(regionServer.getRegionServers());
+    sample.add(regionServer.getBootstrapNodes());
 
     GetBootstrapNodesResponse.Builder builder = GetBootstrapNodesResponse.newBuilder();
     sample.getSamplingResult().stream().map(ProtobufUtil::toServerName)
       .forEach(builder::addServerName);
+    return builder.build();
+  }
+
+  @Override
+  public GetAllBootstrapNodesResponse getAllBootstrapNodes(RpcController controller,
+    GetAllBootstrapNodesRequest request) throws ServiceException {
+    GetAllBootstrapNodesResponse.Builder builder = GetAllBootstrapNodesResponse.newBuilder();
+    regionServer.getBootstrapNodes()
+      .forEachRemaining(server -> builder.addNode(ProtobufUtil.toServerName(server)));
     return builder.build();
   }
 }

@@ -2757,7 +2757,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public Iterator<ServerName> getRegionServers() {
+  public Iterator<ServerName> getBootstrapNodes() {
     return regionServerTracker.getRegionServers().iterator();
   }
 
@@ -3958,5 +3958,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     allowedOnPath = ".*/src/test/.*")
   MasterRegion getMasterRegion() {
     return masterRegion;
+  }
+
+  public Collection<ServerName> getLiveRegionServers() {
+    return regionServerTracker.getRegionServers();
   }
 }
