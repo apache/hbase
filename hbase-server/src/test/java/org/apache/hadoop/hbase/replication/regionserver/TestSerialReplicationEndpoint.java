@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
-
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -57,6 +55,7 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ ReplicationTests.class, MediumTests.class })
 public class TestSerialReplicationEndpoint {
@@ -79,7 +78,7 @@ public class TestSerialReplicationEndpoint {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    IOUtils.closeQuietly(CONN);
+    Closeables.close(CONN, true);
     UTIL.shutdownMiniCluster();
   }
 

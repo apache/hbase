@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -46,6 +45,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 @Category({SmallTests.class, MasterTests.class })
 public class TestMetaRegionLocationCache {
   @ClassRule
@@ -66,7 +67,7 @@ public class TestMetaRegionLocationCache {
 
   @AfterClass
   public static void cleanUp() throws Exception {
-    IOUtils.closeQuietly(REGISTRY);
+    Closeables.close(REGISTRY, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 

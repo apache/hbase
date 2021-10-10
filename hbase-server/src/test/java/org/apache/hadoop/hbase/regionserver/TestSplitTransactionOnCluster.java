@@ -38,7 +38,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -117,6 +116,7 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
@@ -901,7 +901,7 @@ public class TestSplitTransactionOnCluster {
     HMaster master = cluster.startMaster().getMaster();
     cluster.waitForActiveAndReadyMaster();
     // reset the connections
-    IOUtils.closeQuietly(admin);
+    Closeables.close(admin, true);
     TESTING_UTIL.invalidateConnection();
     admin = TESTING_UTIL.getAdmin();
     return master;

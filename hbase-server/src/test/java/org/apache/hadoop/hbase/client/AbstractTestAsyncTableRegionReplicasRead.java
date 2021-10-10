@@ -28,7 +28,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -45,6 +44,8 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 public abstract class AbstractTestAsyncTableRegionReplicasRead {
 
@@ -152,7 +153,7 @@ public abstract class AbstractTestAsyncTableRegionReplicasRead {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    IOUtils.closeQuietly(ASYNC_CONN);
+    Closeables.close(ASYNC_CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
