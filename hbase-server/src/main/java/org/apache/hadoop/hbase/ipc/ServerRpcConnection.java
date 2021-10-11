@@ -364,6 +364,7 @@ abstract class ServerRpcConnection implements Closeable {
         replyToken = saslServer.evaluateResponse(saslToken.hasArray()?
             saslToken.array() : saslToken.toBytes());
       } catch (IOException e) {
+        RpcServer.LOG.debug("Failed to execute SASL handshake", e);
         IOException sendToClient = e;
         Throwable cause = e;
         while (cause != null) {
