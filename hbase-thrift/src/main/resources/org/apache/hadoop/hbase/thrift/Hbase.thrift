@@ -246,6 +246,14 @@ service Hbase {
     throws (1:IOError io)
 
   /**
+   * List all the userspace tables and their enabled or disabled flags.
+   *
+   * @return list of tables with is enabled flags
+   */
+  map<Text,bool> getTableNamesWithIsTableEnabled()
+    throws (1:IOError io)
+
+  /**
    * List all the column families assoicated with a table.
    *
    * @return list of column family descriptors
