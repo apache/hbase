@@ -1009,16 +1009,16 @@ public class BucketCache implements BlockCache, HeapSize {
    * @param re The RAMQueueEntry for which the exception was thrown.
    * @return A warning message created from the input RAMQueueEntry object.
    */
-  private String getWarningMessage (RAMQueueEntry re) {
+  private String getAllocationFailWarningMessage(RAMQueueEntry re) {
     if (re != null && re.getData() instanceof HFileBlock) {
-      HFileBlock    failBlock         = (HFileBlock) re.getData();
-      HFileContext  failFileContext   = failBlock.getHFileContext();
-      String        failHFileName     = failFileContext.getHFileName();
-      String        failColumnFamily  = Bytes.toString(failFileContext.getColumnFamily());
-      String        failTableName     = Bytes.toString(failFileContext.getTableName());
+      HFileBlock block = (HFileBlock) re.getData();
+      HFileContext fileContext = block.getHFileContext();
+      String hFileName = fileContext.getHFileName();
+      String columnFamily = Bytes.toString(fileContext.getColumnFamily());
+      String tableName = Bytes.toString(fileContext.getTableName());
       return ("Most recent failed allocation in " + ALLOCATION_FAIL_LOG_TIME_PERIOD
-            + " milliseconds; Key: " + re.getKey() + ", TableName = " + failTableName
-            + ", ColumnFamily = " + failColumnFamily + ", HFileName : " + failHFileName);
+              + " milliseconds; Table Name = " + tableName + ", Column Family = "
+              + columnFamily + ", HFile Name : " + hFileName);
     }
     return ("Failed allocation for " + (re == null ? "" : re.getKey()) + "; ");
   }
@@ -1071,7 +1071,7 @@ public class BucketCache implements BlockCache, HeapSize {
         long currTs = System.currentTimeMillis(); // Current time since Epoch in milliseconds.
         cacheStats.allocationFailed(); // Record the warning.
         if (allocFailLogPrevTs == 0 || (currTs - allocFailLogPrevTs) > ALLOCATION_FAIL_LOG_TIME_PERIOD) {
-          LOG.warn (getWarningMessage(re), fle);
+          LOG.warn (getAllocationFailWarningMessage(re), fle);
           allocFailLogPrevTs = currTs;
         }
         // Presume can't add. Too big? Move index on. Entry will be cleared from ramCache below.
