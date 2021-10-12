@@ -19,22 +19,24 @@
 package org.apache.hadoop.hbase.wal;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.wal.RegionGroupingProvider.RegionGroupingStrategy;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A WAL grouping strategy based on namespace.
- * Notice: the wal-group mapping might change if we support dynamic namespace updating later,
- * and special attention needed if we support feature like group-based replication.
+ * A WAL grouping strategy based on table.
  */
 @InterfaceAudience.Private
-public class NamespaceGroupingStrategy implements RegionGroupingStrategy {
+public class TableGroupingStrategy implements RegionGroupingStrategy {
   String providerId;
 
   @Override
   public String group(RegionInfo region) {
-    return providerId + GROUP_NAME_DELIMITER + region.getTable().getNamespaceAsString();
+      TableName tableName = region.getTable();
+      return new StringBuilder(providerId).append(GROUP_NAME_DELIMITER)
+          .append(tableName.getNamespaceAsString()).append(GROUP_NAME_DELIMITER)
+          .append(tableName.getNameAsString()).toString();
   }
 
   @Override

@@ -24,9 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.wal.RegionGroupingProvider.RegionGroupingStrategy;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A WAL grouping strategy that limits the number of wal groups to
@@ -43,9 +43,8 @@ public class BoundedGroupingStrategy implements RegionGroupingStrategy{
   private String[] groupNames;
 
   @Override
-  public String group(byte[] identifier, byte[] namespace) {
-    String idStr = Bytes.toString(identifier);
-    return computeIfAbsent(groupNameCache, idStr,
+  public String group(RegionInfo region) {
+    return computeIfAbsent(groupNameCache, region.getEncodedName(),
       () -> groupNames[getAndIncrAtomicInteger(counter, groupNames.length)]);
   }
 

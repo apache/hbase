@@ -31,12 +31,10 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 // imports for classes still in regionserver.wal
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -55,6 +53,8 @@ import org.slf4j.LoggerFactory;
  *                                  "bounded".</li>
  *   <li><em>identity</em> : each region belongs to its own group.</li>
  *   <li><em>bounded</em> : bounded number of groups and region evenly assigned to each group.</li>
+ *   <li><em>namespace</em> : region of the same namespace assigned to the same group.</li>
+ *   <li><em>table</em> : region of the same table assigned to the same group.</li>
  * </ul>
  * Optionally, a FQCN to a custom implementation may be given.
  */
@@ -69,9 +69,9 @@ public class RegionGroupingProvider implements WALProvider {
     String GROUP_NAME_DELIMITER = ".";
 
     /**
-     * Given an identifier and a namespace, pick a group.
+     * Given an region, pick a group.
      */
-    String group(final byte[] identifier, byte[] namespace);
+    String group(RegionInfo region);
     void init(Configuration config, String providerId);
   }
 
@@ -82,7 +82,8 @@ public class RegionGroupingProvider implements WALProvider {
     defaultStrategy(BoundedGroupingStrategy.class),
     identity(IdentityGroupingStrategy.class),
     bounded(BoundedGroupingStrategy.class),
-    namespace(NamespaceGroupingStrategy.class);
+    namespace(NamespaceGroupingStrategy.class),
+    table(TableGroupingStrategy.class);
 
     final Class<? extends RegionGroupingStrategy> clazz;
     Strategies(Class<? extends RegionGroupingStrategy> clazz) {
@@ -210,16 +211,10 @@ public class RegionGroupingProvider implements WALProvider {
     if (META_WAL_PROVIDER_ID.equals(this.providerId)) {
       group = META_WAL_GROUP_NAME;
     } else {
-      byte[] id;
-      byte[] namespace;
-      if (region != null) {
-        id = region.getEncodedNameAsBytes();
-        namespace = region.getTable().getNamespace();
-      } else {
-        id = HConstants.EMPTY_BYTE_ARRAY;
-        namespace = null;
+      if (region == null) {
+        return getWAL("");
       }
-      group = strategy.group(id, namespace);
+      group = strategy.group(region);
     }
     return getWAL(group);
   }
@@ -268,8 +263,8 @@ public class RegionGroupingProvider implements WALProvider {
     @Override
     public void init(Configuration config, String providerId) {}
     @Override
-    public String group(final byte[] identifier, final byte[] namespace) {
-      return Bytes.toString(identifier);
+    public String group(RegionInfo region) {
+      return region.getEncodedName();
     }
   }
 
