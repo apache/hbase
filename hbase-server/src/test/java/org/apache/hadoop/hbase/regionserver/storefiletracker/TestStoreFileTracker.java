@@ -40,7 +40,7 @@ public class TestStoreFileTracker extends DefaultStoreFileTracker {
 
   public TestStoreFileTracker(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
     super(conf, isPrimaryReplica, ctx);
-    if (ctx.getRegionFileSystem() != null) {
+    if (ctx != null && ctx.getRegionFileSystem() != null) {
       this.storeId = ctx.getRegionInfo().getEncodedName() + "-" + ctx.getFamily().getNameAsString();
       LOG.info("created storeId: {}", storeId);
       trackedFiles.computeIfAbsent(storeId, v -> new ArrayList<>());
