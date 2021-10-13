@@ -636,12 +636,14 @@ public class TestMultiByteBuff {
 
     try {
       srcMultiByteBuff.put(200, (byte) 0);
+      fail();
     } catch (IndexOutOfBoundsException e) {
       assertTrue(e != null);
     }
 
     try {
       srcMultiByteBuff.put(260, (byte) 0);
+      fail();
     } catch (IndexOutOfBoundsException e) {
       assertTrue(e != null);
     }
