@@ -169,7 +169,7 @@ public final class StoreFileTrackerFactory {
       StoreFileTracker tracker =
         StoreFileTrackerFactory.create(conf, true, null);
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(descriptor);
-      return tracker.updateWithTrackerConfigs(builder);
+      return tracker.updateWithTrackerConfigs(builder).build();
     }
     return descriptor;
   }

@@ -83,9 +83,9 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
   }
 
   @Override
-  public TableDescriptor updateWithTrackerConfigs(TableDescriptorBuilder builder) {
+  public TableDescriptorBuilder updateWithTrackerConfigs(TableDescriptorBuilder builder) {
     builder.setValue(TRACKER_IMPL, getTrackerName());
-    return builder.build();
+    return builder;
   }
 
   protected final String getTrackerName() {
