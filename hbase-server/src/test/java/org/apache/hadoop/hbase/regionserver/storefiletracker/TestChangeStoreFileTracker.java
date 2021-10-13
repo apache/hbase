@@ -65,7 +65,7 @@ public class TestChangeStoreFileTracker {
   }
 
   @AfterClass
-  public static void tearDown() throws IOException {
+  public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 

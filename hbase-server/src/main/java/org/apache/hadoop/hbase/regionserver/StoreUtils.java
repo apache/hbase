@@ -31,7 +31,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.CompoundConfiguration;
@@ -168,6 +171,14 @@ public final class StoreUtils {
   public static int getBytesPerChecksum(Configuration conf) {
     return conf.getInt(HConstants.BYTES_PER_CHECKSUM,
         HFile.DEFAULT_BYTES_PER_CHECKSUM);
+  }
+
+  public static Configuration createStoreConfiguration(Configuration conf, TableDescriptor td,
+    ColumnFamilyDescriptor cfd) {
+    // CompoundConfiguration will look for keys in reverse order of addition, so we'd
+    // add global config first, then table and cf overrides, then cf metadata.
+    return new CompoundConfiguration().add(conf).addBytesMap(td.getValues())
+      .addStringMap(cfd.getConfiguration()).addBytesMap(cfd.getValues());
   }
 
   public static List<StoreFileInfo> toStoreFileInfo(Collection<HStoreFile> storefiles) {

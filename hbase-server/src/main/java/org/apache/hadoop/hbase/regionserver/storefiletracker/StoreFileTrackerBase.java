@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -84,11 +83,9 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
   }
 
   @Override
-  public void persistConfiguration(TableDescriptorBuilder builder) {
-    TableDescriptor desc = builder.build();
-    if (StringUtils.isEmpty(desc.getValue(TRACKER_IMPL))) {
-      builder.setValue(TRACKER_IMPL, getTrackerName());
-    }
+  public TableDescriptorBuilder updateWithTrackerConfigs(TableDescriptorBuilder builder) {
+    builder.setValue(TRACKER_IMPL, getTrackerName());
+    return builder;
   }
 
   protected final String getTrackerName() {

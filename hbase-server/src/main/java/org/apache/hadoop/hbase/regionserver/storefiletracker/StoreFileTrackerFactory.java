@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -27,6 +29,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -115,16 +118,13 @@ public final class StoreFileTrackerFactory {
     ColumnFamilyDescriptor cfd, HRegionFileSystem regionFs) {
     StoreContext ctx =
       StoreContext.getBuilder().withColumnFamilyDescriptor(cfd).withRegionFileSystem(regionFs)
-        .withFamilyStoreDirectoryPath(regionFs.getStoreDir(cfd.getNameAsString()))
-      .withFamilyStoreDirectoryPath(regionFs.getStoreDir(cfd.getNameAsString()))
-      .build();
+        .withFamilyStoreDirectoryPath(regionFs.getStoreDir(cfd.getNameAsString())).build();
     return StoreFileTrackerFactory.create(mergeConfigurations(conf, td, cfd), true, ctx);
   }
 
   private static Configuration mergeConfigurations(Configuration global, TableDescriptor table,
     ColumnFamilyDescriptor family) {
-    return new CompoundConfiguration().add(global).addBytesMap(table.getValues())
-      .addStringMap(family.getConfiguration()).addBytesMap(family.getValues());
+    return StoreUtils.createStoreConfiguration(global, table, family);
   }
 
   static Class<? extends StoreFileTrackerBase>
@@ -161,12 +161,18 @@ public final class StoreFileTrackerFactory {
     return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
   }
 
-  public static void persistTrackerConfig(Configuration conf, TableDescriptorBuilder builder) {
-    TableDescriptor tableDescriptor = builder.build();
-    ColumnFamilyDescriptor cfDesc = tableDescriptor.getColumnFamilies()[0];
-    StoreContext context = StoreContext.getBuilder().withColumnFamilyDescriptor(cfDesc).build();
-    StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true, context);
-    tracker.persistConfiguration(builder);
+  public static TableDescriptor updateWithTrackerConfigs(Configuration conf,
+      TableDescriptor descriptor) {
+    //CreateTableProcedure needs to instantiate the configured SFT impl, in order to update table
+    //descriptors with the SFT impl specific configs. By the time this happens, the table has no
+    //regions nor stores yet, so it can't create a proper StoreContext.
+    if (StringUtils.isEmpty(descriptor.getValue(TRACKER_IMPL))) {
+      StoreFileTracker tracker =
+        StoreFileTrackerFactory.create(conf, true, null);
+      TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(descriptor);
+      return tracker.updateWithTrackerConfigs(builder).build();
+    }
+    return descriptor;
   }
 
   // should not use MigrationStoreFileTracker for new family
