@@ -514,4 +514,12 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
       throw new IOException("Unable to load configured store engine '" + className + "'", e);
     }
   }
+
+  /**
+   * Whether the implementation of the storefile tracker requires you to write to temp directory
+   * first, i.e, does not allow broken store files under the actual data directory.
+   */
+  public boolean requireWritingToTmpDirFirst(){
+    return storeFileTracker.requireWritingToTmpDirFirst();
+  }
 }

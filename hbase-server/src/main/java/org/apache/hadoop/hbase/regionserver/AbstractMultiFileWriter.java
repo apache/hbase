@@ -110,7 +110,7 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
     return paths;
   }
 
-  protected abstract Collection<StoreFileWriter> writers();
+  public abstract Collection<StoreFileWriter> writers();
 
   /**
    * Subclasses override this method to be called at the end of a successful sequence of append; all

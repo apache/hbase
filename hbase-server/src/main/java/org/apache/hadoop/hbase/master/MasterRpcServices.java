@@ -107,6 +107,7 @@ import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -2269,6 +2270,14 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  public RegionServerStatusProtos.FileBasedStoreFileCleanerUsageResponse reportFileBasedStoreFileCleanerUsage(RpcController controller,
+    RegionServerStatusProtos.FileBasedStoreFileCleanerUsageRequest request) throws ServiceException {
+    this.server.reportFileBasedStoreFileCleanerStatus(request.getServerName(), request.getRuntime(),
+      request.getDeletedFiles(), request.getFailedDeletes(), request.getRuns());
+    return RegionServerStatusProtos.FileBasedStoreFileCleanerUsageResponse.newBuilder().build();
   }
 
   @Override

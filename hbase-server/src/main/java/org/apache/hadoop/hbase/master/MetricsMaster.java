@@ -44,6 +44,7 @@ public class MetricsMaster {
   private MetricsMasterQuotaSource masterQuotaSource;
 
   private ProcedureMetrics serverCrashProcMetrics;
+  private MetricsMasterFileBasedStoreFileCleaner fbsfCleaner;
 
   public MetricsMaster(MetricsMasterWrapper masterWrapper) {
     masterSource = CompatibilitySingletonFactory.getInstance(MetricsMasterSourceFactory.class).create(masterWrapper);
@@ -53,6 +54,7 @@ public class MetricsMaster {
             CompatibilitySingletonFactory.getInstance(MetricsMasterQuotaSourceFactory.class).create(masterWrapper);
 
     serverCrashProcMetrics = convertToProcedureMetrics(masterSource.getServerCrashMetrics());
+    fbsfCleaner = CompatibilitySingletonFactory.getInstance(MetricsMasterFileBasedStoreFileCleaner.class);
   }
 
   // for unit-test usage
@@ -66,6 +68,10 @@ public class MetricsMaster {
 
   public MetricsMasterQuotaSource getMetricsQuotaSource() {
     return masterQuotaSource;
+  }
+
+  public MetricsMasterFileBasedStoreFileCleaner getFBSFCleaner(){
+    return fbsfCleaner;
   }
 
   /**

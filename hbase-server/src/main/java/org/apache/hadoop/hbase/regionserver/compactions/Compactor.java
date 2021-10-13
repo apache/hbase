@@ -25,9 +25,12 @@ import static org.apache.hadoop.hbase.regionserver.ScanType.COMPACT_RETAIN_DELET
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -37,6 +40,7 @@ import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.regionserver.AbstractMultiFileWriter;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -91,6 +95,8 @@ public abstract class Compactor<T extends CellSink> {
 
   private final boolean dropCacheMajor;
   private final boolean dropCacheMinor;
+
+  protected T writer = null;
 
   //TODO: depending on Store is not good but, realistically, all compactors currently do.
   Compactor(Configuration conf, HStore store) {
@@ -324,7 +330,6 @@ public abstract class Compactor<T extends CellSink> {
     // Find the smallest read point across all the Scanners.
     long smallestReadPoint = getSmallestReadPoint();
 
-    T writer = null;
     boolean dropCache;
     if (request.isMajor() || request.isAllFiles()) {
       dropCache = this.dropCacheMajor;
@@ -348,8 +353,12 @@ public abstract class Compactor<T extends CellSink> {
         smallestReadPoint = Math.min(fd.minSeqIdToKeep, smallestReadPoint);
         cleanSeqId = true;
       }
+      if (writer != null){
+        LOG.warn("Writer exists when it should not: " + getCompactionTargets());
+        writer = null;
+      }
       writer = sinkFactory.createWriter(scanner, fd, dropCache, request.isMajor());
-      finished = performCompaction(fd, scanner, writer, smallestReadPoint, cleanSeqId,
+      finished = performCompaction(fd, scanner, smallestReadPoint, cleanSeqId,
         throughputController, request.isAllFiles(), request.getFiles().size());
       if (!finished) {
         throw new InterruptedIOException("Aborting compaction of store " + store + " in region "
@@ -369,24 +378,23 @@ public abstract class Compactor<T extends CellSink> {
         Closeables.close(scanner, true);
       }
       if (!finished && writer != null) {
-        abortWriter(writer);
+        abortWriter();
       }
     }
     assert finished : "We should have exited the method on all error paths";
     assert writer != null : "Writer should be non-null if no error";
-    return commitWriter(writer, fd, request);
+    return commitWriter(fd, request);
   }
 
-  protected abstract List<Path> commitWriter(T writer, FileDetails fd,
+  protected abstract List<Path> commitWriter(FileDetails fd,
       CompactionRequestImpl request) throws IOException;
 
-  protected abstract void abortWriter(T writer) throws IOException;
+  protected abstract void abortWriter() throws IOException;
 
   /**
    * Performs the compaction.
    * @param fd FileDetails of cell sink writer
    * @param scanner Where to read from.
-   * @param writer Where to write to.
    * @param smallestReadPoint Smallest read point.
    * @param cleanSeqId When true, remove seqId(used to be mvcc) value which is &lt;=
    *          smallestReadPoint
@@ -394,7 +402,7 @@ public abstract class Compactor<T extends CellSink> {
    * @param numofFilesToCompact the number of files to compact
    * @return Whether compaction ended; false if it was interrupted for some reason.
    */
-  protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
+  protected boolean performCompaction(FileDetails fd, InternalScanner scanner,
       long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
       boolean major, int numofFilesToCompact) throws IOException {
     assert writer instanceof ShipperListener;
@@ -536,5 +544,18 @@ public abstract class Compactor<T extends CellSink> {
       byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
     return new StoreScanner(store, scanInfo, scanners, smallestReadPoint, earliestPutTs,
         dropDeletesFromRow, dropDeletesToRow);
+  }
+
+  public List<Path> getCompactionTargets(){
+    if (writer == null){
+      return Collections.emptyList();
+    }
+    synchronized (writer){
+      if (writer instanceof StoreFileWriter){
+        return Arrays.asList(((StoreFileWriter)writer).getPath());
+      }
+      return ((AbstractMultiFileWriter)writer).writers().stream().map(sfw -> sfw.getPath()).collect(
+        Collectors.toList());
+    }
   }
 }

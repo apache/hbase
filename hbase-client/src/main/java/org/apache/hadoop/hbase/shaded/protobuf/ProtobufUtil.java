@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Cursor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.FileBasedStoreFileCleanerStatus;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.LogEntry;
@@ -278,6 +279,34 @@ public final class ProtobufUtil {
   }
 
   private static volatile boolean classLoaderLoaded = false;
+
+  public static ClusterStatusProtos.FileBasedStoreFileCleanerStatus toProtoFBSFCleanerStatus(
+    FileBasedStoreFileCleanerStatus status) {
+    ClusterStatusProtos.FileBasedStoreFileCleanerStatus.Builder builder =
+      ClusterStatusProtos.FileBasedStoreFileCleanerStatus.newBuilder();
+    builder.setDeletedFiles(status.getDeletedFiles());
+    builder.setFailedDeletes(status.getFailedDeletes());
+    builder.setRuns(status.getRuns());
+    builder.setMaxRuntime(status.getMaxRuntime());
+    builder.setMinRuntime(status.getMinRuntime());
+    builder.setLastRuntime(status.getLastRuntime());
+    return builder.build();
+  }
+
+  public static Map<String,FileBasedStoreFileCleanerStatus> toFBSFCleanerStatusMap(
+    Map<String, ClusterStatusProtos.FileBasedStoreFileCleanerStatus> fileBasedFileStoreCleanerStatusMap) {
+    Map<String,FileBasedStoreFileCleanerStatus> statusMap = new HashMap<>();
+    fileBasedFileStoreCleanerStatusMap.forEach(
+      (sn, protoStatus) -> statusMap.put(sn, toFBSFCleanerStatus(protoStatus)));
+    return statusMap;
+  }
+
+  private static FileBasedStoreFileCleanerStatus toFBSFCleanerStatus(
+    ClusterStatusProtos.FileBasedStoreFileCleanerStatus protoStatus) {
+    return new FileBasedStoreFileCleanerStatus(protoStatus.getLastRuntime(),
+      protoStatus.getMinRuntime(), protoStatus.getMaxRuntime(), protoStatus.getDeletedFiles(),
+      protoStatus.getFailedDeletes(), protoStatus.getRuns());
+  }
 
   /**
    * Dynamic class loader to load filter/comparators

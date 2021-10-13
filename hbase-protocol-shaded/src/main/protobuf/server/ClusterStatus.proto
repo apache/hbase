@@ -315,6 +315,15 @@ message TableRegionStatesCount {
   required RegionStatesCount region_states_count = 2;
 }
 
+message FileBasedStoreFileCleanerStatus {
+  required uint64 lastRuntime = 1;
+  required uint64 minRuntime = 2;
+  required uint64 maxRuntime = 3;
+  required uint64 deletedFiles = 4;
+  required uint64 failedDeletes = 5;
+  required uint64 runs = 6;
+}
+
 message ClusterStatus {
   optional HBaseVersionFileContent hbase_version = 1;
   repeated LiveServerInfo live_servers = 2;
@@ -328,6 +337,7 @@ message ClusterStatus {
   optional int32 master_info_port = 10 [default = -1];
   repeated ServerName servers_name = 11;
   repeated TableRegionStatesCount table_region_states_count = 12;
+  map<string, FileBasedStoreFileCleanerStatus> fileBasedStoreFileCleanerStatus = 13;
 }
 
 enum Option {
@@ -343,4 +353,5 @@ enum Option {
   MASTER_INFO_PORT = 9;
   SERVERS_NAME = 10;
   TABLE_TO_REGIONS_COUNT = 11;
+  FILEBASED_STORAGE_CLEANER = 12;
 }

@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UserMetrics;
 import org.apache.hadoop.hbase.client.CompactionState;
+import org.apache.hadoop.hbase.client.FileBasedStoreFileCleanerStatus;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -290,6 +291,11 @@ public class TestRegionsRecoveryChore {
 
       @Override
       public Map<TableName, RegionStatesCount> getTableRegionStatesCount() {
+        return null;
+      }
+
+      @Override
+      public Map<String,FileBasedStoreFileCleanerStatus> getFileBasedStoreFileCleanerStatus() {
         return null;
       }
 

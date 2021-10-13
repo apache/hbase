@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.List;
 import java.util.Map;
+import org.apache.hadoop.hbase.client.FileBasedStoreFileCleanerStatus;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -162,6 +163,12 @@ public interface ClusterMetrics {
   Map<TableName, RegionStatesCount> getTableRegionStatesCount();
 
   /**
+   * Provide information about FileBasedFileStoreCleaner chore
+   * @return
+   */
+  Map<String, FileBasedStoreFileCleanerStatus> getFileBasedStoreFileCleanerStatus();
+
+  /**
    * Kinds of ClusterMetrics
    */
   enum Option {
@@ -213,5 +220,9 @@ public interface ClusterMetrics {
      * metrics about table to no of regions status count
      */
     TABLE_TO_REGIONS_COUNT,
+    /**
+     * merics about FileBasedStoreFileCleaner
+     */
+    FILEBASED_STORAGE_CLEANER,
   }
 }

@@ -92,6 +92,12 @@ public class RootResource extends ResourceBase {
     return new StorageClusterStatusResource();
   }
 
+  @Path("status/fileBasedStoreFileCleaner")
+  public FileBasedStoreFileCleanerStatusResource getFileBasedStoreFileCleanerStatusResource()
+    throws IOException {
+    return new FileBasedStoreFileCleanerStatusResource();
+  }
+
   @Path("version")
   public VersionResource getVersionResource() throws IOException {
     return new VersionResource();

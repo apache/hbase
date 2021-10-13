@@ -22,11 +22,13 @@ package org.apache.hadoop.hbase;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.hbase.client.FileBasedStoreFileCleanerStatus;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -94,6 +96,11 @@ public final class ClusterMetricsBuilder {
           FSProtos.HBaseVersionFileContent.newBuilder()
               .setVersion(metrics.getHBaseVersion()));
     }
+    if (metrics.getFileBasedStoreFileCleanerStatus() != null) {
+      metrics.getFileBasedStoreFileCleanerStatus().forEach(
+        (sn, status) -> builder.putFileBasedStoreFileCleanerStatus(sn,
+          ProtobufUtil.toProtoFBSFCleanerStatus(status)));
+    }
     return builder.build();
   }
 
@@ -142,6 +149,11 @@ public final class ClusterMetricsBuilder {
     if (proto.hasMasterInfoPort()) {
       builder.setMasterInfoPort(proto.getMasterInfoPort());
     }
+
+    if (proto.getFileBasedStoreFileCleanerStatusCount() > 0) {
+      builder.setFileBasedStoreFileCleanerStatus(
+        ProtobufUtil.toFBSFCleanerStatusMap(proto.getFileBasedStoreFileCleanerStatusMap()));
+    }
     return builder.build();
   }
 
@@ -164,6 +176,7 @@ public final class ClusterMetricsBuilder {
       case SERVERS_NAME: return ClusterMetrics.Option.SERVERS_NAME;
       case MASTER_INFO_PORT: return ClusterMetrics.Option.MASTER_INFO_PORT;
       case TABLE_TO_REGIONS_COUNT: return ClusterMetrics.Option.TABLE_TO_REGIONS_COUNT;
+      case FILEBASED_STORAGE_CLEANER: return ClusterMetrics.Option.FILEBASED_STORAGE_CLEANER;
       // should not reach here
       default: throw new IllegalArgumentException("Invalid option: " + option);
     }
@@ -188,6 +201,7 @@ public final class ClusterMetricsBuilder {
       case SERVERS_NAME: return Option.SERVERS_NAME;
       case MASTER_INFO_PORT: return ClusterStatusProtos.Option.MASTER_INFO_PORT;
       case TABLE_TO_REGIONS_COUNT: return ClusterStatusProtos.Option.TABLE_TO_REGIONS_COUNT;
+      case FILEBASED_STORAGE_CLEANER: return Option.FILEBASED_STORAGE_CLEANER;
       // should not reach here
       default: throw new IllegalArgumentException("Invalid option: " + option);
     }
@@ -231,6 +245,8 @@ public final class ClusterMetricsBuilder {
   private int masterInfoPort;
   private List<ServerName> serversName = Collections.emptyList();
   private Map<TableName, RegionStatesCount> tableRegionStatesCount = Collections.emptyMap();
+  private Map<String, FileBasedStoreFileCleanerStatus> fileBasedStoreFileCleanerStatus =
+    new HashMap<>();
 
   private ClusterMetricsBuilder() {
   }
@@ -287,6 +303,12 @@ public final class ClusterMetricsBuilder {
     return this;
   }
 
+  public ClusterMetricsBuilder setFileBasedStoreFileCleanerStatus(
+    Map<String, FileBasedStoreFileCleanerStatus> fileBasedFileStoreCleanerStatus) {
+    this.fileBasedStoreFileCleanerStatus = fileBasedFileStoreCleanerStatus;
+    return this;
+  }
+
   public ClusterMetrics build() {
     return new ClusterMetricsImpl(
         hbaseVersion,
@@ -300,7 +322,8 @@ public final class ClusterMetricsBuilder {
         balancerOn,
         masterInfoPort,
         serversName,
-        tableRegionStatesCount
+        tableRegionStatesCount,
+        fileBasedStoreFileCleanerStatus
     );
   }
   private static class ClusterMetricsImpl implements ClusterMetrics {
@@ -320,6 +343,7 @@ public final class ClusterMetricsBuilder {
     private final int masterInfoPort;
     private final List<ServerName> serversName;
     private final Map<TableName, RegionStatesCount> tableRegionStatesCount;
+    private final Map<String, FileBasedStoreFileCleanerStatus> fileBasedStoreFileCleanerStatus;
 
     ClusterMetricsImpl(String hbaseVersion, List<ServerName> deadServerNames,
         Map<ServerName, ServerMetrics> liveServerMetrics,
@@ -331,7 +355,8 @@ public final class ClusterMetricsBuilder {
         Boolean balancerOn,
         int masterInfoPort,
         List<ServerName> serversName,
-        Map<TableName, RegionStatesCount> tableRegionStatesCount) {
+        Map<TableName, RegionStatesCount> tableRegionStatesCount,
+      Map<String, FileBasedStoreFileCleanerStatus> fileBasedStoreFileCleanerStatus) {
       this.hbaseVersion = hbaseVersion;
       this.deadServerNames = Preconditions.checkNotNull(deadServerNames);
       this.liveServerMetrics = Preconditions.checkNotNull(liveServerMetrics);
@@ -344,6 +369,7 @@ public final class ClusterMetricsBuilder {
       this.masterInfoPort = masterInfoPort;
       this.serversName = serversName;
       this.tableRegionStatesCount = Preconditions.checkNotNull(tableRegionStatesCount);
+      this.fileBasedStoreFileCleanerStatus = fileBasedStoreFileCleanerStatus;
     }
 
     @Override
@@ -407,6 +433,11 @@ public final class ClusterMetricsBuilder {
     }
 
     @Override
+    public Map<String, FileBasedStoreFileCleanerStatus> getFileBasedStoreFileCleanerStatus() {
+      return Collections.unmodifiableMap(fileBasedStoreFileCleanerStatus);
+    }
+
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder(1024);
       sb.append("Master: " + getMasterName());
@@ -452,6 +483,14 @@ public final class ClusterMetricsBuilder {
           sb.append("\n  " + state.toDescriptiveString());
         }
       }
+      sb.append("\nFileBasedStoreFileCleaner chore stats:");
+      if (fileBasedStoreFileCleanerStatus != null && fileBasedStoreFileCleanerStatus.size() > 0) {
+        fileBasedStoreFileCleanerStatus.forEach((sn, status) -> {
+          sb.append("\n For server: " + sn);
+          sb.append("\n" + status.toString());
+        });
+      }
+
       return sb.toString();
     }
   }

@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.Timer;
@@ -377,7 +378,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   /** The nonce manager chore. */
   private ScheduledChore nonceManagerChore;
 
-  private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
+  private FileBasedStoreFileCleaner fileBasedStoreFileCleaner;
+  private RegionServerStatusProtos.FileBasedStoreFileCleanerUsageRequest unsentFBSFCleanerReport;
+
+  private final Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
   /**
    * @deprecated since 2.4.0 and will be removed in 4.0.0.
@@ -1279,6 +1283,80 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   }
 
   /**
+   * Reports the results of a FileBasedStoreFileCleaner chore run. If reporting fails stores
+   * the unsent report and tries to send with the next scheduled report.
+   *
+   * @param runtime chore runtime in milisecs
+   * @param deletedFiles number of cleaned junk files
+   * @param failedDeletes number of files the chore tried and failed to delete
+   * @return if sending the report was successful
+   */
+  public boolean reportFileBasedStoreFileCleanerUsage(long runtime, long deletedFiles,
+    long failedDeletes, boolean retry) {
+    RegionServerStatusService.BlockingInterface rss = rssStub;
+    RegionServerStatusProtos.FileBasedStoreFileCleanerUsageRequest request = null;
+    if (rss == null) {
+      // the current server could be stopping.
+      LOG.trace("Skipping FileBasedStoreFileCleaner chore report to HMaster as stub is null");
+      return true;
+    }
+    try {
+      request =
+        buildFBSFCleanerReport(runtime, deletedFiles, failedDeletes, unsentFBSFCleanerReport);
+      rss.reportFileBasedStoreFileCleanerUsage(null, request);
+      if(unsentFBSFCleanerReport != null) {
+        unsentFBSFCleanerReport = null;
+      }
+    } catch (ServiceException se) {
+      if(!retry){
+        LOG.debug("Storing unsent FileBasedStoreFileCleaner chore report");
+        unsentFBSFCleanerReport = request;
+      }
+
+      IOException ioe = ProtobufUtil.getRemoteException(se);
+      if (ioe instanceof PleaseHoldException) {
+        LOG.trace("Failed to report FileBasedStoreFileCleaner chore results to Master because"
+          + " it is initializing.", ioe);
+        // The Master is coming up.Avoid re-creating the stub.
+        return true;
+      }
+      LOG.debug("Failed to report FileBasedStoreFileCleaner chore reult to Master.", ioe);
+      if (retry) {
+        LOG.debug("Re-trying to send FileBasedStoreFileCleaner chore report", ioe);
+        if (rssStub == rss) {
+          rssStub = null;
+        }
+        createRegionServerStatusStub(true);
+        return reportFileBasedStoreFileCleanerUsage(runtime, deletedFiles, failedDeletes, false);
+      }
+    }
+    return true;
+  }
+
+  private RegionServerStatusProtos.FileBasedStoreFileCleanerUsageRequest buildFBSFCleanerReport(long runtime,
+    long deletedFiles, long failedDeletes,
+    RegionServerStatusProtos.FileBasedStoreFileCleanerUsageRequest storedRequest) {
+    RegionServerStatusProtos.FileBasedStoreFileCleanerUsageRequest.Builder builder;
+    if(storedRequest != null) {
+      builder =
+        RegionServerStatusProtos.FileBasedStoreFileCleanerUsageRequest.newBuilder(storedRequest);
+    }
+    else {
+      builder = RegionServerStatusProtos.FileBasedStoreFileCleanerUsageRequest.newBuilder();
+    }
+    builder.setServerName(getServerName().getServerName());
+    if (deletedFiles > 0) {
+      builder.setDeletedFiles(builder.getDeletedFiles() + deletedFiles);
+    }
+    if(failedDeletes > 0) {
+      builder.setFailedDeletes(builder.getFailedDeletes() + failedDeletes);
+    }
+    builder.setRuntime(runtime);
+    builder.setRuns(builder.getRuns() +1 );
+    return builder.build();
+  }
+
+  /**
    * Run init. Sets up wal and starts up all server threads.
    *
    * @param c Extra configuration.
@@ -1816,6 +1894,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     if (this.slowLogTableOpsChore != null) {
       choreService.scheduleChore(slowLogTableOpsChore);
     }
+    if (this.fileBasedStoreFileCleaner != null) {
+      choreService.scheduleChore(fileBasedStoreFileCleaner);
+    }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
@@ -1895,6 +1976,23 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       this.storefileRefresher = new StorefileRefresherChore(storefileRefreshPeriod,
           onlyMetaRefresh, this, this);
     }
+
+    int fileBasedStoreFileCleanerPeriod  = conf.getInt(
+      FileBasedStoreFileCleaner.FILEBASED_STOREFILE_CLEANER_PERIOD,
+      FileBasedStoreFileCleaner.DEFAULT_FILEBASED_STOREFILE_CLEANER_PERIOD);
+    int fileBasedStoreFileCleanerDelay  = conf.getInt(
+      FileBasedStoreFileCleaner.FILEBASED_STOREFILE_CLEANER_DELAY,
+      FileBasedStoreFileCleaner.DEFAULT_FILEBASED_STOREFILE_CLEANER_DELAY);
+    double fileBasedStoreFileCleanerDelayJitter = conf.getDouble(
+      FileBasedStoreFileCleaner.FILEBASED_STOREFILE_CLEANER_DELAY_JITTER,
+      FileBasedStoreFileCleaner.DEFAULT_FILEBASED_STOREFILE_CLEANER_DELAY_JITTER);
+
+    double jitterRate = (new Random().nextDouble() - 0.5D) * fileBasedStoreFileCleanerDelayJitter;
+    long jitterValue = Math.round(fileBasedStoreFileCleanerDelay * jitterRate);
+    this.fileBasedStoreFileCleaner =
+      new FileBasedStoreFileCleaner((int) (fileBasedStoreFileCleanerDelay + jitterValue),
+        fileBasedStoreFileCleanerPeriod, this, conf, this);
+
     registerConfigurationObservers();
   }
 
@@ -3456,6 +3554,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return !conf.getBoolean(MASTERLESS_CONFIG_NAME, false);
   }
 
+  @InterfaceAudience.Private
+  public FileBasedStoreFileCleaner getFileBasedStoreFileCleaner(){
+    return fileBasedStoreFileCleaner;
+  }
+
   @Override
   protected void stopChores() {
     shutdownChore(nonceManagerChore);
@@ -3466,5 +3569,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     shutdownChore(storefileRefresher);
     shutdownChore(fsUtilizationChore);
     shutdownChore(slowLogTableOpsChore);
+    shutdownChore(fileBasedStoreFileCleaner);
   }
 }

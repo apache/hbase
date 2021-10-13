@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Meter;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
@@ -54,6 +55,7 @@ public class MetricsRegionServer {
   private final MetricsTable metricsTable;
   private MetricsRegionServerQuotaSource quotaSource;
   private final MetricsUserAggregate userAggregate;
+  private final MetricsFileBasedStoreFileCleaner fbsfCleaner;
 
   private MetricRegistry metricRegistry;
   private Timer bulkLoadTimer;
@@ -69,7 +71,8 @@ public class MetricsRegionServer {
     this(regionServerWrapper,
         CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
             .createServer(regionServerWrapper), createTableMetrics(conf), metricsTable,
-        MetricsUserAggregateFactory.getMetricsUserAggregate(conf));
+        MetricsUserAggregateFactory.getMetricsUserAggregate(conf),
+      CompatibilitySingletonFactory.getInstance(MetricsFileBasedStoreFileCleaner.class));
 
     // Create hbase-metrics module based metrics. The registry should already be registered by the
     // MetricsRegionServerSource
@@ -89,12 +92,14 @@ public class MetricsRegionServer {
 
   MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
       MetricsRegionServerSource serverSource, RegionServerTableMetrics tableMetrics,
-      MetricsTable metricsTable, MetricsUserAggregate userAggregate) {
+      MetricsTable metricsTable, MetricsUserAggregate userAggregate,
+      MetricsFileBasedStoreFileCleaner fbsfCleaner) {
     this.regionServerWrapper = regionServerWrapper;
     this.serverSource = serverSource;
     this.tableMetrics = tableMetrics;
     this.metricsTable = metricsTable;
     this.userAggregate = userAggregate;
+    this.fbsfCleaner = fbsfCleaner;
   }
 
   /**
@@ -275,6 +280,22 @@ public class MetricsRegionServer {
 
   public void updateBulkLoad(long millis) {
     this.bulkLoadTimer.updateMillis(millis);
+  }
+
+  public void incrementFileBasedStoreFileCleanerDeletes(long deletes) {
+    fbsfCleaner.incrementFileBasedStoreFileCleanerDeletes(deletes);
+  }
+
+  public void incrementFileBasedStoreFileCleanerFailedDeletes(long failedDeletes) {
+    fbsfCleaner.incrementFileBasedStoreFileCleanerFailedDeletes(failedDeletes);
+  }
+
+  public void incrementFileBasedStoreFileCleanerRuns() {
+    fbsfCleaner.incrementFileBasedStoreFileCleanerRuns();
+  }
+
+  public void updateFileBasedStoreFileCleanerTimer(long milis) {
+    fbsfCleaner.updateFileBasedStoreFileCleanerTimer(milis);
   }
 
   /**

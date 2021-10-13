@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactionState;
+import org.apache.hadoop.hbase.client.FileBasedStoreFileCleanerStatus;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.Put;
@@ -378,6 +379,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   // save the information of mob compactions in tables.
   // the key is table name, the value is the number of compactions in that table.
   private Map<TableName, AtomicInteger> mobCompactionStates = Maps.newConcurrentMap();
+  public final static String AGGREGATED_FILEBASED_STOREFILE_CLEANER_NAME = "aggregation";
+  private Map<String, FileBasedStoreFileCleanerStatus> fileBasedStoreFileCleanerStatus =
+    Maps.newConcurrentMap();
 
   MasterCoprocessorHost cpHost;
 
@@ -2726,6 +2730,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           }
           break;
         }
+        case FILEBASED_STORAGE_CLEANER: {
+          builder.setFileBasedStoreFileCleanerStatus(fileBasedStoreFileCleanerStatus);
+        }
       }
     }
     return builder.build();
@@ -4014,5 +4021,30 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   public Collection<ServerName> getLiveRegionServers() {
     return regionServerTracker.getRegionServers();
+  }
+
+  public void reportFileBasedStoreFileCleanerStatus(String serverName, long runtime,
+    long deletedFiles, long failedDelets, long runs) {
+    updateFileBasedStoreFileCleanerStatus(
+      fileBasedStoreFileCleanerStatus.computeIfAbsent(AGGREGATED_FILEBASED_STOREFILE_CLEANER_NAME,
+        s -> new FileBasedStoreFileCleanerStatus()), runtime, deletedFiles, failedDelets, runs);
+    updateFileBasedStoreFileCleanerStatus(
+      fileBasedStoreFileCleanerStatus.computeIfAbsent(serverName,
+        s -> new FileBasedStoreFileCleanerStatus()), runtime, deletedFiles, failedDelets, runs);
+
+    getMasterMetrics().getFBSFCleaner().incrementFileBasedStoreFileCleanerDeletes(deletedFiles);
+    getMasterMetrics().getFBSFCleaner()
+      .incrementFileBasedStoreFileCleanerFailedDeletes(failedDelets);
+    getMasterMetrics().getFBSFCleaner().incrementFileBasedStoreFileCleanerRuns(runs);
+    getMasterMetrics().getFBSFCleaner().updateFileBasedStoreFileCleanerTimer(runtime);
+
+  }
+
+  private void updateFileBasedStoreFileCleanerStatus(FileBasedStoreFileCleanerStatus status, long runtime,
+    long deletedFiles, long failedDelets, long runs){
+    status.updateRuntime(runtime);
+    status.incrementDeletedFiles(deletedFiles);
+    status.incrementFailedDeletes(failedDelets);
+    status.incrementRuns(runs);
   }
 }

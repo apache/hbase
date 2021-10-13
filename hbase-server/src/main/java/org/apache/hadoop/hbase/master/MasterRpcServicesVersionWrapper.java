@@ -116,4 +116,12 @@ public class MasterRpcServicesVersionWrapper
     GetLiveRegionServersRequest request) throws ServiceException {
     return masterRpcServices.getLiveRegionServers(controller, request);
   }
+
+  @Override
+  public RegionServerStatusProtos.FileBasedStoreFileCleanerUsageResponse reportFileBasedStoreFileCleanerUsage(
+    RpcController controller,
+    RegionServerStatusProtos.FileBasedStoreFileCleanerUsageRequest request)
+    throws ServiceException {
+    return masterRpcServices.reportFileBasedStoreFileCleanerUsage(controller, request);
+  }
 }
