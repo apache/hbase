@@ -512,8 +512,11 @@ public class RestoreSnapshotHelper {
     String tableName = tableDesc.getTableName().getNameAsString();
     final String snapshotName = snapshotDesc.getName();
 
-    HRegionFileSystem regionFS = HRegionFileSystem.openRegionFromFileSystem(conf, fs,
-      tableDir, regionInfo, false);
+    Path regionPath = new Path(tableDir, regionInfo.getEncodedName());
+    HRegionFileSystem regionFS = (fs.exists(regionPath)) ?
+      HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, regionInfo, false) :
+      HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, regionInfo);
+
     // Restore families present in the table
     for (Path familyDir: FSUtils.getFamilyDirs(fs, regionDir)) {
       byte[] family = Bytes.toBytes(familyDir.getName());
@@ -694,11 +697,24 @@ public class RestoreSnapshotHelper {
       for (SnapshotRegionManifest.StoreFile storeFile: familyFiles.getStoreFilesList()) {
         LOG.info("Adding HFileLink " + storeFile.getName() +" from cloned region "
                 + "in snapshot " + snapshotName + " to table=" + tableName);
-        String file = restoreStoreFile(familyDir, snapshotRegionInfo, storeFile, createBackRefs);
-        clonedFiles.add(new StoreFileInfo(conf, fs, new Path(familyDir, file), true));
+        if (MobUtils.isMobRegionInfo(newRegionInfo)) {
+          String mobFileName = HFileLink.createHFileLinkName(snapshotRegionInfo,
+            storeFile.getName());
+          Path mobPath = new Path(familyDir, mobFileName);
+          if (fs.exists(mobPath)) {
+            fs.delete(mobPath, true);
+          }
+          restoreStoreFile(familyDir, snapshotRegionInfo, storeFile, createBackRefs);
+        } else {
+          String file = restoreStoreFile(familyDir, snapshotRegionInfo, storeFile, createBackRefs);
+          clonedFiles.add(new StoreFileInfo(conf, fs, new Path(familyDir, file), true));
+        }
       }
-      HRegionFileSystem regionFS = HRegionFileSystem.openRegionFromFileSystem(conf, fs,
-        tableDir, newRegionInfo, false);
+      Path regionPath = new Path(tableDir, newRegionInfo.getEncodedName());
+      HRegionFileSystem regionFS = (fs.exists(regionPath)) ?
+        HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, newRegionInfo, false) :
+        HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, newRegionInfo);
+
       SnapshotStoreFileTracker tracker =
         (SnapshotStoreFileTracker) StoreFileTrackerFactory.create(conf, true,
           StoreContext.getBuilder().withFamilyStoreDirectoryPath(familyDir).

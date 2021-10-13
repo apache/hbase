@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -201,7 +202,6 @@ public class HFileLink extends FileLink {
   public static boolean isHFileLink(final Path path) {
     return isHFileLink(path.getName());
   }
-
 
   /**
    * @param fileName File name to check.
@@ -431,7 +431,7 @@ public class HFileLink extends FileLink {
       }
       throw e;
     }
-    throw new IOException("File link=" + name + " already exists.");
+    throw new IOException("File link=" + name + " already exists under " + dstFamilyPath + " folder.");
   }
 
   /**
