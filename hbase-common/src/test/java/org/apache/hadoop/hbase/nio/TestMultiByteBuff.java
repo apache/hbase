@@ -635,7 +635,7 @@ public class TestMultiByteBuff {
     assertTrue(val == 0);
 
     try {
-    srcMultiByteBuff.put(200, (byte) 0);
+      srcMultiByteBuff.put(200, (byte) 0);
     } catch (IndexOutOfBoundsException e) {
       assertTrue(e != null);
     }
