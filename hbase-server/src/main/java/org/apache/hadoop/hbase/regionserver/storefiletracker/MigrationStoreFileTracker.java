@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
@@ -86,17 +87,6 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
   void set(List<StoreFileInfo> files) {
     throw new UnsupportedOperationException(
       "Should not call this method on " + getClass().getSimpleName());
-  }
-
-  @Override
-  public void persistConfiguration(TableDescriptorBuilder builder) {
-    super.persistConfiguration(builder);
-    if (StringUtils.isEmpty(builder.getValue(SRC_IMPL))) {
-      builder.setValue(SRC_IMPL, src.getTrackerName());
-    }
-    if (StringUtils.isEmpty(builder.getValue(DST_IMPL))) {
-      builder.setValue(DST_IMPL, dst.getTrackerName());
-    }
   }
 
   static Class<? extends StoreFileTracker> getSrcTrackerClass(Configuration conf) {
