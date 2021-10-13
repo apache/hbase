@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.TestStoreFileTracker;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -103,6 +104,21 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
     htd = getMaster().getTableDescriptors().get(tableName);
     assertEquals(trackerName, htd.getValue(TRACKER_IMPL));
+  }
+
+  @Test
+  public void testCreateWithFileBasedStoreTrackerImpl() throws Exception {
+    ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    procExec.getEnvironment().getMasterConfiguration().set(StoreFileTrackerFactory.TRACKER_IMPL,
+      StoreFileTrackerFactory.Trackers.FILE.name());
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, F1);
+    RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, null);
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
+    ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
+    htd = getMaster().getTableDescriptors().get(tableName);
+    assertEquals(StoreFileTrackerFactory.Trackers.FILE.name(), htd.getValue(TRACKER_IMPL));
   }
 
   @Test
