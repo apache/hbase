@@ -89,19 +89,6 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
       "Should not call this method on " + getClass().getSimpleName());
   }
 
-  @Override
-  public TableDescriptor updateWithTrackerConfigs(TableDescriptor descriptor) {
-    descriptor = super.updateWithTrackerConfigs(descriptor);
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(descriptor);
-    if (StringUtils.isEmpty(descriptor.getValue(SRC_IMPL))) {
-      builder.setValue(SRC_IMPL, src.getTrackerName());
-    }
-    if (StringUtils.isEmpty(descriptor.getValue(DST_IMPL))) {
-      builder.setValue(DST_IMPL, dst.getTrackerName());
-    }
-    return builder.build();
-  }
-
   static Class<? extends StoreFileTracker> getSrcTrackerClass(Configuration conf) {
     return StoreFileTrackerFactory.getStoreFileTrackerClassForMigration(conf, SRC_IMPL);
   }

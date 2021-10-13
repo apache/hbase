@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -83,5 +84,5 @@ public interface StoreFileTracker {
    * See HBASE-26246 for more details.
    * @param descriptor The table descriptor for the given table.
    */
-  TableDescriptor updateWithTrackerConfigs(TableDescriptor descriptor);
+  TableDescriptorBuilder updateWithTrackerConfigs(TableDescriptorBuilder builder);
 }

@@ -23,6 +23,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 
@@ -158,12 +160,18 @@ public final class StoreFileTrackerFactory {
     return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
   }
 
-  public static TableDescriptor updateDescriptor(Configuration conf, TableDescriptor descriptor) {
+  public static TableDescriptor updateWithTrackerConfigs(Configuration conf,
+      TableDescriptor descriptor) {
     //CreateTableProcedure needs to instantiate the configured SFT impl, in order to update table
     //descriptors with the SFT impl specific configs. By the time this happens, the table has no
     //regions nor stores yet, so it can't create a proper StoreContext.
-    StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true, null);
-    return tracker.updateWithTrackerConfigs(descriptor);
+    if (StringUtils.isEmpty(descriptor.getValue(TRACKER_IMPL))) {
+      StoreFileTracker tracker =
+        StoreFileTrackerFactory.create(conf, true, null);
+      TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(descriptor);
+      return tracker.updateWithTrackerConfigs(builder).build();
+    }
+    return descriptor;
   }
 
   // should not use MigrationStoreFileTracker for new family
