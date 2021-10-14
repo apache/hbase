@@ -181,6 +181,9 @@ public class MultiByteBuff extends ByteBuff {
    * Returns in which sub ByteBuffer, the given element index will be available.
    */
   private int getItemIndex(int elemIndex) {
+    if (elemIndex < 0) {
+      throw new IndexOutOfBoundsException();
+    }
     int index = 1;
     while (elemIndex >= this.itemBeginPos[index]) {
       index++;
@@ -721,15 +724,16 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Writes a byte to this MBB at the given index
-   * @param index
-   * @param b
+   * Writes a byte to this MBB at the given index and won't affect the position of any of the
+   * buffers.
    * @return this object
+   * @throws IndexOutOfBoundsException If <tt>index</tt> is negative or not smaller than the
+   *           {@link MultiByteBuff#limit}
    */
   @Override
   public MultiByteBuff put(int index, byte b) {
     checkRefCount();
-    int itemIndex = getItemIndex(limit);
+    int itemIndex = getItemIndex(index);
     ByteBuffer item = items[itemIndex];
     item.put(index - itemBeginPos[itemIndex], b);
     return this;
