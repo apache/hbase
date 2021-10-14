@@ -594,4 +594,58 @@ public class TestMultiByteBuff {
       assertTrue(e != null);
     }
   }
+
+  @Test
+  public void testPositionalPutByte() throws Exception {
+    ByteBuffer bb1 = ByteBuffer.allocate(50);
+    ByteBuffer bb2 = ByteBuffer.allocate(50);
+    ByteBuffer bb3 = ByteBuffer.allocate(50);
+    ByteBuffer bb4 = ByteBuffer.allocate(50);
+    MultiByteBuff srcMultiByteBuff = new MultiByteBuff(bb1, bb2, bb3, bb4);
+    for (int i = 1; i <= 200; i++) {
+      srcMultiByteBuff.put((byte) 0xff);
+    }
+
+    srcMultiByteBuff.put(20, (byte) 0);
+    byte val = srcMultiByteBuff.get(20);
+    assertTrue(val == 0);
+
+    srcMultiByteBuff.put(50, (byte) 0);
+    val = srcMultiByteBuff.get(50);
+    assertTrue(val == 0);
+
+    srcMultiByteBuff.put(80, (byte) 0);
+    val = srcMultiByteBuff.get(80);
+    assertTrue(val == 0);
+
+    srcMultiByteBuff.put(100, (byte) 0);
+    val = srcMultiByteBuff.get(100);
+    assertTrue(val == 0);
+
+    srcMultiByteBuff.put(121, (byte) 0);
+    val = srcMultiByteBuff.get(121);
+    assertTrue(val == 0);
+
+    srcMultiByteBuff.put(150, (byte) 0);
+    val = srcMultiByteBuff.get(150);
+    assertTrue(val == 0);
+
+    srcMultiByteBuff.put(180, (byte) 0);
+    val = srcMultiByteBuff.get(180);
+    assertTrue(val == 0);
+
+    try {
+      srcMultiByteBuff.put(200, (byte) 0);
+      fail();
+    } catch (IndexOutOfBoundsException e) {
+      assertTrue(e != null);
+    }
+
+    try {
+      srcMultiByteBuff.put(260, (byte) 0);
+      fail();
+    } catch (IndexOutOfBoundsException e) {
+      assertTrue(e != null);
+    }
+  }
 }
