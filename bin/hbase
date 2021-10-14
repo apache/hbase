@@ -492,8 +492,16 @@ add_jdk11_deps_to_classpath() {
   done
 }
 
-enable_trace() {
-  agent_jar=$(find lib/trace -type f -name "opentelemetry-javaagent-*")
+add_opentelemetry_agent() {
+  if ! agent_jar=$(find lib/trace -type f -name "opentelemetry-javaagent-*" 2>/dev/null); then
+    # must be dev environment
+    f="${HBASE_HOME}/hbase-build-configuration/target/cached_classpath.txt"
+    if [ ! -f "${f}" ]; then
+      echo "As this is a development environment, we need ${f} to be generated from maven (command: mvn install -DskipTests)"
+      exit 1
+    fi
+    agent_jar=$(tr ':' '\n' < "${f}" | grep opentelemetry-javaagent)
+  fi
   HBASE_OPTS="$HBASE_OPTS -javaagent:$agent_jar $HBASE_TRACE_OPTS"
 }
 
@@ -801,8 +809,10 @@ elif [ "${DEBUG}" = "true" ]; then
 fi
 
 if [[ -n "${HBASE_TRACE_OPTS}" ]]; then
-  echo "Attach opentelemetry agent to enable trace"
-  enable_trace
+  if [ "${DEBUG}" = "true" ]; then
+    echo "Attaching opentelemetry agent"
+  fi
+  add_opentelemetry_agent
 fi
 
 # Have JVM dump heap if we run out of memory.  Files will be 'launch directory'
