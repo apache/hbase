@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -40,20 +39,13 @@ public class TestStochasticLoadBalancerRegionReplicaWithRacks extends Stochastic
   private static class ForTestRackManager extends RackManager {
 
     int numRacks;
-    Map<String, Integer> serverIndexes = new HashMap<String, Integer>();
-    int numServers = 0;
 
     public ForTestRackManager(int numRacks) {
       this.numRacks = numRacks;
     }
 
-<<<<<<< HEAD
-
     @Override
     public String getRack(ServerName server) {
-=======
-    @Override public String getRack(ServerName server) {
->>>>>>> HBASE-26310 Repro balancer behavior during iterations
       String key = server.getServerName();
       if (!serverIndexes.containsKey(key)) {
         serverIndexes.put(key, numServers++);
@@ -67,8 +59,6 @@ public class TestStochasticLoadBalancerRegionReplicaWithRacks extends Stochastic
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 100000000L);
     conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", true);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
-    // for full balance
-//    conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.001f);
     loadBalancer.onConfigurationChange(conf);
     int numNodes = 5;
     int numRegions = numNodes * 1;

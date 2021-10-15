@@ -345,8 +345,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     if (idleRegionServerExist(cluster)){
-      LOG.info("Running balancer because cluster has idle server(s)."+
-        " function cost={}", functionCost());
+      LOG.info("Running balancer because cluster has idle server(s).");
       return true;
     }
 
@@ -508,9 +507,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       LOG.info("Finished computing new moving plan. Computation took {} ms" +
           " to try {} different iterations.  Found a solution that moves " +
           "{} regions; Going from a computed imbalance of {}" +
-          " to a new imbalance of {}. funtionCost={}",
+          " to a new imbalance of {}. ",
         endTime - startTime, step, plans.size(),
-        initCost / sumMultiplier, currentCost / sumMultiplier, functionCost());
+        initCost / sumMultiplier, currentCost / sumMultiplier);
       sendRegionPlansToRingBuffer(plans, currentCost, initCost, initFunctionTotalCosts, step);
       return plans;
     }
