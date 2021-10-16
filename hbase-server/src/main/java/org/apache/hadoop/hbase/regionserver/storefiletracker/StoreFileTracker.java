@@ -82,7 +82,7 @@ public interface StoreFileTracker {
    * implementation, and also possible misconfiguration between master and region servers.
    * <p/>
    * See HBASE-26246 for more details.
-   * @param descriptor The table descriptor for the given table.
+   * @param builder The table descriptor builder for the given table.
    */
   TableDescriptorBuilder updateWithTrackerConfigs(TableDescriptorBuilder builder);
 }

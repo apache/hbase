@@ -28,6 +28,9 @@ pipeline {
     timeout (time: 15, unit: 'MINUTES')
     timestamps()
   }
+  environment {
+    ASF_NIGHTLIES = 'https://nightlies.apache.org'
+  }
   parameters {
     booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
   }
@@ -45,7 +48,21 @@ pipeline {
           docker build -t hbase-dev-support dev-support
           docker run --ulimit nproc=12500 -v "${WORKSPACE}":/hbase -u `id -u`:`id -g` --workdir=/hbase hbase-dev-support \
             python dev-support/flaky-tests/report-flakies.py --mvn -v -o output "${flaky_args[@]}"
-'''
+        '''
+        sshPublisher(publishers: [
+          sshPublisherDesc(configName: 'Nightlies',
+            transfers: [
+              sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                sourceFiles: "output/dashboard.html"
+              )
+            ]
+          )
+        ])
+        sh '''
+          if [ -f "output/dashboard.html" ]; then
+            ./dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/output/dashboard.html" > output/dashboard.html
+          fi
+        '''
       }
     }
   }
@@ -53,15 +70,6 @@ pipeline {
     always {
       // Has to be relative to WORKSPACE.
       archiveArtifacts artifacts: "output/*"
-      publishHTML target: [
-        allowMissing: true,
-        keepAll: true,
-        alwaysLinkToLastBuild: true,
-        // Has to be relative to WORKSPACE
-        reportDir: "output",
-        reportFiles: 'dashboard.html',
-        reportName: 'Flaky Test Report'
-      ]
     }
   }
 }
