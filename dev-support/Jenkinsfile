@@ -358,7 +358,7 @@ pipeline {
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
                   rm -rf "${OUTPUT_DIR}/test_logs.zip"
-                  echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}/test_logs.zip" > "${OUTPUT_DIR}/test_logs.txt"
+                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
                 else
                   echo "No test_logs.zip, skipping"
                 fi
@@ -465,7 +465,7 @@ pipeline {
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
                   rm -rf "${OUTPUT_DIR}/test_logs.zip"
-                  echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}/test_logs.zip" > "${OUTPUT_DIR}/test_logs.txt"
+                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
                 else
                   echo "No test_logs.zip, skipping"
                 fi
@@ -579,7 +579,7 @@ pipeline {
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
                   rm -rf "${OUTPUT_DIR}/test_logs.zip"
-                  echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}/test_logs.zip" > "${OUTPUT_DIR}/test_logs.txt"
+                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
                 else
                   echo "No test_logs.zip, skipping"
                 fi
@@ -695,7 +695,7 @@ pipeline {
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
                   rm -rf "${OUTPUT_DIR}/test_logs.zip"
-                  echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}/test_logs.zip" > "${OUTPUT_DIR}/test_logs.txt"
+                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
                 else
                   echo "No test_logs.zip, skipping"
                 fi

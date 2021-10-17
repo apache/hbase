@@ -250,7 +250,7 @@ pipeline {
                             if [ -f "${PATCHDIR}/test_logs.zip" ]; then
                               echo "Remove ${PATCHDIR}/test_logs.zip for saving space"
                               rm -rf "${PATCHDIR}/test_logs.zip"
-                              echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${WORKDIR_REL}/${PATCH_REL}/test_logs.zip" > "${PATCHDIR}/test_logs.txt"
+                              python ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
                             else
                               echo "No test_logs.zip, skipping"
                             fi
@@ -382,7 +382,7 @@ pipeline {
                             if [ -f "${PATCHDIR}/test_logs.zip" ]; then
                               echo "Remove ${PATCHDIR}/test_logs.zip for saving space"
                               rm -rf "${PATCHDIR}/test_logs.zip"
-                              echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${WORKDIR_REL}/${PATCH_REL}/test_logs.zip" > "${PATCHDIR}/test_logs.txt"
+                              python ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
                             else
                               echo "No test_logs.zip, skipping"
                             fi
