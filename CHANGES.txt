@@ -1,5 +1,58 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.4.14 10/17/2021
+
+** Sub-task
+    * [HBASE-24009] - Backport the personality changes in HBASE-23989 to all active branches
+    * [HBASE-24218] - Add hadoop 3.2.x in hadoop check
+    * [HBASE-24841] - Change the jenkins job urls in our jenkinsfile
+    * [HBASE-24876] - Fix the flaky job url in hbase-personality.sh
+    * [HBASE-25107] - Migrate flaky reporting jenkins job from Hadoop to hbase
+    * [HBASE-25132] - Migrate flaky test jenkins job from Hadoop to hbase
+    * [HBASE-25133] - Migrate HBase Nightly jenkins job from Hadoop to hbase
+    * [HBASE-25154] - Set java.io.tmpdir to project build directory to avoid writing std*deferred files to /tmp
+    * [HBASE-25163] - Increase the timeout value for nightly jobs
+    * [HBASE-25194] - Do not publish workspace in flaky find job
+    * [HBASE-25203] - Change the reference url to flaky list in our jenkins jobs
+    * [HBASE-26313] - Publish the test logs for our nightly jobs to nightlies.apache.org
+    * [HBASE-26318] - Publish test logs for flaky jobs to nightlies
+    * [HBASE-26339] - SshPublisher will skip uploading artifacts if the build is failure
+    * [HBASE-26357] - Generate CHANGES.txt for 1.4.14
+
+** Bug
+    * [HBASE-24016] - Change nightly poll from cron @daily to pollSCM @daily; i.e. run nightly if a change ONLY
+    * [HBASE-24017] - Turn down flakey rerun rate on all but hot branches
+    * [HBASE-24040] - WALFactory.Providers.multiwal causes StackOverflowError
+    * [HBASE-24121] - [Authorization] ServiceAuthorizationManager isn't dynamically updatable. And it should be.
+    * [HBASE-24174] - Fix findbugs warning on ServiceAuthorizationManager
+    * [HBASE-24190] - Make kerberos value of hbase.security.authentication property case insensitive
+    * [HBASE-24213] - Backport the pre commit changes for HBASE-24169 to all branches
+    * [HBASE-24499] - Use a client property for SaslConnection MAX_ATTEMPTS (currently hardcoded to 5)
+    * [HBASE-24550] - Passing '-h' or '--help' to bin/hbase doesn't do as expected
+    * [HBASE-24739] - [Build] branch-1's build seems broken because of pylint
+    * [HBASE-24794] - hbase.rowlock.wait.duration should not be <= 0
+    * [HBASE-24816] - Remove unused credential hbaseqa-at-asf-jira
+    * [HBASE-25090] - CompactionConfiguration logs unrealistic store file sizes
+    * [HBASE-25204] - Nightly job failed as the name of jdk and maven changed
+    * [HBASE-26244] - Avoid trim the error stack trace when running UT with maven
+
+** Improvement
+    * [HBASE-24032] - [RSGroup] Assign created tables to respective rsgroup automatically instead of manual operations
+    * [HBASE-24099] - Use a fair ReentrantReadWriteLock for the region close lock
+    * [HBASE-24148] - Upgrade Thrift to 0.13.0: 0.12.0 has outstanding CVEs.
+    * [HBASE-24229] - [Build] Pin rubocop version <= 0.81
+    * [HBASE-24351] - Backport HBASE-24302 to branch-1
+    * [HBASE-24355] - Fix typos in the HStore#compact annotation
+
+** Test
+    * [HBASE-24115] - Relocate test-only REST "client" from src/ to test/ and mark Private
+
+** Task
+    * [HBASE-23874] - Move Jira-attached file precommit definition from script in Jenkins config to dev-support
+    * [HBASE-24200] - Upgrade to Yetus 0.12.0
+    * [HBASE-25228] - Delete dev-support/jenkins_precommit_jira_yetus.sh
+    * [HBASE-25601] - Remove search hadoop references in book
+
 Release Notes - HBase - Version 1.4.13 02/29/2020
 
 ** Bug
