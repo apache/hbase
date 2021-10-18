@@ -39,21 +39,41 @@ public class DirScanPool implements ConfigurationObserver {
   private final ThreadPoolExecutor pool;
   private int cleanerLatch;
   private boolean reconfigNotification;
+  private Type dirScanPoolType;
+  private final String name;
 
-  public DirScanPool(Configuration conf) {
-    String poolSize = conf.get(CleanerChore.CHORE_POOL_SIZE, CleanerChore.DEFAULT_CHORE_POOL_SIZE);
+  private enum Type {
+    LOG_CLEANER(CleanerChore.LOG_CLEANER_CHORE_SIZE,
+      CleanerChore.DEFAULT_LOG_CLEANER_CHORE_POOL_SIZE),
+    HFILE_CLEANER(CleanerChore.CHORE_POOL_SIZE, CleanerChore.DEFAULT_CHORE_POOL_SIZE);
+
+    private final String cleanerPoolSizeConfigName;
+    private final String cleanerPoolSizeConfigDefault;
+
+    private Type(String cleanerPoolSizeConfigName, String cleanerPoolSizeConfigDefault) {
+      this.cleanerPoolSizeConfigName = cleanerPoolSizeConfigName;
+      this.cleanerPoolSizeConfigDefault = cleanerPoolSizeConfigDefault;
+    }
+  }
+
+  private DirScanPool(Configuration conf, Type dirScanPoolType) {
+    this.dirScanPoolType = dirScanPoolType;
+    this.name = dirScanPoolType.name().toLowerCase();
+    String poolSize = conf.get(dirScanPoolType.cleanerPoolSizeConfigName,
+      dirScanPoolType.cleanerPoolSizeConfigDefault);
     size = CleanerChore.calculatePoolSize(poolSize);
     // poolSize may be 0 or 0.0 from a careless configuration,
     // double check to make sure.
-    size = size == 0 ? CleanerChore.calculatePoolSize(CleanerChore.DEFAULT_CHORE_POOL_SIZE) : size;
-    pool = initializePool(size);
-    LOG.info("Cleaner pool size is {}", size);
+    size = size == 0 ?
+      CleanerChore.calculatePoolSize(dirScanPoolType.cleanerPoolSizeConfigDefault) : size;
+    pool = initializePool(size, name);
+    LOG.info("{} Cleaner pool size is {}", name, size);
     cleanerLatch = 0;
   }
 
-  private static ThreadPoolExecutor initializePool(int size) {
+  private static ThreadPoolExecutor initializePool(int size, String name) {
     return Threads.getBoundedCachedThreadPool(size, 1, TimeUnit.MINUTES,
-      new ThreadFactoryBuilder().setNameFormat("dir-scan-pool-%d").setDaemon(true)
+      new ThreadFactoryBuilder().setNameFormat(name + "-dir-scan-pool-%d").setDaemon(true)
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
@@ -64,9 +84,11 @@ public class DirScanPool implements ConfigurationObserver {
   @Override
   public synchronized void onConfigurationChange(Configuration conf) {
     int newSize = CleanerChore.calculatePoolSize(
-      conf.get(CleanerChore.CHORE_POOL_SIZE, CleanerChore.DEFAULT_CHORE_POOL_SIZE));
+      conf.get(dirScanPoolType.cleanerPoolSizeConfigName,
+        dirScanPoolType.cleanerPoolSizeConfigDefault));
     if (newSize == size) {
-      LOG.trace("Size from configuration is same as previous={}, no need to update.", newSize);
+      LOG.trace("{} Cleaner Size from configuration is same as previous={}, no need to update.",
+          name, newSize);
       return;
     }
     size = newSize;
@@ -109,11 +131,19 @@ public class DirScanPool implements ConfigurationObserver {
         break;
       }
     }
-    LOG.info("Update chore's pool size from {} to {}", pool.getPoolSize(), size);
+    LOG.info("Update {} chore's pool size from {} to {}", name, pool.getPoolSize(), size);
     pool.setCorePoolSize(size);
   }
 
   public int getSize() {
     return size;
+  }
+
+  public static DirScanPool getHFileCleanerScanPool(Configuration conf) {
+    return new DirScanPool(conf, Type.HFILE_CLEANER);
+  }
+
+  public static DirScanPool getLogCleanerScanPool(Configuration conf) {
+    return new DirScanPool(conf, Type.LOG_CLEANER);
   }
 }
