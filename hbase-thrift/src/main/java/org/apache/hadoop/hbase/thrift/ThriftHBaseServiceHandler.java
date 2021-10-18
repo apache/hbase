@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -197,6 +198,20 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     try {
       return this.connectionCache.getAdmin().isTableEnabled(getTableName(tableName));
     } catch (IOException e) {
+      LOG.warn(e.getMessage(), e);
+      throw getIOError(e);
+    }
+  }
+
+  @Override
+  public Map<ByteBuffer, Boolean> getTableNamesWithIsTableEnabled() throws IOError {
+    try {
+      HashMap<ByteBuffer, Boolean> tables = new HashMap<>();
+      for (ByteBuffer tableName: this.getTableNames()) {
+        tables.put(tableName, this.isTableEnabled(tableName));
+      }
+      return tables;
+    } catch (IOError e) {
       LOG.warn(e.getMessage(), e);
       throw getIOError(e);
     }

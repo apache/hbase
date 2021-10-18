@@ -32,6 +32,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
@@ -735,6 +736,35 @@ public class TestThriftServer {
       handler.disableTable(tableAname);
       handler.deleteTable(tableAname);
     }
+  }
+
+  @Test
+  public void testGetTableNamesWithStatus() throws Exception{
+    ThriftHBaseServiceHandler handler =
+      new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
+        UserProvider.instantiate(UTIL.getConfiguration()));
+
+    createTestTables(handler);
+
+    assertEquals(2, handler.getTableNamesWithIsTableEnabled().size());
+    assertEquals(2, countTablesByStatus(true, handler));
+    handler.disableTable(tableBname);
+    assertEquals(1, countTablesByStatus(true, handler));
+    assertEquals(1, countTablesByStatus(false, handler));
+    assertEquals(2, handler.getTableNamesWithIsTableEnabled().size());
+    handler.enableTable(tableBname);
+    assertEquals(2, countTablesByStatus(true, handler));
+
+    dropTestTables(handler);
+  }
+
+  private static int countTablesByStatus(Boolean isEnabled, Hbase.Iface handler) throws Exception {
+    AtomicInteger counter = new AtomicInteger(0);
+    handler.getTableNamesWithIsTableEnabled().forEach(
+      (table, tableStatus) -> {
+        if (tableStatus.equals(isEnabled)) counter.getAndIncrement();
+      });
+    return counter.get();
   }
 
   @Test
