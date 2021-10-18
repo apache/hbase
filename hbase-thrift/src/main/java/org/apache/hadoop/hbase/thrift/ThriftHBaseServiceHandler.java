@@ -192,6 +192,20 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     }
   }
 
+  @Override
+  public Map<ByteBuffer, Boolean> getTableNamesWithIsTableEnabled() throws IOError {
+    try {
+      HashMap<ByteBuffer, Boolean> tables = new HashMap<>();
+      for (ByteBuffer tableName: this.getTableNames()) {
+        tables.put(tableName, this.isTableEnabled(tableName));
+      }
+      return tables;
+    } catch (IOError e) {
+      LOG.warn(e.getMessage(), e);
+      throw getIOError(e);
+    }
+  }
+
   // ThriftServerRunner.compact should be deprecated and replaced with methods specific to
   // table and region.
   @Override
