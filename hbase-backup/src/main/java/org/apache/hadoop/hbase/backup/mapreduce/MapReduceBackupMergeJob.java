@@ -21,8 +21,12 @@ import static org.apache.hadoop.hbase.backup.util.BackupUtils.succeeded;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.*;
-
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.Stack;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -99,7 +103,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       for (String backupId : backupIds) {
         BackupInfo bInfo = table.readBackupInfo(backupId);
         if (bInfo != null) {
-            backupInfos.add(bInfo);
+          backupInfos.add(bInfo);
         }
       }
 

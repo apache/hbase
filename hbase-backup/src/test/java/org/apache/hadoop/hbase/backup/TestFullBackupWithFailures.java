@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -31,7 +34,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.junit.Assert.*;
 
 @Category(LargeTests.class)
 public class TestFullBackupWithFailures extends TestBackupBase {

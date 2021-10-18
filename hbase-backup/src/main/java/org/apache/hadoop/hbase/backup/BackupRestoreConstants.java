@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.backup;
 
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -126,8 +125,7 @@ public interface BackupRestoreConstants {
   String UNDERSCORE = "_";
 
   static String getBackupPrefix() {
-    return BackupRestoreConstants.BACKUPID_PREFIX + RandomStringUtils.randomNumeric(4)
-      + BackupRestoreConstants.UNDERSCORE;
+    return BackupRestoreConstants.BACKUPID_PREFIX + BackupRestoreConstants.UNDERSCORE;
   }
 
   enum BackupCommand {

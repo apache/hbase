@@ -18,11 +18,13 @@ package org.apache.hadoop.hbase.backup;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import java.util.List;
+import java.util.Random;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -132,7 +134,7 @@ public class TestParallelBackup extends TestBackupBase {
     }
   }
 
-  class RunFullBackup implements Runnable {
+  static class RunFullBackup implements Runnable {
     String tableNames;
 
     RunFullBackup(String tableNames) {
@@ -142,9 +144,11 @@ public class TestParallelBackup extends TestBackupBase {
     @Override public void run() {
       try {
         String[] args = new String[] { "create", "full", BACKUP_ROOT_DIR, "-t", tableNames };
+        Threads.sleep((new Random()).nextInt(500));
         int ret = ToolRunner.run(conf1, new BackupDriver(), args);
         assertTrue(ret == 0);
       } catch (Exception e) {
+        LOG.error("Failure with exception: " + e.getMessage(), e);
       }
     }
   }

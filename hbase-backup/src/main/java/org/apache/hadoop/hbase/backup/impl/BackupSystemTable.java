@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -159,10 +160,8 @@ public final class BackupSystemTable implements Closeable {
   private final static String START_CODE_ROW = "startcode:";
   private final static String ACTIVE_SESSION_ROW_STR = "activesession:";
   private final static byte[] ACTIVE_SESSION_ROW = Bytes.toBytes(ACTIVE_SESSION_ROW_STR);
-  private final static String ACTIVE_SESSION_COL_STR = "c";
-  private final static byte[] ACTIVE_SESSION_COL = Bytes.toBytes( ACTIVE_SESSION_COL_STR);
   private final static String ACTIVE_SESSION_VERSION_STR = "version";
-  private final static byte[] ACTIVE_SESSION_VERSION = Bytes.toBytes( ACTIVE_SESSION_VERSION_STR);
+  private final static byte[] ACTIVE_SESSION_VERSION = Bytes.toBytes(ACTIVE_SESSION_VERSION_STR);
 
   private final static String INCR_BACKUP_SET = "incrbackupset:";
   private final static String TABLE_RS_LOG_MAP_PREFIX = "trslm:";
@@ -253,14 +252,17 @@ public final class BackupSystemTable implements Closeable {
     LOG.debug("Backup table {} exists and available", tableName);
   }
 
-  private Map<String, Map<String, Map.Entry<Long, String>>> getExistingBackupSessionsForTables() throws IOException {
+  private Map<String, Map<String, Map.Entry<Long, String>>> getExistingBackupSessionsForTables()
+    throws IOException {
     Map<String, Map<String, Map.Entry<Long, String>>> response = new HashMap<>();
     try (Table table = connection.getTable(tableName)) {
       Get get = new Get(ACTIVE_SESSION_ROW);
       Result result = table.get(get);
-      NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> cfMap = result.getMap();
+      NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> cfMap =
+        result.getMap();
       if (cfMap != null) {
-        for (Map.Entry<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> cfEntry : cfMap.entrySet()) {
+        for (Map.Entry<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> cfEntry : cfMap
+          .entrySet()) {
           String cf = Bytes.toString(cfEntry.getKey());
           response.putIfAbsent(cf, new HashMap<>());
           NavigableMap<byte[], NavigableMap<Long, byte[]>> columns = cfEntry.getValue();
@@ -269,7 +271,8 @@ public final class BackupSystemTable implements Closeable {
               String tableName = Bytes.toString(colEntry.getKey());
               for (Map.Entry<Long, byte[]> valueEntry : colEntry.getValue().entrySet()) {
                 response.get(cf).put(tableName,
-                        new AbstractMap.SimpleImmutableEntry<>(valueEntry.getKey(), new String(valueEntry.getValue())));
+                  new AbstractMap.SimpleImmutableEntry<>(valueEntry.getKey(),
+                    new String(valueEntry.getValue())));
               }
             }
           }
@@ -643,8 +646,8 @@ public final class BackupSystemTable implements Closeable {
       Put put = new Put(ACTIVE_SESSION_ROW);
       for (BackupInfo backupInfo : backupInfos) {
         for (TableName table : backupInfo.getTables()) {
-          put.addColumn(META_FAMILY, table.toString().getBytes(),
-            backupInfo.getBackupId().getBytes());
+          put.addColumn(META_FAMILY, table.getNameAsString().getBytes(StandardCharsets.UTF_8),
+            backupInfo.getBackupId().getBytes(StandardCharsets.UTF_8));
         }
       }
       put.addColumn(SESSIONS_FAMILY, ACTIVE_SESSION_VERSION,
@@ -659,7 +662,7 @@ public final class BackupSystemTable implements Closeable {
             .getValue();
         }
         if (!sysTable.checkAndMutate(CheckAndMutate.newBuilder(ACTIVE_SESSION_ROW)
-          .ifEquals(SESSIONS_FAMILY, ACTIVE_SESSION_VERSION, version.getBytes()).build(put))
+          .ifEquals(SESSIONS_FAMILY, ACTIVE_SESSION_VERSION, version.getBytes(StandardCharsets.UTF_8)).build(put))
           .isSuccess()) {
           throw new ExclusiveOperationException(String.format(
             "Failed to acquire table lock. Read Version: %s, " + "for Row: %s, CF: %s, QF: %s",
@@ -684,7 +687,7 @@ public final class BackupSystemTable implements Closeable {
         for (String tableName : tables.keySet()) {
           String bkp = tables.get(tableName).getValue();
           if (backupIds.contains(bkp)) {
-            delete.addColumn(META_FAMILY, tableName.getBytes());
+            delete.addColumn(META_FAMILY, tableName.getBytes(StandardCharsets.UTF_8));
             hasDeletes = true;
           }
         }

@@ -40,12 +40,10 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKE
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME_DESC;
-
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -67,7 +65,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
@@ -686,7 +683,7 @@ public final class BackupCommands {
           repairFailedBackupMergeIfAny(conn, sysTable);
           return;
         }
-        for (BackupInfo backupInfo : backupInfos ) {
+        for (BackupInfo backupInfo : backupInfos) {
           // If this is a cancel exception, then we've already cleaned.
           // set the failure timestamp of the overall backup
           backupInfo.setCompleteTs(EnvironmentEdgeManager.currentTime());
