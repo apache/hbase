@@ -126,7 +126,8 @@ public class DemoClient {
     TProtocol protocol = new TBinaryProtocol(transport, true, true);
     Hbase.Client client = new Hbase.Client(protocol);
 
-    byte[] t = bytes("demo_table");
+    ByteBuffer demoTable = ByteBuffer.wrap(bytes("demo_table"));
+    ByteBuffer disabledTable = ByteBuffer.wrap(bytes("disabled_table"));
 
     // Scan all tables, look for the demo table and delete it.
     System.out.println("scanning tables...");
@@ -134,7 +135,7 @@ public class DemoClient {
     for (ByteBuffer name : client.getTableNames()) {
       System.out.println("  found: " + ClientUtils.utf8(name.array()));
 
-      if (ClientUtils.utf8(name.array()).equals(ClientUtils.utf8(t))) {
+      if (name.equals(demoTable) || name.equals(disabledTable)) {
         if (client.isTableEnabled(name)) {
           System.out.println("    disabling table: " + ClientUtils.utf8(name.array()));
           client.disableTable(name);
@@ -158,20 +159,33 @@ public class DemoClient {
     col.timeToLive = Integer.MAX_VALUE;
     columns.add(col);
 
-    System.out.println("creating table: " + ClientUtils.utf8(t));
+    System.out.println("creating table: " + ClientUtils.utf8(demoTable.array()));
 
     try {
-      client.createTable(ByteBuffer.wrap(t), columns);
+      client.createTable(demoTable, columns);
+      client.createTable(disabledTable, columns);
     } catch (AlreadyExists ae) {
       System.out.println("WARN: " + ae.message);
     }
 
-    System.out.println("column families in " + ClientUtils.utf8(t) + ": ");
-    Map<ByteBuffer, ColumnDescriptor> columnMap = client.getColumnDescriptors(ByteBuffer.wrap(t));
+    System.out.println("column families in " + ClientUtils.utf8(demoTable.array()) + ": ");
+    Map<ByteBuffer, ColumnDescriptor> columnMap = client.getColumnDescriptors(demoTable);
 
     for (ColumnDescriptor col2 : columnMap.values()) {
       System.out.println("  column: " + ClientUtils.utf8(col2.name.array()) + ", maxVer: "
           + col2.maxVersions);
+    }
+
+    if (client.isTableEnabled(disabledTable)){
+      System.out.println("disabling table: " + ClientUtils.utf8(disabledTable.array()));
+      client.disableTable(disabledTable);
+    }
+
+    System.out.println("list tables with enabled statuses : ");
+    Map<ByteBuffer, Boolean> statusMap = client.getTableNamesWithIsTableEnabled();
+    for (Map.Entry<ByteBuffer, Boolean> entry : statusMap.entrySet()) {
+      System.out.println(" Table: " + ClientUtils.utf8(entry.getKey().array()) +
+                          ", is enabled: " + entry.getValue());
     }
 
     Map<ByteBuffer, ByteBuffer> dummyAttributes = null;
@@ -190,27 +204,27 @@ public class DemoClient {
     mutations = new ArrayList<>(1);
     mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")),
             ByteBuffer.wrap(invalid), writeToWal));
-    client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("foo")),
+    client.mutateRow(demoTable, ByteBuffer.wrap(bytes("foo")),
             mutations, dummyAttributes);
 
     // this row name is valid utf8
     mutations = new ArrayList<>(1);
     mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")),
             ByteBuffer.wrap(valid), writeToWal));
-    client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(valid), mutations, dummyAttributes);
+    client.mutateRow(demoTable, ByteBuffer.wrap(valid), mutations, dummyAttributes);
 
     // non-utf8 is now allowed in row names because HBase stores values as binary
     mutations = new ArrayList<>(1);
     mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")),
             ByteBuffer.wrap(invalid), writeToWal));
-    client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(invalid), mutations, dummyAttributes);
+    client.mutateRow(demoTable, ByteBuffer.wrap(invalid), mutations, dummyAttributes);
 
     // Run a scanner on the rows we just created
     ArrayList<ByteBuffer> columnNames = new ArrayList<>();
     columnNames.add(ByteBuffer.wrap(bytes("entry:")));
 
     System.out.println("Starting scanner...");
-    int scanner = client.scannerOpen(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("")), columnNames,
+    int scanner = client.scannerOpen(demoTable, ByteBuffer.wrap(bytes("")), columnNames,
             dummyAttributes);
 
     while (true) {
@@ -234,9 +248,9 @@ public class DemoClient {
       mutations = new ArrayList<>(1);
       mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("unused:")),
               ByteBuffer.wrap(bytes("DELETE_ME")), writeToWal));
-      client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
-      printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
-      client.deleteAllRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes);
+      client.mutateRow(demoTable, ByteBuffer.wrap(row), mutations, dummyAttributes);
+      printRow(client.getRow(demoTable, ByteBuffer.wrap(row), dummyAttributes));
+      client.deleteAllRow(demoTable, ByteBuffer.wrap(row), dummyAttributes);
 
       // sleep to force later timestamp
       try {
@@ -250,8 +264,8 @@ public class DemoClient {
               ByteBuffer.wrap(bytes("0")), writeToWal));
       mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")),
               ByteBuffer.wrap(bytes("FOO")), writeToWal));
-      client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
-      printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
+      client.mutateRow(demoTable, ByteBuffer.wrap(row), mutations, dummyAttributes);
+      printRow(client.getRow(demoTable, ByteBuffer.wrap(row), dummyAttributes));
 
       Mutation m;
       mutations = new ArrayList<>(2);
@@ -263,16 +277,16 @@ public class DemoClient {
       m.column = ByteBuffer.wrap(bytes("entry:num"));
       m.value = ByteBuffer.wrap(bytes("-1"));
       mutations.add(m);
-      client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
-      printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
+      client.mutateRow(demoTable, ByteBuffer.wrap(row), mutations, dummyAttributes);
+      printRow(client.getRow(demoTable, ByteBuffer.wrap(row), dummyAttributes));
 
       mutations = new ArrayList<>();
       mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:num")),
               ByteBuffer.wrap(bytes(Integer.toString(i))), writeToWal));
       mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:sqr")),
               ByteBuffer.wrap(bytes(Integer.toString(i * i))), writeToWal));
-      client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
-      printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
+      client.mutateRow(demoTable, ByteBuffer.wrap(row), mutations, dummyAttributes);
+      printRow(client.getRow(demoTable, ByteBuffer.wrap(row), dummyAttributes));
 
       // sleep to force later timestamp
       try {
@@ -289,11 +303,11 @@ public class DemoClient {
       m = new Mutation();
       m.column = ByteBuffer.wrap(bytes("entry:sqr"));
       m.isDelete = true;
-      client.mutateRowTs(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, 1,
+      client.mutateRowTs(demoTable, ByteBuffer.wrap(row), mutations, 1,
               dummyAttributes); // shouldn't override latest
-      printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
+      printRow(client.getRow(demoTable, ByteBuffer.wrap(row), dummyAttributes));
 
-      List<TCell> versions = client.getVer(ByteBuffer.wrap(t), ByteBuffer.wrap(row),
+      List<TCell> versions = client.getVer(demoTable, ByteBuffer.wrap(row),
               ByteBuffer.wrap(bytes("entry:num")), 10, dummyAttributes);
       printVersions(ByteBuffer.wrap(row), versions);
 
@@ -302,7 +316,7 @@ public class DemoClient {
         System.exit(-1);
       }
 
-      List<TCell> result = client.get(ByteBuffer.wrap(t), ByteBuffer.wrap(row),
+      List<TCell> result = client.get(demoTable, ByteBuffer.wrap(row),
               ByteBuffer.wrap(bytes("entry:foo")), dummyAttributes);
 
       if (!result.isEmpty()) {
@@ -316,7 +330,7 @@ public class DemoClient {
     // scan all rows/columnNames
     columnNames.clear();
 
-    for (ColumnDescriptor col2 : client.getColumnDescriptors(ByteBuffer.wrap(t)).values()) {
+    for (ColumnDescriptor col2 : client.getColumnDescriptors(demoTable).values()) {
       System.out.println("column with name: " + new String(col2.name.array()));
       System.out.println(col2.toString());
 
@@ -324,7 +338,7 @@ public class DemoClient {
     }
 
     System.out.println("Starting scanner...");
-    scanner = client.scannerOpenWithStop(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("00020")),
+    scanner = client.scannerOpenWithStop(demoTable, ByteBuffer.wrap(bytes("00020")),
             ByteBuffer.wrap(bytes("00040")), columnNames, dummyAttributes);
 
     while (true) {
