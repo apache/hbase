@@ -254,10 +254,8 @@ public class TestThriftServer {
   public static void createTestTables(Hbase.Iface handler) throws Exception {
     // Create/enable/disable/delete tables, ensure methods act correctly
     List<java.nio.ByteBuffer> bbs = handler.getTableNames();
-    assertEquals(bbs.stream().map(b -> {
-      return Bytes.toString(b.array());
-    }
-      ).collect(Collectors.joining(",")), 0, bbs.size());
+    assertEquals(bbs.stream().map(b -> Bytes.toString(b.array())).
+      collect(Collectors.joining(",")), 0, bbs.size());
     handler.createTable(tableAname, getColumnDescriptors());
     assertEquals(1, handler.getTableNames().size());
     assertEquals(2, handler.getColumnDescriptors(tableAname).size());
