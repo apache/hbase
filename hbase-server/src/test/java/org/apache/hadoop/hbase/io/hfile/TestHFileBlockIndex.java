@@ -270,7 +270,7 @@ public class TestHFileBlockIndex {
                         .withCompression(compr)
                         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                         .build();
-    HFileBlock.Writer hbw = new HFileBlock.Writer(null,
+    HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null,
         meta);
     FSDataOutputStream outputStream = fs.create(path);
     HFileBlockIndex.BlockIndexWriter biw =

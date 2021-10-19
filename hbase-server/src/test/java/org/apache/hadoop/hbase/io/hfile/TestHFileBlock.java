@@ -269,7 +269,7 @@ public class TestHFileBlock {
                         .withIncludesTags(includesTag)
                         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                         .build();
-    HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
+    HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null, meta);
     DataOutputStream dos = hbw.startWriting(blockType);
     writeTestBlockContents(dos);
     dos.flush();
@@ -351,8 +351,9 @@ public class TestHFileBlock {
   }
 
   protected void testReaderV2Internals() throws IOException {
-    if(includesTag) {
-      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+    final Configuration conf = TEST_UTIL.getConfiguration();
+    if (includesTag) {
+      conf.setInt("hfile.format.version", 3);
     }
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
@@ -367,7 +368,7 @@ public class TestHFileBlock {
                            .withIncludesTags(includesTag)
                            .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                            .build();
-        HFileBlock.Writer hbw = new HFileBlock.Writer(null,
+        HFileBlock.Writer hbw = new HFileBlock.Writer(conf, null,
            meta);
         long totalSize = 0;
         for (int blockId = 0; blockId < 2; ++blockId) {
@@ -444,8 +445,9 @@ public class TestHFileBlock {
 
   private void testInternals() throws IOException {
     final int numBlocks = 5;
+    final Configuration conf = TEST_UTIL.getConfiguration();
     if(includesTag) {
-      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+      conf.setInt("hfile.format.version", 3);
     }
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
@@ -463,7 +465,7 @@ public class TestHFileBlock {
                               .withIncludesTags(includesTag)
                               .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                               .build();
-          HFileBlock.Writer hbw = new HFileBlock.Writer(dataBlockEncoder, meta);
+          HFileBlock.Writer hbw = new HFileBlock.Writer(conf, dataBlockEncoder, meta);
           long totalSize = 0;
           final List<Integer> encodedSizes = new ArrayList<>();
           final List<ByteBuff> encodedBlocks = new ArrayList<>();
@@ -620,8 +622,8 @@ public class TestHFileBlock {
           List<Long> expectedPrevOffsets = new ArrayList<>();
           List<BlockType> expectedTypes = new ArrayList<>();
           List<ByteBuffer> expectedContents = cacheOnWrite ? new ArrayList<>() : null;
-          long totalSize = writeBlocks(rand, algo, path, expectedOffsets,
-              expectedPrevOffsets, expectedTypes, expectedContents);
+          long totalSize = writeBlocks(TEST_UTIL.getConfiguration(), rand, algo, path,
+            expectedOffsets, expectedPrevOffsets, expectedTypes, expectedContents);
 
           FSDataInputStream is = fs.open(path);
           HFileContext meta = new HFileContextBuilder()
@@ -824,7 +826,8 @@ public class TestHFileBlock {
       Random rand = defaultRandom();
       List<Long> offsets = new ArrayList<>();
       List<BlockType> types = new ArrayList<>();
-      writeBlocks(rand, compressAlgo, path, offsets, null, types, null);
+      writeBlocks(TEST_UTIL.getConfiguration(), rand, compressAlgo, path, offsets, null,
+        types, null);
       FSDataInputStream is = fs.open(path);
       long fileSize = fs.getFileStatus(path).getLen();
       HFileContext meta = new HFileContextBuilder()
@@ -862,7 +865,7 @@ public class TestHFileBlock {
     }
   }
 
-  private long writeBlocks(Random rand, Compression.Algorithm compressAlgo,
+  private long writeBlocks(Configuration conf, Random rand, Compression.Algorithm compressAlgo,
       Path path, List<Long> expectedOffsets, List<Long> expectedPrevOffsets,
       List<BlockType> expectedTypes, List<ByteBuffer> expectedContents
   ) throws IOException {
@@ -875,7 +878,7 @@ public class TestHFileBlock {
                         .withCompression(compressAlgo)
                         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                         .build();
-    HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
+    HFileBlock.Writer hbw = new HFileBlock.Writer(conf, null, meta);
     Map<BlockType, Long> prevOffsetByType = new HashMap<>();
     long totalSize = 0;
     for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {

@@ -36,38 +36,32 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.util.RedundantKVGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HFileTestBase {
 
-  static {
-    Log4jUtils.setLogLevel("org.apache.hadoop.hbase.io.compress", "TRACE");
-  }
-
   protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected static final Logger LOG = LoggerFactory.getLogger(HFileTestBase.class);
   protected static final SecureRandom RNG = new SecureRandom();
-  protected static FileSystem fs;
+  protected static FileSystem FS;
 
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Disable block cache in this test.
     conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
-    conf.setInt("hfile.format.version", 3);
-    fs = FileSystem.get(conf);
+    FS = FileSystem.get(conf);
   }
 
   @SuppressWarnings("deprecation")
-  public void doTest(Compression.Algorithm compression) throws Exception {
+  public void doTest(Configuration conf, Path path, Compression.Algorithm compression)
+      throws Exception {
     // Create 10000 random test KVs
     RedundantKVGenerator generator = new RedundantKVGenerator();
     List<KeyValue> testKvs = generator.generateTestKeyValues(10000);
 
     // Iterate through data block encoding and compression combinations
-    Configuration conf = TEST_UTIL.getConfiguration();
     CacheConfig cacheConf = new CacheConfig(conf);
     HFileContext fileContext = new HFileContextBuilder()
       .withBlockSize(4096) // small block
@@ -75,9 +69,7 @@ public class HFileTestBase {
       .build();
     // write a new test HFile
     LOG.info("Writing with " + fileContext);
-    Path path = new Path(TEST_UTIL.getDataTestDir(),
-      HBaseTestingUtil.getRandomUUID().toString() + ".hfile");
-    FSDataOutputStream out = fs.create(path);
+    FSDataOutputStream out = FS.create(path);
     HFile.Writer writer = HFile.getWriterFactory(conf, cacheConf)
       .withOutputStream(out)
       .withFileContext(fileContext)
@@ -95,7 +87,7 @@ public class HFileTestBase {
     LOG.info("Reading with " + fileContext);
     int i = 0;
     HFileScanner scanner = null;
-    HFile.Reader reader = HFile.createReader(fs, path, cacheConf, true, conf);
+    HFile.Reader reader = HFile.createReader(FS, path, cacheConf, true, conf);
     try {
       scanner = reader.getScanner(false, false);
       assertTrue("Initial seekTo failed", scanner.seekTo());
@@ -114,7 +106,7 @@ public class HFileTestBase {
 
     // Test random seeks with pread
     LOG.info("Random seeking with " + fileContext);
-    reader = HFile.createReader(fs, path, cacheConf, true, conf);
+    reader = HFile.createReader(FS, path, cacheConf, true, conf);
     try {
       scanner = reader.getScanner(false, true);
       assertTrue("Initial seekTo failed", scanner.seekTo());

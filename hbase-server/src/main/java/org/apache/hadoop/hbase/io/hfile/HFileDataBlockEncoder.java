@@ -20,6 +20,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
@@ -97,11 +98,12 @@ public interface HFileDataBlockEncoder {
    * encoding context should also perform compression if compressionAlgorithm is
    * valid.
    *
+   * @param conf store configuration
    * @param headerBytes header bytes
    * @param fileContext HFile meta data
    * @return a new {@link HFileBlockEncodingContext} object
    */
-  HFileBlockEncodingContext newDataBlockEncodingContext(byte[] headerBytes,
+  HFileBlockEncodingContext newDataBlockEncodingContext(Configuration conf, byte[] headerBytes,
       HFileContext fileContext);
 
   /**

@@ -94,9 +94,9 @@ public class TestHFileEncryption {
     cryptoContext.setKey(key);
   }
 
-  private int writeBlock(FSDataOutputStream os, HFileContext fileContext, int size)
-      throws IOException {
-    HFileBlock.Writer hbw = new HFileBlock.Writer(null, fileContext);
+  private int writeBlock(Configuration conf, FSDataOutputStream os, HFileContext fileContext,
+      int size) throws IOException {
+    HFileBlock.Writer hbw = new HFileBlock.Writer(conf, null, fileContext);
     DataOutputStream dos = hbw.startWriting(BlockType.DATA);
     for (int j = 0; j < size; j++) {
       dos.writeInt(j);
@@ -149,7 +149,7 @@ public class TestHFileEncryption {
       FSDataOutputStream os = fs.create(path);
       try {
         for (int i = 0; i < blocks; i++) {
-          totalSize += writeBlock(os, fileContext, blockSizes[i]);
+          totalSize += writeBlock(TEST_UTIL.getConfiguration(), os, fileContext, blockSizes[i]);
         }
       } finally {
         os.close();

@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -68,18 +69,19 @@ public class EncodedDataBlock {
 
   /**
    * Create a buffer which will be encoded using dataBlockEncoder.
+   * @param conf store configuration
    * @param dataBlockEncoder Algorithm used for compression.
    * @param encoding encoding type used
    * @param rawKVs
    * @param meta
    */
-  public EncodedDataBlock(DataBlockEncoder dataBlockEncoder, DataBlockEncoding encoding,
-      byte[] rawKVs, HFileContext meta) {
+  public EncodedDataBlock(Configuration conf, DataBlockEncoder dataBlockEncoder,
+      DataBlockEncoding encoding, byte[] rawKVs, HFileContext meta) {
     Preconditions.checkNotNull(encoding,
         "Cannot create encoded data block with null encoder");
     this.dataBlockEncoder = dataBlockEncoder;
     this.encoding = encoding;
-    encodingCtx = dataBlockEncoder.newDataBlockEncodingContext(encoding,
+    encodingCtx = dataBlockEncoder.newDataBlockEncodingContext(conf, encoding,
         HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
     this.rawKVs = rawKVs;
     this.meta = meta;

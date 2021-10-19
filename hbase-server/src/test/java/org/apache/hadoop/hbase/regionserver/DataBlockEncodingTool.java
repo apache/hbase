@@ -129,6 +129,7 @@ public class DataBlockEncodingTool {
   private byte[] rawKVs;
   private boolean useHBaseChecksum = false;
 
+  private final Configuration conf;
   private final String compressionAlgorithmName;
   private final Algorithm compressionAlgorithm;
   private final Compressor compressor;
@@ -158,6 +159,7 @@ public class DataBlockEncodingTool {
    *                                 as baseline for comparison (e.g. lzo, gz).
    */
   public DataBlockEncodingTool(String compressionAlgorithmName) {
+    this.conf = HBaseConfiguration.create();
     this.compressionAlgorithmName = compressionAlgorithmName;
     this.compressionAlgorithm = Compression.getCompressionAlgorithmByName(
         compressionAlgorithmName);
@@ -242,7 +244,7 @@ public class DataBlockEncodingTool {
           .withCompression(Compression.Algorithm.NONE)
           .withIncludesMvcc(includesMemstoreTS)
           .withIncludesTags(USE_TAG).build();
-      codecs.add(new EncodedDataBlock(d, encoding, rawKVs, meta ));
+      codecs.add(new EncodedDataBlock(conf, d, encoding, rawKVs, meta ));
     }
   }
 

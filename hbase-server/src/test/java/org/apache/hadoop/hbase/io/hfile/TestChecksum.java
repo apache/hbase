@@ -85,7 +85,7 @@ public class TestChecksum {
     Path path = new Path(TEST_UTIL.getDataTestDir(), "default_checksum");
     FSDataOutputStream os = fs.create(path);
     HFileContext meta = new HFileContextBuilder().build();
-    HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
+    HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null, meta);
     DataOutputStream dos = hbw.startWriting(BlockType.DATA);
     for (int i = 0; i < 1000; ++i)
       dos.writeInt(i);
@@ -137,7 +137,7 @@ public class TestChecksum {
       HFileContext meta = new HFileContextBuilder()
             .withChecksumType(ckt)
             .build();
-      HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
+      HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null, meta);
       DataOutputStream dos = hbw.startWriting(BlockType.DATA);
       for (int i = 0; i < intCount; ++i) {
         dos.writeInt(i);
@@ -206,7 +206,7 @@ public class TestChecksum {
                             .withIncludesTags(useTags)
                             .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                             .build();
-        HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
+        HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null, meta);
         long totalSize = 0;
         for (int blockId = 0; blockId < 2; ++blockId) {
           DataOutputStream dos = hbw.startWriting(BlockType.DATA);
@@ -329,7 +329,7 @@ public class TestChecksum {
                             .withHBaseCheckSum(true)
                             .withBytesPerCheckSum(bytesPerChecksum)
                             .build();
-        HFileBlock.Writer hbw = new HFileBlock.Writer(null,
+        HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null,
            meta);
 
         // write one block. The block has data
