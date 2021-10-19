@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import static org.apache.hadoop.hbase.regionserver.StripeStoreConfig.MAX_FILES_KEY;
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
 import static org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY;
+import static org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -409,6 +410,7 @@ public class TestStripeCompactionPolicy {
   public void testSplitOffStripeDropDeletes() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(StripeStoreConfig.MIN_FILES_KEY, 2);
+    conf.setLong(HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY, 0);
     StripeCompactionPolicy policy = createPolicy(conf);
     Long[] toSplit = new Long[] { defaultSplitSize / 2, defaultSplitSize / 2 };
     Long[] noSplit = new Long[] { 1L };
@@ -417,6 +419,32 @@ public class TestStripeCompactionPolicy {
     // Verify the deletes can be dropped if there are no L0 files.
     StripeCompactionPolicy.StripeInformationProvider si =
         createStripesWithSizes(0, 0, noSplit, toSplit);
+    verifyWholeStripesCompaction(policy, si, 1, 1,    true, null, splitTargetSize);
+    // But cannot be dropped if there are.
+    si = createStripesWithSizes(2, 2, noSplit, toSplit);
+    verifyWholeStripesCompaction(policy, si, 1, 1,    false, null, splitTargetSize);
+  }
+
+  @Test
+  public void testSingleStripeCompactWithMinSizeLimit() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setInt(StripeStoreConfig.MIN_FILES_KEY, 2);
+    conf.setLong(HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY, defaultSplitSize * 2);
+    StripeCompactionPolicy policy = createPolicy(conf, defaultSplitSize, defaultSplitCount,
+      defaultInitialCount, false, 4);
+    Long[] toSplit = new Long[] { defaultSplitSize / 2, defaultSplitSize / 2 };
+    Long[] noSplit = new Long[] { 1L };
+    long splitTargetSize = (long)(defaultSplitSize / defaultSplitCount);
+
+    // Can not compact because file size is smaller than min compact size
+    StripeCompactionPolicy.StripeInformationProvider si =
+      createStripesWithSizes(0, 0, noSplit, toSplit);
+    assertFalse(policy.needsSingleStripeCompaction(si));
+
+    // Can compact by setting min compact size lower
+    conf.setLong(HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY, 0);
+    policy = createPolicy(conf);
+    assertTrue(policy.needsSingleStripeCompaction(si));
     verifyWholeStripesCompaction(policy, si, 1, 1,    true, null, splitTargetSize);
     // But cannot be dropped if there are.
     si = createStripesWithSizes(2, 2, noSplit, toSplit);
@@ -552,6 +580,20 @@ public class TestStripeCompactionPolicy {
     StoreConfigInformation sci = mock(StoreConfigInformation.class);
     when(sci.getStoreFileTtl()).thenReturn(hasTtl ? defaultTtl : Long.MAX_VALUE);
     when(sci.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    StripeStoreConfig ssc = new StripeStoreConfig(conf, sci);
+    return new StripeCompactionPolicy(conf, sci, ssc);
+  }
+
+  private static StripeCompactionPolicy createPolicy(Configuration conf, long splitSize,
+      float splitCount, int initialCount, boolean hasTtl, long blocking)
+    throws Exception {
+    conf.setLong(StripeStoreConfig.SIZE_TO_SPLIT_KEY, splitSize);
+    conf.setFloat(StripeStoreConfig.SPLIT_PARTS_KEY, splitCount);
+    conf.setInt(StripeStoreConfig.INITIAL_STRIPE_COUNT_KEY, initialCount);
+    StoreConfigInformation sci = mock(StoreConfigInformation.class);
+    when(sci.getStoreFileTtl()).thenReturn(hasTtl ? defaultTtl : Long.MAX_VALUE);
+    when(sci.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    when(sci.getBlockingFileCount()).thenReturn(blocking);
     StripeStoreConfig ssc = new StripeStoreConfig(conf, sci);
     return new StripeCompactionPolicy(conf, sci, ssc);
   }

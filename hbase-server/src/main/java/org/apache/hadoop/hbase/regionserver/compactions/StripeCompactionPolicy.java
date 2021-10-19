@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
@@ -165,8 +164,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
   public boolean needsCompactions(StripeInformationProvider si, List<HStoreFile> filesCompacting) {
     // Approximation on whether we need compaction.
     return filesCompacting.isEmpty()
-        && (StoreUtils.hasReferences(si.getStorefiles())
-          || (si.getLevel0Files().size() >= this.config.getLevel0MinFiles())
+        && (StoreUtils.hasReferences(si.getStorefiles()) || needsL0Compaction(si)
           || needsSingleStripeCompaction(si) || hasExpiredStripes(si));
   }
 
@@ -187,10 +185,22 @@ public class StripeCompactionPolicy extends CompactionPolicy {
    */
   protected boolean needsSingleStripeCompaction(StripeInformationProvider si) {
     int minFiles = this.config.getStripeCompactMinFiles();
+    long minSize = this.config.getStripeCompactMinSize();
     for (List<HStoreFile> stripe : si.getStripes()) {
-      if (stripe.size() >= minFiles) return true;
+      if (stripe.size() >= minFiles && (getTotalFileSize(stripe) >= minSize
+        || si.getStorefiles().size() >= storeConfigInfo.getBlockingFileCount())) {
+        return true;
+      }
     }
     return false;
+  }
+
+  protected boolean needsL0Compaction(StripeInformationProvider si) {
+    int minFiles = this.config.getLevel0MinFiles();
+    long minSize = this.config.getLevel0CompactMinSize();
+    return si.getLevel0Files().size() >= minFiles && (
+      getTotalFileSize(si.getLevel0Files()) >= minSize
+        || si.getStorefiles().size() >= storeConfigInfo.getBlockingFileCount());
   }
 
   protected StripeCompactionRequest selectSingleStripeCompaction(StripeInformationProvider si,

@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,11 +66,20 @@ public class StripeStoreConfig {
   public static final String MAX_REGION_SPLIT_IMBALANCE_KEY =
       "hbase.store.stripe.region.split.max.imbalance";
 
+  /** Min size of stripe compaction*/
+  public static final String HBASE_HSTORE_STRIPE_COMPACTION_MIN_SIZE_KEY =
+    "hbase.hstore.stripe.compaction.min.size";
+  /** Min size of L0 compaction*/
+  public static final String HBASE_HSTORE_L0_COMPACTION_MIN_SIZE_KEY =
+    "hbase.hstore.l0.compaction.min.size";
+
 
   private final float maxRegionSplitImbalance;
   private final int level0CompactMinFiles;
+  private final long level0CompactMinSize;
   private final int stripeCompactMinFiles;
   private final int stripeCompactMaxFiles;
+  private final long stripeCompactMinSize;
 
   private final int initialCount;
   private final long sizeToSplitAt;
@@ -86,8 +96,14 @@ public class StripeStoreConfig {
     this.stripeCompactMinFiles = config.getInt(MIN_FILES_KEY, Math.max(minMinFiles, minFiles));
     this.stripeCompactMaxFiles = config.getInt(MAX_FILES_KEY,
         config.getInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY, 10));
-    this.maxRegionSplitImbalance = getFloat(config, MAX_REGION_SPLIT_IMBALANCE_KEY, 1.5f, true);
+    long storeCompactMinSize = config.getLong(HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY,
+      sci.getMemStoreFlushSize());
+    this.stripeCompactMinSize = config.getLong(HBASE_HSTORE_STRIPE_COMPACTION_MIN_SIZE_KEY,
+      storeCompactMinSize);
+    this.level0CompactMinSize = config.getLong(HBASE_HSTORE_L0_COMPACTION_MIN_SIZE_KEY,
+      storeCompactMinSize);
 
+    this.maxRegionSplitImbalance = getFloat(config, MAX_REGION_SPLIT_IMBALANCE_KEY, 1.5f, true);
     float splitPartCount = getFloat(config, SPLIT_PARTS_KEY, 2f, true);
     if (Math.abs(splitPartCount - 1.0) < EPSILON) {
       LOG.error("Split part count cannot be 1 (" + splitPartCount + "), using the default");
@@ -138,6 +154,14 @@ public class StripeStoreConfig {
 
   public int getStripeCompactMaxFiles() {
     return stripeCompactMaxFiles;
+  }
+
+  public long getStripeCompactMinSize() {
+    return stripeCompactMinSize;
+  }
+
+  public long getLevel0CompactMinSize() {
+    return level0CompactMinSize;
   }
 
   public boolean isUsingL0Flush() {
