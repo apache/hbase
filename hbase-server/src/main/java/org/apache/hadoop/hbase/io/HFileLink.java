@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.mob.MobConstants;
-import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -323,8 +322,8 @@ public class HFileLink extends FileLink {
    * @param dstFamilyPath - Destination path (table/region/cf/)
    * @param hfileRegionInfo - Linked HFile Region Info
    * @param hfileName - Linked HFile name
-   * @return true if the file is created, otherwise the file exists.
-   * @throws IOException on file or parent directory creation failure
+   * @return the file link name.
+   * @throws IOException on file or parent directory creation failure.
    */
   public static String create(final Configuration conf, final FileSystem fs,
       final Path dstFamilyPath, final RegionInfo hfileRegionInfo,
@@ -344,8 +343,8 @@ public class HFileLink extends FileLink {
    * @param hfileRegionInfo - Linked HFile Region Info
    * @param hfileName - Linked HFile name
    * @param createBackRef - Whether back reference should be created. Defaults to true.
-   * @return true if the file is created, otherwise the file exists.
-   * @throws IOException on file or parent directory creation failure
+   * @return the file link name.
+   * @throws IOException on file or parent directory creation failure.
    */
   public static String create(final Configuration conf, final FileSystem fs,
       final Path dstFamilyPath, final RegionInfo hfileRegionInfo,
@@ -367,8 +366,8 @@ public class HFileLink extends FileLink {
    * @param linkedTable - Linked Table Name
    * @param linkedRegion - Linked Region Name
    * @param hfileName - Linked HFile name
-   * @return true if the file is created, otherwise the file exists.
-   * @throws IOException on file or parent directory creation failure
+   * @return the file link name.
+   * @throws IOException on file or parent directory creation failure.
    */
   public static String create(final Configuration conf, final FileSystem fs,
       final Path dstFamilyPath, final TableName linkedTable, final String linkedRegion,
@@ -389,8 +388,8 @@ public class HFileLink extends FileLink {
    * @param linkedRegion - Linked Region Name
    * @param hfileName - Linked HFile name
    * @param createBackRef - Whether back reference should be created. Defaults to true.
-   * @return true if the file is created, otherwise the file exists.
-   * @throws IOException on file or parent directory creation failure
+   * @return the file link name.
+   * @throws IOException on file or parent directory creation failure.
    */
   public static String create(final Configuration conf, final FileSystem fs,
       final Path dstFamilyPath, final TableName linkedTable, final String linkedRegion,
@@ -431,7 +430,8 @@ public class HFileLink extends FileLink {
       }
       throw e;
     }
-    throw new IOException("File link=" + name + " already exists under " + dstFamilyPath + " folder.");
+    throw new IOException("File link=" + name + " already exists under " +
+      dstFamilyPath + " folder.");
   }
 
   /**
@@ -445,8 +445,8 @@ public class HFileLink extends FileLink {
    * @param dstFamilyPath - Destination path (table/region/cf/)
    * @param hfileLinkName - HFileLink name (it contains hfile-region-table)
    * @param createBackRef - Whether back reference should be created. Defaults to true.
-   * @return true if the file is created, otherwise the file exists.
-   * @throws IOException on file or parent directory creation failure
+   * @return the file link name.
+   * @throws IOException on file or parent directory creation failure.
    */
   public static String createFromHFileLink(final Configuration conf, final FileSystem fs,
       final Path dstFamilyPath, final String hfileLinkName, final boolean createBackRef)

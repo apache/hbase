@@ -687,8 +687,9 @@ public class RestoreSnapshotHelper {
    * @param regionDir {@link Path} cloned dir
    * @param snapshotRegionInfo
    */
-  private void cloneRegion(final RegionInfo newRegionInfo, final Path regionDir, final RegionInfo snapshotRegionInfo,
-      final SnapshotRegionManifest manifest) throws IOException {
+  private void cloneRegion(final RegionInfo newRegionInfo, final Path regionDir,
+      final RegionInfo snapshotRegionInfo, final SnapshotRegionManifest manifest)
+        throws IOException {
     final String tableName = tableDesc.getTableName().getNameAsString();
     final String snapshotName = snapshotDesc.getName();
     for (SnapshotRegionManifest.FamilyFiles familyFiles: manifest.getFamilyFilesList()) {
@@ -710,19 +711,21 @@ public class RestoreSnapshotHelper {
           clonedFiles.add(new StoreFileInfo(conf, fs, new Path(familyDir, file), true));
         }
       }
-      Path regionPath = new Path(tableDir, newRegionInfo.getEncodedName());
-      HRegionFileSystem regionFS = (fs.exists(regionPath)) ?
-        HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, newRegionInfo, false) :
-        HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, newRegionInfo);
+      //we don't need to track regions under mobdir
+      if (!MobUtils.isMobRegionInfo(newRegionInfo)) {
+        Path regionPath = new Path(tableDir, newRegionInfo.getEncodedName());
+        HRegionFileSystem regionFS = (fs.exists(regionPath)) ?
+          HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, newRegionInfo, false) :
+          HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, newRegionInfo);
 
-      SnapshotStoreFileTracker tracker =
-        (SnapshotStoreFileTracker) StoreFileTrackerFactory.create(conf, true,
-          StoreContext.getBuilder().withFamilyStoreDirectoryPath(familyDir).
+        SnapshotStoreFileTracker tracker = (SnapshotStoreFileTracker) StoreFileTrackerFactory
+          .create(conf, true, StoreContext.getBuilder().withFamilyStoreDirectoryPath(familyDir).
             withRegionFileSystem(regionFS).build());
-      //since we are adding the reference files for the first time,
-      // we do tracker.load, rather than add
-      tracker.getSourceTracker().setReferenceFiles(clonedFiles);
-      tracker.load();
+        //since we are adding the reference files for the first time,
+        // we do tracker.load, rather than add
+        tracker.getSourceTracker().setReferenceFiles(clonedFiles);
+        tracker.load();
+      }
     }
 
   }

@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Extends MigrationStoreFileTracker for Snapshot restore/clone specific case.
@@ -64,8 +64,8 @@ public class SnapshotStoreFileTracker extends MigrationStoreFileTracker {
       this.files = files;
     }
     /**
-     * Overrides <code>MigrationStoreFileTracker</code> to simply call <code>set</code> on destination
-     * SFT implementation, passing the list of reference files.
+     * Overrides <code>MigrationStoreFileTracker</code> to simply call <code>set</code>
+     * on destination SFT implementation, passing the list of reference files.
      * @return
      * @throws IOException
      */

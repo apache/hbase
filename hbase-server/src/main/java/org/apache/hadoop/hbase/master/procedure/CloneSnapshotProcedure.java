@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure.CreateHdfsRegions;
-import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -456,7 +455,8 @@ public class CloneSnapshotProcedure
 
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
-    final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), tableDescriptor.getTableName());
+    final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(),
+      tableDescriptor.getTableName());
     if (CommonFSUtils.isExists(mfs.getFileSystem(), tableDir)) {
       // if the region dirs exist, will cause exception and unlimited retry (see HBASE-24546)
       LOG.warn("temp table dir already exists on disk: {}, will be deleted.", tableDir);
