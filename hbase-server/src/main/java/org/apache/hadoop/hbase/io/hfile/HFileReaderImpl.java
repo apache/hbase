@@ -1637,7 +1637,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    * {@link HFileScanner#seekTo(Cell)} to position an start the read. There is
    * nothing to clean up in a Scanner. Letting go of your references to the
    * scanner is sufficient. NOTE: Do not use this overload of getScanner for
-   * compactions. See {@link #getScanner(boolean, boolean, boolean)}
+   * compactions. See {@link #getScanner(Configuration, boolean, boolean, boolean)}
    *
    * @param conf Store configuration.
    * @param cacheBlocks True if we should cache blocks read in by this scanner.

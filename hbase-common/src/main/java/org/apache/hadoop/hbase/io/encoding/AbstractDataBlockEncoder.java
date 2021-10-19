@@ -37,7 +37,8 @@ public abstract class AbstractDataBlockEncoder implements DataBlockEncoder {
   }
 
   @Override
-  public HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf, HFileContext meta) {
+  public HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf,
+      HFileContext meta) {
     return new HFileBlockDefaultDecodingContext(conf, meta);
   }
 

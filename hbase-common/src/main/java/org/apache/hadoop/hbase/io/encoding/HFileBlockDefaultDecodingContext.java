@@ -97,7 +97,7 @@ public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingConte
           decompressor = compression.getDecompressor();
           // Some algorithms don't return decompressors and accept null as a valid parameter for
           // same when creating decompression streams. We can ignore these cases wrt reinit.
-          if (decompressor != null && decompressor instanceof CanReinit) {
+          if (decompressor instanceof CanReinit) {
             ((CanReinit)decompressor).reinit(conf);
           }
           try (InputStream is =

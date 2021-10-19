@@ -75,7 +75,6 @@ public class EncodedDataBlock {
    * @param encoding encoding type used
    * @param rawKVs raw KVs
    * @param meta hfile context
-   * @param conf store configuration
    */
   public EncodedDataBlock(Configuration conf, DataBlockEncoder dataBlockEncoder,
       DataBlockEncoding encoding, byte[] rawKVs, HFileContext meta) {
