@@ -1347,7 +1347,7 @@ public class HFileBlock implements Cacheable {
     HFileBlockDecodingContext getDefaultBlockDecodingContext();
 
     void setIncludesMemStoreTS(boolean includesMemstoreTS);
-    void setDataBlockEncoder(HFileDataBlockEncoder encoder);
+    void setDataBlockEncoder(HFileDataBlockEncoder encoder, Configuration conf);
 
     /**
      * To close the stream's socket. Note: This can be concurrently called from multiple threads and
@@ -1415,7 +1415,7 @@ public class HFileBlock implements Cacheable {
     private final Lock streamLock = new ReentrantLock();
 
     FSReaderImpl(ReaderContext readerContext, HFileContext fileContext,
-        ByteBuffAllocator allocator) throws IOException {
+        ByteBuffAllocator allocator, Configuration conf) throws IOException {
       this.fileSize = readerContext.getFileSize();
       this.hfs = readerContext.getFileSystem();
       if (readerContext.getFilePath() != null) {
@@ -1428,7 +1428,7 @@ public class HFileBlock implements Cacheable {
       this.streamWrapper = readerContext.getInputStreamWrapper();
       // Older versions of HBase didn't support checksum.
       this.streamWrapper.prepareForBlockReader(!fileContext.isUseHBaseChecksum());
-      defaultDecodingCtx = new HFileBlockDefaultDecodingContext(fileContext);
+      defaultDecodingCtx = new HFileBlockDefaultDecodingContext(conf, fileContext);
       encodedBlockDecodingCtx = defaultDecodingCtx;
     }
 
@@ -1792,8 +1792,8 @@ public class HFileBlock implements Cacheable {
     }
 
     @Override
-    public void setDataBlockEncoder(HFileDataBlockEncoder encoder) {
-      encodedBlockDecodingCtx = encoder.newDataBlockDecodingContext(this.fileContext);
+    public void setDataBlockEncoder(HFileDataBlockEncoder encoder, Configuration conf) {
+      encodedBlockDecodingCtx = encoder.newDataBlockDecodingContext(conf, fileContext);
     }
 
     @Override

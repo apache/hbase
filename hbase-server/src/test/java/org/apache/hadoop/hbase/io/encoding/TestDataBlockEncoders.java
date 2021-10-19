@@ -210,7 +210,7 @@ public class TestDataBlockEncoders {
                           .withCompression(Compression.Algorithm.NONE)
                           .build();
       DataBlockEncoder.EncodedSeeker seeker =
-        encoder.createSeeker(encoder.newDataBlockDecodingContext(meta));
+        encoder.createSeeker(encoder.newDataBlockDecodingContext(conf, meta));
       seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
       encodedSeekers.add(seeker);
     }
@@ -283,7 +283,7 @@ public class TestDataBlockEncoders {
                           .withCompression(Compression.Algorithm.NONE)
                           .build();
       DataBlockEncoder.EncodedSeeker seeker =
-        encoder.createSeeker(encoder.newDataBlockDecodingContext(meta));
+        encoder.createSeeker(encoder.newDataBlockDecodingContext(conf, meta));
       seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
       int i = 0;
       do {
@@ -345,7 +345,7 @@ public class TestDataBlockEncoders {
       new HFileContextBuilder().withHBaseCheckSum(false).withIncludesMvcc(includesMemstoreTS)
         .withIncludesTags(includesTags).withCompression(Compression.Algorithm.NONE).build();
     DataBlockEncoder.EncodedSeeker seeker =
-      encoder.createSeeker(encoder.newDataBlockDecodingContext(meta));
+      encoder.createSeeker(encoder.newDataBlockDecodingContext(conf, meta));
     seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
     Cell cell = seeker.getCell();
     Assert.assertEquals(expectedKV.getLength(), ((KeyValue) cell).getLength());
@@ -444,7 +444,7 @@ public class TestDataBlockEncoders {
     HFileContext meta = new HFileContextBuilder().withHBaseCheckSum(false)
         .withIncludesMvcc(includesMemstoreTS).withIncludesTags(includesTags)
         .withCompression(Compression.Algorithm.NONE).build();
-    actualDataset = encoder.decodeKeyValues(dis, encoder.newDataBlockDecodingContext(meta));
+    actualDataset = encoder.decodeKeyValues(dis, encoder.newDataBlockDecodingContext(conf, meta));
     actualDataset.rewind();
 
     // this is because in case of prefix tree the decoded stream will not have

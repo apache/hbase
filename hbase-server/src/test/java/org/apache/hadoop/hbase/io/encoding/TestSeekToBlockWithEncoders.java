@@ -56,8 +56,8 @@ public class TestSeekToBlockWithEncoders {
       HBaseClassTestRule.forClass(TestSeekToBlockWithEncoders.class);
 
   static final byte[] HFILEBLOCK_DUMMY_HEADER = new byte[HConstants.HFILEBLOCK_HEADER_SIZE];
-  private final Configuration conf;
   private final boolean useOffheapData;
+  private final Configuration conf = HBaseConfiguration.create();
 
   @Parameters
   public static Collection<Object[]> parameters() {
@@ -66,7 +66,6 @@ public class TestSeekToBlockWithEncoders {
 
   public TestSeekToBlockWithEncoders(boolean useOffheapData) {
     this.useOffheapData = useOffheapData;
-    this.conf = HBaseConfiguration.create();
   }
 
   /**
@@ -295,7 +294,7 @@ public class TestSeekToBlockWithEncoders {
       ByteBuffer encodedBuffer = TestDataBlockEncoders.encodeKeyValues(encoding, kvs,
         encodingContext, this.useOffheapData);
       DataBlockEncoder.EncodedSeeker seeker =
-        encoder.createSeeker(encoder.newDataBlockDecodingContext(meta));
+        encoder.createSeeker(encoder.newDataBlockDecodingContext(conf, meta));
       seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
       encodedSeekers.add(seeker);
     }

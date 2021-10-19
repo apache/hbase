@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.compress.zstd;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.compress.CanReinit;
 import org.apache.hadoop.hbase.io.compress.CompressionUtil;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -30,7 +31,7 @@ import com.github.luben.zstd.Zstd;
  * Hadoop compressor glue for zstd-jni.
  */
 @InterfaceAudience.Private
-public class ZstdCompressor implements Compressor {
+public class ZstdCompressor implements CanReinit, Compressor {
 
   protected static final Logger LOG = LoggerFactory.getLogger(ZstdCompressor.class);
   protected int level, bufferSize;
@@ -38,7 +39,7 @@ public class ZstdCompressor implements Compressor {
   protected boolean finish, finished;
   protected long bytesRead, bytesWritten;
 
-  ZstdCompressor(int level, int bufferSize) {
+  ZstdCompressor(final int level, final int bufferSize) {
     this.level = level;
     this.bufferSize = bufferSize;
     this.inBuf = ByteBuffer.allocateDirect(bufferSize);
@@ -47,7 +48,7 @@ public class ZstdCompressor implements Compressor {
   }
 
   @Override
-  public int compress(byte[] b, int off, int len) throws IOException {
+  public int compress(final byte[] b, final int off, final int len) throws IOException {
     // If we have previously compressed our input and still have some buffered bytes
     // remaining, provide them to the caller.
     if (outBuf.hasRemaining()) {
@@ -71,7 +72,7 @@ public class ZstdCompressor implements Compressor {
         } else {
           outBuf.clear();
         }
-        int written = Zstd.compress(outBuf, inBuf, level, true);
+        int written = Zstd.compress(outBuf, inBuf, level);
         bytesWritten += written;
         inBuf.clear();
         LOG.trace("compress: compressed {} -> {} (level {})", uncompressed, written, level);
@@ -125,7 +126,7 @@ public class ZstdCompressor implements Compressor {
   }
 
   @Override
-  public void reinit(Configuration conf) {
+  public void reinit(final Configuration conf) {
     LOG.trace("reinit");
     if (conf != null) {
       // Level might have changed
@@ -154,12 +155,12 @@ public class ZstdCompressor implements Compressor {
   }
 
   @Override
-  public void setDictionary(byte[] b, int off, int len) {
+  public void setDictionary(final byte[] b, final int off, final int len) {
     throw new UnsupportedOperationException("setDictionary is not supported");
   }
 
   @Override
-  public void setInput(byte[] b, int off, int len) {
+  public void setInput(final byte[] b, final int off, final int len) {
     LOG.trace("setInput: off={} len={}", off, len);
     if (inBuf.remaining() < len) {
       // Get a new buffer that can accomodate the accumulated input plus the additional
@@ -179,7 +180,7 @@ public class ZstdCompressor implements Compressor {
 
   // Package private
 
-  int maxCompressedLength(int len) {
+  int maxCompressedLength(final int len) {
     return (int) Zstd.compressBound(len);
   }
 

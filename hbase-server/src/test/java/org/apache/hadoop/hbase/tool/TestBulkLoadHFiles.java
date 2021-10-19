@@ -611,7 +611,7 @@ public class TestBulkLoadHFiles {
     Configuration conf = util.getConfiguration();
     HFile.Reader reader =
       HFile.createReader(p.getFileSystem(conf), p, new CacheConfig(conf), true, conf);
-    HFileScanner scanner = reader.getScanner(false, false);
+    HFileScanner scanner = reader.getScanner(conf, false, false);
     scanner.seekTo();
     int count = 0;
     do {

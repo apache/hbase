@@ -190,7 +190,7 @@ public class TestHFileSeek extends TestCase {
     Reader reader = TestHFile.createReaderFromStream(context, new CacheConfig(conf), conf);
     KeySampler kSampler = new KeySampler(rng, ((KeyValue) reader.getFirstKey().get()).getKey(),
         ((KeyValue) reader.getLastKey().get()).getKey(), keyLenGen);
-    HFileScanner scanner = reader.getScanner(false, USE_PREAD);
+    HFileScanner scanner = reader.getScanner(conf, false, USE_PREAD);
     BytesWritable key = new BytesWritable();
     timer.reset();
     timer.start();

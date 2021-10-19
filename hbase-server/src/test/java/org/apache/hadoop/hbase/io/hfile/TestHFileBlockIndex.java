@@ -213,7 +213,7 @@ public class TestHFileBlockIndex {
                         .build();
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, path).build();
     HFileBlock.FSReader blockReader = new HFileBlock.FSReaderImpl(context, meta,
-        ByteBuffAllocator.HEAP);
+        ByteBuffAllocator.HEAP, conf);
 
     BlockReaderWrapper brw = new BlockReaderWrapper(blockReader);
     HFileBlockIndex.BlockIndexReader indexReader =
@@ -650,7 +650,7 @@ public class TestHFileBlockIndex {
       LOG.info("Last key: " + Bytes.toStringBinary(keys[NUM_KV - 1]));
 
       for (boolean pread : new boolean[] { false, true }) {
-        HFileScanner scanner = reader.getScanner(true, pread);
+        HFileScanner scanner = reader.getScanner(conf, true, pread);
         for (int i = 0; i < NUM_KV; ++i) {
           checkSeekTo(keys, scanner, i);
           checkKeyValue("i=" + i, keys[i], values[i],
@@ -779,7 +779,7 @@ public class TestHFileBlockIndex {
 
     HFile.Reader reader = HFile.createReader(fs, hfPath, cacheConf, true, conf);
     // Scanner doesn't do Cells yet.  Fix.
-    HFileScanner scanner = reader.getScanner(true, true);
+    HFileScanner scanner = reader.getScanner(conf, true, true);
     for (int i = 0; i < keys.size(); ++i) {
       scanner.seekTo(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
         .setRow(keys.get(i)).setFamily(HConstants.EMPTY_BYTE_ARRAY)

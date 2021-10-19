@@ -119,6 +119,7 @@ public class DataBlockEncodingTool {
   private static int benchmarkNTimes = DEFAULT_BENCHMARK_N_TIMES;
   private static int benchmarkNOmit = DEFAULT_BENCHMARK_N_OMIT;
 
+  private final Configuration conf;
   private List<EncodedDataBlock> codecs = new ArrayList<>();
   private long totalPrefixLength = 0;
   private long totalKeyLength = 0;
@@ -129,7 +130,6 @@ public class DataBlockEncodingTool {
   private byte[] rawKVs;
   private boolean useHBaseChecksum = false;
 
-  private final Configuration conf;
   private final String compressionAlgorithmName;
   private final Algorithm compressionAlgorithm;
   private final Compressor compressor;
@@ -158,8 +158,8 @@ public class DataBlockEncodingTool {
    * @param compressionAlgorithmName What kind of algorithm should be used
    *                                 as baseline for comparison (e.g. lzo, gz).
    */
-  public DataBlockEncodingTool(String compressionAlgorithmName) {
-    this.conf = HBaseConfiguration.create();
+  public DataBlockEncodingTool(Configuration conf, String compressionAlgorithmName) {
+    this.conf = conf;
     this.compressionAlgorithmName = compressionAlgorithmName;
     this.compressionAlgorithm = Compression.getCompressionAlgorithmByName(
         compressionAlgorithmName);
@@ -621,7 +621,7 @@ public class DataBlockEncodingTool {
         false, hsf.getMaxMemStoreTS(), 0, false);
     USE_TAG = reader.getHFileReader().getFileContext().isIncludesTags();
     // run the utilities
-    DataBlockEncodingTool comp = new DataBlockEncodingTool(compressionName);
+    DataBlockEncodingTool comp = new DataBlockEncodingTool(conf, compressionName);
     int majorVersion = reader.getHFileVersion();
     comp.useHBaseChecksum = majorVersion > 2 ||
       (majorVersion == 2 &&

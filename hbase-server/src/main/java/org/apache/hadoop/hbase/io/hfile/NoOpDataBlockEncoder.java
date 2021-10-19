@@ -88,8 +88,9 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
   }
 
   @Override
-  public HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext meta) {
-    return new HFileBlockDefaultDecodingContext(meta);
+  public HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf,
+      HFileContext meta) {
+    return new HFileBlockDefaultDecodingContext(conf, meta);
   }
 
   @Override

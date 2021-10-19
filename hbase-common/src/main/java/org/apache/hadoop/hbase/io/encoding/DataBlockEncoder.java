@@ -111,11 +111,13 @@ public interface DataBlockEncoder {
    * Creates an encoder specific decoding context, which will prepare the data
    * before actual decoding
    *
+   * @param conf
+   *          store configuration
    * @param meta
    *          HFile meta data        
    * @return a newly created decoding context
    */
-  HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext meta);
+  HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf, HFileContext meta);
 
   /**
    * An interface which enable to seek while underlying data is encoded.

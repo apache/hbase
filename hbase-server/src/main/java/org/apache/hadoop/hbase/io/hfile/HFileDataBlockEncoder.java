@@ -110,8 +110,10 @@ public interface HFileDataBlockEncoder {
    * decoding context should also do decompression if compressionAlgorithm
    * is valid.
    *
+   * @param conf store configuration
    * @param fileContext - HFile meta data
    * @return a new {@link HFileBlockDecodingContext} object
    */
-  HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext fileContext);
+  HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf,
+      HFileContext fileContext);
 }

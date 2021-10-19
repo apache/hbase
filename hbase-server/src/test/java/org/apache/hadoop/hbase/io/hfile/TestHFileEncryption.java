@@ -162,7 +162,7 @@ public class TestHFileEncryption {
           .withFileSize(totalSize).build();
       try {
         HFileBlock.FSReaderImpl hbr = new HFileBlock.FSReaderImpl(context, fileContext,
-            ByteBuffAllocator.HEAP);
+            ByteBuffAllocator.HEAP, TEST_UTIL.getConfiguration());
         long pos = 0;
         for (int i = 0; i < blocks; i++) {
           pos += readAndVerifyBlock(pos, fileContext, hbr, blockSizes[i]);
@@ -254,7 +254,7 @@ public class TestHFileEncryption {
         try {
           FixedFileTrailer trailer = reader.getTrailer();
           assertNotNull(trailer.getEncryptionKey());
-          scanner = reader.getScanner(false, false);
+          scanner = reader.getScanner(conf, false, false);
           assertTrue("Initial seekTo failed", scanner.seekTo());
           do {
             Cell kv = scanner.getCell();
@@ -273,7 +273,7 @@ public class TestHFileEncryption {
         LOG.info("Random seeking with " + fileContext);
         reader = HFile.createReader(fs, path, cacheConf, true, conf);
         try {
-          scanner = reader.getScanner(false, true);
+          scanner = reader.getScanner(conf, false, true);
           assertTrue("Initial seekTo failed", scanner.seekTo());
           for (i = 0; i < 100; i++) {
             KeyValue kv = testKvs.get(RNG.nextInt(testKvs.size()));

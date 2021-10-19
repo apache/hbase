@@ -119,12 +119,13 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   }
 
   @Override
-  public HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext fileContext) {
+  public HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf,
+      HFileContext fileContext) {
     DataBlockEncoder encoder = encoding.getEncoder();
     if (encoder != null) {
-      return encoder.newDataBlockDecodingContext(fileContext);
+      return encoder.newDataBlockDecodingContext(conf, fileContext);
     }
-    return new HFileBlockDefaultDecodingContext(fileContext);
+    return new HFileBlockDefaultDecodingContext(conf, fileContext);
   }
 
   @Override

@@ -136,7 +136,7 @@ public class HFileProcedurePrettyPrinter extends AbstractHBaseTool {
     out.println("Scanning -> " + file);
     FileSystem fs = file.getFileSystem(conf);
     try (HFile.Reader reader = HFile.createReader(fs, file, CacheConfig.DISABLED, true, conf);
-      HFileScanner scanner = reader.getScanner(false, false, false)) {
+      HFileScanner scanner = reader.getScanner(conf, false, false, false)) {
       if (procId != null) {
         if (scanner
           .seekTo(PrivateCellUtil.createFirstOnRow(Bytes.toBytes(procId.longValue()))) != -1) {

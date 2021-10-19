@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -105,7 +106,7 @@ public class TestChecksum {
         .withFilePath(path)
         .build();
     HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context,
-        meta, ByteBuffAllocator.HEAP);
+        meta, ByteBuffAllocator.HEAP, TEST_UTIL.getConfiguration());
     HFileBlock b = hbr.readBlockData(0, -1, false, false, true);
     assertTrue(!b.isSharedMem());
     assertEquals(b.getChecksumType(), ChecksumType.getDefaultChecksumType().getCode());
@@ -158,7 +159,7 @@ public class TestChecksum {
           .withFilePath(path)
           .build();
       HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context,
-          meta, ByteBuffAllocator.HEAP);
+          meta, ByteBuffAllocator.HEAP, TEST_UTIL.getConfiguration());
       HFileBlock b = hbr.readBlockData(0, -1, false, false, true);
       assertTrue(!b.isSharedMem());
 
@@ -234,7 +235,8 @@ public class TestChecksum {
            .withFileSystem(fs)
            .withFilePath(path)
            .build();
-        HFileBlock.FSReader hbr = new CorruptedFSReaderImpl(context, meta);
+        HFileBlock.FSReader hbr = new CorruptedFSReaderImpl(context, meta,
+          TEST_UTIL.getConfiguration());
         HFileBlock b = hbr.readBlockData(0, -1, pread, false, true);
         b.sanityCheck();
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
@@ -276,7 +278,8 @@ public class TestChecksum {
         // Now, use a completely new reader. Switch off hbase checksums in
         // the configuration. In this case, we should not detect
         // any retries within hbase.
-        HFileSystem newfs = new HFileSystem(TEST_UTIL.getConfiguration(), false);
+        Configuration conf = TEST_UTIL.getConfiguration();
+        HFileSystem newfs = new HFileSystem(conf, false);
         assertEquals(false, newfs.useHBaseChecksum());
         is = new FSDataInputStreamWrapper(newfs, path);
         context = new ReaderContextBuilder()
@@ -285,7 +288,7 @@ public class TestChecksum {
             .withFileSystem(newfs)
             .withFilePath(path)
             .build();
-        hbr = new CorruptedFSReaderImpl(context, meta);
+        hbr = new CorruptedFSReaderImpl(context, meta, conf);
         b = hbr.readBlockData(0, -1, pread, false, true);
         is.close();
         b.sanityCheck();
@@ -373,7 +376,8 @@ public class TestChecksum {
             .withFilePath(path)
             .build();
         HFileBlock.FSReader hbr =
-            new HFileBlock.FSReaderImpl(context, meta, ByteBuffAllocator.HEAP);
+            new HFileBlock.FSReaderImpl(context, meta, ByteBuffAllocator.HEAP,
+              TEST_UTIL.getConfiguration());
         HFileBlock b = hbr.readBlockData(0, -1, pread, false, true);
         assertTrue(b.getBufferReadOnly() instanceof SingleByteBuff);
         is.close();
@@ -413,8 +417,9 @@ public class TestChecksum {
      */
     boolean corruptDataStream = false;
 
-    public CorruptedFSReaderImpl(ReaderContext context, HFileContext meta) throws IOException {
-      super(context, meta, ByteBuffAllocator.HEAP);
+    public CorruptedFSReaderImpl(ReaderContext context, HFileContext meta, Configuration conf)
+        throws IOException {
+      super(context, meta, ByteBuffAllocator.HEAP, conf);
     }
 
     @Override

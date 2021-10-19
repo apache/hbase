@@ -392,7 +392,8 @@ public class TestHFileBlock {
             .withFilePath(path)
             .withFileSystem(fs)
             .build();
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context, meta, alloc);
+        HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context, meta, alloc,
+          TEST_UTIL.getConfiguration());
         HFileBlock b = hbr.readBlockData(0, -1, pread, false, true);
         is.close();
         assertEquals(0, HFile.getAndResetChecksumFailuresCount());
@@ -411,7 +412,8 @@ public class TestHFileBlock {
               .withFilePath(path)
               .withFileSystem(fs)
               .build();
-          hbr = new HFileBlock.FSReaderImpl(readerContext, meta, alloc);
+          hbr = new HFileBlock.FSReaderImpl(readerContext, meta, alloc,
+            TEST_UTIL.getConfiguration());
           b = hbr.readBlockData(0,
             2173 + HConstants.HFILEBLOCK_HEADER_SIZE + b.totalChecksumBytes(), pread, false, true);
           assertEquals(expected, b);
@@ -502,8 +504,8 @@ public class TestHFileBlock {
               .withFileSystem(fs)
               .build();
           HFileBlock.FSReaderImpl hbr =
-              new HFileBlock.FSReaderImpl(context, meta, alloc);
-          hbr.setDataBlockEncoder(dataBlockEncoder);
+              new HFileBlock.FSReaderImpl(context, meta, alloc, conf);
+          hbr.setDataBlockEncoder(dataBlockEncoder, conf);
           hbr.setIncludesMemStoreTS(includesMemstoreTS);
           HFileBlock blockFromHFile, blockUnpacked;
           int pos = 0;
@@ -611,6 +613,7 @@ public class TestHFileBlock {
 
   protected void testPreviousOffsetInternals() throws IOException {
     // TODO: parameterize these nested loops.
+    Configuration conf = TEST_UTIL.getConfiguration();
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : BOOLEAN_VALUES) {
         for (boolean cacheOnWrite : BOOLEAN_VALUES) {
@@ -637,8 +640,7 @@ public class TestHFileBlock {
               .withFilePath(path)
               .withFileSystem(fs)
               .build();
-          HFileBlock.FSReader hbr =
-              new HFileBlock.FSReaderImpl(context, meta, alloc);
+          HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context, meta, alloc, conf);
           long curOffset = 0;
           for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
             if (!pread) {
@@ -821,6 +823,7 @@ public class TestHFileBlock {
 
   protected void testConcurrentReadingInternals() throws IOException,
       InterruptedException, ExecutionException {
+    Configuration conf = TEST_UTIL.getConfiguration();
     for (Compression.Algorithm compressAlgo : COMPRESSION_ALGORITHMS) {
       Path path = new Path(TEST_UTIL.getDataTestDir(), "concurrent_reading");
       Random rand = defaultRandom();
@@ -842,7 +845,7 @@ public class TestHFileBlock {
           .withFilePath(path)
           .withFileSystem(fs)
           .build();
-      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context, meta, alloc);
+      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context, meta, alloc, conf);
 
       Executor exec = Executors.newFixedThreadPool(NUM_READER_THREADS);
       ExecutorCompletionService<Boolean> ecs = new ExecutorCompletionService<>(exec);
