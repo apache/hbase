@@ -244,7 +244,7 @@ public class DataBlockEncodingTool {
           .withCompression(Compression.Algorithm.NONE)
           .withIncludesMvcc(includesMemstoreTS)
           .withIncludesTags(USE_TAG).build();
-      codecs.add(new EncodedDataBlock(conf, d, encoding, rawKVs, meta ));
+      codecs.add(new EncodedDataBlock(conf, d, encoding, rawKVs, meta));
     }
   }
 

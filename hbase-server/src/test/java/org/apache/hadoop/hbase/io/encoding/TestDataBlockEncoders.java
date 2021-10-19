@@ -104,7 +104,7 @@ public class TestDataBlockEncoders {
     this.useOffheapData = useOffheapData;
   }
 
-  private HFileBlockEncodingContext getEncodingContext(Configuration conf, 
+  private HFileBlockEncodingContext getEncodingContext(Configuration conf,
       Compression.Algorithm algo, DataBlockEncoding encoding) {
     DataBlockEncoder encoder = encoding.getEncoder();
     HFileContext meta = new HFileContextBuilder()
@@ -339,11 +339,11 @@ public class TestDataBlockEncoders {
     kvList.add(expectedKV);
     DataBlockEncoding encoding = DataBlockEncoding.ROW_INDEX_V1;
     DataBlockEncoder encoder = encoding.getEncoder();
-    ByteBuffer encodedBuffer =
-        encodeKeyValues(encoding, kvList, getEncodingContext(conf, Algorithm.NONE, encoding), false);
+    ByteBuffer encodedBuffer = encodeKeyValues(encoding, kvList,
+      getEncodingContext(conf, Algorithm.NONE, encoding), false);
     HFileContext meta =
-        new HFileContextBuilder().withHBaseCheckSum(false).withIncludesMvcc(includesMemstoreTS)
-            .withIncludesTags(includesTags).withCompression(Compression.Algorithm.NONE).build();
+      new HFileContextBuilder().withHBaseCheckSum(false).withIncludesMvcc(includesMemstoreTS)
+        .withIncludesTags(includesTags).withCompression(Compression.Algorithm.NONE).build();
     DataBlockEncoder.EncodedSeeker seeker =
       encoder.createSeeker(encoder.newDataBlockDecodingContext(meta));
     seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
