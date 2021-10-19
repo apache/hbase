@@ -82,7 +82,7 @@ public class DictionaryCache {
                   LOG.info("Loaded dictionary from {} (size {})", s, bytes.length);
                   return bytes;
                 }
-            });
+              });
         }
       }
     }
