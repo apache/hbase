@@ -103,7 +103,7 @@ public class DictionaryCache {
       return CACHE.get(path);
     } catch (ExecutionException e) {
       throw new RuntimeException(e);
-    }    
+    }
   }
 
 }
