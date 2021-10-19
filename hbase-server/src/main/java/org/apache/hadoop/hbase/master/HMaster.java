@@ -370,7 +370,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   private HbckChore hbckChore;
   CatalogJanitor catalogJanitorChore;
-  private DirScanPool cleanerPool;
+  // Threadpool for scanning the archive directory, used by the HFileCleaner
+  private DirScanPool hfileCleanerPool;
+  // Threadpool for scanning the Old logs directory, used by the LogCleaner
+  private DirScanPool logCleanerPool;
   private LogCleaner logCleaner;
   private HFileCleaner hfileCleaner;
   private HFileCleaner[] customCleaners;
@@ -1137,7 +1140,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
        (EnvironmentEdgeManager.currentTime() - masterActiveTime) / 1000.0f));
     this.masterFinishedInitializationTime = EnvironmentEdgeManager.currentTime();
     configurationManager.registerObserver(this.balancer);
-    configurationManager.registerObserver(this.cleanerPool);
+    configurationManager.registerObserver(this.hfileCleanerPool);
+    configurationManager.registerObserver(this.logCleanerPool);
     configurationManager.registerObserver(this.hfileCleaner);
     configurationManager.registerObserver(this.logCleaner);
     configurationManager.registerObserver(this.regionsRecoveryConfigManager);
@@ -1507,15 +1511,16 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         ExecutorType.MASTER_TABLE_OPERATIONS).setCorePoolSize(1));
     startProcedureExecutor();
 
-    // Create cleaner thread pool
-    cleanerPool = new DirScanPool(conf);
+    // Create log cleaner thread pool
+    logCleanerPool = DirScanPool.getLogCleanerScanPool(conf);
     Map<String, Object> params = new HashMap<>();
     params.put(MASTER, this);
     // Start log cleaner thread
     int cleanerInterval =
       conf.getInt(HBASE_MASTER_CLEANER_INTERVAL, DEFAULT_HBASE_MASTER_CLEANER_INTERVAL);
     this.logCleaner = new LogCleaner(cleanerInterval, this, conf,
-      getMasterWalManager().getFileSystem(), getMasterWalManager().getOldLogDir(), cleanerPool, params);
+      getMasterWalManager().getFileSystem(), getMasterWalManager().getOldLogDir(),
+      logCleanerPool, params);
     getChoreService().scheduleChore(logCleaner);
 
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
@@ -1532,7 +1537,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
             cleanerClasses.toArray(new String[cleanerClasses.size()]));
           LOG.info("Custom cleaner paths: {}, plugins: {}", Arrays.asList(paths), cleanerClasses);
         }
-        customCleanerPool = new DirScanPool(conf.get(CleanerChore.CUSTOM_POOL_SIZE, "6"));
+        customCleanerPool = DirScanPool.getHFileCleanerScanPool(conf);
         customPaths = new Path[paths.length];
         customCleaners = new HFileCleaner[paths.length];
         for (int i = 0; i < paths.length; i++) {
@@ -1548,9 +1553,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       }
     }
 
-    // start the hfile archive cleaner thread
+    // Create archive cleaner thread pool
+    hfileCleanerPool = DirScanPool.getHFileCleanerScanPool(conf);
     this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf,
-      getMasterFileSystem().getFileSystem(), archiveDir, cleanerPool, params, customPaths);
+      getMasterFileSystem().getFileSystem(), archiveDir, hfileCleanerPool, params);
     getChoreService().scheduleChore(hfileCleaner);
 
     // Regions Reopen based on very high storeFileRefCount is considered enabled
@@ -1600,9 +1606,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     stopChoreService();
     stopExecutorService();
-    if (cleanerPool != null) {
-      cleanerPool.shutdownNow();
-      cleanerPool = null;
+    if (hfileCleanerPool != null) {
+      hfileCleanerPool.shutdownNow();
+      hfileCleanerPool = null;
+    }
+    if (logCleanerPool != null) {
+      logCleanerPool.shutdownNow();
+      logCleanerPool = null;
     }
     if (customCleanerPool != null) {
       customCleanerPool.shutdownNow();
