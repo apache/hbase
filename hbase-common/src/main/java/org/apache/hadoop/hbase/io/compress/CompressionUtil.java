@@ -21,6 +21,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class CompressionUtil {
 
+  private CompressionUtil() { }
+
   /**
    * Round up to the next power of two, unless the value would become negative (ints
    * are signed), in which case just return Integer.MAX_VALUE.
