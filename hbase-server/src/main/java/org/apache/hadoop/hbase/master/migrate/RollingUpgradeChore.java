@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.migrate;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -41,10 +40,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
  * To avoid too many migrating/upgrade threads to be submitted at the time during master
- * initialization, RollingUpgradeChore handler all rolling-upgrade tasks.
+ * initialization, RollingUpgradeChore handles all rolling-upgrade tasks.
  * */
 @InterfaceAudience.Private
 public class RollingUpgradeChore extends ScheduledChore {
