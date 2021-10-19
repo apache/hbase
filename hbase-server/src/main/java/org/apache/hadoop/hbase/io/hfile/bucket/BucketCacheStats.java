@@ -35,14 +35,20 @@ public class BucketCacheStats extends CacheStats {
   private static final long NANO_TIME = TimeUnit.MILLISECONDS.toNanos(1);
   private long lastLogTime = EnvironmentEdgeManager.currentTime();
 
+  /* Tracing failed Bucket Cache allocations. */
+  private LongAdder allocationFailCount = new LongAdder();
+
   BucketCacheStats() {
     super("BucketCache");
+
+    allocationFailCount.reset();
   }
 
   @Override
   public String toString() {
     return super.toString() + ", ioHitsPerSecond=" + getIOHitsPerSecond() +
-      ", ioTimePerHit=" + getIOTimePerHit();
+      ", ioTimePerHit=" + getIOTimePerHit() + ", allocationFailCount=" +
+      getAllocationFailCount();
   }
 
   public void ioHit(long time) {
@@ -66,5 +72,14 @@ public class BucketCacheStats extends CacheStats {
   public void reset() {
     ioHitCount.reset();
     ioHitTime.reset();
+    allocationFailCount.reset();
+  }
+
+  public long getAllocationFailCount() {
+    return allocationFailCount.sum();
+  }
+
+  public void allocationFailed () {
+    allocationFailCount.increment();
   }
 }
