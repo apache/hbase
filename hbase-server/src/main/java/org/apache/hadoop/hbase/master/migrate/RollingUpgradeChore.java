@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.migrate;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -32,7 +33,6 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.MigrateStoreFileTrackerProcedure;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
@@ -58,12 +58,14 @@ public class RollingUpgradeChore extends ScheduledChore {
   static final String ROLLING_UPGRADE_CHORE_PERIOD_KEY = "hbase.master.rolling.upgrade.chore.period";
   static final int DFAULT_ROLLING_UPGRADE_CHORE_PERIOD = 1000 * 60 * 5; // 5 minutes in millis
 
-  static final String ROLLING_UPGRADE_CHORE_DELAY_KEY = "hbase.master.mob.cleaner.period";
+  static final String ROLLING_UPGRADE_CHORE_DELAY_KEY = "hbase.master.rolling.upgrade.chore.delay";
   static final long DEFAULT_ROLLING_UPGRADE_CHORE_DELAY = 1000L * 60 * 10; // 10 minutes in millis
 
   private final static Logger LOG = LoggerFactory.getLogger(RollingUpgradeChore.class);
   ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
   private TableDescriptors tableDescriptors;
+  private List<MigrateStoreFileTrackerProcedure> processingProcs = new ArrayList<>();
+  private boolean isMigratingDone;
 
   public RollingUpgradeChore(MasterServices masterServices) {
     this(masterServices.getConfiguration(), masterServices.getMasterProcedureExecutor(), masterServices.getTableDescriptors(), masterServices);
@@ -80,38 +82,50 @@ public class RollingUpgradeChore extends ScheduledChore {
 
   @Override
   protected void chore() {
+    migrateStoreFileTracker(5);
+    if (isMigratingDone) {
+      LOG.info("All Rolling-Upgrade tasks are complete, shutdown RollingUpgradeChore!");
+      shutdown();
+    }
+  }
+
+  private void migrateStoreFileTracker(int concurrentCount){
+    Iterator<MigrateStoreFileTrackerProcedure> iter = processingProcs.iterator();
+    while(iter.hasNext()){
+      MigrateStoreFileTrackerProcedure proc = iter.next();
+      if(procedureExecutor.isFinished(proc.getProcId())){
+        iter.remove();
+      }
+    }
+    // No new migration procedures will be submitted until
+    // all procedures executed last time are completed.
+    if (!processingProcs.isEmpty()) {
+      return;
+    }
+
     Map<String, TableDescriptor> migrateSFTTables;
     try {
       migrateSFTTables = tableDescriptors.getAll().entrySet().stream().filter(entry -> {
         TableDescriptor td = entry.getValue();
         return StringUtils.isEmpty(td.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
-      }).collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+      }).limit(concurrentCount).collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
     } catch (IOException e) {
       LOG.warn("Failed to migrate StoreFileTracker", e);
       return;
     }
 
     if (migrateSFTTables.isEmpty()) {
-      LOG.info("There is no table to migrate StoreFileTracker, shutdown RollingUpgradeChore!");
-      shutdown();
+      LOG.info("There is no table to migrate StoreFileTracker!");
+      isMigratingDone = true;
       return;
     }
 
-    List<MigrateStoreFileTrackerProcedure> procs = new ArrayList<>();
     for (Map.Entry<String, TableDescriptor> entry : migrateSFTTables.entrySet()) {
       TableDescriptor tableDescriptor = entry.getValue();
       MigrateStoreFileTrackerProcedure proc =
         new MigrateStoreFileTrackerProcedure(procedureExecutor.getEnvironment(), tableDescriptor);
       procedureExecutor.submitProcedure(proc);
-      procs.add(proc);
-    }
-
-    for (MigrateStoreFileTrackerProcedure proc : procs) {
-      try {
-        ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, proc, 60000);
-      } catch (IOException e) {
-        LOG.warn("Failed to migrate StoreFileTracker for table {}", proc.getTableName());
-      }
+      processingProcs.add(proc);
     }
   }
 }
