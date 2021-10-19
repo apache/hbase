@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -169,7 +170,7 @@ public abstract class AbstractProtobufLogWriter {
   }
 
   public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable,
-      long blocksize) throws IOException, StreamLacksCapabilityException {
+      long blocksize, StreamSlowMonitor monitor) throws IOException, StreamLacksCapabilityException {
     this.conf = conf;
     boolean doCompress = initializeCompressionContext(conf, path);
     this.trailerWarnSize = conf.getInt(WAL_TRAILER_WARN_SIZE, DEFAULT_WAL_TRAILER_WARN_SIZE);
@@ -177,7 +178,7 @@ public abstract class AbstractProtobufLogWriter {
     short replication = (short) conf.getInt("hbase.regionserver.hlog.replication",
       CommonFSUtils.getDefaultReplication(fs, path));
 
-    initOutput(fs, path, overwritable, bufferSize, replication, blocksize);
+    initOutput(fs, path, overwritable, bufferSize, replication, blocksize, monitor);
 
     boolean doTagCompress = doCompress &&
       conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
@@ -266,7 +267,7 @@ public abstract class AbstractProtobufLogWriter {
   }
 
   protected abstract void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
-      short replication, long blockSize) throws IOException, StreamLacksCapabilityException;
+      short replication, long blockSize, StreamSlowMonitor monitor) throws IOException, StreamLacksCapabilityException;
 
   /**
    * return the file length after written.

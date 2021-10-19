@@ -21,12 +21,12 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -105,6 +105,8 @@ public class WALFactory {
 
   private final Configuration conf;
 
+  private final ExcludeDatanodeManager excludeDatanodeManager;
+
   // Used for the singleton WALFactory, see below.
   private WALFactory(Configuration conf) {
     // this code is duplicated here so we can keep our members final.
@@ -121,6 +123,7 @@ public class WALFactory {
     provider = null;
     factoryId = SINGLETON_ID;
     this.abortable = null;
+    this.excludeDatanodeManager = new ExcludeDatanodeManager(conf);
   }
 
   Providers getDefaultProvider() {
@@ -207,11 +210,13 @@ public class WALFactory {
       provider.init(this, conf, null, this.abortable);
       provider.addWALActionsListener(new MetricsWAL());
       this.provider = provider;
+      this.excludeDatanodeManager = new ExcludeDatanodeManager(conf);
     } else {
       // special handling of existing configuration behavior.
       LOG.warn("Running with WAL disabled.");
       provider = new DisabledWALProvider();
       provider.init(this, conf, factoryId, null);
+      this.excludeDatanodeManager = null;
     }
   }
 
@@ -501,5 +506,9 @@ public class WALFactory {
    */
   public final WALProvider getMetaWALProvider() {
     return this.metaProvider.get();
+  }
+
+  public ExcludeDatanodeManager getExcludeDatanodeManager() {
+    return excludeDatanodeManager;
   }
 }

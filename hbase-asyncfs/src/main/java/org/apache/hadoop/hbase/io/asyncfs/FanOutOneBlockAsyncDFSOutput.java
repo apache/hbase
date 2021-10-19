@@ -29,10 +29,9 @@ import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.WRI
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,7 +43,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.Encryptor;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.CancelOnClose;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -120,7 +121,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   private final Encryptor encryptor;
 
-  private final List<Channel> datanodeList;
+  private final Map<Channel, DatanodeInfo> datanodeInfoMap;
 
   private final DataChecksum summer;
 
@@ -136,17 +137,22 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
     // should be backed by a thread safe collection
     private final Set<ChannelId> unfinishedReplicas;
+    private final long dataLength;
+    private final long flushTimestamp;
+    private long lastAckTimestamp = -1;
 
     public Callback(CompletableFuture<Long> future, long ackedLength,
-        Collection<Channel> replicas) {
+        final Map<Channel, DatanodeInfo> replicas, long dataLength) {
       this.future = future;
       this.ackedLength = ackedLength;
+      this.dataLength = dataLength;
+      this.flushTimestamp = EnvironmentEdgeManager.currentTime();
       if (replicas.isEmpty()) {
         this.unfinishedReplicas = Collections.emptySet();
       } else {
         this.unfinishedReplicas =
           Collections.newSetFromMap(new ConcurrentHashMap<ChannelId, Boolean>(replicas.size()));
-        replicas.stream().map(c -> c.id()).forEachOrdered(unfinishedReplicas::add);
+        replicas.forEach((ch, dn)-> unfinishedReplicas.add(ch.id()));
       }
     }
   }
@@ -176,6 +182,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   private volatile State state;
 
+  private final StreamSlowMonitor streamSlowMonitor;
+
   // all lock-free to make it run faster
   private void completed(Channel channel) {
     for (Iterator<Callback> iter = waitingAckQueue.iterator(); iter.hasNext();) {
@@ -183,6 +191,12 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       // if the current unfinished replicas does not contain us then it means that we have already
       // acked this one, let's iterate to find the one we have not acked yet.
       if (c.unfinishedReplicas.remove(channel.id())) {
+        if (streamSlowMonitor != null) {
+          long current = EnvironmentEdgeManager.currentTime();
+          streamSlowMonitor.checkProcessTimeAndSpeed(datanodeInfoMap.get(channel), c.dataLength,
+            current - c.flushTimestamp, c.lastAckTimestamp, c.unfinishedReplicas.size());
+          c.lastAckTimestamp = current;
+        }
         if (c.unfinishedReplicas.isEmpty()) {
           // we need to remove first before complete the future. It is possible that after we
           // complete the future the upper layer will call close immediately before we remove the
@@ -245,7 +259,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       }
       break;
     }
-    datanodeList.forEach(ch -> ch.close());
+    datanodeInfoMap.forEach((ch, dn) -> ch.close());
   }
 
   @Sharable
@@ -313,7 +327,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   private void setupReceiver(int timeoutMs) {
     AckHandler ackHandler = new AckHandler(timeoutMs);
-    for (Channel ch : datanodeList) {
+    for (Channel ch : datanodeInfoMap.keySet()) {
       ch.pipeline().addLast(
         new IdleStateHandler(timeoutMs, timeoutMs / 2, 0, TimeUnit.MILLISECONDS),
         new ProtobufVarint32FrameDecoder(),
@@ -324,8 +338,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   FanOutOneBlockAsyncDFSOutput(Configuration conf,DistributedFileSystem dfs,
       DFSClient client, ClientProtocol namenode, String clientName, String src, long fileId,
-      LocatedBlock locatedBlock, Encryptor encryptor, List<Channel> datanodeList,
-      DataChecksum summer, ByteBufAllocator alloc) {
+      LocatedBlock locatedBlock, Encryptor encryptor, Map<Channel, DatanodeInfo> datanodeInfoMap,
+      DataChecksum summer, ByteBufAllocator alloc, StreamSlowMonitor streamSlowMonitor) {
     this.conf = conf;
     this.dfs = dfs;
     this.client = client;
@@ -336,13 +350,14 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     this.block = locatedBlock.getBlock();
     this.locations = locatedBlock.getLocations();
     this.encryptor = encryptor;
-    this.datanodeList = datanodeList;
+    this.datanodeInfoMap = datanodeInfoMap;
     this.summer = summer;
     this.maxDataLen = MAX_DATA_LEN - (MAX_DATA_LEN % summer.getBytesPerChecksum());
     this.alloc = alloc;
     this.buf = alloc.directBuffer(sendBufSizePRedictor.initialSize());
     this.state = State.STREAMING;
     setupReceiver(conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT));
+    this.streamSlowMonitor = streamSlowMonitor;
   }
 
   @Override
@@ -394,7 +409,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     ByteBuf headerBuf = alloc.buffer(headerLen);
     header.putInBuffer(headerBuf.nioBuffer(0, headerLen));
     headerBuf.writerIndex(headerLen);
-    Callback c = new Callback(future, nextPacketOffsetInBlock + dataLen, datanodeList);
+    Callback c = new Callback(future, nextPacketOffsetInBlock + dataLen, datanodeInfoMap, dataLen);
     waitingAckQueue.addLast(c);
     // recheck again after we pushed the callback to queue
     if (state != State.STREAMING && waitingAckQueue.peekFirst() == c) {
@@ -405,7 +420,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
     // TODO: we should perhaps measure time taken per DN here;
     //       we could collect statistics per DN, and/or exclude bad nodes in createOutput.
-    datanodeList.forEach(ch -> {
+    datanodeInfoMap.forEach((ch, dn) -> {
       ch.write(headerBuf.retainedDuplicate());
       ch.write(checksumBuf.retainedDuplicate());
       ch.writeAndFlush(dataBuf.retainedDuplicate());
@@ -427,7 +442,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       long lengthAfterFlush = nextPacketOffsetInBlock + dataLen;
       Callback lastFlush = waitingAckQueue.peekLast();
       if (lastFlush != null) {
-        Callback c = new Callback(future, lengthAfterFlush, Collections.emptyList());
+        Callback c = new Callback(future, lengthAfterFlush, Collections.emptyMap(), dataLen);
         waitingAckQueue.addLast(c);
         // recheck here if we have already removed the previous callback from the queue
         if (waitingAckQueue.peekFirst() == c) {
@@ -527,8 +542,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     header.putInBuffer(headerBuf.nioBuffer(0, headerLen));
     headerBuf.writerIndex(headerLen);
     CompletableFuture<Long> future = new CompletableFuture<>();
-    waitingAckQueue.add(new Callback(future, finalizedLength, datanodeList));
-    datanodeList.forEach(ch -> ch.writeAndFlush(headerBuf.retainedDuplicate()));
+    waitingAckQueue.add(new Callback(future, finalizedLength, datanodeInfoMap, headerLen));
+    datanodeInfoMap.forEach((ch, dn) -> ch.writeAndFlush(headerBuf.retainedDuplicate()));
     headerBuf.release();
     try {
       future.get();
@@ -550,8 +565,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       buf.release();
       buf = null;
     }
-    datanodeList.forEach(ch -> ch.close());
-    datanodeList.forEach(ch -> ch.closeFuture().awaitUninterruptibly());
+    datanodeInfoMap.forEach((ch, dn) -> ch.close());
+    datanodeInfoMap.forEach((ch, dn) -> ch.closeFuture().awaitUninterruptibly());
     endFileLease(client, fileId);
     RecoverLeaseFSUtils.recoverFileLease(dfs, new Path(src), conf,
       reporter == null ? new CancelOnClose(client) : reporter);
@@ -565,8 +580,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   public void close() throws IOException {
     endBlock();
     state = State.CLOSED;
-    datanodeList.forEach(ch -> ch.close());
-    datanodeList.forEach(ch -> ch.closeFuture().awaitUninterruptibly());
+    datanodeInfoMap.forEach((ch, dn) -> ch.close());
+    datanodeInfoMap.forEach((ch, dn) -> ch.closeFuture().awaitUninterruptibly());
     block.setNumBytes(ackedBlockLength);
     completeFile(client, namenode, src, clientName, block, fileId);
   }

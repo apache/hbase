@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -200,22 +201,25 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private final int waitOnShutdownInSeconds;
 
+  private final StreamSlowMonitor streamSlowMonitor;
+
   public AsyncFSWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
       Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
       String prefix, String suffix, EventLoopGroup eventLoopGroup,
       Class<? extends Channel> channelClass) throws FailedLogCloseException, IOException {
     this(fs, null, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix,
-        eventLoopGroup, channelClass);
+        eventLoopGroup, channelClass, null);
   }
 
   public AsyncFSWAL(FileSystem fs, Abortable abortable, Path rootDir, String logDir,
       String archiveDir, Configuration conf, List<WALActionsListener> listeners,
       boolean failIfWALExists, String prefix, String suffix, EventLoopGroup eventLoopGroup,
-      Class<? extends Channel> channelClass) throws FailedLogCloseException, IOException {
+      Class<? extends Channel> channelClass, StreamSlowMonitor monitor) throws FailedLogCloseException, IOException {
     super(fs, abortable, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
         suffix);
     this.eventLoopGroup = eventLoopGroup;
     this.channelClass = channelClass;
+    this.streamSlowMonitor = monitor;
     Supplier<Boolean> hasConsumerTask;
     if (conf.getBoolean(ASYNC_WAL_USE_SHARED_EVENT_LOOP, DEFAULT_ASYNC_WAL_USE_SHARED_EVENT_LOOP)) {
       this.consumeExecutor = eventLoopGroup.next();
@@ -692,7 +696,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   protected final AsyncWriter createAsyncWriter(FileSystem fs, Path path) throws IOException {
     return AsyncFSWALProvider.createAsyncWriter(conf, fs, path, false, this.blocksize,
-      eventLoopGroup, channelClass);
+      eventLoopGroup, channelClass, streamSlowMonitor);
   }
 
   @Override

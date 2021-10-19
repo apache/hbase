@@ -33,9 +33,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.Encryptor;
@@ -47,6 +50,8 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSOutputStream;
@@ -451,15 +456,29 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static FanOutOneBlockAsyncDFSOutput createOutput(DistributedFileSystem dfs, String src,
       boolean overwrite, boolean createParent, short replication, long blockSize,
-      EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass) throws IOException {
+      EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass,
+      StreamSlowMonitor monitor) throws IOException {
     Configuration conf = dfs.getConf();
     DFSClient client = dfs.getClient();
     String clientName = client.getClientName();
     ClientProtocol namenode = client.getNamenode();
     int createMaxRetries = conf.getInt(ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES,
       DEFAULT_ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES);
-    DatanodeInfo[] excludesNodes = EMPTY_DN_ARRAY;
+    ExcludeDatanodeManager excludeDatanodeManager = monitor == null ? null :
+      monitor.getExcludeDatanodeManager();
+    Set<DatanodeInfo> toExcludeNodes = new HashSet<>();
     for (int retry = 0;; retry++) {
+      if (excludeDatanodeManager != null) {
+        toExcludeNodes.addAll(excludeDatanodeManager.getExcludeDNs().keySet());
+      }
+      if (excludeDatanodeManager != null && retry > 1 && retry >= createMaxRetries - 1) {
+        // invalid the exclude cache, to avoid not enough replicas
+        LOG.warn("Clear excludeDNs cache, because addBlock failed more than twice, retry={}, "
+          + "maxRetry={}", retry, createMaxRetries);
+        excludeDatanodeManager.invalidAllExcludeDNs();
+      }
+      LOG.debug("When create output stream for {}, exclude list is {}, retry={}", src,
+          toExcludeNodes, retry);
       HdfsFileStatus stat;
       try {
         stat = FILE_CREATOR.create(namenode, src,
@@ -479,24 +498,29 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       List<Future<Channel>> futureList = null;
       try {
         DataChecksum summer = createChecksum(client);
-        locatedBlock = namenode.addBlock(src, client.getClientName(), null, excludesNodes,
-          stat.getFileId(), null, null);
-        List<Channel> datanodeList = new ArrayList<>();
+        locatedBlock = namenode.addBlock(src, client.getClientName(), null,
+          toExcludeNodes.toArray(new DatanodeInfo[0]), stat.getFileId(), null, null);
+        Map<Channel, DatanodeInfo> datanodes = new HashMap<>();
         futureList = connectToDataNodes(conf, client, clientName, locatedBlock, 0L, 0L,
           PIPELINE_SETUP_CREATE, summer, eventLoopGroup, channelClass);
         for (int i = 0, n = futureList.size(); i < n; i++) {
+          DatanodeInfo datanodeInfo = locatedBlock.getLocations()[i];
           try {
-            datanodeList.add(futureList.get(i).syncUninterruptibly().getNow());
+            datanodes.put(futureList.get(i).syncUninterruptibly().getNow(), datanodeInfo);
           } catch (Exception e) {
             // exclude the broken DN next time
-            excludesNodes = ArrayUtils.add(excludesNodes, locatedBlock.getLocations()[i]);
+            if (excludeDatanodeManager != null) {
+              excludeDatanodeManager.addExcludeDN(datanodeInfo, "connect error");
+            } else {
+              toExcludeNodes.add(datanodeInfo);
+            }
             throw e;
           }
         }
         Encryptor encryptor = createEncryptor(conf, stat, client);
         FanOutOneBlockAsyncDFSOutput output =
           new FanOutOneBlockAsyncDFSOutput(conf, dfs, client, namenode, clientName, src,
-            stat.getFileId(), locatedBlock, encryptor, datanodeList, summer, ALLOC);
+            stat.getFileId(), locatedBlock, encryptor, datanodes, summer, ALLOC, monitor);
         succ = true;
         return output;
       } catch (RemoteException e) {
@@ -547,14 +571,15 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
    */
   public static FanOutOneBlockAsyncDFSOutput createOutput(DistributedFileSystem dfs, Path f,
       boolean overwrite, boolean createParent, short replication, long blockSize,
-      EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass) throws IOException {
+      EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass,
+      StreamSlowMonitor monitor) throws IOException {
     return new FileSystemLinkResolver<FanOutOneBlockAsyncDFSOutput>() {
 
       @Override
       public FanOutOneBlockAsyncDFSOutput doCall(Path p)
           throws IOException, UnresolvedLinkException {
         return createOutput(dfs, p.toUri().getPath(), overwrite, createParent, replication,
-          blockSize, eventLoopGroup, channelClass);
+          blockSize, eventLoopGroup, channelClass, monitor);
       }
 
       @Override

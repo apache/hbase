@@ -39,6 +39,9 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -133,7 +136,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
-      false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
+      false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, null);
     writeAndVerify(FS, f, out);
   }
 
@@ -142,7 +145,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
-      false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
+      false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, null);
     byte[] b = new byte[10];
     ThreadLocalRandom.current().nextBytes(b);
     out.write(b, 0, b.length);
@@ -171,7 +174,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
-      false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
+      false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, null);
     Thread.sleep(READ_TIMEOUT_MS * 2);
     // the connection to datanode should still alive.
     writeAndVerify(FS, f, out);
@@ -186,7 +189,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     try {
       FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true, false, (short) 3,
-        FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
+        FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, null);
       fail("should fail with parent does not exist");
     } catch (RemoteException e) {
       LOG.info("expected exception caught", e);
@@ -209,9 +212,38 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     Path f = new Path("/test");
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     try (FanOutOneBlockAsyncDFSOutput output = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS,
-      f, true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS)) {
+      f, true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, null)) {
       // should exclude the dead dn when retry so here we only have 2 DNs in pipeline
       assertEquals(2, output.getPipeline().length);
+    } finally {
+      CLUSTER.restartDataNode(dnProp);
+    }
+  }
+
+  @Test
+  public void testExcludeFailedConnectToDatanode()
+    throws IOException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
+    InvocationTargetException, InterruptedException, NoSuchFieldException {
+    Field xceiverServerDaemonField = DataNode.class.getDeclaredField("dataXceiverServer");
+    xceiverServerDaemonField.setAccessible(true);
+    Class<?> xceiverServerClass =
+      Class.forName("org.apache.hadoop.hdfs.server.datanode.DataXceiverServer");
+    Method numPeersMethod = xceiverServerClass.getDeclaredMethod("getNumPeers");
+    numPeersMethod.setAccessible(true);
+    // make one datanode broken
+    DataNodeProperties dnProp = CLUSTER.stopDataNode(0);
+    Path f = new Path("/test");
+    EventLoop eventLoop = EVENT_LOOP_GROUP.next();
+    ExcludeDatanodeManager excludeDatanodeManager = new ExcludeDatanodeManager(HBaseConfiguration.create());
+    StreamSlowMonitor streamSlowDNsMonitor =
+      excludeDatanodeManager.getStreamSlowMonitor("testMonitor");
+    assertEquals(0, excludeDatanodeManager.getExcludeDNs().size());
+    try (FanOutOneBlockAsyncDFSOutput output = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS,
+      f, true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop,
+      CHANNEL_CLASS, streamSlowDNsMonitor)) {
+      // should exclude the dead dn when retry so here we only have 2 DNs in pipeline
+      assertEquals(2, output.getPipeline().length);
+      assertEquals(1, excludeDatanodeManager.getExcludeDNs().size());
     } finally {
       CLUSTER.restartDataNode(dnProp);
     }
@@ -222,7 +254,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
-      false, (short) 3, 1024 * 1024 * 1024, eventLoop, CHANNEL_CLASS);
+      false, (short) 3, 1024 * 1024 * 1024, eventLoop, CHANNEL_CLASS, null);
     byte[] b = new byte[50 * 1024 * 1024];
     ThreadLocalRandom.current().nextBytes(b);
     out.write(b);
