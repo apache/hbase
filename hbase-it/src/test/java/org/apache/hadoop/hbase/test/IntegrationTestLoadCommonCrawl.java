@@ -26,13 +26,12 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPInputStream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -85,7 +84,6 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
@@ -495,7 +493,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
         FileInputFormat.setInputPaths(job, warcFileInput);
       } else if (warcFileInput.toUri().getScheme().equals("file")) {
         LOG.info("Getting WARC input paths from file: " + warcFileInput);
-        final List<Path> paths = new LinkedList<Path>();
+        final List<Path> paths = new ArrayList<Path>();
         try (FSDataInputStream is = fs.open(warcFileInput)) {
           InputStreamReader reader;
           if (warcFileInput.getName().toLowerCase().endsWith(".gz")) {
@@ -660,7 +658,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
         // Reverse the components of the hostname
         String reversedHost;
         if (uri.getHost() != null) {
-          final StringBuffer sb = new StringBuffer();
+          final StringBuilder sb = new StringBuilder();
           final String[] hostComponents = uri.getHost().split("\\.");
           for (int i = hostComponents.length - 1; i >= 0; i--) {
             sb.append(hostComponents[i]);
@@ -672,7 +670,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
         } else {
           throw new IllegalArgumentException("URI is missing host component");
         }
-        final StringBuffer sb = new StringBuffer();
+        final StringBuilder sb = new StringBuilder();
         sb.append(reversedHost);
         if (uri.getPort() >= 0) {
           sb.append(':');
