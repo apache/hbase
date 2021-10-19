@@ -17,12 +17,10 @@
 package org.apache.hadoop.hbase.io.compress;
 
 import static org.junit.Assert.assertTrue;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -70,6 +68,11 @@ public class CompressionTestBase {
   }
 
   protected void codecTest(final CompressionCodec codec, final byte[][] input) throws Exception {
+    codecTest(codec, input, null);
+  }
+
+  protected void codecTest(final CompressionCodec codec, final byte[][] input,
+      final Integer expectedCompressedSize) throws Exception {
     // We do this in Compression.java
     ((Configurable)codec).getConf().setInt("io.file.buffer.size", 32 * 1024);
     // Compress
@@ -88,6 +91,10 @@ public class CompressionTestBase {
     final byte[] compressed = baos.toByteArray();
     LOG.info("{} compressed {} bytes to {} bytes in {} ms", codec.getClass().getSimpleName(),
       inLen, compressed.length, end - start);
+    if (expectedCompressedSize != null) {
+      assertTrue("Expected compressed size does not match: (expected=" + expectedCompressedSize +
+        ", actual=" + compressed.length + ")", expectedCompressedSize == compressed.length);
+    }
     // Decompress
     final byte[] plain = new byte[inLen];
     Decompressor decompressor = codec.createDecompressor();
@@ -121,7 +128,8 @@ public class CompressionTestBase {
   /**
    * Test with a large input (1MB) divided into blocks of 4KB.
    */
-  protected void codecLargeTest(final CompressionCodec codec, final double sigma) throws Exception {
+  protected void codecLargeTest(final CompressionCodec codec, final double sigma)
+      throws Exception {
     RandomDistribution.DiscreteRNG rng =
       new RandomDistribution.Zipf(new Random(), 0, Byte.MAX_VALUE, sigma);
     final byte[][] input = new byte[LARGE_SIZE/BLOCK_SIZE][BLOCK_SIZE];
@@ -132,7 +140,8 @@ public class CompressionTestBase {
   /**
    * Test with a very large input (100MB) as a single input buffer.
    */
-  protected void codecVeryLargeTest(final CompressionCodec codec, final double sigma) throws Exception {
+  protected void codecVeryLargeTest(final CompressionCodec codec, final double sigma)
+      throws Exception {
     RandomDistribution.DiscreteRNG rng =
         new RandomDistribution.Zipf(new Random(), 0, Byte.MAX_VALUE, sigma);
     final byte[][] input = new byte[1][VERY_LARGE_SIZE];

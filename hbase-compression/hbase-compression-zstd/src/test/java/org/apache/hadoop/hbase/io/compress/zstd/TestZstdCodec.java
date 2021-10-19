@@ -18,12 +18,10 @@ package org.apache.hadoop.hbase.io.compress.zstd;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -68,32 +66,34 @@ public class TestZstdCodec extends CompressionTestBase {
 
   @Test
   public void testZstdCodecWithDictionary() throws Exception {
-    final int maxSize = 1024 * 1024;
+    // zstd.test.data compressed with zstd.test.dict at level 3 will produce a result of
+    // 365533 bytes
+    final int expectedCompressedSize = 365533;
     Configuration conf = HBaseConfiguration.create();
+    conf.setInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_LEVEL_KEY, 3);
     // Configure for dictionary available in test resources
-    conf.setInt(DictionaryCache.DICTIONARY_MAX_SIZE_KEY, maxSize);
     final String dictionaryPath = DictionaryCache.RESOURCE_SCHEME + "zstd.test.dict";
     conf.set(ZstdCodec.ZSTD_DICTIONARY_KEY, dictionaryPath);
     // Load test data from test resources
     // This will throw an IOException if the test data cannot be loaded
     final byte[] testData = DictionaryCache.loadFromResource(conf,
-      DictionaryCache.RESOURCE_SCHEME + "zstd.test.data", maxSize);
+      DictionaryCache.RESOURCE_SCHEME + "zstd.test.data", /* maxSize */ 1024*1024);
     assertNotNull("Failed to load test data", testData);
     // Run the test
     // This will throw an IOException of some kind if there is a problem loading or using the
     // dictionary.
     ZstdCodec codec = new ZstdCodec();
     codec.setConf(conf);
-    codecTest(codec, new byte[][] { testData });
+    codecTest(codec, new byte[][] { testData }, expectedCompressedSize);
     // Assert that the dictionary was actually loaded
     assertTrue("Dictionary was not loaded by codec", DictionaryCache.contains(dictionaryPath));
   }
 
-  // 
+  //
   // For generating the test data in src/test/resources/
   //
 
-  public static void main(String args[]) throws IOException {
+  public static void main(String[] args) throws IOException {
     // Write 1000 1k blocks for training to the specified file
     // Train with:
     //   zstd --train-fastcover=k=32,b=8 -B1024 -o <dictionary_file> <input_file>

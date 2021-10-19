@@ -27,12 +27,12 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
-import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
 
 /**
  * A utility class for managing compressor/decompressor dictionary loading and caching of load
@@ -48,6 +48,8 @@ public class DictionaryCache {
 
   private static final Logger LOG = LoggerFactory.getLogger(DictionaryCache.class);
   private static volatile LoadingCache<String, byte[]> CACHE;
+
+  private DictionaryCache() { }
 
   /**
    * Load a dictionary or return a previously cached load.
