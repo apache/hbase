@@ -488,7 +488,9 @@ add_jdk11_deps_to_classpath() {
 }
 
 add_opentelemetry_agent() {
-  if ! agent_jar=$(find lib/trace -type f -name "opentelemetry-javaagent-*" 2>/dev/null); then
+  if [ -e "${OPENTELEMETRY_JAVAAGENT_PATH}" ] ; then
+    agent_jar="${OPENTELEMETRY_JAVAAGENT_PATH}"
+  elif ! agent_jar=$(find -L "${HBASE_HOME}/lib/trace" -type f -name "opentelemetry-javaagent-*" 2>/dev/null); then
     # must be dev environment
     f="${HBASE_HOME}/hbase-build-configuration/target/cached_classpath.txt"
     if [ ! -f "${f}" ]; then
@@ -497,7 +499,7 @@ add_opentelemetry_agent() {
     fi
     agent_jar=$(tr ':' '\n' < "${f}" | grep opentelemetry-javaagent)
   fi
-  HBASE_OPTS="$HBASE_OPTS -javaagent:$agent_jar $HBASE_TRACE_OPTS"
+  HBASE_OPTS="$HBASE_OPTS -javaagent:$agent_jar"
 }
 
 #Add the development env class path stuff
@@ -560,6 +562,7 @@ elif [ "$COMMAND" = 'jshell' ] ; then
   CLASS='jdk.internal.jshell.tool.JShellToolProvider'
   # set default values for HBASE_JSHELL_ARGS
   read -r -a JSHELL_ARGS <<< "${HBASE_JSHELL_ARGS:-"--startup DEFAULT --startup PRINTING --startup ${HBASE_HOME}/bin/hbase_startup.jsh"}"
+  HBASE_OPTS="$HBASE_OPTS $HBASE_JSHELL_OPTS"
 elif [ "$COMMAND" = "hbck" ] ; then
   # Look for the -j /path/to/HBCK2.jar parameter. Else pass through to hbck.
   case "${1}" in
