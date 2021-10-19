@@ -67,9 +67,11 @@ import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
 import org.apache.hadoop.hbase.util.IdReadWriteLock.ReferenceType;
@@ -244,6 +246,10 @@ public class BucketCache implements BlockCache, HeapSize {
    * */
   private String algorithm;
 
+  /* Tracing failed Bucket Cache allocations. */
+  private long allocFailLogPrevTs; // time of previous log event for allocation failure.
+  private static final int ALLOCATION_FAIL_LOG_TIME_PERIOD = 60000; // Default 1 minute.
+
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
       int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
     this(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
@@ -279,6 +285,8 @@ public class BucketCache implements BlockCache, HeapSize {
     this.persistencePath = persistencePath;
     this.blockSize = blockSize;
     this.ioErrorsTolerationDuration = ioErrorsTolerationDuration;
+
+    this.allocFailLogPrevTs = 0;
 
     bucketAllocator = new BucketAllocator(capacity, bucketSizes);
     for (int i = 0; i < writerThreads.length; ++i) {
@@ -717,7 +725,8 @@ public class BucketCache implements BlockCache, HeapSize {
           (StringUtils.formatPercent(cacheStats.getHitCachingRatio(), 2)+ ", ")) +
         "evictions=" + cacheStats.getEvictionCount() + ", " +
         "evicted=" + cacheStats.getEvictedCount() + ", " +
-        "evictedPerRun=" + cacheStats.evictedPerEviction());
+        "evictedPerRun=" + cacheStats.evictedPerEviction() + ", " +
+        "allocationFailCount=" + cacheStats.getAllocationFailCount());
     cacheStats.reset();
   }
 
@@ -986,6 +995,25 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
+   * Prepare and return a warning message for Bucket Allocator Exception
+   * @param re The RAMQueueEntry for which the exception was thrown.
+   * @return A warning message created from the input RAMQueueEntry object.
+   */
+  private String getAllocationFailWarningMessage(RAMQueueEntry re) {
+    if (re != null && re.getData() instanceof HFileBlock) {
+      HFileBlock block = (HFileBlock) re.getData();
+      HFileContext fileContext = block.getHFileContext();
+      String hFileName = fileContext.getHFileName();
+      String columnFamily = Bytes.toString(fileContext.getColumnFamily());
+      String tableName = Bytes.toString(fileContext.getTableName());
+      return ("Most recent failed allocation in " + ALLOCATION_FAIL_LOG_TIME_PERIOD
+              + " milliseconds; Table Name = " + tableName + ", Column Family = "
+              + columnFamily + ", HFile Name : " + hFileName);
+    }
+    return ("Failed allocation for " + (re == null ? "" : re.getKey()) + "; ");
+  }
+
+  /**
    * Flush the entries in ramCache to IOEngine and add bucket entry to backingMap. Process all that
    * are passed in even if failure being sure to remove from ramCache else we'll never undo the
    * references and we'll OOME.
@@ -1025,7 +1053,12 @@ public class BucketCache implements BlockCache, HeapSize {
         }
         index++;
       } catch (BucketAllocatorException fle) {
-        LOG.warn("Failed allocation for " + (re == null ? "" : re.getKey()) + "; " + fle);
+        long currTs = System.currentTimeMillis(); // Current time since Epoch in milliseconds.
+        cacheStats.allocationFailed(); // Record the warning.
+        if (allocFailLogPrevTs == 0 || (currTs - allocFailLogPrevTs) > ALLOCATION_FAIL_LOG_TIME_PERIOD) {
+          LOG.warn (getAllocationFailWarningMessage(re), fle);
+          allocFailLogPrevTs = currTs;
+        }
         // Presume can't add. Too big? Move index on. Entry will be cleared from ramCache below.
         bucketEntries[index] = null;
         index++;
