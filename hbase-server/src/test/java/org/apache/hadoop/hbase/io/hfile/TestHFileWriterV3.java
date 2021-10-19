@@ -190,7 +190,7 @@ public class TestHFileWriterV3 {
       .withFileSystem(fs)
       .withFileSize(fileSize).build();
     HFileBlock.FSReader blockReader =
-        new HFileBlock.FSReaderImpl(readerContext, meta, ByteBuffAllocator.HEAP);
+        new HFileBlock.FSReaderImpl(readerContext, meta, ByteBuffAllocator.HEAP, conf);
     // Comparator class name is stored in the trailer in version 3.
     CellComparator comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =

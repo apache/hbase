@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.hbase.io.compress.xz;
 
+import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.HFileTestBase;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -35,9 +39,11 @@ public class TestHFileCompressionLzma extends HFileTestBase {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHFileCompressionLzma.class);
 
+  private static Configuration conf;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
+    conf = TEST_UTIL.getConfiguration();
     conf.set(Compression.LZMA_CODEC_CLASS_KEY, LzmaCodec.class.getCanonicalName());
     Compression.Algorithm.LZMA.reload(conf);
     HFileTestBase.setUpBeforeClass();
@@ -45,7 +51,26 @@ public class TestHFileCompressionLzma extends HFileTestBase {
 
   @Test
   public void test() throws Exception {
-    doTest(Compression.Algorithm.LZMA);
+    Path path = new Path(TEST_UTIL.getDataTestDir(),
+      HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
+    doTest(conf, path, Compression.Algorithm.LZMA);
+  }
+
+  @Test
+  public void testReconfLevels() throws Exception {
+    Path path_1 = new Path(TEST_UTIL.getDataTestDir(),
+      HBaseTestingUtility.getRandomUUID().toString() + ".1.hfile");
+    Path path_2 = new Path(TEST_UTIL.getDataTestDir(),
+      HBaseTestingUtility.getRandomUUID().toString() + ".2.hfile");
+    conf.setInt(LzmaCodec.LZMA_LEVEL_KEY, 1);
+    doTest(conf, path_1, Compression.Algorithm.LZMA);
+    long len_1 = FS.getFileStatus(path_1).getLen();
+    conf.setInt(LzmaCodec.LZMA_LEVEL_KEY, 9);
+    doTest(conf, path_2, Compression.Algorithm.LZMA);
+    long len_2 = FS.getFileStatus(path_2).getLen();
+    LOG.info("Level 1 len {}", len_1);
+    LOG.info("Level 9 len {}", len_2);
+    assertTrue("Reconfiguraton with LZMA_LEVEL_KEY did not seem to work", len_1 > len_2);
   }
 
 }

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -108,22 +109,23 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   }
 
   @Override
-  public HFileBlockEncodingContext newDataBlockEncodingContext(
+  public HFileBlockEncodingContext newDataBlockEncodingContext(Configuration conf,
       byte[] dummyHeader, HFileContext fileContext) {
     DataBlockEncoder encoder = encoding.getEncoder();
     if (encoder != null) {
-      return encoder.newDataBlockEncodingContext(encoding, dummyHeader, fileContext);
+      return encoder.newDataBlockEncodingContext(conf, encoding, dummyHeader, fileContext);
     }
-    return new HFileBlockDefaultEncodingContext(null, dummyHeader, fileContext);
+    return new HFileBlockDefaultEncodingContext(conf, null, dummyHeader, fileContext);
   }
 
   @Override
-  public HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext fileContext) {
+  public HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf,
+      HFileContext fileContext) {
     DataBlockEncoder encoder = encoding.getEncoder();
     if (encoder != null) {
-      return encoder.newDataBlockDecodingContext(fileContext);
+      return encoder.newDataBlockDecodingContext(conf, fileContext);
     }
-    return new HFileBlockDefaultDecodingContext(fileContext);
+    return new HFileBlockDefaultDecodingContext(conf, fileContext);
   }
 
   @Override

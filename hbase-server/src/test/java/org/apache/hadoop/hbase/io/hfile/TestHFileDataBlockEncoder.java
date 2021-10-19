@@ -27,8 +27,11 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
@@ -58,8 +61,9 @@ public class TestHFileDataBlockEncoder {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHFileDataBlockEncoder.class);
 
+  private final Configuration conf = HBaseConfiguration.create();
+  private final RedundantKVGenerator generator = new RedundantKVGenerator();
   private HFileDataBlockEncoder blockEncoder;
-  private RedundantKVGenerator generator = new RedundantKVGenerator();
   private boolean includesMemstoreTS;
 
   /**
@@ -87,7 +91,7 @@ public class TestHFileDataBlockEncoder {
   private void testEncodingWithCacheInternals(boolean useTag) throws IOException {
     List<KeyValue> kvs = generator.generateTestKeyValues(60, useTag);
     HFileBlock block = getSampleHFileBlock(kvs, useTag);
-    HFileBlock cacheBlock = createBlockOnDisk(kvs, block, useTag);
+    HFileBlock cacheBlock = createBlockOnDisk(conf, kvs, block, useTag);
 
     LruBlockCache blockCache =
         new LruBlockCache(8 * 1024 * 1024, 32 * 1024);
@@ -135,7 +139,7 @@ public class TestHFileDataBlockEncoder {
                         .build();
     HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(buf),
         HFileBlock.FILL_HEADER, 0, 0, -1, hfileContext, ByteBuffAllocator.HEAP);
-    HFileBlock cacheBlock = createBlockOnDisk(kvs, block, useTags);
+    HFileBlock cacheBlock = createBlockOnDisk(conf, kvs, block, useTags);
     assertEquals(headerSize, cacheBlock.getDummyHeaderForVersion().length);
   }
 
@@ -162,7 +166,7 @@ public class TestHFileDataBlockEncoder {
       HFileContext meta = new HFileContextBuilder().withIncludesMvcc(includesMemstoreTS)
           .withIncludesTags(true).withHBaseCheckSum(true).withCompression(Algorithm.NONE)
           .withBlockSize(0).withChecksumType(ChecksumType.NULL).build();
-      writeBlock(kvs, meta, true);
+      writeBlock(conf, kvs, meta, true);
     } catch (IllegalArgumentException e) {
       fail("No exception should have been thrown");
     }
@@ -172,7 +176,7 @@ public class TestHFileDataBlockEncoder {
     // usually we have just block without headers, but don't complicate that
     List<KeyValue> kvs = generator.generateTestKeyValues(60, useTag);
     HFileBlock block = getSampleHFileBlock(kvs, useTag);
-    HFileBlock blockOnDisk = createBlockOnDisk(kvs, block, useTag);
+    HFileBlock blockOnDisk = createBlockOnDisk(conf, kvs, block, useTag);
 
     if (blockEncoder.getDataBlockEncoding() !=
         DataBlockEncoding.NONE) {
@@ -204,10 +208,10 @@ public class TestHFileDataBlockEncoder {
     return b;
   }
 
-  private HFileBlock createBlockOnDisk(List<KeyValue> kvs, HFileBlock block, boolean useTags)
-      throws IOException {
+  private HFileBlock createBlockOnDisk(Configuration conf, List<KeyValue> kvs, HFileBlock block,
+      boolean useTags) throws IOException {
     int size;
-    HFileBlockEncodingContext context = new HFileBlockDefaultEncodingContext(
+    HFileBlockEncodingContext context = new HFileBlockDefaultEncodingContext(conf,
         blockEncoder.getDataBlockEncoding(), HConstants.HFILEBLOCK_DUMMY_HEADER,
         block.getHFileContext());
 
@@ -226,9 +230,9 @@ public class TestHFileDataBlockEncoder {
         block.getOnDiskDataSizeWithHeader(), -1, block.getHFileContext(), ByteBuffAllocator.HEAP);
   }
 
-  private void writeBlock(List<Cell> kvs, HFileContext fileContext, boolean useTags)
-      throws IOException {
-    HFileBlockEncodingContext context = new HFileBlockDefaultEncodingContext(
+  private void writeBlock(Configuration conf, List<Cell> kvs, HFileContext fileContext,
+      boolean useTags) throws IOException {
+    HFileBlockEncodingContext context = new HFileBlockDefaultEncodingContext(conf,
         blockEncoder.getDataBlockEncoding(), HConstants.HFILEBLOCK_DUMMY_HEADER,
         fileContext);
 

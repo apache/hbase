@@ -22,12 +22,9 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.io.util.BlockIOUtils;
-import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
@@ -519,37 +516,6 @@ public final class Compression {
     }
 
     return ret;
-  }
-
-  /**
-   * Decompresses data from the given stream using the configured compression algorithm. It will
-   * throw an exception if the dest buffer does not have enough space to hold the decompressed data.
-   * @param dest the output buffer
-   * @param bufferedBoundedStream a stream to read compressed data from, bounded to the exact amount
-   *          of compressed data
-   * @param uncompressedSize uncompressed data size, header not included
-   * @param compressAlgo compression algorithm used
-   * @throws IOException if any IO error happen
-   */
-  public static void decompress(ByteBuff dest, InputStream bufferedBoundedStream,
-      int uncompressedSize, Compression.Algorithm compressAlgo) throws IOException {
-    if (dest.remaining() < uncompressedSize) {
-      throw new IllegalArgumentException("Output buffer does not have enough space to hold "
-          + uncompressedSize + " decompressed bytes, available: " + dest.remaining());
-    }
-
-    Decompressor decompressor = null;
-    try {
-      decompressor = compressAlgo.getDecompressor();
-      try (InputStream is =
-          compressAlgo.createDecompressionStream(bufferedBoundedStream, decompressor, 0)) {
-        BlockIOUtils.readFullyWithHeapBuffer(is, dest, uncompressedSize);
-      }
-    } finally {
-      if (decompressor != null) {
-        compressAlgo.returnDecompressor(decompressor);
-      }
-    }
   }
 
   /**

@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.Cell;
@@ -837,12 +839,13 @@ public class HFileBlock implements Cacheable {
     /**
      * @param dataBlockEncoder data block encoding algorithm to use
      */
-    public Writer(HFileDataBlockEncoder dataBlockEncoder, HFileContext fileContext) {
-      this(dataBlockEncoder, fileContext, ByteBuffAllocator.HEAP);
+    public Writer(Configuration conf, HFileDataBlockEncoder dataBlockEncoder,
+        HFileContext fileContext) {
+      this(conf, dataBlockEncoder, fileContext, ByteBuffAllocator.HEAP);
     }
 
-    public Writer(HFileDataBlockEncoder dataBlockEncoder, HFileContext fileContext,
-        ByteBuffAllocator allocator) {
+    public Writer(Configuration conf, HFileDataBlockEncoder dataBlockEncoder,
+        HFileContext fileContext, ByteBuffAllocator allocator) {
       if (fileContext.getBytesPerChecksum() < HConstants.HFILEBLOCK_HEADER_SIZE) {
         throw new RuntimeException("Unsupported value of bytesPerChecksum. " +
             " Minimum is " + HConstants.HFILEBLOCK_HEADER_SIZE + " but the configured value is " +
@@ -851,11 +854,11 @@ public class HFileBlock implements Cacheable {
       this.allocator = allocator;
       this.dataBlockEncoder = dataBlockEncoder != null?
           dataBlockEncoder: NoOpDataBlockEncoder.INSTANCE;
-      this.dataBlockEncodingCtx = this.dataBlockEncoder.
-          newDataBlockEncodingContext(HConstants.HFILEBLOCK_DUMMY_HEADER, fileContext);
-      // TODO: This should be lazily instantiated since we usually do NOT need this default encoder
-      this.defaultBlockEncodingCtx = new HFileBlockDefaultEncodingContext(null,
-          HConstants.HFILEBLOCK_DUMMY_HEADER, fileContext);
+      this.dataBlockEncodingCtx = this.dataBlockEncoder.newDataBlockEncodingContext(conf,
+        HConstants.HFILEBLOCK_DUMMY_HEADER, fileContext);
+      // TODO: This should be lazily instantiated
+      this.defaultBlockEncodingCtx = new HFileBlockDefaultEncodingContext(conf, null,
+        HConstants.HFILEBLOCK_DUMMY_HEADER, fileContext);
       // TODO: Set BAOS initial size. Use fileContext.getBlocksize() and add for header/checksum
       baosInMemory = new ByteArrayOutputStream();
       prevOffsetByType = new long[BlockType.values().length];
@@ -1345,7 +1348,7 @@ public class HFileBlock implements Cacheable {
     HFileBlockDecodingContext getDefaultBlockDecodingContext();
 
     void setIncludesMemStoreTS(boolean includesMemstoreTS);
-    void setDataBlockEncoder(HFileDataBlockEncoder encoder);
+    void setDataBlockEncoder(HFileDataBlockEncoder encoder, Configuration conf);
 
     /**
      * To close the stream's socket. Note: This can be concurrently called from multiple threads and
@@ -1413,7 +1416,7 @@ public class HFileBlock implements Cacheable {
     private final Lock streamLock = new ReentrantLock();
 
     FSReaderImpl(ReaderContext readerContext, HFileContext fileContext,
-        ByteBuffAllocator allocator) throws IOException {
+        ByteBuffAllocator allocator, Configuration conf) throws IOException {
       this.fileSize = readerContext.getFileSize();
       this.hfs = readerContext.getFileSystem();
       if (readerContext.getFilePath() != null) {
@@ -1426,7 +1429,7 @@ public class HFileBlock implements Cacheable {
       this.streamWrapper = readerContext.getInputStreamWrapper();
       // Older versions of HBase didn't support checksum.
       this.streamWrapper.prepareForBlockReader(!fileContext.isUseHBaseChecksum());
-      defaultDecodingCtx = new HFileBlockDefaultDecodingContext(fileContext);
+      defaultDecodingCtx = new HFileBlockDefaultDecodingContext(conf, fileContext);
       encodedBlockDecodingCtx = defaultDecodingCtx;
     }
 
@@ -1790,8 +1793,8 @@ public class HFileBlock implements Cacheable {
     }
 
     @Override
-    public void setDataBlockEncoder(HFileDataBlockEncoder encoder) {
-      encodedBlockDecodingCtx = encoder.newDataBlockDecodingContext(this.fileContext);
+    public void setDataBlockEncoder(HFileDataBlockEncoder encoder, Configuration conf) {
+      encodedBlockDecodingCtx = encoder.newDataBlockDecodingContext(conf, fileContext);
     }
 
     @Override

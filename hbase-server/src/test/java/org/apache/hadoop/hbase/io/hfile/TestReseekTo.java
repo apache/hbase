@@ -112,7 +112,7 @@ public class TestReseekTo {
 
     HFile.Reader reader = HFile.createReader(TEST_UTIL.getTestFileSystem(), ncTFile, cacheConf,
       true, TEST_UTIL.getConfiguration());
-    HFileScanner scanner = reader.getScanner(false, true);
+    HFileScanner scanner = reader.getScanner(TEST_UTIL.getConfiguration(), false, true);
 
     scanner.seekTo();
     for (int i = 0; i < keyList.size(); i++) {

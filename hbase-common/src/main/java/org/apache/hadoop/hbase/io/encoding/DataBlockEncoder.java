@@ -20,6 +20,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -91,6 +93,8 @@ public interface DataBlockEncoder {
   /**
    * Creates a encoder specific encoding context
    *
+   * @param conf
+   *          store configuration
    * @param encoding
    *          encoding strategy used
    * @param headerBytes
@@ -100,18 +104,20 @@ public interface DataBlockEncoder {
    *          HFile meta data
    * @return a newly created encoding context
    */
-  HFileBlockEncodingContext newDataBlockEncodingContext(
+  HFileBlockEncodingContext newDataBlockEncodingContext(Configuration conf,
       DataBlockEncoding encoding, byte[] headerBytes, HFileContext meta);
 
   /**
    * Creates an encoder specific decoding context, which will prepare the data
    * before actual decoding
    *
+   * @param conf
+   *          store configuration
    * @param meta
    *          HFile meta data        
    * @return a newly created decoding context
    */
-  HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext meta);
+  HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf, HFileContext meta);
 
   /**
    * An interface which enable to seek while underlying data is encoded.

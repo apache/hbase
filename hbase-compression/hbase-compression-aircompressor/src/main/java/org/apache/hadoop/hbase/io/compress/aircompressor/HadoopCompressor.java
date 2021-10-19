@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.compress.CanReinit;
 import org.apache.hadoop.hbase.io.compress.CompressionUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -32,7 +33,7 @@ import io.airlift.compress.Compressor;
  */
 @InterfaceAudience.Private
 public abstract class HadoopCompressor<T extends Compressor>
-    implements org.apache.hadoop.io.compress.Compressor {
+    implements CanReinit, org.apache.hadoop.io.compress.Compressor {
 
   protected static final Logger LOG = LoggerFactory.getLogger(HadoopCompressor.class);
   protected T compressor;

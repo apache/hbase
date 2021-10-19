@@ -93,9 +93,9 @@ public class TestHFileEncryption {
     cryptoContext.setKey(key);
   }
 
-  private int writeBlock(FSDataOutputStream os, HFileContext fileContext, int size)
-      throws IOException {
-    HFileBlock.Writer hbw = new HFileBlock.Writer(null, fileContext);
+  private int writeBlock(Configuration conf, FSDataOutputStream os, HFileContext fileContext,
+      int size) throws IOException {
+    HFileBlock.Writer hbw = new HFileBlock.Writer(conf, null, fileContext);
     DataOutputStream dos = hbw.startWriting(BlockType.DATA);
     for (int j = 0; j < size; j++) {
       dos.writeInt(j);
@@ -148,7 +148,7 @@ public class TestHFileEncryption {
       FSDataOutputStream os = fs.create(path);
       try {
         for (int i = 0; i < blocks; i++) {
-          totalSize += writeBlock(os, fileContext, blockSizes[i]);
+          totalSize += writeBlock(TEST_UTIL.getConfiguration(), os, fileContext, blockSizes[i]);
         }
       } finally {
         os.close();
@@ -161,7 +161,7 @@ public class TestHFileEncryption {
           .withFileSize(totalSize).build();
       try {
         HFileBlock.FSReaderImpl hbr = new HFileBlock.FSReaderImpl(context, fileContext,
-            ByteBuffAllocator.HEAP);
+            ByteBuffAllocator.HEAP, TEST_UTIL.getConfiguration());
         long pos = 0;
         for (int i = 0; i < blocks; i++) {
           pos += readAndVerifyBlock(pos, fileContext, hbr, blockSizes[i]);
@@ -252,7 +252,7 @@ public class TestHFileEncryption {
         try {
           FixedFileTrailer trailer = reader.getTrailer();
           assertNotNull(trailer.getEncryptionKey());
-          scanner = reader.getScanner(false, false);
+          scanner = reader.getScanner(conf, false, false);
           assertTrue("Initial seekTo failed", scanner.seekTo());
           do {
             Cell kv = scanner.getCell();
@@ -271,7 +271,7 @@ public class TestHFileEncryption {
         LOG.info("Random seeking with " + fileContext);
         reader = HFile.createReader(fs, path, cacheConf, true, conf);
         try {
-          scanner = reader.getScanner(false, true);
+          scanner = reader.getScanner(conf, false, true);
           assertTrue("Initial seekTo failed", scanner.seekTo());
           for (i = 0; i < 100; i++) {
             KeyValue kv = testKvs.get(RNG.nextInt(testKvs.size()));

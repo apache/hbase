@@ -176,7 +176,7 @@ public class TestHFileWriterV3WithDataEncoders {
       .withFileSystem(fs)
       .withFileSize(fileSize).build();
     HFileBlock.FSReader blockReader =
-      new HFileBlock.FSReaderImpl(readerContext, meta, ByteBuffAllocator.HEAP);
+      new HFileBlock.FSReaderImpl(readerContext, meta, ByteBuffAllocator.HEAP, conf);
     // Comparator class name is stored in the trailer in version 3.
     CellComparator comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =
@@ -277,7 +277,7 @@ public class TestHFileWriterV3WithDataEncoders {
       origBlock.limit(pos + block.getUncompressedSizeWithoutHeader() - DataBlockEncoding.ID_SIZE);
       ByteBuff buf =  origBlock.slice();
       DataBlockEncoder.EncodedSeeker seeker =
-        encoder.createSeeker(encoder.newDataBlockDecodingContext(meta));
+        encoder.createSeeker(encoder.newDataBlockDecodingContext(conf, meta));
       seeker.setCurrentBuffer(buf);
       Cell res = seeker.getCell();
       KeyValue kv = keyValues.get(entriesRead);

@@ -283,7 +283,7 @@ public class TestCacheOnWrite {
       .withIncludesTags(useTags).build();
     final boolean cacheBlocks = false;
     final boolean pread = false;
-    HFileScanner scanner = reader.getScanner(cacheBlocks, pread);
+    HFileScanner scanner = reader.getScanner(conf, cacheBlocks, pread);
     assertTrue(testDescription, scanner.seekTo());
 
     long offset = 0;

@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.compress.CanReinit;
 import org.apache.hadoop.hbase.io.compress.CompressionUtil;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -32,7 +33,7 @@ import org.xerial.snappy.Snappy;
  * Hadoop compressor glue for Xerial Snappy.
  */
 @InterfaceAudience.Private
-public class SnappyCompressor implements Compressor {
+public class SnappyCompressor implements CanReinit, Compressor {
 
   protected static final Logger LOG = LoggerFactory.getLogger(SnappyCompressor.class);
   protected ByteBuffer inBuf, outBuf;

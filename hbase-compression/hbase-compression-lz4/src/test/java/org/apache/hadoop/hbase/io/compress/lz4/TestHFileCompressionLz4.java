@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.io.compress.lz4;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.HFileTestBase;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -35,9 +37,11 @@ public class TestHFileCompressionLz4 extends HFileTestBase {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHFileCompressionLz4.class);
 
+  private static Configuration conf;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
+    conf = TEST_UTIL.getConfiguration();
     conf.set(Compression.LZ4_CODEC_CLASS_KEY, Lz4Codec.class.getCanonicalName());
     Compression.Algorithm.LZ4.reload(conf);
     HFileTestBase.setUpBeforeClass();
@@ -45,7 +49,9 @@ public class TestHFileCompressionLz4 extends HFileTestBase {
 
   @Test
   public void test() throws Exception {
-    doTest(Compression.Algorithm.LZ4);
+    Path path = new Path(TEST_UTIL.getDataTestDir(),
+      HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
+    doTest(conf, path, Compression.Algorithm.LZ4);
   }
 
 }
