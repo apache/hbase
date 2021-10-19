@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.io.compress.aircompressor;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.HFileTestBase;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -35,9 +37,11 @@ public class TestHFileCompressionSnappy extends HFileTestBase {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHFileCompressionSnappy.class);
 
+  private static Configuration conf;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
+    conf = TEST_UTIL.getConfiguration();
     conf.set(Compression.SNAPPY_CODEC_CLASS_KEY, SnappyCodec.class.getCanonicalName());
     Compression.Algorithm.SNAPPY.reload(conf);
     HFileTestBase.setUpBeforeClass();
@@ -45,7 +49,9 @@ public class TestHFileCompressionSnappy extends HFileTestBase {
 
   @Test
   public void test() throws Exception {
-    doTest(Compression.Algorithm.SNAPPY);
+    Path path = new Path(TEST_UTIL.getDataTestDir(),
+      HBaseTestingUtil.getRandomUUID().toString() + ".hfile");
+    doTest(conf, path, Compression.Algorithm.SNAPPY);
   }
 
 }

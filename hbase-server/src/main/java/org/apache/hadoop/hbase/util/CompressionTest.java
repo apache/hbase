@@ -145,7 +145,7 @@ public class CompressionTest {
     Cell cc = null;
     HFile.Reader reader = HFile.createReader(fs, path, CacheConfig.DISABLED, true, conf);
     try {
-      HFileScanner scanner = reader.getScanner(false, true);
+      HFileScanner scanner = reader.getScanner(conf, false, true);
       scanner.seekTo(); // position to the start of file
       // Scanner does not do Cells yet. Do below for now till fixed.
       cc = scanner.getCell();

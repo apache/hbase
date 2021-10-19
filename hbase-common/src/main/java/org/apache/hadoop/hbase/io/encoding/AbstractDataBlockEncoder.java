@@ -18,6 +18,8 @@ package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
@@ -29,14 +31,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 public abstract class AbstractDataBlockEncoder implements DataBlockEncoder {
 
   @Override
-  public HFileBlockEncodingContext newDataBlockEncodingContext(
+  public HFileBlockEncodingContext newDataBlockEncodingContext(Configuration conf,
       DataBlockEncoding encoding, byte[] header, HFileContext meta) {
-    return new HFileBlockDefaultEncodingContext(encoding, header, meta);
+    return new HFileBlockDefaultEncodingContext(conf, encoding, header, meta);
   }
 
   @Override
-  public HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext meta) {
-    return new HFileBlockDefaultDecodingContext(meta);
+  public HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf,
+      HFileContext meta) {
+    return new HFileBlockDefaultDecodingContext(conf, meta);
   }
 
   protected void postEncoding(HFileBlockEncodingContext encodingCtx)

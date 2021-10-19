@@ -302,7 +302,7 @@ public class HFileWriterImpl implements HFile.Writer {
     if (blockWriter != null) {
       throw new IllegalStateException("finishInit called twice");
     }
-    blockWriter = new HFileBlock.Writer(blockEncoder, hFileContext,
+    blockWriter = new HFileBlock.Writer(conf, blockEncoder, hFileContext,
         cacheConf.getByteBuffAllocator());
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();

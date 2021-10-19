@@ -24,9 +24,12 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -54,6 +57,7 @@ public class TestSeekToBlockWithEncoders {
 
   static final byte[] HFILEBLOCK_DUMMY_HEADER = new byte[HConstants.HFILEBLOCK_HEADER_SIZE];
   private final boolean useOffheapData;
+  private final Configuration conf = HBaseConfiguration.create();
 
   @Parameters
   public static Collection<Object[]> parameters() {
@@ -283,14 +287,14 @@ public class TestSeekToBlockWithEncoders {
       }
       DataBlockEncoder encoder = encoding.getEncoder();
       HFileContext meta = new HFileContextBuilder().withHBaseCheckSum(false)
-          .withIncludesMvcc(false).withIncludesTags(false)
-          .withCompression(Compression.Algorithm.NONE).build();
-      HFileBlockEncodingContext encodingContext = encoder.newDataBlockEncodingContext(encoding,
-          HFILEBLOCK_DUMMY_HEADER, meta);
+        .withIncludesMvcc(false).withIncludesTags(false)
+        .withCompression(Compression.Algorithm.NONE).build();
+      HFileBlockEncodingContext encodingContext = encoder.newDataBlockEncodingContext(conf,
+        encoding, HFILEBLOCK_DUMMY_HEADER, meta);
       ByteBuffer encodedBuffer = TestDataBlockEncoders.encodeKeyValues(encoding, kvs,
-          encodingContext, this.useOffheapData);
+        encodingContext, this.useOffheapData);
       DataBlockEncoder.EncodedSeeker seeker =
-        encoder.createSeeker(encoder.newDataBlockDecodingContext(meta));
+        encoder.createSeeker(encoder.newDataBlockDecodingContext(conf, meta));
       seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
       encodedSeekers.add(seeker);
     }

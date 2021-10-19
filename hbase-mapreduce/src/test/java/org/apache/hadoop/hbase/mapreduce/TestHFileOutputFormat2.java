@@ -485,7 +485,7 @@ public class TestHFileOutputFormat2  {
         LocatedFileStatus keyFileStatus = iterator.next();
         HFile.Reader reader =
                 HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf), true, conf);
-        HFileScanner scanner = reader.getScanner(false, false, false);
+        HFileScanner scanner = reader.getScanner(conf, false, false, false);
 
         kvCount += reader.getEntries();
         scanner.seekTo();
@@ -534,7 +534,7 @@ public class TestHFileOutputFormat2  {
         LocatedFileStatus keyFileStatus = iterator.next();
         HFile.Reader reader =
             HFile.createReader(fs, keyFileStatus.getPath(), new CacheConfig(conf), true, conf);
-        HFileScanner scanner = reader.getScanner(false, false, false);
+        HFileScanner scanner = reader.getScanner(conf, false, false, false);
         scanner.seekTo();
         Cell cell = scanner.getCell();
         List<Tag> tagsFromCell = PrivateCellUtil.getTags(cell);

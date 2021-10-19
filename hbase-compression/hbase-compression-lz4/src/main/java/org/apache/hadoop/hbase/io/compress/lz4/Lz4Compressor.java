@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.compress.lz4;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.compress.CanReinit;
 import org.apache.hadoop.hbase.io.compress.CompressionUtil;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -31,7 +32,7 @@ import net.jpountz.lz4.LZ4Factory;
  * Hadoop compressor glue for lz4-java.
  */
 @InterfaceAudience.Private
-public class Lz4Compressor implements Compressor {
+public class Lz4Compressor implements CanReinit, Compressor {
 
   protected static final Logger LOG = LoggerFactory.getLogger(Lz4Compressor.class);
   protected LZ4Compressor compressor;
