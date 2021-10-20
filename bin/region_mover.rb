@@ -328,6 +328,26 @@ def unloadRegions(options, hostname, port)
   movedRegions = java.util.Collections.synchronizedList(java.util.ArrayList.new())
   while true
     rs = getRegions(config, servername)
+    # Move meta region first
+    meta_region = nil
+    if not rs.nil? and rs.length > 0
+      rs.each { |region|
+        if region.isMetaRegion()
+          meta_region = region
+          break
+        end
+      }
+    end
+    unless meta_region.nil?
+      $LOG.info("Moving region " + meta_region.getEncodedName() + " to server=" +
+                    servers[0] + " for " + servername)
+      # Assert we can scan meta region in its current location
+      isSuccessfulScan(admin, meta_region)
+      # Move meta region and wait for Scan to be successful from new location
+      move(admin, meta_region, servers[0], servername)
+      movedRegions.add(meta_region)
+    end
+
     # Remove those already tried to move
     rs.removeAll(movedRegions)
     break if rs.length == 0
@@ -387,6 +407,32 @@ def loadRegions(options, hostname, port)
   # sleep 20s to make sure the rs finished initialization.
   sleep 20
   counter = 0
+
+  # Move meta region first
+  meta_region = nil
+  if not regions.nil? and regions.length > 0
+    regions.each { |region|
+      if region.isMetaRegion()
+        meta_region = region
+        break
+      end
+    }
+  end
+  unless meta_region.nil?
+    current_server = getServerNameForRegion(admin, meta_region)
+    if current_server and servername and current_server == servername.to_s
+      $LOG.info("Region " + meta_region.getRegionNameAsString() +
+                    " already on target server=" + servername)
+
+    elsif current_server and servername and current_server != servername.to_s
+      $LOG.info("Moving region " + meta_region.getRegionNameAsString() +
+                    " from " + current_server.to_s + " to server=" + servername)
+      # Move meta region and wait for Scan to be successful from new location
+      move(admin, meta_region, servername, current_server)
+      regions.remove(meta_region)
+    end
+  end
+
   pool = ThreadPool.new(options[:maxthreads])
   while counter < regions.length do
     r = regions[counter]
