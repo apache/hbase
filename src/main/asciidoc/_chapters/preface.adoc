@@ -27,6 +27,8 @@
 :icons: font
 :experimental:
 
+Add an extra line to check the result.
+
 This is the official reference guide for the link:https://hbase.apache.org/[HBase] version it ships with.
 
 Herein you will find either the definitive documentation on an HBase topic as of its
