@@ -283,14 +283,22 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
    */
   public boolean load() throws ExecutionException, InterruptedException, TimeoutException {
     ExecutorService loadPool = Executors.newFixedThreadPool(1);
-    Future<Boolean> loadTask = loadPool.submit(getRegionsMovePlan(true));
+    Future<Boolean> loadTask = loadPool.submit(getMetaRegionMovePlan());
     boolean isMetaMoved = waitTaskToFinish(loadPool, loadTask, "loading");
     if (!isMetaMoved) {
       return false;
     }
     loadPool = Executors.newFixedThreadPool(1);
-    loadTask = loadPool.submit(getRegionsMovePlan(false));
+    loadTask = loadPool.submit(getNonMetaRegionsMovePlan());
     return waitTaskToFinish(loadPool, loadTask, "loading");
+  }
+
+  private Callable<Boolean> getMetaRegionMovePlan() {
+    return getRegionsMovePlan(true);
+  }
+
+  private Callable<Boolean> getNonMetaRegionsMovePlan() {
+    return getRegionsMovePlan(false);
   }
 
   private Callable<Boolean> getRegionsMovePlan(boolean moveMetaRegion) {
@@ -493,7 +501,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     for (RegionInfo regionToMove : regionsToMove) {
       if (ack) {
         Future<Boolean> task = moveRegionsPool.submit(
-          new MoveWithAck(conn, regionToMove, server, regionServers.get(serverIndex), movedRegions));
+          new MoveWithAck(conn, regionToMove, server, regionServers.get(serverIndex),
+            movedRegions));
         taskList.add(task);
       } else {
         Future<Boolean> task = moveRegionsPool.submit(
@@ -505,7 +514,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     }
     moveRegionsPool.shutdown();
     long timeoutInSeconds = regionsToMove.size() * admin.getConfiguration()
-        .getLong(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX);
+      .getLong(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX);
     waitMoveTasksToFinish(moveRegionsPool, taskList, timeoutInSeconds);
   }
 
