@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.4.14 10/17/2021
+Release Notes - HBase - Version 1.4.14 10/20/2021
 
 ** Sub-task
     * [HBASE-24009] - Backport the personality changes in HBASE-23989 to all active branches
@@ -53,6 +53,9 @@ Release Notes - HBase - Version 1.4.14 10/17/2021
     * [HBASE-25228] - Delete dev-support/jenkins_precommit_jira_yetus.sh
     * [HBASE-25601] - Remove search hadoop references in book
     * [HBASE-25804] - [branch-1] Make hbase-thrift module build with jdk8
+    * [HBASE-25831] - [branch-1] remove thrift examples out of hbase-examples module for bypassing the thrift version check
+    * [HBASE-25858] - [branch-1] make hbase-thrift optional in hbase-assembly module
+    * [HBASE-25890] - [branch-1] add -U for maven build to force a check for updated releases and snapshots on remote repositories
 
 Release Notes - HBase - Version 1.4.13 02/29/2020
 
