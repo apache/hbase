@@ -52,6 +52,7 @@ Release Notes - HBase - Version 1.4.14 10/17/2021
     * [HBASE-24200] - Upgrade to Yetus 0.12.0
     * [HBASE-25228] - Delete dev-support/jenkins_precommit_jira_yetus.sh
     * [HBASE-25601] - Remove search hadoop references in book
+    * [HBASE-25804] - [branch-1] Make hbase-thrift module build with jdk8
 
 Release Notes - HBase - Version 1.4.13 02/29/2020
 
