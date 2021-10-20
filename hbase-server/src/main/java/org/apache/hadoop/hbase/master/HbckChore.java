@@ -223,7 +223,8 @@ public class HbckChore extends ScheduledChore {
           .isTableState(regionInfo.getTable(), TableState.State.DISABLED)) {
         disabledTableRegions.add(regionInfo.getRegionNameAsString());
       }
-      if (regionState.isSplit()) {
+      // Check both state and regioninfo for split status, see HBASE-26383
+      if (regionState.isSplit() || regionInfo.isSplit()) {
         splitParentRegions.add(regionInfo.getRegionNameAsString());
       }
       HbckRegionInfo.MetaEntry metaEntry =
