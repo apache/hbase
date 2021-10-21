@@ -439,7 +439,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return null;
     }
 
-   if (!needsBalance(tableName, cluster)) {
+    if (!needsBalance(tableName, cluster)) {
       return null;
     }
 
