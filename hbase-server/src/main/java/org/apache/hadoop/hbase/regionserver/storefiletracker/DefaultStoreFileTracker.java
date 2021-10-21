@@ -62,7 +62,7 @@ class DefaultStoreFileTracker extends StoreFileTrackerBase {
   }
 
   @Override
-  void set(List<StoreFileInfo> files) {
+  public void set(List<StoreFileInfo> files) {
     // NOOP
   }
 }
