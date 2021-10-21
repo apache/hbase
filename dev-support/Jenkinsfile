@@ -50,6 +50,8 @@ pipeline {
     TESTS_FILTER = 'cc,checkstyle,javac,javadoc,pylint,shellcheck,whitespace,perlcritic,ruby-lint,rubocop,mvnsite,xml'
     EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/output/excludes"
     ASF_NIGHTLIES = 'https://nightlies.apache.org'
+    ASF_NIGHTLIES_BASE_ORI = "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}"
+    ASF_NIGHTLIES_BASE = "${ASF_NIGHTLIES_BASE_ORI.replaceAll(' ', '%20')}"
   }
   parameters {
     booleanParam(name: 'USE_YETUS_PRERELEASE', defaultValue: false, description: '''Check to use the current HEAD of apache/yetus rather than our configured release.
@@ -141,6 +143,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_GENERAL}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_GENERAL}"
             SKIP_ERRORPRONE = 'true'
+            ASF_NIGHTLIES_GENERAL_CHECK_BASE="${ASF_NIGHTLIES_BASE}/${OUTPUT_DIR_RELATIVE}"
           }
           steps {
             // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
@@ -188,6 +191,31 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           post {
             always {
               stash name: 'general-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "${env.OUTPUT_DIR_RELATIVE}/*-site/*,${env.OUTPUT_DIR_RELATIVE}/*-site/**/*"
+                    )
+                  ]
+                )
+              ])
+              sh '''#!/bin/bash -e
+              if [ -d "${OUTPUT_DIR}/branch-site" ]; then
+                echo "Remove ${OUTPUT_DIR}/branch-site for saving space"
+                rm -rf "${OUTPUT_DIR}/branch-site"
+                python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/branch-site" > "${OUTPUT_DIR}/branch-site.html"
+              else
+                echo "No branch-site, skipping"
+              fi
+              if [ -d "${OUTPUT_DIR}/patch-site" ]; then
+                echo "Remove ${OUTPUT_DIR}/patch-site for saving space"
+                rm -rf "${OUTPUT_DIR}/patch-site"
+                python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/patch-site" > "${OUTPUT_DIR}/patch-site.html"
+              else
+                echo "No patch-site, skipping"
+              fi
+              '''
               // Has to be relative to WORKSPACE.
               archiveArtifacts "${env.OUTPUT_DIR_RELATIVE}/*"
               archiveArtifacts "${env.OUTPUT_DIR_RELATIVE}/**/*"
@@ -294,7 +322,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
                   rm -rf "${OUTPUT_DIR}/test_logs.zip"
-                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
+                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
                 else
                   echo "No test_logs.zip, skipping"
                 fi
@@ -402,7 +430,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
                   rm -rf "${OUTPUT_DIR}/test_logs.zip"
-                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
+                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
                 else
                   echo "No test_logs.zip, skipping"
                 fi
@@ -517,7 +545,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
                   rm -rf "${OUTPUT_DIR}/test_logs.zip"
-                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
+                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
                 else
                   echo "No test_logs.zip, skipping"
                 fi

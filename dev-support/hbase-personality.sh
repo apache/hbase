@@ -118,6 +118,10 @@ function personality_parse_args
         delete_parameter "${i}"
         SKIP_ERRORPRONE=true
       ;;
+      --asf-nightlies-general-check-base=*)
+        delete_parameter "${i}"
+        ASF_NIGHTLIES_GENERAL_CHECK_BASE=${i#*=}
+      ;;
     esac
   done
 }
@@ -399,7 +403,11 @@ function refguide_rebuild
   fi
 
   add_vote_table 0 refguide "${repostatus} has no errors when building the reference guide. See footer for rendered docs, which you should manually inspect."
-  add_footer_table refguide "@@BASE@@/${repostatus}-site/book.html"
+  if [[ -n "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}" ]]; then
+    add_footer_table refguide "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/${repostatus}-site/book.html"
+  else
+    add_footer_table refguide "@@BASE@@/${repostatus}-site/book.html"
+  fi
   return 0
 }
 
