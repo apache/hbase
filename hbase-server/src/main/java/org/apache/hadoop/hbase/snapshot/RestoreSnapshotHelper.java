@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.regionserver.storefiletracker.SnapshotStoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -158,7 +158,7 @@ public class RestoreSnapshotHelper {
     final ForeignExceptionDispatcher monitor, final MonitoredTask status,
     final boolean createBackRefs) {
     this.fs = fs;
-    this.conf = new Configuration(conf);
+    this.conf = conf;
     this.snapshotManifest = manifest;
     this.snapshotDesc = manifest.getSnapshotDescription();
     this.snapshotTable = TableName.valueOf(snapshotDesc.getTable());
@@ -168,13 +168,6 @@ public class RestoreSnapshotHelper {
     this.monitor = monitor;
     this.status = status;
     this.createBackRefs = createBackRefs;
-    this.conf.set(TRACKER_IMPL, SnapshotStoreFileTracker.class.getName());
-    this.conf.set("hbase.store.file-tracker.migration.src.impl",
-      SnapshotStoreFileTracker.SourceTracker.class.getName());
-    this.conf.set("hbase.store.file-tracker.migration.dst.impl",
-      this.tableDesc.getValue(TRACKER_IMPL) != null ?
-        this.tableDesc.getValue(TRACKER_IMPL) :
-        StoreFileTrackerFactory.Trackers.DEFAULT.name());
   }
 
   /**
@@ -568,23 +561,20 @@ public class RestoreSnapshotHelper {
         fs.delete(familyDir, true);
       }
 
-      SnapshotStoreFileTracker tracker = (SnapshotStoreFileTracker)
-        StoreFileTrackerFactory.create(conf, true,
+      StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true,
           StoreContext.getBuilder().withFamilyStoreDirectoryPath(familyDir).
             withRegionFileSystem(regionFS).build());
 
       //simply reset list of tracked files with the matching files
-      // and the extra one present in the snapshot
-      tracker.getSourceTracker().setReferenceFiles(filesToTrack);
-      tracker.load();
+      //and the extra one present in the snapshot
+      tracker.set(filesToTrack);
     }
 
     // Add families not present in the table
     for (Map.Entry<String, List<SnapshotRegionManifest.StoreFile>> familyEntry:
                                                                       snapshotFiles.entrySet()) {
       Path familyDir = new Path(regionDir, familyEntry.getKey());
-      SnapshotStoreFileTracker tracker = (SnapshotStoreFileTracker)
-        StoreFileTrackerFactory.create(conf, true,
+      StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true,
           StoreContext.getBuilder().withFamilyStoreDirectoryPath(familyDir).
             withRegionFileSystem(regionFS).build());
       List<StoreFileInfo> files = new ArrayList<>();
@@ -598,8 +588,7 @@ public class RestoreSnapshotHelper {
         String fileName = restoreStoreFile(familyDir, regionInfo, storeFile, createBackRefs);
         files.add(new StoreFileInfo(conf, fs, new Path(familyDir, fileName), true));
       }
-      tracker.getSourceTracker().setReferenceFiles(files);
-      tracker.load();
+      tracker.set(files);
     }
   }
 
@@ -718,13 +707,10 @@ public class RestoreSnapshotHelper {
           HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, newRegionInfo, false) :
           HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, newRegionInfo);
 
-        SnapshotStoreFileTracker tracker = (SnapshotStoreFileTracker) StoreFileTrackerFactory
-          .create(conf, true, StoreContext.getBuilder().withFamilyStoreDirectoryPath(familyDir).
+        StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true,
+          StoreContext.getBuilder().withFamilyStoreDirectoryPath(familyDir).
             withRegionFileSystem(regionFS).build());
-        //since we are adding the reference files for the first time,
-        // we do tracker.load, rather than add
-        tracker.getSourceTracker().setReferenceFiles(clonedFiles);
-        tracker.load();
+        tracker.set(clonedFiles);
       }
     }
 
