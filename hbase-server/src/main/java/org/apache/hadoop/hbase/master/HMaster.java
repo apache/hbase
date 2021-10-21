@@ -367,7 +367,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   private HbckChore hbckChore;
   CatalogJanitor catalogJanitorChore;
-  private DirScanPool cleanerPool;
+  // Threadpool for scanning the archive directory, used by the HFileCleaner
+  private DirScanPool hfileCleanerPool;
+  // Threadpool for scanning the Old logs directory, used by the LogCleaner
+  private DirScanPool logCleanerPool;
   private LogCleaner logCleaner;
   private HFileCleaner hfileCleaner;
   private ReplicationBarrierCleaner replicationBarrierCleaner;
@@ -1131,7 +1134,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
        (EnvironmentEdgeManager.currentTime() - masterActiveTime) / 1000.0f));
     this.masterFinishedInitializationTime = EnvironmentEdgeManager.currentTime();
     configurationManager.registerObserver(this.balancer);
-    configurationManager.registerObserver(this.cleanerPool);
+    configurationManager.registerObserver(this.hfileCleanerPool);
+    configurationManager.registerObserver(this.logCleanerPool);
     configurationManager.registerObserver(this.hfileCleaner);
     configurationManager.registerObserver(this.logCleaner);
     configurationManager.registerObserver(this.regionsRecoveryConfigManager);
@@ -1493,21 +1497,24 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         ExecutorType.MASTER_TABLE_OPERATIONS).setCorePoolSize(1));
     startProcedureExecutor();
 
-    // Create cleaner thread pool
-    cleanerPool = new DirScanPool(conf);
+    // Create log cleaner thread pool
+    logCleanerPool = DirScanPool.getLogCleanerScanPool(conf);
     Map<String, Object> params = new HashMap<>();
     params.put(MASTER, this);
     // Start log cleaner thread
     int cleanerInterval =
       conf.getInt(HBASE_MASTER_CLEANER_INTERVAL, DEFAULT_HBASE_MASTER_CLEANER_INTERVAL);
     this.logCleaner = new LogCleaner(cleanerInterval, this, conf,
-      getMasterWalManager().getFileSystem(), getMasterWalManager().getOldLogDir(), cleanerPool, params);
+      getMasterWalManager().getFileSystem(), getMasterWalManager().getOldLogDir(),
+      logCleanerPool, params);
     getChoreService().scheduleChore(logCleaner);
 
     // start the hfile archive cleaner thread
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
+    // Create archive cleaner thread pool
+    hfileCleanerPool = DirScanPool.getHFileCleanerScanPool(conf);
     this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf,
-      getMasterFileSystem().getFileSystem(), archiveDir, cleanerPool, params);
+      getMasterFileSystem().getFileSystem(), archiveDir, hfileCleanerPool, params);
     getChoreService().scheduleChore(hfileCleaner);
 
     // Regions Reopen based on very high storeFileRefCount is considered enabled
@@ -1557,9 +1564,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     stopChoreService();
     stopExecutorService();
-    if (cleanerPool != null) {
-      cleanerPool.shutdownNow();
-      cleanerPool = null;
+    if (hfileCleanerPool != null) {
+      hfileCleanerPool.shutdownNow();
+      hfileCleanerPool = null;
+    }
+    if (logCleanerPool != null) {
+      logCleanerPool.shutdownNow();
+      logCleanerPool = null;
     }
     if (maintenanceRegionServer != null) {
       maintenanceRegionServer.getRegionServer().stop(HBASE_MASTER_CLEANER_INTERVAL);

@@ -618,7 +618,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         long verificationStartTime = EnvironmentEdgeManager.currentTime();
         LOG.info("Full verification started for bulk load hfile: {}", srcPath);
         Cell prevCell = null;
-        HFileScanner scanner = reader.getScanner(false, false, false);
+        HFileScanner scanner = reader.getScanner(conf, false, false, false);
         scanner.seekTo();
         do {
           Cell cell = scanner.getCell();

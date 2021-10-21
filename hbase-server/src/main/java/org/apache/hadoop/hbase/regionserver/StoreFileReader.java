@@ -75,6 +75,7 @@ public class StoreFileReader {
   private KeyValue.KeyOnlyKeyValue lastBloomKeyOnlyKV = null;
   private boolean skipResetSeqId = true;
   private int prefixLength = -1;
+  protected Configuration conf;
 
   // Counter that is incremented every time a scanner is created on the
   // store file. It is decremented when the scan on the store file is
@@ -82,16 +83,18 @@ public class StoreFileReader {
   private final AtomicInteger refCount;
   private final ReaderContext context;
 
-  private StoreFileReader(HFile.Reader reader, AtomicInteger refCount, ReaderContext context) {
+  private StoreFileReader(HFile.Reader reader, AtomicInteger refCount, ReaderContext context,
+      Configuration conf) {
     this.reader = reader;
     bloomFilterType = BloomType.NONE;
     this.refCount = refCount;
     this.context = context;
+    this.conf = conf;
   }
 
   public StoreFileReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
       AtomicInteger refCount, Configuration conf) throws IOException {
-    this(HFile.createReader(context, fileInfo, cacheConf, conf), refCount, context);
+    this(HFile.createReader(context, fileInfo, cacheConf, conf), refCount, context, conf);
   }
 
   void copyFields(StoreFileReader storeFileReader) throws IOException {
@@ -205,7 +208,7 @@ public class StoreFileReader {
   @Deprecated
   public HFileScanner getScanner(boolean cacheBlocks, boolean pread,
       boolean isCompaction) {
-    return reader.getScanner(cacheBlocks, pread, isCompaction);
+    return reader.getScanner(conf, cacheBlocks, pread, isCompaction);
   }
 
   public void close(boolean evictOnClose) throws IOException {

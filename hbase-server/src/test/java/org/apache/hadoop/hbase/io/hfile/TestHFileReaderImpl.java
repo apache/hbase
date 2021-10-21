@@ -92,7 +92,7 @@ public class TestHFileReaderImpl {
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf, bucketcache), true, conf);
 
     // warm cache
-    HFileScanner scanner = reader.getScanner(true, true);
+    HFileScanner scanner = reader.getScanner(conf, true, true);
     scanner.seekTo(toKV("i"));
     assertEquals("i", toRowStr(scanner.getCell()));
     scanner.close();
@@ -102,7 +102,7 @@ public class TestHFileReaderImpl {
     }
 
     // reopen again.
-    scanner = reader.getScanner(true, true);
+    scanner = reader.getScanner(conf, true, true);
     scanner.seekTo(toKV("i"));
     assertEquals("i", toRowStr(scanner.getCell()));
     scanner.seekBefore(toKV("i"));
@@ -117,7 +117,7 @@ public class TestHFileReaderImpl {
     }
 
     // case 2
-    scanner = reader.getScanner(true, true);
+    scanner = reader.getScanner(conf, true, true);
     scanner.seekTo(toKV("i"));
     assertEquals("i", toRowStr(scanner.getCell()));
     scanner.seekBefore(toKV("c"));

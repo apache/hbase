@@ -21,9 +21,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -40,9 +37,9 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
 
   public static final String DST_IMPL = "hbase.store.file-tracker.migration.dst.impl";
 
-  final StoreFileTrackerBase src;
+  private final StoreFileTrackerBase src;
 
-  final StoreFileTrackerBase dst;
+  private final StoreFileTrackerBase dst;
 
   public MigrationStoreFileTracker(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
     super(conf, isPrimaryReplica, ctx);
@@ -84,7 +81,7 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
   }
 
   @Override
-  void set(List<StoreFileInfo> files) {
+  public void set(List<StoreFileInfo> files) {
     throw new UnsupportedOperationException(
       "Should not call this method on " + getClass().getSimpleName());
   }

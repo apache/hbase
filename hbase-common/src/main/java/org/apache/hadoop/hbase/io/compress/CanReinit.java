@@ -16,23 +16,16 @@
  */
 package org.apache.hadoop.hbase.io.compress;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * This is a marker interface that indicates if a compressor or decompressor
+ * type can support reinitialization via reinit(Configuration conf).
+ */
 @InterfaceAudience.Private
-public class CompressionUtil {
+public interface CanReinit {
 
-  private CompressionUtil() { }
-
-  /**
-   * Round up to the next power of two, unless the value would become negative (ints
-   * are signed), in which case just return Integer.MAX_VALUE.
-   */
-  public static int roundInt2(int v) {
-    v = Integer.highestOneBit(v) << 1;
-    if (v < 0) {
-      return Integer.MAX_VALUE;
-    }
-    return v;
-  }
+  void reinit(Configuration conf);
 
 }

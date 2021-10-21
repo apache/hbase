@@ -57,6 +57,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   private static final int AVAIL_PROCESSORS = Runtime.getRuntime().availableProcessors();
 
   /**
+   * Configures the threadpool used for scanning the archive directory for the HFileCleaner
    * If it is an integer and >= 1, it would be the size;
    * if 0.0 < size <= 1.0, size would be available processors * size.
    * Pay attention that 1.0 is different from 1, former indicates it will use 100% of cores,
@@ -64,6 +65,12 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    */
   public static final String CHORE_POOL_SIZE = "hbase.cleaner.scan.dir.concurrent.size";
   static final String DEFAULT_CHORE_POOL_SIZE = "0.25";
+  /**
+   * Configures the threadpool used for scanning the Old logs directory for the LogCleaner
+   * Follows the same configuration mechanism as CHORE_POOL_SIZE, but has a default of 1 thread.
+   */
+  public static final String LOG_CLEANER_CHORE_SIZE = "hbase.log.cleaner.scan.dir.concurrent.size";
+  static final String DEFAULT_LOG_CLEANER_CHORE_POOL_SIZE = "1";
 
   private final DirScanPool pool;
 
