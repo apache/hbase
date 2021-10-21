@@ -2217,6 +2217,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       final ReplicateWALEntryRequest request) throws ServiceException {
     long before = EnvironmentEdgeManager.currentTime();
     CellScanner cells = ((HBaseRpcController) controller).cellScanner();
+    ((HBaseRpcController) controller).setCellScanner(null);
     try {
       checkOpen();
       List<WALEntry> entries = request.getEntryList();
@@ -2319,6 +2320,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         requestCount.increment();
         List<WALEntry> entries = request.getEntryList();
         CellScanner cellScanner = ((HBaseRpcController)controller).cellScanner();
+        ((HBaseRpcController) controller).setCellScanner(null);
         regionServer.getRegionServerCoprocessorHost().preReplicateLogEntries();
         regionServer.getReplicationSinkService().replicateLogEntries(entries, cellScanner,
           request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),
