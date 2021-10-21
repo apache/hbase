@@ -920,6 +920,7 @@ public class BucketCache implements BlockCache, HeapSize {
             index++;
             continue;
           }
+
           BlockCacheKey cacheKey = re.getKey();
           if (ramCache.containsKey(cacheKey)) {
             blocksByHFile.add(cacheKey);
