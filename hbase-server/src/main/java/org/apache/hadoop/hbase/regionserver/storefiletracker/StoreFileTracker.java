@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -68,6 +66,11 @@ public interface StoreFileTracker {
    */
   void replace(Collection<StoreFileInfo> compactedFiles, Collection<StoreFileInfo> newFiles)
     throws IOException;
+
+  /**
+   * Set the store files.
+   */
+  void set(List<StoreFileInfo> files) throws IOException;
 
   /**
    * Create a writer for writing new store files.
