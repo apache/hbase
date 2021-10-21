@@ -143,6 +143,10 @@ fi
 YETUS_ARGS+=("--sentinel")
 # use emoji vote so it is easier to find the broken line
 YETUS_ARGS+=("--github-use-emoji-vote")
+# pass asf nightlies url in
+if [[ -n "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}" ]]; then
+  YETUS_ARGS+=("--asf-nightlies-general-check-base=${ASF_NIGHTLIES_GENERAL_CHECK_BASE}")
+fi
 
 echo "Launching yetus with command line:"
 echo "${TESTPATCHBIN} ${YETUS_ARGS[*]}"
