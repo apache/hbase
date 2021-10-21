@@ -91,16 +91,14 @@ import java.util.concurrent.atomic.AtomicLong;
           }
           Path storePath =
               new Path(region.getRegionFileSystem().getRegionDir(), store.getColumnFamilyName());
-          List<FileStatus> fsStoreFiles = new ArrayList<>();
+
           try {
-            fsStoreFiles = Arrays.asList(region.getRegionFileSystem().fs.listStatus(storePath));
+            List<FileStatus> fsStoreFiles = Arrays.asList(region.getRegionFileSystem().fs.listStatus(storePath));
+            fsStoreFiles.forEach(file -> cleanFileIfNeeded(file, store, deletedFiles, failedDeletes));
           } catch (IOException e) {
             LOG.warn("Failed to list files in {}, cleanup is skipped there",storePath);
             continue;
           }
-
-          fsStoreFiles.forEach(file -> cleanFileIfNeeded(file, store, deletedFiles, failedDeletes));
-
         }
       }
       logCleanupMetrics(EnvironmentEdgeManager.currentTime() - start, deletedFiles.get(), failedDeletes.get());

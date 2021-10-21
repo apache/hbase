@@ -1987,7 +1987,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       FileBasedStoreFileCleaner.FILEBASED_STOREFILE_CLEANER_DELAY_JITTER,
       FileBasedStoreFileCleaner.DEFAULT_FILEBASED_STOREFILE_CLEANER_DELAY_JITTER);
 
-    double jitterRate = (new Random().nextDouble() - 0.5D) * fileBasedStoreFileCleanerDelayJitter;
+    double jitterRate = RandomUtils.nextDouble(-0.5D, 0.5D) * fileBasedStoreFileCleanerDelayJitter;
     long jitterValue = Math.round(fileBasedStoreFileCleanerDelay * jitterRate);
     this.fileBasedStoreFileCleaner =
       new FileBasedStoreFileCleaner((int) (fileBasedStoreFileCleanerDelay + jitterValue),
