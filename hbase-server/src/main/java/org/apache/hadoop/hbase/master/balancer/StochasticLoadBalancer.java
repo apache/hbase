@@ -149,8 +149,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   private List<CandidateGenerator> candidateGenerators;
   private List<CostFunction> costFunctions; // FindBugs: Wants this protected; IS2_INCONSISTENT_SYNC
-  // To save currently configed sum of multiplier. Defaulted at 1 for cases that carry high cost
-  private float sumMultiplier = 1.0f;
+  private float sumMultiplier;
   // to save and report costs to JMX
   private double curOverallCost = 0d;
   private double[] tempFunctionCosts;
@@ -240,8 +239,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     LOG.info(
       "Loaded config; maxSteps=" + maxSteps + ", runMaxSteps=" + runMaxSteps +
         ", stepsPerRegion=" + stepsPerRegion +
-        ", maxRunningTime=" + maxRunningTime + ", isByTable=" + isByTable
-        + ", CostFunctions=" + Arrays.toString(getCostFunctionNames()) + " etc.");
+        ", maxRunningTime=" + maxRunningTime + ", isByTable=" + isByTable +
+        ", CostFunctions=" + Arrays.toString(getCostFunctionNames()) +
+        " , sum of multiplier of cost functions = " + sumMultiplier + " etc.");
   }
 
   private void loadCustomCostFunctions(Configuration conf) {
@@ -334,31 +334,24 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return false;
     }
     if (areSomeRegionReplicasColocated(cluster)) {
-      LOG.info("Running balancer because at least one server hosts replicas of the same region.");
+      LOG.info("Running balancer because at least one server hosts replicas of the same region." +
+        " function cost={}", functionCost());
       return true;
     }
 
     if (idleRegionServerExist(cluster)){
-      LOG.info("Running balancer because cluster has idle server(s).");
+      LOG.info("Running balancer because cluster has idle server(s)."+
+        " function cost={}", functionCost());
       return true;
     }
 
-    sumMultiplier = 0.0f;
     double total = 0.0;
     for (CostFunction c : costFunctions) {
-      float multiplier = c.getMultiplier();
-      double cost = c.cost();
       if (!c.isNeeded()) {
         LOG.trace("{} not needed", c.getClass().getSimpleName());
         continue;
       }
-      total += cost * multiplier;
-      sumMultiplier += multiplier;
-    }
-    if (sumMultiplier <= 0) {
-      LOG.error("At least one cost function needs a multiplier > 0. For example, set "
-        + "hbase.master.balancer.stochastic.regionCountCost to a positive value or default");
-      return false;
+      total += c.cost() * c.getMultiplier();
     }
 
     boolean balanced = (total / sumMultiplier < minCostNeedBalance);
@@ -434,8 +427,19 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     long startTime = EnvironmentEdgeManager.currentTime();
 
     initCosts(cluster);
+    sumMultiplier = 0;
+    for (CostFunction c : costFunctions) {
+      if(c.isNeeded()) {
+        sumMultiplier += c.getMultiplier();
+      }
+    }
+    if (sumMultiplier <= 0) {
+      LOG.error("At least one cost function needs a multiplier > 0. For example, set "
+        + "hbase.master.balancer.stochastic.regionCountCost to a positive value or default");
+      return null;
+    }
 
-    if (!needsBalance(tableName, cluster)) {
+   if (!needsBalance(tableName, cluster)) {
       return null;
     }
 
@@ -605,8 +609,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         builder.append(", ");
         double cost = c.cost();
         builder.append("imbalance=" + cost);
-        if (cost < minCostNeedBalance) {
-          builder.append(", balanced");
+        if (cost >= minCostNeedBalance) {
+          builder.append(", need balance");
         }
       } else {
         builder.append("not needed");
@@ -1229,7 +1233,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   /**
-   * Class to be used for the subset of RegionLoad costs that should be treated as rates.
+   * Class to be used for the subset of RegionLoad csts that should be treated as rates.
    * We do not compare about the actual rate in requests per second but rather the rate relative
    * to the rest of the regions.
    */
