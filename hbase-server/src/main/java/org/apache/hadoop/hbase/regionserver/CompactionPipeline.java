@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -64,7 +63,16 @@ public class CompactionPipeline {
   private final LinkedList<ImmutableSegment> pipeline = new LinkedList<>();
   // The list is volatile to avoid reading a new allocated reference before the c'tor is executed
   private volatile LinkedList<ImmutableSegment> readOnlyCopy = new LinkedList<>();
-  // Version is volatile to ensure it is atomically read when not using a lock
+  /**
+   * <pre>
+   * Version is volatile to ensure it is atomically read when not using a lock.
+   * To indicate whether the suffix of pipleline changes：
+   * 1.for {@link CompactionPipeline#pushHead(MutableSegment)},new {@link ImmutableSegment} only
+   *   added at Head, {@link #version} not change.
+   * 2.for {@link CompactionPipeline#swap},{@link #version} increase.
+   * 3.for {@link CompactionPipeline#replaceAtIndex},{@link #version} increase.
+   * </pre>
+   */
   private volatile long version = 0;
 
   public CompactionPipeline(RegionServicesForStores region) {
@@ -95,7 +103,7 @@ public class CompactionPipeline {
 
   public VersionedSegmentsList getVersionedTail() {
     synchronized (pipeline){
-      List<ImmutableSegment> segmentList = new ArrayList<>();
+      LinkedList<ImmutableSegment> segmentList = new LinkedList<>();
       if(!pipeline.isEmpty()) {
         segmentList.add(0, pipeline.getLast());
       }
@@ -125,7 +133,7 @@ public class CompactionPipeline {
     if (versionedList.getVersion() != version) {
       return false;
     }
-    List<ImmutableSegment> suffix;
+    LinkedList<ImmutableSegment> suffix;
     synchronized (pipeline){
       if(versionedList.getVersion() != version) {
         return false;
@@ -290,10 +298,15 @@ public class CompactionPipeline {
     return memStoreSizing.getMemStoreSize();
   }
 
-  private void swapSuffix(List<? extends Segment> suffix, ImmutableSegment segment,
+  /**
+   * Must be called under the {@link CompactionPipeline#pipeline} Lock.
+   */
+  private void swapSuffix(LinkedList<? extends Segment> suffix, ImmutableSegment segment,
       boolean closeSegmentsInSuffix) {
-    pipeline.removeAll(suffix);
-    if(segment != null) pipeline.addLast(segment);
+    matchAndRemoveSuffixFromPipeline(suffix);
+    if (segment != null) {
+      pipeline.addLast(segment);
+    }
     // During index merge we won't be closing the segments undergoing the merge. Segment#close()
     // will release the MSLAB chunks to pool. But in case of index merge there wont be any data copy
     // from old MSLABs. So the new cells in new segment also refers to same chunks. In case of data
@@ -305,6 +318,41 @@ public class CompactionPipeline {
         itemInSuffix.close();
       }
     }
+  }
+
+  /**
+   * Checking that the {@link Segment}s in suffix input parameter is same as the {@link Segment}s in
+   * {@link CompactionPipeline#pipeline} one by one from the last element to the first element of
+   * suffix. If matched, remove suffix from {@link CompactionPipeline#pipeline}. <br/>
+   * Must be called under the {@link CompactionPipeline#pipeline} Lock.
+   */
+  private void matchAndRemoveSuffixFromPipeline(LinkedList<? extends Segment> suffix) {
+    if (suffix.isEmpty()) {
+      return;
+    }
+    if (pipeline.size() < suffix.size()) {
+      throw new IllegalStateException(
+          "CODE-BUG:pipleine size:[" + pipeline.size() + "],suffix size:[" + suffix.size()
+              + "],pipeline size must greater than or equals suffix size");
+    }
+
+    Iterator<? extends Segment> suffixIterator = suffix.descendingIterator();
+    Iterator<? extends Segment> pipelineIterator = pipeline.descendingIterator();
+    int count = 0;
+    while (suffixIterator.hasNext()) {
+      Segment suffixSegment = suffixIterator.next();
+      Segment pipelineSegment = pipelineIterator.next();
+      if (suffixSegment != pipelineSegment) {
+        throw new IllegalStateException("CODE-BUG:suffix last:[" + count + "]" + suffixSegment
+            + " is not pipleline segment:[" + pipelineSegment + "]");
+      }
+      count++;
+    }
+
+    for (int index = 1; index <= count; index++) {
+      pipeline.pollLast();
+    }
+
   }
 
   // replacing one segment in the pipeline with a new one exactly at the same index
