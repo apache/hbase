@@ -517,4 +517,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
       throw new IOException("Unable to load configured store engine '" + className + "'", e);
     }
   }
+
+  public boolean requireWritingToTmpDirFirst() {
+    return storeFileTracker.requireWritingToTmpDirFirst();
+  }
 }

@@ -432,6 +432,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
    */
   final ServerNonceManager nonceManager;
 
+  private FileBasedStoreFileCleaner fileBasedStoreFileCleaner;
+
   @InterfaceAudience.Private
   CompactedHFilesDischarger compactedFileDischarger;
 
@@ -1831,6 +1833,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     if (this.slowLogTableOpsChore != null) {
       choreService.scheduleChore(slowLogTableOpsChore);
     }
+    if (this.fileBasedStoreFileCleaner != null) {
+      choreService.scheduleChore(fileBasedStoreFileCleaner);
+    }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
@@ -1910,6 +1915,22 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       this.storefileRefresher = new StorefileRefresherChore(storefileRefreshPeriod,
           onlyMetaRefresh, this, this);
     }
+
+    int fileBasedStoreFileCleanerPeriod  = conf.getInt(
+      FileBasedStoreFileCleaner.FILEBASED_STOREFILE_CLEANER_PERIOD,
+      FileBasedStoreFileCleaner.DEFAULT_FILEBASED_STOREFILE_CLEANER_PERIOD);
+    int fileBasedStoreFileCleanerDelay  = conf.getInt(
+      FileBasedStoreFileCleaner.FILEBASED_STOREFILE_CLEANER_DELAY,
+      FileBasedStoreFileCleaner.DEFAULT_FILEBASED_STOREFILE_CLEANER_DELAY);
+    double fileBasedStoreFileCleanerDelayJitter = conf.getDouble(
+      FileBasedStoreFileCleaner.FILEBASED_STOREFILE_CLEANER_DELAY_JITTER,
+      FileBasedStoreFileCleaner.DEFAULT_FILEBASED_STOREFILE_CLEANER_DELAY_JITTER);
+    double jitterRate = (RandomUtils.nextDouble() - 0.5D) * fileBasedStoreFileCleanerDelayJitter;
+    long jitterValue = Math.round(fileBasedStoreFileCleanerDelay * jitterRate);
+    this.fileBasedStoreFileCleaner =
+      new FileBasedStoreFileCleaner((int) (fileBasedStoreFileCleanerDelay + jitterValue),
+        fileBasedStoreFileCleanerPeriod, this, conf, this);
+
     registerConfigurationObservers();
   }
 
@@ -3484,6 +3505,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return !conf.getBoolean(MASTERLESS_CONFIG_NAME, false);
   }
 
+  @InterfaceAudience.Private
+  public FileBasedStoreFileCleaner getFileBasedStoreFileCleaner(){
+    return fileBasedStoreFileCleaner;
+  }
+
   @Override
   protected void stopChores() {
     shutdownChore(nonceManagerChore);
@@ -3494,5 +3520,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     shutdownChore(storefileRefresher);
     shutdownChore(fsUtilizationChore);
     shutdownChore(slowLogTableOpsChore);
+    shutdownChore(fileBasedStoreFileCleaner);
   }
 }

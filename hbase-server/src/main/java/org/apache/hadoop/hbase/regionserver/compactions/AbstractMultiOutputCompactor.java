@@ -68,7 +68,7 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
   }
 
   @Override
-  protected void abortWriter(T writer) throws IOException {
+  protected void abortWriter() throws IOException {
     FileSystem fs = store.getFileSystem();
     for (Path leftoverFile : writer.abortWriters()) {
       try {
@@ -79,5 +79,6 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
           e);
       }
     }
+    writer = null;
   }
 }

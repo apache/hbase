@@ -57,7 +57,7 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
   }
 
   @Override
-  protected boolean requireWritingToTmpDirFirst() {
+  public boolean requireWritingToTmpDirFirst() {
     // Returns true if either of the two StoreFileTracker returns true.
     // For example, if we want to migrate from a tracker implementation which can ignore the broken
     // files under data directory to a tracker implementation which can not, if we still allow
