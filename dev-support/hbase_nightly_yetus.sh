@@ -96,6 +96,11 @@ if [[ ! -d "${OUTPUT_DIR}" ]]; then
   exit 1
 fi
 
+# pass asf nightlies url in
+if [[ -n "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}" ]]; then
+  YETUS_ARGS=("--asf-nightlies-general-check-base=${ASF_NIGHTLIES_GENERAL_CHECK_BASE}" "${YETUS_ARGS[@]}")
+fi
+
 if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then
   YETUS_ARGS=("--shelldocs=${WORKSPACE}/yetus-${YETUS_RELEASE}/bin/shelldocs" "${YETUS_ARGS[@]}")
   TESTPATCHBIN="${WORKSPACE}/yetus-${YETUS_RELEASE}/bin/test-patch"

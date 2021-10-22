@@ -132,7 +132,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private List<CandidateGenerator> candidateGenerators;
   private List<CostFunction> costFunctions; // FindBugs: Wants this protected; IS2_INCONSISTENT_SYNC
   // To save currently configed sum of multiplier. Defaulted at 1 for cases that carry high cost
-  private float sumMultiplier = 1.0f;
+  private float sumMultiplier;
   // to save and report costs to JMX
   private double curOverallCost = 0d;
   private double[] tempFunctionCosts;
@@ -248,11 +248,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     curFunctionCosts = new double[costFunctions.size()];
     tempFunctionCosts = new double[costFunctions.size()];
 
-    LOG.info("Loaded config; maxSteps=" + maxSteps + ", runMaxSteps=" + runMaxSteps,
-      ", stepsPerRegion=" + stepsPerRegion +
-      ", maxRunningTime=" + maxRunningTime + ", isByTable=" + isByTable + ", CostFunctions=" +
-      Arrays.toString(getCostFunctionNames()) + " etc.");
-  }
+    LOG.info(
+      "Loaded config; maxSteps=" + maxSteps + ", runMaxSteps=" + runMaxSteps +
+        ", stepsPerRegion=" + stepsPerRegion +
+        ", maxRunningTime=" + maxRunningTime + ", isByTable=" + isByTable +
+        ", CostFunctions=" + Arrays.toString(getCostFunctionNames()) +
+        " , sum of multiplier of cost functions = " + sumMultiplier + " etc.");  }
 
   @Override
   public void updateClusterMetrics(ClusterMetrics st) {
@@ -345,33 +346,27 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return false;
     }
     if (areSomeRegionReplicasColocated(cluster)) {
-      LOG.info("Running balancer because at least one server hosts replicas of the same region.");
+      LOG.info("Running balancer because at least one server hosts replicas of the same region." +
+        " function cost={}", functionCost());
       return true;
     }
 
     if (idleRegionServerExist(cluster)){
-      LOG.info("Running balancer because cluster has idle server(s).");
+      LOG.info("Running balancer because at least one server hosts replicas of the same region." +
+        "regionReplicaRackCostFunction={}", regionReplicaRackCostFunction.cost());
+      LOG.info("Running balancer because cluster has idle server(s)."+
+        " function cost={}", functionCost());
       return true;
     }
 
-    sumMultiplier = 0.0f;
     double total = 0.0;
     for (CostFunction c : costFunctions) {
-      float multiplier = c.getMultiplier();
-      double cost = c.cost();
       if (!c.isNeeded()) {
         LOG.trace("{} not needed", c.getClass().getSimpleName());
         continue;
       }
-      total += cost * multiplier;
-      sumMultiplier += multiplier;
+      total += c.cost() * c.getMultiplier();
     }
-    if (sumMultiplier <= 0) {
-      LOG.error("At least one cost function needs a multiplier > 0. For example, set "
-        + "hbase.master.balancer.stochastic.regionCountCost to a positive value or default");
-      return false;
-    }
-
     boolean balanced = (total / sumMultiplier < minCostNeedBalance);
 
     if (balanced) {
@@ -434,6 +429,18 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     long startTime = EnvironmentEdgeManager.currentTime();
 
     initCosts(cluster);
+
+    sumMultiplier = 0;
+    for (CostFunction c : costFunctions) {
+      if(c.isNeeded()) {
+        sumMultiplier += c.getMultiplier();
+      }
+    }
+    if (sumMultiplier <= 0) {
+      LOG.error("At least one cost function needs a multiplier > 0. For example, set "
+        + "hbase.master.balancer.stochastic.regionCountCost to a positive value or default");
+      return null;
+    }
 
     double currentCost = computeCost(cluster, Double.MAX_VALUE);
     curOverallCost = currentCost;
@@ -598,8 +605,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         builder.append(", ");
         double cost = c.cost();
         builder.append("imbalance=" + cost);
-        if (cost < minCostNeedBalance) {
-          builder.append(", balanced");
+        if (cost >= minCostNeedBalance) {
+          builder.append(", need balance");
         }
       } else {
         builder.append("not needed");
