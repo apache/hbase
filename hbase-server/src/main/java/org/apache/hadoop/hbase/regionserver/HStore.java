@@ -531,6 +531,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
     int totalValidStoreFile = 0;
     for (StoreFileInfo storeFileInfo : files) {
+      // The StoreFileInfo will carry store configuration down to HFile, we need to set it to
+      // our store's CompoundConfiguration here.
+      storeFileInfo.setConf(conf);
       // open each store file in parallel
       completionService.submit(() -> this.createStoreFileAndReader(storeFileInfo));
       totalValidStoreFile++;

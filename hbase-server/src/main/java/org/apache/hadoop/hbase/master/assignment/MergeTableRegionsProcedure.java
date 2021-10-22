@@ -24,6 +24,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
@@ -53,6 +55,7 @@ import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
@@ -609,10 +612,16 @@ public class MergeTableRegionsProcedure
       String family = hcd.getNameAsString();
       final Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family);
       if (storeFiles != null && storeFiles.size() > 0) {
+        final Configuration storeConfiguration =
+          StoreUtils.createStoreConfiguration(env.getMasterConfiguration(), htd, hcd);
         for (StoreFileInfo storeFileInfo : storeFiles) {
           // Create reference file(s) to parent region file here in mergedDir.
           // As this procedure is running on master, use CacheConfig.DISABLED means
           // don't cache any block.
+          // We also need to pass through a suitable CompoundConfiguration as if this
+          // is running in a regionserver's Store context, or we might not be able
+          // to read the hfiles.
+          storeFileInfo.setConf(storeConfiguration);
           mergeRegionFs.mergeStoreFile(regionFs.getRegionInfo(), family,
             new HStoreFile(storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED));
         }
