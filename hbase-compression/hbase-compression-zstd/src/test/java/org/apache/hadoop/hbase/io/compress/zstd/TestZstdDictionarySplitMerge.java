@@ -64,7 +64,7 @@ public class TestZstdDictionarySplitMerge {
     // CF or per table schema settings are applied correctly.
     conf = TEST_UTIL.getConfiguration();
     conf.set(Compression.ZSTD_CODEC_CLASS_KEY, ZstdCodec.class.getCanonicalName());
-    Compression.Algorithm.ZSTD.reload(conf);    
+    Compression.Algorithm.ZSTD.reload(conf);
     conf.setInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, 1000);
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     TEST_UTIL.startMiniCluster(1);
@@ -80,7 +80,7 @@ public class TestZstdDictionarySplitMerge {
     // Create the table
 
     final TableName tableName = TableName.valueOf("TestZstdDictionarySplitMerge");
-    final byte[] cfName = "info".getBytes();
+    final byte[] cfName = Bytes.toBytes("info");
     final String dictionaryPath = DictionaryCache.RESOURCE_SCHEME + "zstd.test.dict";
     final TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(cfName)

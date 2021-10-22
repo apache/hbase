@@ -40,7 +40,7 @@ import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
  * such as ZStandard.
  */
 @InterfaceAudience.Private
-public class DictionaryCache {
+public final class DictionaryCache {
 
   public static final String DICTIONARY_MAX_SIZE_KEY = "hbase.io.compress.dictionary.max.size";
   public static final int DEFAULT_DICTIONARY_MAX_SIZE = 10 * 1024 * 1024;

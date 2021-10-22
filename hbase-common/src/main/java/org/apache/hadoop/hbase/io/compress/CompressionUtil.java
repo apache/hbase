@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.io.compress;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class CompressionUtil {
+public final class CompressionUtil {
 
   private CompressionUtil() { }
 
