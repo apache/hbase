@@ -48,6 +48,7 @@ public class ZstdCompressor implements CanReinit, Compressor {
     this.outBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf.position(bufferSize);
     if (dictionary != null) {
+      checkDictionary(dictionary);
       this.dict = new ZstdDictCompress(dictionary, level);
     }
   }
@@ -148,7 +149,10 @@ public class ZstdCompressor implements CanReinit, Compressor {
       // Dictionary may have changed
       byte[] b = ZstdCodec.getDictionary(conf);
       if (b != null) {
+        checkDictionary(b);
         dict = new ZstdDictCompress(b, level);
+      } else {
+        dict = null;
       }
       // Buffer size might have changed
       int newBufferSize = ZstdCodec.getBufferSize(conf);
@@ -199,8 +203,15 @@ public class ZstdCompressor implements CanReinit, Compressor {
 
   // Package private
 
-  int maxCompressedLength(final int len) {
+  static int maxCompressedLength(final int len) {
     return (int) Zstd.compressBound(len);
+  }
+
+  private static void checkDictionary(final byte[] dictionary) {
+    if (!ZstdCodec.isDictionary(dictionary)) {
+      throw new RuntimeException("Not a ZStandard dictionary");
+    }
+    LOG.trace("Loaded dictionary with id {}", ZstdCodec.getDictionaryId(dictionary));
   }
 
 }

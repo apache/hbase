@@ -78,7 +78,6 @@ public class CompressionTestBase {
     // Compress
     long start = EnvironmentEdgeManager.currentTime();
     Compressor compressor = codec.createCompressor();
-    compressor.reinit(((Configurable)codec).getConf());
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     CompressionOutputStream out = codec.createOutputStream(baos, compressor);
     int inLen = 0;
@@ -98,9 +97,6 @@ public class CompressionTestBase {
     // Decompress
     final byte[] plain = new byte[inLen];
     Decompressor decompressor = codec.createDecompressor();
-    if (decompressor instanceof CanReinit) {
-      ((CanReinit)decompressor).reinit(((Configurable)codec).getConf());
-    }
     CompressionInputStream in = codec.createInputStream(new ByteArrayInputStream(compressed),
       decompressor);
     start = EnvironmentEdgeManager.currentTime();

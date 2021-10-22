@@ -26,11 +26,11 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.compress.CompressionTestBase;
 import org.apache.hadoop.hbase.io.compress.DictionaryCache;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.RandomDistribution;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -44,26 +44,27 @@ public class TestZstdDictionary extends CompressionTestBase {
 
   private static final String DICTIONARY_PATH = DictionaryCache.RESOURCE_SCHEME + "zstd.test.dict";
   // zstd.test.data compressed with zstd.test.dict at level 3 will produce a result of
-  // 365533 bytes
-  private static final int EXPECTED_COMPRESSED_SIZE = 365533;
+  // 358555 bytes
+  private static final int EXPECTED_COMPRESSED_SIZE = 358555;
+
+  private static byte[] TEST_DATA;
+
+  @BeforeClass
+  public static void setUp() throws Exception {
+    Configuration conf = new Configuration();
+    TEST_DATA = DictionaryCache.loadFromResource(conf,
+      DictionaryCache.RESOURCE_SCHEME + "zstd.test.data", /* maxSize */ 1024*1024);
+    assertNotNull("Failed to load test data", TEST_DATA);
+  }
 
   @Test
   public void test() throws Exception {
-    Configuration conf = HBaseConfiguration.create();
+    Configuration conf = new Configuration();
     conf.setInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_LEVEL_KEY, 3);
-    // Configure for dictionary available in test resources
     conf.set(ZstdCodec.ZSTD_DICTIONARY_KEY, DICTIONARY_PATH);
-    // Load test data from test resources
-    // This will throw an IOException if the test data cannot be loaded
-    final byte[] testData = DictionaryCache.loadFromResource(conf,
-      DictionaryCache.RESOURCE_SCHEME + "zstd.test.data", /* maxSize */ 1024*1024);
-    assertNotNull("Failed to load test data", testData);
-    // Run the test
-    // This will throw an IOException of some kind if there is a problem loading or using the
-    // dictionary.
     ZstdCodec codec = new ZstdCodec();
     codec.setConf(conf);
-    codecTest(codec, new byte[][] { testData }, EXPECTED_COMPRESSED_SIZE);
+    codecTest(codec, new byte[][] { TEST_DATA }, EXPECTED_COMPRESSED_SIZE);
     // Assert that the dictionary was actually loaded
     assertTrue("Dictionary was not loaded by codec", DictionaryCache.contains(DICTIONARY_PATH));
   }
@@ -75,7 +76,7 @@ public class TestZstdDictionary extends CompressionTestBase {
   public static void main(String[] args) throws IOException {
     // Write 1000 1k blocks for training to the specified file
     // Train with:
-    //   zstd --train-fastcover=k=32,b=8 -B1024 -o <dictionary_file> <input_file>
+    //   zstd --train -B1024 -o <dictionary_file> <input_file>
     if (args.length < 1) {
       System.err.println("Usage: TestZstdCodec <outFile>");
       System.exit(-1);

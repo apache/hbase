@@ -47,6 +47,7 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
     this.outBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf.position(bufferSize);
     if (dictionary != null) {
+      checkDictionary(dictionary);
       this.dict = new ZstdDictDecompress(dictionary);
     }
   }
@@ -129,8 +130,7 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
 
   @Override
   public void setDictionary(final byte[] b, final int off, final int len) {
-    LOG.trace("setDictionary: off={} len={}", off, len);
-    this.dict = new ZstdDictDecompress(b, off, len);
+    throw new UnsupportedOperationException("setDictionary is not supported");
   }
 
   @Override
@@ -159,7 +159,10 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
       // Dictionary may have changed
       byte[] b = ZstdCodec.getDictionary(conf);
       if (b != null) {
+        checkDictionary(b);
         dict = new ZstdDictDecompress(b);
+      } else {
+        dict = null;
       }
       // Buffer size might have changed
       int newBufferSize = ZstdCodec.getBufferSize(conf);
@@ -170,6 +173,13 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
       }
     }
     reset();
+  }
+
+  private static void checkDictionary(final byte[] dictionary) {
+    if (!ZstdCodec.isDictionary(dictionary)) {
+      throw new RuntimeException("Not a ZStandard dictionary");
+    }
+    LOG.trace("Loaded dictionary with id {}", ZstdCodec.getDictionaryId(dictionary));
   }
 
 }

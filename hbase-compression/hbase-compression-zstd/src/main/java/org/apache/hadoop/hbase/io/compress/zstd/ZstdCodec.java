@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.io.compress.zstd;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -132,6 +134,21 @@ public class ZstdCodec implements Configurable, CompressionCodec {
     } catch (IOException e) {
       throw new RuntimeException("Unable to load dictionary at " + path, e);
     }
+  }
+
+  // Zstandard dictionaries begin with a 32-bit magic number, 0xEC30A437 in little-endian
+  // format, followed by a 32-bit identifier also in little-endian format.
+  // Reference: https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md
+
+  static boolean isDictionary(byte[] dictionary) {
+    return (dictionary[0] == (byte)0x37 &&
+            dictionary[1] == (byte)0xA4 &&
+            dictionary[2] == (byte)0x30 &&
+            dictionary[3] == (byte)0xEC);
+  }
+
+  static int getDictionaryId(byte[] dictionary) {
+    return ByteBuffer.wrap(dictionary, 4, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
   }
 
 }
