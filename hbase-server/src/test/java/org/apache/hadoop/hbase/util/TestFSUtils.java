@@ -28,6 +28,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -52,6 +54,7 @@ import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -105,7 +108,30 @@ public class TestFSUtils {
     out.close();
   }
 
-  @Test public void testcomputeHDFSBlocksDistribution() throws Exception {
+  @Test
+  public void testComputeHDFSBlocksDistributionByInputStream() throws Exception {
+    testComputeHDFSBlocksDistribution((fs, testFile) -> {
+      try (FSDataInputStream open = fs.open(testFile)) {
+        assertTrue(open instanceof HdfsDataInputStream);
+        return FSUtils.computeHDFSBlocksDistribution((HdfsDataInputStream) open);
+      }
+    });
+  }
+
+  @Test
+  public void testComputeHDFSBlockDistribution() throws Exception {
+    testComputeHDFSBlocksDistribution((fs, testFile) -> {
+      FileStatus status = fs.getFileStatus(testFile);
+      return FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
+    });
+  }
+
+  @FunctionalInterface
+  interface HDFSBlockDistributionFunction {
+    HDFSBlocksDistribution getForPath(FileSystem fs, Path path) throws IOException;
+  }
+
+  private void testComputeHDFSBlocksDistribution(HDFSBlockDistributionFunction fileToBlockDistribution) throws Exception {
     final int DEFAULT_BLOCK_SIZE = 1024;
     conf.setLong("dfs.blocksize", DEFAULT_BLOCK_SIZE);
     MiniDFSCluster cluster = null;
@@ -129,9 +155,9 @@ public class TestFSUtils {
       boolean ok;
       do {
         ok = true;
-        FileStatus status = fs.getFileStatus(testFile);
-        HDFSBlocksDistribution blocksDistribution =
-          FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
+
+        HDFSBlocksDistribution blocksDistribution = fileToBlockDistribution.getForPath(fs, testFile);
+
         long uniqueBlocksTotalWeight =
           blocksDistribution.getUniqueBlocksTotalWeight();
         for (String host : hosts) {
@@ -163,9 +189,7 @@ public class TestFSUtils {
       long weight;
       long uniqueBlocksTotalWeight;
       do {
-        FileStatus status = fs.getFileStatus(testFile);
-        HDFSBlocksDistribution blocksDistribution =
-          FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
+        HDFSBlocksDistribution blocksDistribution = fileToBlockDistribution.getForPath(fs, testFile);
         uniqueBlocksTotalWeight = blocksDistribution.getUniqueBlocksTotalWeight();
 
         String tophost = blocksDistribution.getTopHosts().get(0);
@@ -197,8 +221,7 @@ public class TestFSUtils {
       final long maxTime = EnvironmentEdgeManager.currentTime() + 2000;
       HDFSBlocksDistribution blocksDistribution;
       do {
-        FileStatus status = fs.getFileStatus(testFile);
-        blocksDistribution = FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
+        blocksDistribution = fileToBlockDistribution.getForPath(fs, testFile);
         // NameNode is informed asynchronously, so we may have a delay. See HBASE-6175
       }
       while (blocksDistribution.getTopHosts().size() != 3 &&

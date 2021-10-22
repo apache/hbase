@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -86,6 +87,40 @@ public class TestFileLink {
     assertNotEquals(new FileLink(p1, p2).hashCode(), new FileLink(p1).hashCode());
     assertNotEquals(new FileLink(p1, p2).hashCode(), new FileLink(p2).hashCode());
     assertNotEquals(new FileLink(p1, p2).hashCode(), new FileLink(p2, p1).hashCode()); // ordering
+  }
+
+  /**
+   * Test that the returned link from {@link FileLink#open(FileSystem)} can be unwrapped
+   * to a {@link HdfsDataInputStream} by
+   * {@link FileLink#getUnderlyingFileLinkInputStream(FSDataInputStream)}
+   */
+  @Test
+  public void testGetUnderlyingFSDataInputStream() throws Exception {
+    HBaseTestingUtil testUtil = new HBaseTestingUtil();
+    Configuration conf = testUtil.getConfiguration();
+    conf.setInt("dfs.blocksize", 1024 * 1024);
+    conf.setInt("dfs.client.read.prefetch.size", 2 * 1024 * 1024);
+
+    testUtil.startMiniDFSCluster(1);
+    try {
+      MiniDFSCluster cluster = testUtil.getDFSCluster();
+      FileSystem fs = cluster.getFileSystem();
+
+      Path originalPath = new Path(testUtil.getDefaultRootDirPath(), "test.file");
+
+      writeSomeData(fs, originalPath, 256 << 20, (byte) 2);
+
+      List<Path> files = new ArrayList<Path>();
+      files.add(originalPath);
+
+      FileLink link = new FileLink(files);
+      FSDataInputStream stream = link.open(fs);
+
+      FSDataInputStream underlying = FileLink.getUnderlyingFileLinkInputStream(stream);
+      assertTrue(underlying instanceof HdfsDataInputStream);
+    } finally {
+      testUtil.shutdownMiniCluster();
+    }
   }
 
   /**
