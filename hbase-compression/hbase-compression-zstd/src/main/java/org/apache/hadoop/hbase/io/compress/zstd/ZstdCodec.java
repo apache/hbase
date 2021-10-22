@@ -16,19 +16,13 @@
  */
 package org.apache.hadoop.hbase.io.compress.zstd;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.io.compress.DictionaryCache;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -36,12 +30,7 @@ import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
-import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
-import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Hadoop ZStandard codec implemented with zstd-jni.
@@ -54,12 +43,7 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   public static final String ZSTD_LEVEL_KEY = "hbase.io.compress.zstd.level";
   public static final String ZSTD_BUFFER_SIZE_KEY = "hbase.io.compress.zstd.buffersize";
   public static final String ZSTD_DICTIONARY_KEY = "hbase.io.compress.zstd.dictionary";
-  public static final String ZSTD_DICTIONARY_MAX_SIZE_KEY =
-    "hbase.io.compress.zstd.dictionary.max.size";
-  public static final int DEFAULT_ZSTD_DICTIONARY_MAX_SIZE = 10 * 1024 * 1024;
 
-  private static final Logger LOG = LoggerFactory.getLogger(ZstdCodec.class);
-  private static volatile LoadingCache<String, byte[]> DICTIONARY_CACHE;
   private Configuration conf;
 
   public ZstdCodec() {
@@ -142,57 +126,11 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   }
 
   static byte[] getDictionary(final Configuration conf) {
-    // Get the dictionary path, if set
-    final String s = conf.get(ZSTD_DICTIONARY_KEY);
-    if (s == null || s.isEmpty()) {
-      return null;
-    }
-
-    // Create the dictionary loading cache if we haven't already
-    if (DICTIONARY_CACHE == null) {
-      synchronized (ZstdCodec.class) {
-        if (DICTIONARY_CACHE == null) {
-          DICTIONARY_CACHE = CacheBuilder.newBuilder()
-            .expireAfterAccess(1, TimeUnit.HOURS)
-            .build(
-              new CacheLoader<String, byte[]>() {
-                public byte[] load(String s) throws Exception {
-                  final Path path = new Path(s);
-                  final FileSystem fs = FileSystem.get(path.toUri(), conf);
-                  final FileStatus stat = fs.getFileStatus(path);
-                  if (!stat.isFile()) {
-                    throw new IllegalArgumentException(s + " is not a file");
-                  }
-                  final int limit = conf.getInt(ZSTD_DICTIONARY_MAX_SIZE_KEY,
-                    DEFAULT_ZSTD_DICTIONARY_MAX_SIZE);
-                  if (stat.getLen() > limit) {
-                    throw new IllegalArgumentException("Dictionary " + s + " is too large" +
-                      ", size=" + stat.getLen() + ", limit=" + limit);
-                  }
-                  final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                  final byte[] buffer = new byte[8192];
-                  try (final FSDataInputStream in = fs.open(path)) {
-                    int n;
-                    do {
-                      n = in.read(buffer);
-                      if (n > 0) {
-                        baos.write(buffer, 0, n);
-                         }
-                    } while (n > 0);
-                  }
-                  LOG.info("Loaded {} from {} (size {})", ZSTD_DICTIONARY_KEY, s, stat.getLen());
-                  return baos.toByteArray();
-                }
-            });
-        }
-      }
-    }
-
-    // Get or load the dictionary for the given path
+    String path = conf.get(ZSTD_DICTIONARY_KEY);
     try {
-      return DICTIONARY_CACHE.get(s);
-    } catch (ExecutionException e) {
-      throw new RuntimeException(e);
+      return DictionaryCache.getDictionary(conf, path);
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to load dictionary at " + path, e);
     }
   }
 
