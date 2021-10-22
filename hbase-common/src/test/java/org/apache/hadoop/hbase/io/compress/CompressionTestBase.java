@@ -31,6 +31,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.apache.hadoop.io.compress.Compressor;
+import org.apache.hadoop.io.compress.Decompressor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,11 +41,11 @@ public class CompressionTestBase {
 
   protected static final Logger LOG = LoggerFactory.getLogger(CompressionTestBase.class);
 
-  static final int LARGE_SIZE = 10 * 1024 * 1024;
-  static final int VERY_LARGE_SIZE = 100 * 1024 * 1024;
-  static final int BLOCK_SIZE = 4096;
+  protected static final int LARGE_SIZE = 10 * 1024 * 1024;
+  protected static final int VERY_LARGE_SIZE = 100 * 1024 * 1024;
+  protected static final int BLOCK_SIZE = 4096;
 
-  static final byte[] SMALL_INPUT;
+  protected static final byte[] SMALL_INPUT;
   static {
     // 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597
     SMALL_INPUT = new byte[1+1+2+3+5+8+13+21+34+55+89+144+233+377+610+987+1597];
@@ -67,15 +69,16 @@ public class CompressionTestBase {
     Arrays.fill(SMALL_INPUT, off, (off+=1597), (byte)'Q');
   }
 
-  protected void codecTest(final CompressionCodec codec, final byte[][] input)
-      throws Exception {
+  protected void codecTest(final CompressionCodec codec, final byte[][] input) throws Exception {
     // We do this in Compression.java
     ((Configurable)codec).getConf().setInt("io.file.buffer.size", 32 * 1024);
     // Compress
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    CompressionOutputStream out = codec.createOutputStream(baos);
-    int inLen = 0;
     long start = EnvironmentEdgeManager.currentTime();
+    Compressor compressor = codec.createCompressor();
+    compressor.reinit(((Configurable)codec).getConf());
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    CompressionOutputStream out = codec.createOutputStream(baos, compressor);
+    int inLen = 0;
     for (int i = 0; i < input.length; i++) {
       out.write(input[i]);
       inLen += input[i].length;
@@ -87,7 +90,12 @@ public class CompressionTestBase {
       inLen, compressed.length, end - start);
     // Decompress
     final byte[] plain = new byte[inLen];
-    CompressionInputStream in = codec.createInputStream(new ByteArrayInputStream(compressed));
+    Decompressor decompressor = codec.createDecompressor();
+    if (decompressor instanceof CanReinit) {
+      ((CanReinit)decompressor).reinit(((Configurable)codec).getConf());
+    }
+    CompressionInputStream in = codec.createInputStream(new ByteArrayInputStream(compressed),
+      decompressor);
     start = EnvironmentEdgeManager.currentTime();
     IOUtils.readFully(in, plain, 0, plain.length);
     in.close();
@@ -114,14 +122,10 @@ public class CompressionTestBase {
    * Test with a large input (1MB) divided into blocks of 4KB.
    */
   protected void codecLargeTest(final CompressionCodec codec, final double sigma) throws Exception {
-    RandomDistribution.DiscreteRNG zipf =
+    RandomDistribution.DiscreteRNG rng =
       new RandomDistribution.Zipf(new Random(), 0, Byte.MAX_VALUE, sigma);
     final byte[][] input = new byte[LARGE_SIZE/BLOCK_SIZE][BLOCK_SIZE];
-    for (int i = 0; i < input.length; i++) {
-      for (int j = 0; j < input[i].length; j++) {
-        input[i][j] = (byte)zipf.nextInt();
-      }
-    }
+    fill(rng, input);
     codecTest(codec, input);
   }
 
@@ -129,13 +133,23 @@ public class CompressionTestBase {
    * Test with a very large input (100MB) as a single input buffer.
    */
   protected void codecVeryLargeTest(final CompressionCodec codec, final double sigma) throws Exception {
-    RandomDistribution.DiscreteRNG zipf =
+    RandomDistribution.DiscreteRNG rng =
         new RandomDistribution.Zipf(new Random(), 0, Byte.MAX_VALUE, sigma);
     final byte[][] input = new byte[1][VERY_LARGE_SIZE];
-    for (int i = 0; i < VERY_LARGE_SIZE; i++) {
-      input[0][i] = (byte)zipf.nextInt();
-    }
+    fill(rng, input);
     codecTest(codec, input);
+  }
+
+  protected static void fill(RandomDistribution.DiscreteRNG rng, byte[][] input) {
+    for (int i = 0; i < input.length; i++) {
+      fill(rng, input[i]);
+    }
+  }
+
+  protected static void fill(RandomDistribution.DiscreteRNG rng, byte[] input) {
+    for (int i = 0; i < input.length; i++) {
+      input[i] = (byte) rng.nextInt();
+    }
   }
 
 }
