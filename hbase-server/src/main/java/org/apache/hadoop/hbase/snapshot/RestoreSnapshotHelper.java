@@ -700,7 +700,7 @@ public class RestoreSnapshotHelper {
           clonedFiles.add(new StoreFileInfo(conf, fs, new Path(familyDir, file), true));
         }
       }
-      //we don't need to track regions under mobdir
+      //we don't need to track files under mobdir
       if (!MobUtils.isMobRegionInfo(newRegionInfo)) {
         Path regionPath = new Path(tableDir, newRegionInfo.getEncodedName());
         HRegionFileSystem regionFS = (fs.exists(regionPath)) ?

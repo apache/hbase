@@ -376,7 +376,8 @@ public class HFileLink extends FileLink {
   }
 
   /**
-   * Create a new HFileLink
+   * Create a new HFileLink. In the event of link creation failure, this method throws an
+   * IOException, so that the calling upper laying can decide on how to proceed with this.
    *
    * <p>It also adds a back-reference to the hfile back-reference directory
    * to simplify the reference-count and the cleaning process.
