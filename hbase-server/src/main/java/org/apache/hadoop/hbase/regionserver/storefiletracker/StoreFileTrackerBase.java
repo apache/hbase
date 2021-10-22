@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTra
 
 import java.io.IOException;
 import java.util.Collection;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;

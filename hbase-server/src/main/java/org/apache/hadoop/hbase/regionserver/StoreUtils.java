@@ -207,13 +207,5 @@ public final class StoreUtils {
     }
     return f.applyAsLong(reader);
   }
-
-
-  public static Configuration createStoreConfiguration(Configuration conf, TableDescriptor td,
-      ColumnFamilyDescriptor cfd) {
-    // CompoundConfiguration will look for keys in reverse order of addition, so we'd
-    // add global config first, then table and cf overrides, then cf metadata.
-    return new CompoundConfiguration().add(conf).addBytesMap(td.getValues())
-        .addStringMap(cfd.getConfiguration()).addBytesMap(cfd.getValues());
-  }
+  
 }

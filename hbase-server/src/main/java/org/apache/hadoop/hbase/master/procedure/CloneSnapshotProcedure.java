@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure.CreateHdfsRegions;
-import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -459,56 +458,25 @@ public class CloneSnapshotProcedure
     List<RegionInfo> newRegions,
     final CreateHdfsRegions hdfsRegionHandler) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tempdir = mfs.getTempDir();
 
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
-    final Path tempTableDir = CommonFSUtils.getTableDir(tempdir, tableDescriptor.getTableName());
-    if (CommonFSUtils.isExists(mfs.getFileSystem(), tempTableDir)) {
+    final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(),
+      tableDescriptor.getTableName());
+    if (CommonFSUtils.isExists(mfs.getFileSystem(), tableDir)) {
       // if the region dirs exist, will cause exception and unlimited retry (see HBASE-24546)
-      LOG.warn("temp table dir already exists on disk: {}, will be deleted.", tempTableDir);
-      CommonFSUtils.deleteDirectory(mfs.getFileSystem(), tempTableDir);
+      LOG.warn("temp table dir already exists on disk: {}, will be deleted.", tableDir);
+      CommonFSUtils.deleteDirectory(mfs.getFileSystem(), tableDir);
     }
-    ((FSTableDescriptors) (env.getMasterServices().getTableDescriptors()))
-      .createTableDescriptorForTableDirectory(tempTableDir,
-        TableDescriptorBuilder.newBuilder(tableDescriptor).build(), false);
+    ((FSTableDescriptors)(env.getMasterServices().getTableDescriptors()))
+      .createTableDescriptorForTableDirectory(tableDir,
+              TableDescriptorBuilder.newBuilder(tableDescriptor).build(), false);
 
     // 2. Create Regions
     newRegions = hdfsRegionHandler.createHdfsRegions(
-      env, tempdir, tableDescriptor.getTableName(), newRegions);
+      env, mfs.getRootDir(), tableDescriptor.getTableName(), newRegions);
 
-    // 3. Move Table temp directory to the hbase root location
-    CreateTableProcedure.moveTempDirectoryToHBaseRoot(env, tableDescriptor, tempTableDir);
-    // Move Table temp mob directory to the hbase root location
-    Path tempMobTableDir = MobUtils.getMobTableDir(tempdir, tableDescriptor.getTableName());
-    if (mfs.getFileSystem().exists(tempMobTableDir)) {
-      moveTempMobDirectoryToHBaseRoot(mfs, tableDescriptor, tempMobTableDir);
-    }
     return newRegions;
-  }
-
-  /**
-   * Move table temp mob directory to the hbase root location
-   * @param mfs The master file system
-   * @param tableDescriptor The table to operate on
-   * @param tempMobTableDir The temp mob directory of table
-   * @throws IOException If failed to move temp mob dir to hbase root dir
-   */
-  private void moveTempMobDirectoryToHBaseRoot(final MasterFileSystem mfs,
-      final TableDescriptor tableDescriptor, final Path tempMobTableDir) throws IOException {
-    FileSystem fs = mfs.getFileSystem();
-    final Path tableMobDir =
-        MobUtils.getMobTableDir(mfs.getRootDir(), tableDescriptor.getTableName());
-    if (!fs.delete(tableMobDir, true) && fs.exists(tableMobDir)) {
-      throw new IOException("Couldn't delete mob table " + tableMobDir);
-    }
-    if (!fs.exists(tableMobDir.getParent())) {
-      fs.mkdirs(tableMobDir.getParent());
-    }
-    if (!fs.rename(tempMobTableDir, tableMobDir)) {
-      throw new IOException("Unable to move mob table from temp=" + tempMobTableDir
-          + " to hbase root=" + tableMobDir);
-    }
   }
 
   /**
