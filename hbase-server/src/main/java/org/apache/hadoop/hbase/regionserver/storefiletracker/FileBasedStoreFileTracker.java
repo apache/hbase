@@ -148,7 +148,7 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
   }
 
   @Override
-  void set(List<StoreFileInfo> files) throws IOException {
+  public void set(List<StoreFileInfo> files) throws IOException {
     synchronized (storefiles) {
       storefiles.clear();
       StoreFileList.Builder builder = StoreFileList.newBuilder();

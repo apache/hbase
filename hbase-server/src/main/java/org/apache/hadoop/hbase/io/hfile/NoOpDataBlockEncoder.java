@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -81,14 +82,15 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
   }
 
   @Override
-  public HFileBlockEncodingContext newDataBlockEncodingContext(
+  public HFileBlockEncodingContext newDataBlockEncodingContext(Configuration conf,
       byte[] dummyHeader, HFileContext meta) {
-    return new HFileBlockDefaultEncodingContext(null, dummyHeader, meta);
+    return new HFileBlockDefaultEncodingContext(conf, null, dummyHeader, meta);
   }
 
   @Override
-  public HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext meta) {
-    return new HFileBlockDefaultDecodingContext(meta);
+  public HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf,
+      HFileContext meta) {
+    return new HFileBlockDefaultDecodingContext(conf, meta);
   }
 
   @Override

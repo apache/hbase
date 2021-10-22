@@ -715,6 +715,12 @@
       <email>sunxin@apache.org</email>
       <timezone>+8</timezone>
     </developer>
+    <developer>
+      <id>huangzhuoyue</id>
+      <name>Zhuoyue Huang</name>
+      <email>huangzhuoyue@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
   </developers>
   <build>
     <extensions>

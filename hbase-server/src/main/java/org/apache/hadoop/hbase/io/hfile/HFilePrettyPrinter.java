@@ -320,7 +320,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
     if (verbose || printKey || checkRow || checkFamily || printStats || checkMobIntegrity) {
       // scan over file and read key/value's and check if requested
-      HFileScanner scanner = reader.getScanner(false, false, false);
+      HFileScanner scanner = reader.getScanner(getConf(), false, false, false);
       fileStats = new KeyValueStatsCollector();
       boolean shouldScanKeysValues;
       if (this.isSeekToRow && !Bytes.equals(row, reader.getFirstRowKey().orElse(null))) {

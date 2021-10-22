@@ -21,11 +21,9 @@ import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTra
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -184,12 +182,4 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   protected abstract void doAddCompactionResults(Collection<StoreFileInfo> compactedFiles,
     Collection<StoreFileInfo> newFiles) throws IOException;
-
-  /**
-   * used to mirror the store file list after loading when migration.
-   * <p/>
-   * Do not add this method to the {@link StoreFileTracker} interface since we do not need this
-   * method in upper layer.
-   */
-  abstract void set(List<StoreFileInfo> files) throws IOException;
 }

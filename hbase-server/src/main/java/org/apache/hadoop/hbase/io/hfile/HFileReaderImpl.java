@@ -141,9 +141,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     this.trailer = fileInfo.getTrailer();
     this.hfileContext = fileInfo.getHFileContext();
     this.fsBlockReader = new HFileBlock.FSReaderImpl(context, hfileContext,
-        cacheConf.getByteBuffAllocator());
+        cacheConf.getByteBuffAllocator(), conf);
     this.dataBlockEncoder = HFileDataBlockEncoderImpl.createFromFileInfo(fileInfo);
-    fsBlockReader.setDataBlockEncoder(dataBlockEncoder);
+    fsBlockReader.setDataBlockEncoder(dataBlockEncoder, conf);
     dataBlockIndexReader = fileInfo.getDataBlockIndexReader();
     metaBlockIndexReader = fileInfo.getMetaBlockIndexReader();
   }
@@ -256,7 +256,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   @Override
   public void setDataBlockEncoder(HFileDataBlockEncoder dataBlockEncoder) {
     this.dataBlockEncoder = dataBlockEncoder;
-    this.fsBlockReader.setDataBlockEncoder(dataBlockEncoder);
+    this.fsBlockReader.setDataBlockEncoder(dataBlockEncoder, conf);
   }
 
   @Override
@@ -1445,11 +1445,11 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     private final DataBlockEncoder dataBlockEncoder;
 
     public EncodedScanner(HFile.Reader reader, boolean cacheBlocks,
-        boolean pread, boolean isCompaction, HFileContext meta) {
+        boolean pread, boolean isCompaction, HFileContext meta, Configuration conf) {
       super(reader, cacheBlocks, pread, isCompaction);
       DataBlockEncoding encoding = reader.getDataBlockEncoding();
       dataBlockEncoder = encoding.getEncoder();
-      decodingCtx = dataBlockEncoder.newDataBlockDecodingContext(meta);
+      decodingCtx = dataBlockEncoder.newDataBlockDecodingContext(conf, meta);
       seeker = dataBlockEncoder.createSeeker(decodingCtx);
     }
 
@@ -1637,16 +1637,17 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    * {@link HFileScanner#seekTo(Cell)} to position an start the read. There is
    * nothing to clean up in a Scanner. Letting go of your references to the
    * scanner is sufficient. NOTE: Do not use this overload of getScanner for
-   * compactions. See {@link #getScanner(boolean, boolean, boolean)}
+   * compactions. See {@link #getScanner(Configuration, boolean, boolean, boolean)}
    *
+   * @param conf Store configuration.
    * @param cacheBlocks True if we should cache blocks read in by this scanner.
    * @param pread Use positional read rather than seek+read if true (pread is
    *          better for random reads, seek+read is better scanning).
    * @return Scanner on this file.
    */
   @Override
-  public HFileScanner getScanner(boolean cacheBlocks, final boolean pread) {
-    return getScanner(cacheBlocks, pread, false);
+  public HFileScanner getScanner(Configuration conf, boolean cacheBlocks, final boolean pread) {
+    return getScanner(conf, cacheBlocks, pread, false);
   }
 
   /**
@@ -1654,6 +1655,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    * {@link HFileScanner#seekTo(Cell)} to position an start the read. There is
    * nothing to clean up in a Scanner. Letting go of your references to the
    * scanner is sufficient.
+   * @param conf
+   *          Store configuration.
    * @param cacheBlocks
    *          True if we should cache blocks read in by this scanner.
    * @param pread
@@ -1664,10 +1667,10 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    * @return Scanner on this file.
    */
   @Override
-  public HFileScanner getScanner(boolean cacheBlocks, final boolean pread,
+  public HFileScanner getScanner(Configuration conf, boolean cacheBlocks, final boolean pread,
       final boolean isCompaction) {
     if (dataBlockEncoder.useEncodedScanner()) {
-      return new EncodedScanner(this, cacheBlocks, pread, isCompaction, this.hfileContext);
+      return new EncodedScanner(this, cacheBlocks, pread, isCompaction, this.hfileContext, conf);
     }
     return new HFileScannerImpl(this, cacheBlocks, pread, isCompaction);
   }

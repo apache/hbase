@@ -22,6 +22,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.SecureRandom;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -72,18 +74,26 @@ public class HFileBlockDefaultEncodingContext implements HFileBlockEncodingConte
   private EncodingState encoderState;
 
   /**
+   * @param conf configuraton
    * @param encoding encoding used
    * @param headerBytes dummy header bytes
    * @param fileContext HFile meta data
    */
-  public HFileBlockDefaultEncodingContext(DataBlockEncoding encoding, byte[] headerBytes,
-      HFileContext fileContext) {
+  public HFileBlockDefaultEncodingContext(Configuration conf, DataBlockEncoding encoding,
+      byte[] headerBytes, HFileContext fileContext) {
     this.encodingAlgo = encoding;
     this.fileContext = fileContext;
     Compression.Algorithm compressionAlgorithm =
         fileContext.getCompression() == null ? NONE : fileContext.getCompression();
     if (compressionAlgorithm != NONE) {
-      compressor = compressionAlgorithm.getCompressor();
+      if (compressor == null) {
+        compressor = compressionAlgorithm.getCompressor();
+        // Some algorithms don't return compressors and accept null as a valid parameter for
+        // same when creating compression streams. We can ignore these cases wrt reinit.
+        if (compressor != null) {
+          compressor.reinit(conf);
+        }
+      }
       compressedByteStream = new ByteArrayOutputStream();
       try {
         compressionStream =

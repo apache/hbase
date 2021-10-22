@@ -485,7 +485,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   private static int getKVCountFromHfile(FileSystem fs, Path p) throws IOException {
     Configuration conf = util.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
-    HFileScanner scanner = reader.getScanner(false, false);
+    HFileScanner scanner = reader.getScanner(conf, false, false);
     scanner.seekTo();
     int count = 0;
     do {
