@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.LinkedList;
-import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
