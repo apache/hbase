@@ -23,7 +23,6 @@ import java.io.OutputStream;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.io.compress.DictionaryCache;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -43,7 +42,6 @@ public class ZstdCodec implements Configurable, CompressionCodec {
 
   public static final String ZSTD_LEVEL_KEY = "hbase.io.compress.zstd.level";
   public static final String ZSTD_BUFFER_SIZE_KEY = "hbase.io.compress.zstd.buffersize";
-  public static final String ZSTD_DICTIONARY_KEY = "hbase.io.compress.zstd.dictionary";
 
   private Configuration conf;
 
@@ -63,12 +61,12 @@ public class ZstdCodec implements Configurable, CompressionCodec {
 
   @Override
   public Compressor createCompressor() {
-    return new ZstdCompressor(getLevel(conf), getBufferSize(conf), getDictionary(conf));
+    return new ZstdCompressor(getLevel(conf), getBufferSize(conf));
   }
 
   @Override
   public Decompressor createDecompressor() {
-    return new ZstdDecompressor(getBufferSize(conf), getDictionary(conf));
+    return new ZstdDecompressor(getBufferSize(conf));
   }
 
   @Override
@@ -124,15 +122,6 @@ public class ZstdCodec implements Configurable, CompressionCodec {
       conf.getInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_BUFFER_SIZE_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_BUFFER_SIZE_DEFAULT));
     return size > 0 ? size : 256 * 1024; // Don't change this default
-  }
-
-  static byte[] getDictionary(final Configuration conf) {
-    String path = conf.get(ZSTD_DICTIONARY_KEY);
-    try {
-      return DictionaryCache.getDictionary(conf, path);
-    } catch (IOException e) {
-      throw new RuntimeException("Unable to load dictionary at " + path, e);
-    }
   }
 
 }

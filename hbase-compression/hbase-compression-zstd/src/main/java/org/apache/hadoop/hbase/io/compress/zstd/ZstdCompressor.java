@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.luben.zstd.Zstd;
-import com.github.luben.zstd.ZstdDictCompress;
 
 /**
  * Hadoop compressor glue for zstd-jni.
@@ -41,21 +40,13 @@ public class ZstdCompressor implements CanReinit, Compressor {
   protected ByteBuffer inBuf, outBuf;
   protected boolean finish, finished;
   protected long bytesRead, bytesWritten;
-  protected ZstdDictCompress dict;
 
-  ZstdCompressor(final int level, final int bufferSize, final byte[] dictionary) {
+  ZstdCompressor(final int level, final int bufferSize) {
     this.level = level;
     this.bufferSize = bufferSize;
     this.inBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf.position(bufferSize);
-    if (dictionary != null) {
-      this.dict = new ZstdDictCompress(dictionary, level);
-    }
-  }
-
-  ZstdCompressor(final int level, final int bufferSize) {
-    this(level, bufferSize, null);
   }
 
   @Override
@@ -83,12 +74,7 @@ public class ZstdCompressor implements CanReinit, Compressor {
         } else {
           outBuf.clear();
         }
-        int written;
-        if (dict != null) {
-          written = Zstd.compress(outBuf, inBuf, dict);
-        } else {
-          written = Zstd.compress(outBuf, inBuf, level);
-        }
+        int written = Zstd.compress(outBuf, inBuf, level);
         bytesWritten += written;
         inBuf.clear();
         LOG.trace("compress: compressed {} -> {} (level {})", uncompressed, written, level);
@@ -147,11 +133,6 @@ public class ZstdCompressor implements CanReinit, Compressor {
     if (conf != null) {
       // Level might have changed
       level = ZstdCodec.getLevel(conf);
-      // Dictionary may have changed
-      byte[] b = ZstdCodec.getDictionary(conf);
-      if (b != null) {
-        dict = new ZstdDictCompress(b, level);
-      }
       // Buffer size might have changed
       int newBufferSize = ZstdCodec.getBufferSize(conf);
       if (bufferSize != newBufferSize) {
