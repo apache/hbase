@@ -51,7 +51,7 @@ public class TestStochasticLoadBalancerRegionReplicaWithRacks extends BalancerTe
 
   @Test
   public void testRegionReplicationOnMidClusterWithRacks() {
-    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 10000000L);
+    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 100000000L);
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
     loadBalancer.onConfigurationChange(conf);
