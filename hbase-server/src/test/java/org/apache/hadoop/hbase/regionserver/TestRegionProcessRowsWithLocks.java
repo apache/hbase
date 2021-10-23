@@ -172,7 +172,7 @@ public class TestRegionProcessRowsWithLocks {
     try {
       incrementCounter(table);
       Assert.fail("Should throw IOException.");
-    } catch (Throwable e) {
+    } catch (IOException e) {
     }
 
     long endMemstoreSize = region.getMemstoreSize();
