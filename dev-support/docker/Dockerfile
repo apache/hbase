@@ -19,7 +19,7 @@
 # See BUILDING.txt.
 
 
-FROM ubuntu:trusty
+FROM ubuntu:18.04
 
 WORKDIR /root
 
@@ -63,10 +63,12 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     pylint \
     python-dateutil \
     rsync \
-    snappy \
+    libsnappy-dev \
     xz-utils \
     zlib1g-dev \
-    wget
+    wget \
+    gpg \
+    dirmngr
 
 ####
 # Apps that require Java.
@@ -90,13 +92,12 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
 RUN echo "dot_style = mega" > "/root/.wgetrc"
 RUN echo "quiet = on" >> "/root/.wgetrc"
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0x219BD9C9
-RUN apt-get -q update && apt-get -q install --no-install-recommends -y software-properties-common python-software-properties
+RUN apt-get -q update && apt-get -q install --no-install-recommends -y software-properties-common
 RUN apt-add-repository 'deb http://repos.azulsystems.com/ubuntu stable main'
 RUN apt-get -q update
 RUN apt-get -q install --no-install-recommends -y zulu-8 zulu-7
 RUN update-alternatives --config java
 RUN update-alternatives --config javac
-RUN mv /usr/lib/jvm/java-7-openjdk-amd64 /usr/lib/jvm/moved.java-7-openjdk-amd64
 ENV JAVA_HOME /usr/lib/jvm/zulu-7-amd64
 
 # Fixing the Apache commons / Maven dependency problem under Ubuntu:

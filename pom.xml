@@ -739,6 +739,8 @@
               <exclude>**/rat.txt</exclude>
               <!-- hbase-error-prone module is in a profile which is not used for rat check -->
               <exclude>hbase-error-prone/target/**</exclude>
+              <!-- when using jdk7, hbase-thrift module will not be used for rat check -->
+              <exclude>hbase-thrift/target/**</exclude>
             </excludes>
           </configuration>
         </plugin>
