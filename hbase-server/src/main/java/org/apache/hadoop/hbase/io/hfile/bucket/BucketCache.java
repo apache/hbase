@@ -1011,16 +1011,17 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   private String getAllocationFailWarningMessage(RAMQueueEntry re) {
     if (re != null && re.getData() instanceof HFileBlock) {
-      HFileBlock block = (HFileBlock) re.getData();
-      HFileContext fileContext = block.getHFileContext();
-      String hFileName = fileContext.getHFileName();
+      HFileContext fileContext = ((HFileBlock) re.getData()).getHFileContext();
       String columnFamily = Bytes.toString(fileContext.getColumnFamily());
       String tableName = Bytes.toString(fileContext.getTableName());
-      return ("Most recent failed allocation in " + ALLOCATION_FAIL_LOG_TIME_PERIOD
-              + " milliseconds; Table Name = " + tableName + ", Column Family = "
-              + columnFamily + ", HFile Name : " + hFileName);
+      if (tableName != null && columnFamily != null) {
+        return ("Most recent failed allocation in " + ALLOCATION_FAIL_LOG_TIME_PERIOD
+            + " milliseconds; Table Name = " + tableName + ", Column Family = " + columnFamily
+            + ", HFile Name : " + fileContext.getHFileName());
+      }
     }
-    return ("Failed allocation for " + (re == null ? "" : re.getKey()) + "; ");
+    return ("Most recent failed allocation in " + ALLOCATION_FAIL_LOG_TIME_PERIOD
+        + " milliseconds; HFile Name : " + (re == null ? "" : re.getKey()));
   }
 
   /**
@@ -1068,7 +1069,7 @@ public class BucketCache implements BlockCache, HeapSize {
         }
         index++;
       } catch (BucketAllocatorException fle) {
-        long currTs = System.currentTimeMillis(); // Current time since Epoch in milliseconds.
+        long currTs = EnvironmentEdgeManager.currentTime();
         cacheStats.allocationFailed(); // Record the warning.
         if (allocFailLogPrevTs == 0 || (currTs - allocFailLogPrevTs) > ALLOCATION_FAIL_LOG_TIME_PERIOD) {
           LOG.warn (getAllocationFailWarningMessage(re), fle);
