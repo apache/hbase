@@ -60,6 +60,9 @@ public class JVM {
 
   private static final String JVMVersion = System.getProperty("java.version");
 
+  private static final Float JREVersion =
+    Float.parseFloat(System.getProperty("java.specification.version"));
+
   /**
    * Constructor. Get the running Operating System instance
    */
@@ -104,6 +107,10 @@ public class JVM {
    */
   public static boolean isGZIPOutputStreamFinishBroken() {
     return ibmvendor && JVMVersion.contains("1.6.0");
+  }
+
+  public static float getJREVersion() {
+    return JREVersion;
   }
 
   /**

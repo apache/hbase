@@ -257,7 +257,7 @@ public class ClassSize {
     LINKEDLIST_ENTRY = align(OBJECT + (2 * REFERENCE));
 
     //noinspection PointlessArithmeticExpression
-    BYTE_BUFFER = Float.parseFloat(System.getProperty("java.specification.version")) < 17 ?
+    BYTE_BUFFER = JVM.getJREVersion() < 17 ?
       align(OBJECT + REFERENCE +
         (5 * Bytes.SIZEOF_INT) +
         (3 * Bytes.SIZEOF_BOOLEAN) + Bytes.SIZEOF_LONG) + align(ARRAY) :
