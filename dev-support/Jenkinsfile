@@ -317,7 +317,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                   ]
                 )
               ])
-              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              // remove the big test logs zip file, store the nightlies url in test_logs.html
               sh '''#!/bin/bash -e
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
@@ -425,7 +425,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                   ]
                 )
               ])
-              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              // remove the big test logs zip file, store the nightlies url in test_logs.html
               sh '''#!/bin/bash -e
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
@@ -540,7 +540,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                   ]
                 )
               ])
-              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              // remove the big test logs zip file, store the nightlies url in test_logs.html
               sh '''#!/bin/bash -e
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
@@ -584,7 +584,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               rm -rf ".m2-for-repo" && mkdir ".m2-for-repo"
               rm -rf ".m2-for-src" && mkdir ".m2-for-src"
               echo '(x) {color:red}-1 source release artifact{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console].' >output-srctarball/commentfile
-'''
+            '''
             dir('component') {
               checkout scm
             }
@@ -594,7 +594,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "output-srctarball/machine"
               echo "got the following saved stats in 'output-srctarball/machine'"
               ls -lh "output-srctarball/machine"
-'''
+            '''
             sh """#!/bin/bash -e
               if "${env.BASEDIR}/dev-support/hbase_nightly_source-artifact.sh" \
                   --intermediate-file-dir output-srctarball \
@@ -608,11 +608,31 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
                 echo '(x) {color:red}-1 source release artifact{color}\n-- See build output for details.' >output-srctarball/commentfile
                 exit 1
               fi
-"""
+            """
           }
           post {
             always {
               stash name: 'srctarball-result', includes: "output-srctarball/commentfile"
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "output-srctarball/hbase-src.tar.gz"
+                    )
+                  ]
+                )
+              ])
+              // remove the big src tarball, store the nightlies url in hbase-src.html
+              sh '''#!/bin/bash -e
+                SRC_TAR="${WORKSPACE}/output-srctarball/hbase-src.tar.gz"
+                if [ -f "${SRC_TAR}" ]; then
+                  echo "Remove ${SRC_TAR} for saving space"
+                  rm -rf "${SRC_TAR}"
+                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/output-srctarball" > "${WORKSPACE}/output-srctarball/hbase-src.html"
+                else
+                  echo "No hbase-src.tar.gz, skipping"
+                fi
+              '''
               archiveArtifacts 'output-srctarball/*'
               archiveArtifacts 'output-srctarball/**/*'
             }
