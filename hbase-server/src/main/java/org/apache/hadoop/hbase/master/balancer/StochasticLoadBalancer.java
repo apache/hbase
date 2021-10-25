@@ -316,11 +316,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     if (Math.abs(regionReplicaHostCostFunction.cost()) > CostFunction.COST_EPSILON) {
       return true;
     }
-    regionReplicaRackCostFunction.init(c);
-    if (Math.abs(regionReplicaRackCostFunction.cost()) > CostFunction.COST_EPSILON) {
-      return true;
-    }
-    return false;
+    return (Math.abs(regionReplicaRackCostFunction.cost()) > CostFunction.COST_EPSILON);
   }
 
   @Override
