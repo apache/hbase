@@ -3773,7 +3773,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
             regionInfo.getTable(), e);
         }
         if(tableDesc != null) {
-            tdCache.put(tableName, tableDesc);
+          tdCache.put(tableName, tableDesc);
         }
       }
       if (regionOpenInfo.getFavoredNodesCount() > 0) {
