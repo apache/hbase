@@ -381,7 +381,7 @@ pipeline {
                   ]
                 )
               ])
-              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              // remove the big test logs zip file, store the nightlies url in test_logs.html
               sh '''#!/bin/bash -e
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
@@ -491,7 +491,7 @@ pipeline {
                   ]
                 )
               ])
-              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              // remove the big test logs zip file, store the nightlies url in test_logs.html
               sh '''#!/bin/bash -e
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
@@ -605,7 +605,7 @@ pipeline {
                   ]
                 )
               ])
-              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              // remove the big test logs zip file, store the nightlies url in test_logs.html
               sh '''#!/bin/bash -e
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
@@ -711,7 +711,7 @@ pipeline {
                 else
                   echo "No archiver directory, skipping compressing."
                 fi
-'''
+              '''
               sshPublisher(publishers: [
                 sshPublisherDesc(configName: 'Nightlies',
                   transfers: [
@@ -721,7 +721,7 @@ pipeline {
                   ]
                 )
               ])
-              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              // remove the big test logs zip file, store the nightlies url in test_logs.html
               sh '''#!/bin/bash -e
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
@@ -730,7 +730,7 @@ pipeline {
                 else
                   echo "No test_logs.zip, skipping"
                 fi
-'''
+              '''
               // Has to be relative to WORKSPACE.
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
@@ -773,14 +773,14 @@ pipeline {
               rm -rf ".m2-for-src" && mkdir ".m2-for-src"
               echo "(x) {color:red}-1 source release artifact{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-srctarball/commentfile
               echo "(x) {color:red}-1 client integration test{color}\n-- Something went wrong with this stage, [check relevant console output|${BUILD_URL}/console]." >output-integration/commentfile
-'''
+            '''
             sh '''#!/usr/bin/env bash
               set -e
               rm -rf "output-srctarball/machine" && mkdir "output-srctarball/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "output-srctarball/machine"
               echo "got the following saved stats in 'output-srctarball/machine'"
               ls -lh "output-srctarball/machine"
-'''
+            '''
             sh """#!/bin/bash -e
               echo "Checking the steps for an RM to make a source artifact, then a binary artifact."
               if "${env.BASEDIR}/dev-support/hbase_nightly_source-artifact.sh" \
@@ -795,7 +795,7 @@ pipeline {
                 echo '(x) {color:red}-1 source release artifact{color}\n-- See build output for details.' >output-srctarball/commentfile
                 exit 1
               fi
-"""
+            """
             echo "unpacking the hbase bin tarball into 'hbase-install' and the client tarball into 'hbase-client'"
             sh '''#!/bin/bash -e
               if [ 2 -ne $(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | wc -l) ]; then
@@ -806,7 +806,7 @@ pipeline {
               tar --strip-component=1 -xzf "${install_artifact}" -C "hbase-install"
               client_artifact=$(ls -1 "${WORKSPACE}"/unpacked_src_tarball/hbase-assembly/target/hbase-*-bin.tar.gz | sort | tail -n 1)
               tar --strip-component=1 -xzf "${client_artifact}" -C "hbase-client"
-'''
+            '''
             unstash 'hadoop-2'
             sh '''#!/bin/bash -xe
               if [[ "${BRANCH}" = branch-2* ]] || [[ "${BRANCH}" = branch-1* ]]; then
@@ -830,7 +830,7 @@ pipeline {
               else
                 echo "Skipping to run against Hadoop 2 for branch ${BRANCH}"
               fi
-'''
+            '''
             unstash 'hadoop-3'
             sh '''#!/bin/bash -e
               if [[ "${BRANCH}" = branch-1* ]]; then
@@ -871,13 +871,31 @@ pipeline {
                 fi
                 echo "(/) {color:green}+1 client integration test{color}" >output-integration/commentfile
               fi
-'''
-
-
+            '''
           }
           post {
             always {
               stash name: 'srctarball-result', includes: "output-srctarball/commentfile,output-integration/commentfile"
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "output-srctarball/hbase-src.tar.gz"
+                    )
+                  ]
+                )
+              ])
+              // remove the big src tarball, store the nightlies url in hbase-src.html
+              sh '''#!/bin/bash -e
+                SRC_TAR="${WORKSPACE}/output-srctarball/hbase-src.tar.gz"
+                if [ -f "${SRC_TAR}" ]; then
+                  echo "Remove ${SRC_TAR} for saving space"
+                  rm -rf "${SRC_TAR}"
+                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/output-srctarball" > "${WORKSPACE}/output-srctarball/hbase-src.html"
+                else
+                  echo "No hbase-src.tar.gz, skipping"
+                fi
+              '''
               archiveArtifacts artifacts: 'output-srctarball/*'
               archiveArtifacts artifacts: 'output-srctarball/**/*'
               archiveArtifacts artifacts: 'output-integration/*'
