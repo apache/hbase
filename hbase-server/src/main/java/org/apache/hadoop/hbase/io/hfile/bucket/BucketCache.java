@@ -925,6 +925,7 @@ public class BucketCache implements BlockCache, HeapSize {
           if (ramCache.containsKey(cacheKey)) {
             blocksByHFile.add(cacheKey);
           }
+
           BucketEntry bucketEntry =
             re.writeToCache(ioEngine, bucketAllocator, deserialiserMap, realCacheSize);
           // Successfully added.  Up index and add bucketEntry. Clear io exceptions.
