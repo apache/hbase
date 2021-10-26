@@ -3759,7 +3759,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     long masterSystemTime = request.hasMasterSystemTime() ? request.getMasterSystemTime() : -1;
     for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
       RegionInfo regionInfo = ProtobufUtil.toRegionInfo(regionOpenInfo.getRegion());
-      TableDescriptor tableDesc = tdCache.get(regionInfo.getTable());
+      TableName tableName = regionInfo.getTable();
+      TableDescriptor tableDesc = tdCache.get(tableName);
       if (tableDesc == null) {
         try {
           tableDesc = server.getTableDescriptors().get(regionInfo.getTable());
@@ -3770,6 +3771,9 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
           // TableDescriptor.
           LOG.warn("Failed to get TableDescriptor of {}, will try again in the handler",
             regionInfo.getTable(), e);
+        }
+        if(tableDesc != null) {
+          tdCache.put(tableName, tableDesc);
         }
       }
       if (regionOpenInfo.getFavoredNodesCount() > 0) {
