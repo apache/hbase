@@ -21,13 +21,16 @@ import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@InterfaceAudience.Private
 public class StreamSlowMonitor implements ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(StreamSlowMonitor.class);
 

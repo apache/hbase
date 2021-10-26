@@ -24,12 +24,15 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@InterfaceAudience.Private
 public class ExcludeDatanodeManager implements ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(ExcludeDatanodeManager.class);
 

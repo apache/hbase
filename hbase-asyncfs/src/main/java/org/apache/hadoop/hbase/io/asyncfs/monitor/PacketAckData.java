@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.io.asyncfs.monitor;
 
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
+@InterfaceAudience.Private
 public class PacketAckData {
   private long dataLength;
   private long processTime;
