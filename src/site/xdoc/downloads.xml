@@ -153,7 +153,7 @@ under the License.
         <a href="https://s.apache.org/hbase-1.4.14-jira-release-notes">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.14/hbase-1.4.14-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/1.4.14/hbase-1.4.14-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/1.4.14/hbase-1.4.14-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.14/hbase-1.4.14-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/1.4.14/hbase-1.4.14-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/1.4.14/hbase-1.4.14-src.tar.gz.asc">asc</a>) <br />
         <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.14/hbase-1.4.14-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/1.4.14/hbase-1.4.14-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/1.4.14/hbase-1.4.14-bin.tar.gz.asc">asc</a>)
       </td>
       <td />
