@@ -161,7 +161,7 @@ public class TestRecoverStandbyProcedure {
     for (int i = 0; i < WAL_NUMBER; i++) {
       try (ProtobufLogWriter writer = new ProtobufLogWriter()) {
         Path wal = new Path(peerRemoteWALDir, "srv1,8888." + i + ".syncrep");
-        writer.init(fs, wal, conf, true, WALUtil.getWALBlockSize(conf, fs, peerRemoteWALDir));
+        writer.init(fs, wal, conf, true, WALUtil.getWALBlockSize(conf, fs, peerRemoteWALDir), null);
         List<Entry> entries = setupWALEntries(i * ROW_COUNT, (i + 1) * ROW_COUNT);
         for (Entry entry : entries) {
           writer.append(entry);

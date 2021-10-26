@@ -1179,7 +1179,7 @@ public abstract class AbstractTestWALReplay {
     throws IOException, StreamLacksCapabilityException {
     fs.mkdirs(file.getParent());
     ProtobufLogWriter writer = new ProtobufLogWriter();
-    writer.init(fs, file, conf, true, WALUtil.getWALBlockSize(conf, fs, file));
+    writer.init(fs, file, conf, true, WALUtil.getWALBlockSize(conf, fs, file), null);
     for (FSWALEntry entry : entries) {
       writer.append(entry);
     }

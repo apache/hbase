@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
@@ -48,8 +49,8 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
      * @throws StreamLacksCapabilityException if the given FileSystem can't provide streams that
      *         meet the needs of the given Writer implementation.
      */
-    void init(FileSystem fs, Path path, Configuration c, boolean overwritable, long blocksize)
-        throws IOException, CommonFSUtils.StreamLacksCapabilityException;
+    void init(FileSystem fs, Path path, Configuration c, boolean overwritable, long blocksize,
+        StreamSlowMonitor monitor) throws IOException, CommonFSUtils.StreamLacksCapabilityException;
   }
 
   /**
@@ -76,7 +77,7 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
     try {
       writer = logWriterClass.getDeclaredConstructor().newInstance();
       FileSystem rootFs = FileSystem.get(path.toUri(), conf);
-      writer.init(rootFs, path, conf, overwritable, blocksize);
+      writer.init(rootFs, path, conf, overwritable, blocksize, null);
       return writer;
     } catch (Exception e) { 
       if (e instanceof CommonFSUtils.StreamLacksCapabilityException) {
