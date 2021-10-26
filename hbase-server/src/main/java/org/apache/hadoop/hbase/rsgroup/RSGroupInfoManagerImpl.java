@@ -280,7 +280,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         updateDefaultServers();
       }
     });
-    migrate();
   }
 
   static RSGroupInfoManager getInstance(MasterServices masterServices) throws IOException {
