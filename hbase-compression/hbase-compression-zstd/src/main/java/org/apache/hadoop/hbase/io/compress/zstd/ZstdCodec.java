@@ -148,6 +148,9 @@ public class ZstdCodec implements Configurable, CompressionCodec {
   }
 
   static int getDictionaryId(byte[] dictionary) {
+    if (!isDictionary(dictionary)) {
+      throw new IllegalArgumentException("Not a ZStandard dictionary");
+    }
     return ByteBuffer.wrap(dictionary, 4, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
   }
 

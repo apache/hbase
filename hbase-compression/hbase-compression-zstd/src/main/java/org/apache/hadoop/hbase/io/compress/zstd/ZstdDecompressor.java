@@ -39,6 +39,7 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
   protected int bufferSize;
   protected int inLen;
   protected boolean finished;
+  protected int dictId;
   protected ZstdDictDecompress dict;
 
   ZstdDecompressor(final int bufferSize, final byte[] dictionary) {
@@ -47,7 +48,7 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
     this.outBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf.position(bufferSize);
     if (dictionary != null) {
-      checkDictionary(dictionary);
+      this.dictId = ZstdCodec.getDictionaryId(dictionary);
       this.dict = new ZstdDictDecompress(dictionary);
     }
   }
@@ -159,8 +160,13 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
       // Dictionary may have changed
       byte[] b = ZstdCodec.getDictionary(conf);
       if (b != null) {
-        checkDictionary(b);
-        dict = new ZstdDictDecompress(b);
+        // Don't casually create dictionary objects; they consume native memory
+        int thisDictId = ZstdCodec.getDictionaryId(b);
+        if (dict == null || dictId != thisDictId) {
+          dictId = thisDictId;
+          dict = new ZstdDictDecompress(b);
+          LOG.trace("Reloaded dictionary, new id is {}", dictId);
+        }
       } else {
         dict = null;
       }
@@ -170,16 +176,10 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
         bufferSize = newBufferSize;
         this.inBuf = ByteBuffer.allocateDirect(bufferSize);
         this.outBuf = ByteBuffer.allocateDirect(bufferSize);
+        LOG.trace("Resized buffers, new size is {}", bufferSize);
       }
     }
     reset();
-  }
-
-  private static void checkDictionary(final byte[] dictionary) {
-    if (!ZstdCodec.isDictionary(dictionary)) {
-      throw new RuntimeException("Not a ZStandard dictionary");
-    }
-    LOG.trace("Loaded dictionary with id {}", ZstdCodec.getDictionaryId(dictionary));
   }
 
 }

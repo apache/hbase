@@ -39,6 +39,7 @@ public class ZstdCompressor implements CanReinit, Compressor {
   protected ByteBuffer inBuf, outBuf;
   protected boolean finish, finished;
   protected long bytesRead, bytesWritten;
+  protected int dictId;
   protected ZstdDictCompress dict;
 
   ZstdCompressor(final int level, final int bufferSize, final byte[] dictionary) {
@@ -48,7 +49,7 @@ public class ZstdCompressor implements CanReinit, Compressor {
     this.outBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf.position(bufferSize);
     if (dictionary != null) {
-      checkDictionary(dictionary);
+      this.dictId = ZstdCodec.getDictionaryId(dictionary);
       this.dict = new ZstdDictCompress(dictionary, level);
     }
   }
@@ -149,8 +150,13 @@ public class ZstdCompressor implements CanReinit, Compressor {
       // Dictionary may have changed
       byte[] b = ZstdCodec.getDictionary(conf);
       if (b != null) {
-        checkDictionary(b);
-        dict = new ZstdDictCompress(b, level);
+        // Don't casually create dictionary objects; they consume native memory
+        int thisDictId = ZstdCodec.getDictionaryId(b);
+        if (dict == null || dictId != thisDictId) {
+          dictId = thisDictId;
+          dict = new ZstdDictCompress(b, level);
+          LOG.trace("Reloaded dictionary, new id is {}", dictId);
+        }
       } else {
         dict = null;
       }
@@ -160,6 +166,7 @@ public class ZstdCompressor implements CanReinit, Compressor {
         bufferSize = newBufferSize;
         this.inBuf = ByteBuffer.allocateDirect(bufferSize);
         this.outBuf = ByteBuffer.allocateDirect(bufferSize);
+        LOG.trace("Resized buffers, new size is {}", bufferSize);
       }
     }
     reset();
@@ -205,13 +212,6 @@ public class ZstdCompressor implements CanReinit, Compressor {
 
   static int maxCompressedLength(final int len) {
     return (int) Zstd.compressBound(len);
-  }
-
-  private static void checkDictionary(final byte[] dictionary) {
-    if (!ZstdCodec.isDictionary(dictionary)) {
-      throw new RuntimeException("Not a ZStandard dictionary");
-    }
-    LOG.trace("Loaded dictionary with id {}", ZstdCodec.getDictionaryId(dictionary));
   }
 
 }
