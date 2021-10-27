@@ -72,8 +72,8 @@ public class JVM {
    * Java 8, 9, 10 ... will be noted as 8, 9 10 ...
    */
   private static final int JVM_SPEC_VERSION = JVM_SPEC_VERSION_STRING.contains(".") ?
-    (int) (Float.parseFloat(System.getProperty("java.specification.version")) * 10 % 10) :
-    Integer.parseInt(System.getProperty("java.specification.version"));
+    (int) (Float.parseFloat(JVM_SPEC_VERSION_STRING) * 10 % 10) :
+    Integer.parseInt(JVM_SPEC_VERSION_STRING);
 
   /**
    * Constructor. Get the running Operating System instance
