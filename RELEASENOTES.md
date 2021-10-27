@@ -20,34 +20,6 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-# HBASE  2.4.8 Release Notes
-
-These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
-
-
----
-
-* [HBASE-26329](https://issues.apache.org/jira/browse/HBASE-26329) | *Major* | **Upgrade commons-io to 2.11.0**
-
-Upgraded commons-io to 2.11.0.
-
-
----
-
-* [HBASE-26186](https://issues.apache.org/jira/browse/HBASE-26186) | *Major* | **jenkins script for caching artifacts should verify cached file before relying on it**
-
-Add a '--verify-tar-gz' option to cache-apache-project-artifact.sh for verifying whether the cached file can be parsed as a gzipped tarball.
-Use this option in our nightly job to avoid failures on broken cached hadoop tarballs.
-
-
----
-
-* [HBASE-26339](https://issues.apache.org/jira/browse/HBASE-26339) | *Major* | **SshPublisher will skip uploading artifacts if the build is failure**
-
-Now we will mark build as unstable instead of failure when the yetus script returns error. This is used to solve the problem that the SshPublisher jenkins plugin will skip uploading artifacts if the build is marked as failure. In fact, the test output will be more important when there are UT failures.
-
-
-
 # HBASE  2.4.7 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
