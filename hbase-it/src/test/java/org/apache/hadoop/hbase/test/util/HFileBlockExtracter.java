@@ -50,8 +50,8 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
  * <p>
  * where options are one or more of:
  * <p>
- * &nbsp;&nbsp; -d <width>: Width of generated file name for zero padding, default: 5 <br>
- * &nbsp;&nbsp; -n <count>: Total number of blocks to extract, default: unlimited <br>
+ * &nbsp;&nbsp; -d width: Width of generated file name for zero padding, default: 5 <br>
+ * &nbsp;&nbsp; -n count: Total number of blocks to extract, default: unlimited <br>
  * &nbsp;&nbsp; -r | --random: Shuffle blocks and write them in randomized order
  * </blockquote>
  */
@@ -80,7 +80,8 @@ public class HFileBlockExtracter extends Configured implements Tool {
     }
     args = cmd.getArgs();
     if (args.length < 2) {
-      System.out.println("Usage: HFileBlockExtracter <options> <outputDir> <hfile_1> ... <hfile_n>");
+      System.out.println(
+        "Usage: HFileBlockExtracter <options> <outputDir> <hfile_1> ... <hfile_n>");
       System.out.println("where <options> are:");
       System.out.println(opts.toString());
     }

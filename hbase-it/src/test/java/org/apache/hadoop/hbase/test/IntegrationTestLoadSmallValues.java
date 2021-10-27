@@ -56,8 +56,8 @@ import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -108,8 +108,8 @@ import org.slf4j.LoggerFactory;
  * &nbsp;&nbsp; options outputDir hfile_1 ... hfile_n
  * </tt><p>
  * Where options are:<p>
- * &nbsp;&nbsp; -d <width>: Width of generated file name for zero padding, default: 5 <br>
- * &nbsp;&nbsp; -n <count>: Total number of blocks to extract, default: unlimited <br>
+ * &nbsp;&nbsp; -d width: Width of generated file name for zero padding, default: 5 <br>
+ * &nbsp;&nbsp; -n count: Total number of blocks to extract, default: unlimited <br>
  * &nbsp;&nbsp; -r | --random: Shuffle blocks and write them in randomized order
  * </blockquote>
  * <p>
@@ -143,7 +143,7 @@ public class IntegrationTestLoadSmallValues extends IntegrationTestBase {
     REFERENCED, UNREFERENCED, CORRUPT
   }
 
-  protected String args[];
+  protected String[] args;
   protected long numRows = DEFAULT_NUM_ROWS;
   protected int numMaps = DEFAULT_NUM_MAPS;
   protected Path outputDir = null;
@@ -337,7 +337,7 @@ public class IntegrationTestLoadSmallValues extends IntegrationTestBase {
         longitude = ((lonRng.nextInt() * 1000) + fracRng.nextInt()) *
           (r.nextBoolean() ? 1 : -1);
         // -40 <= +40 C, approximately nine in ten measures are a positive value
-        temperature = (short) ((r.nextInt() % 40) * (((r.nextInt() % 10) == 1) ? -1 : +1));
+        temperature = (short) (r.nextInt(40) * ((r.nextInt(10) == 1) ? -1 : +1));
       }
 
     }
@@ -615,7 +615,7 @@ public class IntegrationTestLoadSmallValues extends IntegrationTestBase {
             .setColumnFamilies(families)
             .build();
         if (conf.getBoolean(HBaseTestingUtil.PRESPLIT_TEST_TABLE_KEY, DEFAULT_PRESPLIT_TABLE)) {
-         int numberOfServers = admin.getRegionServers().size();
+          int numberOfServers = admin.getRegionServers().size();
           if (numberOfServers == 0) {
             throw new IllegalStateException("No live regionservers");
           }
