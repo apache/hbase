@@ -1927,7 +1927,7 @@ public class TestHStore {
    * This test is for HBASE-26384,
    * test {@link CompactingMemStore#flattenOneSegment} and {@link CompactingMemStore#snapshot()}
    * execute concurrently.
-   * The threads sequence is:
+   * The threads sequence is(following description is the correct and expected behavior):
    * 1. The {@link CompactingMemStore} size exceeds
    *    {@link CompactingMemStore#getInmemoryFlushSize()},the write thread adds a new
    *    {@link ImmutableSegment}  to the head of {@link CompactingMemStore#pipeline},and start a
@@ -2009,7 +2009,7 @@ public class TestHStore {
    * This test is for HBASE-26384,
    * test {@link CompactingMemStore#flattenOneSegment}{@link CompactingMemStore#snapshot()}
    * and writeMemStore execute concurrently.
-   * The threads sequence is:
+   * The test threads sequence is(following description is the correct and expected behavior):
    * 1. The {@link CompactingMemStore} size exceeds
    *    {@link CompactingMemStore#getInmemoryFlushSize()},the write thread adds a new
    *    {@link ImmutableSegment}  to the head of {@link CompactingMemStore#pipeline},and start a
