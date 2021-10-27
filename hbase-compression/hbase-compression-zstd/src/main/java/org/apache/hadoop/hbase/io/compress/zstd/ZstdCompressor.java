@@ -146,13 +146,19 @@ public class ZstdCompressor implements CanReinit, Compressor {
     LOG.trace("reinit");
     if (conf != null) {
       // Level might have changed
-      level = ZstdCodec.getLevel(conf);
+      boolean levelChanged = false;
+      int newLevel = ZstdCodec.getLevel(conf);
+      if (level != newLevel) {
+        LOG.trace("Level changed, was {} now {}", level, newLevel);
+        level = newLevel;
+        levelChanged = true;
+      }
       // Dictionary may have changed
       byte[] b = ZstdCodec.getDictionary(conf);
       if (b != null) {
         // Don't casually create dictionary objects; they consume native memory
         int thisDictId = ZstdCodec.getDictionaryId(b);
-        if (dict == null || dictId != thisDictId) {
+        if (dict == null || dictId != thisDictId || levelChanged) {
           dictId = thisDictId;
           dict = new ZstdDictCompress(b, level);
           LOG.trace("Reloaded dictionary, new id is {}", dictId);
