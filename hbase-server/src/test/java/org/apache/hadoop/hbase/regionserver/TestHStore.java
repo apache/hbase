@@ -1938,10 +1938,11 @@ public class TestHStore {
 
   /**
    * <pre>
-   * This test is for HBASE-26384,
+    * This test is for HBASE-26384,
    * test {@link CompactingMemStore#flattenOneSegment} and {@link CompactingMemStore#snapshot()}
    * execute concurrently.
-   * The threads sequence is(following description is the correct and expected behavior):
+   * The threads sequence before HBASE-26384 is(The bug only exists for branch-2,and I add UTs
+   * for both branch-2 and master):
    * 1. The {@link CompactingMemStore} size exceeds
    *    {@link CompactingMemStore#getInmemoryFlushSize()},the write thread adds a new
    *    {@link ImmutableSegment}  to the head of {@link CompactingMemStore#pipeline},and start a
@@ -1954,6 +1955,16 @@ public class TestHStore {
    *    Assuming {@link VersionedSegmentsList#version} returned from
    *    {@link CompactingMemStore#getImmutableSegments} is v.
    * 4. The snapshot thread stopping before {@link CompactingMemStore#swapPipelineWithNull}.
+   * 5. The in memory compact thread completes {@link CompactingMemStore#flattenOneSegment},
+   *    {@link CompactionPipeline#version} is still v.
+   * 6. The snapshot thread continues {@link CompactingMemStore#swapPipelineWithNull}, and because
+   *    {@link CompactionPipeline#version} is v, {@link CompactingMemStore#swapPipelineWithNull}
+   *    thinks it is successful and continue flushing,but the {@link ImmutableSegment} in
+   *    {@link CompactionPipeline} has changed because
+   *    {@link CompactingMemStore#flattenOneSegment},so the {@link ImmutableSegment} is not
+   *    removed in fact and still remaining in {@link CompactionPipeline}.
+   *
+   * After HBASE-26384, the 5-6 step is changed to following, which is expected behavior:
    * 5. The in memory compact thread completes {@link CompactingMemStore#flattenOneSegment},
    *    {@link CompactingMemStore#flattenOneSegment} change {@link CompactionPipeline#version} to
    *    v+1.
@@ -2023,7 +2034,8 @@ public class TestHStore {
    * This test is for HBASE-26384,
    * test {@link CompactingMemStore#flattenOneSegment}{@link CompactingMemStore#snapshot()}
    * and writeMemStore execute concurrently.
-   * The threads sequence is(following description is the correct and expected behavior):
+   * The threads sequence before HBASE-26384 is(The bug only exists for branch-2,and I add UTs
+   * for both branch-2 and master):
    * 1. The {@link CompactingMemStore} size exceeds
    *    {@link CompactingMemStore#getInmemoryFlushSize()},the write thread adds a new
    *    {@link ImmutableSegment}  to the head of {@link CompactingMemStore#pipeline},and start a
@@ -2036,6 +2048,17 @@ public class TestHStore {
    *    Assuming {@link VersionedSegmentsList#version} returned from
    *    {@link CompactingMemStore#getImmutableSegments} is v.
    * 4. The snapshot thread stopping before {@link CompactingMemStore#swapPipelineWithNull}.
+   * 5. The in memory compact thread completes {@link CompactingMemStore#flattenOneSegment},
+   *    {@link CompactionPipeline#version} is still v.
+   * 6. The snapshot thread continues {@link CompactingMemStore#swapPipelineWithNull}, and because
+   *    {@link CompactionPipeline#version} is v, {@link CompactingMemStore#swapPipelineWithNull}
+   *    thinks it is successful and continue flushing,but the {@link ImmutableSegment} in
+   *    {@link CompactionPipeline} has changed because
+   *    {@link CompactingMemStore#flattenOneSegment},so the {@link ImmutableSegment} is not
+   *    removed in fact and still remaining in {@link CompactionPipeline}.
+   *
+   * After HBASE-26384, the 5-6 step is changed to following, which is expected behavior,
+   * and I add step 7-8 to test there is new segment added before retry.
    * 5. The in memory compact thread completes {@link CompactingMemStore#flattenOneSegment},
    *    {@link CompactingMemStore#flattenOneSegment} change {@link CompactionPipeline#version} to
    *     v+1.

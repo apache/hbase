@@ -18,9 +18,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -103,7 +105,7 @@ public class CompactionPipeline {
 
   public VersionedSegmentsList getVersionedTail() {
     synchronized (pipeline){
-      LinkedList<ImmutableSegment> segmentList = new LinkedList<>();
+      ArrayList<ImmutableSegment> segmentList = new ArrayList<>();
       if(!pipeline.isEmpty()) {
         segmentList.add(0, pipeline.getLast());
       }
@@ -133,7 +135,7 @@ public class CompactionPipeline {
     if (versionedList.getVersion() != version) {
       return false;
     }
-    LinkedList<ImmutableSegment> suffix;
+    List<ImmutableSegment> suffix;
     synchronized (pipeline){
       if(versionedList.getVersion() != version) {
         return false;
@@ -301,7 +303,7 @@ public class CompactionPipeline {
   /**
    * Must be called under the {@link CompactionPipeline#pipeline} Lock.
    */
-  private void swapSuffix(LinkedList<? extends Segment> suffix, ImmutableSegment segment,
+  private void swapSuffix(List<? extends Segment> suffix, ImmutableSegment segment,
       boolean closeSegmentsInSuffix) {
     matchAndRemoveSuffixFromPipeline(suffix);
     if (segment != null) {
@@ -326,7 +328,7 @@ public class CompactionPipeline {
    * suffix. If matched, remove suffix from {@link CompactionPipeline#pipeline}. <br/>
    * Must be called under the {@link CompactionPipeline#pipeline} Lock.
    */
-  private void matchAndRemoveSuffixFromPipeline(LinkedList<? extends Segment> suffix) {
+  private void matchAndRemoveSuffixFromPipeline(List<? extends Segment> suffix) {
     if (suffix.isEmpty()) {
       return;
     }
@@ -336,12 +338,12 @@ public class CompactionPipeline {
               + "],pipeline size must greater than or equals suffix size");
     }
 
-    Iterator<? extends Segment> suffixIterator = suffix.descendingIterator();
-    Iterator<? extends Segment> pipelineIterator = pipeline.descendingIterator();
+    ListIterator<? extends Segment> suffixIterator = suffix.listIterator(suffix.size());
+    ListIterator<? extends Segment> pipelineIterator = pipeline.listIterator(pipeline.size());
     int count = 0;
-    while (suffixIterator.hasNext()) {
-      Segment suffixSegment = suffixIterator.next();
-      Segment pipelineSegment = pipelineIterator.next();
+    while (suffixIterator.hasPrevious()) {
+      Segment suffixSegment = suffixIterator.previous();
+      Segment pipelineSegment = pipelineIterator.previous();
       if (suffixSegment != pipelineSegment) {
         throw new IllegalStateException("CODE-BUG:suffix last:[" + count + "]" + suffixSegment
             + " is not pipleline segment:[" + pipelineSegment + "]");

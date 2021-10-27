@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.LinkedList;
+import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -34,15 +34,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class VersionedSegmentsList {
 
-  private final LinkedList<ImmutableSegment> storeSegments;
+  private final List<ImmutableSegment> storeSegments;
   private final long version;
 
-  public VersionedSegmentsList(LinkedList<ImmutableSegment> storeSegments, long version) {
+  public VersionedSegmentsList(List<ImmutableSegment> storeSegments, long version) {
     this.storeSegments = storeSegments;
     this.version = version;
   }
 
-  public LinkedList<ImmutableSegment> getStoreSegments() {
+  public List<ImmutableSegment> getStoreSegments() {
     return storeSegments;
   }
 
