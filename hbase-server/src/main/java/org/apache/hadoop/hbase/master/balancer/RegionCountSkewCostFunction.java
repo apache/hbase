@@ -28,8 +28,6 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 class RegionCountSkewCostFunction extends CostFunction {
 
-  private static final Logger LOG = LoggerFactory.getLogger(RegionCountSkewCostFunction.class);
-
   static final String REGION_COUNT_SKEW_COST_KEY =
     "hbase.master.balancer.stochastic.regionCountCost";
   static final float DEFAULT_REGION_COUNT_SKEW_COST = 500;
@@ -50,14 +48,6 @@ class RegionCountSkewCostFunction extends CostFunction {
         costs[i] = cluster.regionsPerServer[i].length;
       }
     });
-    LOG.debug("{} sees a total of {} servers and {} regions.", getClass().getSimpleName(),
-      cluster.numServers, cluster.numRegions);
-    if (LOG.isTraceEnabled()) {
-      for (int i = 0; i < cluster.numServers; i++) {
-        LOG.trace("{} sees server '{}' has {} regions", getClass().getSimpleName(),
-          cluster.servers[i], cluster.regionsPerServer[i].length);
-      }
-    }
   }
 
   @Override

@@ -94,7 +94,6 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     conf = UTIL.getConfiguration();
 
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
-    conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
     conf.setFloat("hbase.regions.slop", 0.0f);
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
     Random rand = new Random();
