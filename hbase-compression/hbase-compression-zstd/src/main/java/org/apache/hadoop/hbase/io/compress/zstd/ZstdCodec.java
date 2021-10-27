@@ -19,10 +19,12 @@ package org.apache.hadoop.hbase.io.compress.zstd;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hbase.io.compress.DictionaryCache;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -42,6 +44,7 @@ public class ZstdCodec implements Configurable, CompressionCodec {
 
   public static final String ZSTD_LEVEL_KEY = "hbase.io.compress.zstd.level";
   public static final String ZSTD_BUFFER_SIZE_KEY = "hbase.io.compress.zstd.buffersize";
+  public static final String ZSTD_DICTIONARY_KEY = "hbase.io.compress.zstd.dictionary";
 
   private Configuration conf;
 
@@ -61,12 +64,12 @@ public class ZstdCodec implements Configurable, CompressionCodec {
 
   @Override
   public Compressor createCompressor() {
-    return new ZstdCompressor(getLevel(conf), getBufferSize(conf));
+    return new ZstdCompressor(getLevel(conf), getBufferSize(conf), getDictionary(conf));
   }
 
   @Override
   public Decompressor createDecompressor() {
-    return new ZstdDecompressor(getBufferSize(conf));
+    return new ZstdDecompressor(getBufferSize(conf), getDictionary(conf));
   }
 
   @Override
@@ -122,6 +125,33 @@ public class ZstdCodec implements Configurable, CompressionCodec {
       conf.getInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_BUFFER_SIZE_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_BUFFER_SIZE_DEFAULT));
     return size > 0 ? size : 256 * 1024; // Don't change this default
+  }
+
+  static byte[] getDictionary(final Configuration conf) {
+    String path = conf.get(ZSTD_DICTIONARY_KEY);
+    try {
+      return DictionaryCache.getDictionary(conf, path);
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to load dictionary at " + path, e);
+    }
+  }
+
+  // Zstandard dictionaries begin with a 32-bit magic number, 0xEC30A437 in little-endian
+  // format, followed by a 32-bit identifier also in little-endian format.
+  // Reference: https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md
+
+  static boolean isDictionary(byte[] dictionary) {
+    return (dictionary[0] == (byte)0x37 &&
+            dictionary[1] == (byte)0xA4 &&
+            dictionary[2] == (byte)0x30 &&
+            dictionary[3] == (byte)0xEC);
+  }
+
+  static int getDictionaryId(byte[] dictionary) {
+    if (!isDictionary(dictionary)) {
+      throw new IllegalArgumentException("Not a ZStandard dictionary");
+    }
+    return ByteBuffer.wrap(dictionary, 4, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
   }
 
 }

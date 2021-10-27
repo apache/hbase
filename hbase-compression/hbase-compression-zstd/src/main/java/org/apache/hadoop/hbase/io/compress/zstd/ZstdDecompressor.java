@@ -26,6 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.github.luben.zstd.Zstd;
+import com.github.luben.zstd.ZstdDictDecompress;
 
 /**
  * Hadoop decompressor glue for zstd-java.
@@ -38,12 +39,22 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
   protected int bufferSize;
   protected int inLen;
   protected boolean finished;
+  protected int dictId;
+  protected ZstdDictDecompress dict;
 
-  ZstdDecompressor(final int bufferSize) {
+  ZstdDecompressor(final int bufferSize, final byte[] dictionary) {
     this.bufferSize = bufferSize;
     this.inBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf.position(bufferSize);
+    if (dictionary != null) {
+      this.dictId = ZstdCodec.getDictionaryId(dictionary);
+      this.dict = new ZstdDictDecompress(dictionary);
+    }
+  }
+
+  ZstdDecompressor(final int bufferSize) {
+    this(bufferSize, null);
   }
 
   @Override
@@ -60,7 +71,11 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
       inLen -= remaining;
       outBuf.clear();
       int written;
-      written = Zstd.decompress(outBuf, inBuf);
+      if (dict != null) {
+        written = Zstd.decompress(outBuf, inBuf, dict);
+      } else {
+        written = Zstd.decompress(outBuf, inBuf);
+      }
       inBuf.clear();
       LOG.trace("decompress: decompressed {} -> {}", remaining, written);
       outBuf.flip();
@@ -116,8 +131,7 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
 
   @Override
   public void setDictionary(final byte[] b, final int off, final int len) {
-    LOG.trace("setDictionary: off={} len={}", off, len);
-    throw new UnsupportedOperationException("setDictionary not supported");
+    throw new UnsupportedOperationException("setDictionary is not supported");
   }
 
   @Override
@@ -143,12 +157,26 @@ public class ZstdDecompressor implements CanReinit, Decompressor {
   public void reinit(final Configuration conf) {
     LOG.trace("reinit");
     if (conf != null) {
+      // Dictionary may have changed
+      byte[] b = ZstdCodec.getDictionary(conf);
+      if (b != null) {
+        // Don't casually create dictionary objects; they consume native memory
+        int thisDictId = ZstdCodec.getDictionaryId(b);
+        if (dict == null || dictId != thisDictId) {
+          dictId = thisDictId;
+          dict = new ZstdDictDecompress(b);
+          LOG.trace("Reloaded dictionary, new id is {}", dictId);
+        }
+      } else {
+        dict = null;
+      }
       // Buffer size might have changed
       int newBufferSize = ZstdCodec.getBufferSize(conf);
       if (bufferSize != newBufferSize) {
         bufferSize = newBufferSize;
         this.inBuf = ByteBuffer.allocateDirect(bufferSize);
         this.outBuf = ByteBuffer.allocateDirect(bufferSize);
+        LOG.trace("Resized buffers, new size is {}", bufferSize);
       }
     }
     reset();
