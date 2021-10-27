@@ -69,10 +69,10 @@ public class JVM {
 
   /**
    * The Integer represent of JVM_SPEC_VERSION, for the JVM version comparison.
-   * NOTE: Java 8 will be represented by 1.
+   * Java 8, 9, 10 ... will be noted as 8, 9 10 ...
    */
   private static final int JVM_SPEC_VERSION = JVM_SPEC_VERSION_STRING.contains(".") ?
-    (int) Float.parseFloat(System.getProperty("java.specification.version")) :
+    (int) (Float.parseFloat(System.getProperty("java.specification.version")) * 10 % 10) :
     Integer.parseInt(System.getProperty("java.specification.version"));
 
   /**
@@ -121,7 +121,7 @@ public class JVM {
     return ibmvendor && JVMVersion.contains("1.6.0");
   }
 
-  public static float getJVMSpecVersion() {
+  public static int getJVMSpecVersion() {
     return JVM_SPEC_VERSION;
   }
 
