@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.compress.zstd;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.compress.CompressionTestBase;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -33,20 +34,20 @@ public class TestZstdCodec extends CompressionTestBase {
       HBaseClassTestRule.forClass(TestZstdCodec.class);
 
   @Test
-  public void testzstdCodecSmall() throws Exception {
+  public void testZstdCodecSmall() throws Exception {
     codecSmallTest(new ZstdCodec());
   }
 
   @Test
-  public void testzstdCodecLarge() throws Exception {
+  public void testZstdCodecLarge() throws Exception {
     codecLargeTest(new ZstdCodec(), 1.1); // poor compressability
     codecLargeTest(new ZstdCodec(),   2);
     codecLargeTest(new ZstdCodec(),  10); // very high compressability
   }
 
   @Test
-  public void testzstdCodecVeryLarge() throws Exception {
-    Configuration conf = new Configuration();
+  public void testZstdCodecVeryLarge() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
     // ZStandard levels range from 1 to 22.
     // Level 22 might take up to a minute to complete. 3 is the Hadoop default, and will be fast.
     conf.setInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_ZSTD_LEVEL_KEY, 3);

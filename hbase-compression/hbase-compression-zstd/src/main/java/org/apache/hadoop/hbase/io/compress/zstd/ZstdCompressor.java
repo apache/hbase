@@ -26,6 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.github.luben.zstd.Zstd;
+import com.github.luben.zstd.ZstdDictCompress;
 
 /**
  * Hadoop compressor glue for zstd-jni.
@@ -38,13 +39,23 @@ public class ZstdCompressor implements CanReinit, Compressor {
   protected ByteBuffer inBuf, outBuf;
   protected boolean finish, finished;
   protected long bytesRead, bytesWritten;
+  protected int dictId;
+  protected ZstdDictCompress dict;
 
-  ZstdCompressor(final int level, final int bufferSize) {
+  ZstdCompressor(final int level, final int bufferSize, final byte[] dictionary) {
     this.level = level;
     this.bufferSize = bufferSize;
     this.inBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf.position(bufferSize);
+    if (dictionary != null) {
+      this.dictId = ZstdCodec.getDictionaryId(dictionary);
+      this.dict = new ZstdDictCompress(dictionary, level);
+    }
+  }
+
+  ZstdCompressor(final int level, final int bufferSize) {
+    this(level, bufferSize, null);
   }
 
   @Override
@@ -72,7 +83,12 @@ public class ZstdCompressor implements CanReinit, Compressor {
         } else {
           outBuf.clear();
         }
-        int written = Zstd.compress(outBuf, inBuf, level);
+        int written;
+        if (dict != null) {
+          written = Zstd.compress(outBuf, inBuf, dict);
+        } else {
+          written = Zstd.compress(outBuf, inBuf, level);
+        }
         bytesWritten += written;
         inBuf.clear();
         LOG.trace("compress: compressed {} -> {} (level {})", uncompressed, written, level);
@@ -130,13 +146,33 @@ public class ZstdCompressor implements CanReinit, Compressor {
     LOG.trace("reinit");
     if (conf != null) {
       // Level might have changed
-      level = ZstdCodec.getLevel(conf);
+      boolean levelChanged = false;
+      int newLevel = ZstdCodec.getLevel(conf);
+      if (level != newLevel) {
+        LOG.trace("Level changed, was {} now {}", level, newLevel);
+        level = newLevel;
+        levelChanged = true;
+      }
+      // Dictionary may have changed
+      byte[] b = ZstdCodec.getDictionary(conf);
+      if (b != null) {
+        // Don't casually create dictionary objects; they consume native memory
+        int thisDictId = ZstdCodec.getDictionaryId(b);
+        if (dict == null || dictId != thisDictId || levelChanged) {
+          dictId = thisDictId;
+          dict = new ZstdDictCompress(b, level);
+          LOG.trace("Reloaded dictionary, new id is {}", dictId);
+        }
+      } else {
+        dict = null;
+      }
       // Buffer size might have changed
       int newBufferSize = ZstdCodec.getBufferSize(conf);
       if (bufferSize != newBufferSize) {
         bufferSize = newBufferSize;
         this.inBuf = ByteBuffer.allocateDirect(bufferSize);
         this.outBuf = ByteBuffer.allocateDirect(bufferSize);
+        LOG.trace("Resized buffers, new size is {}", bufferSize);
       }
     }
     reset();
@@ -180,7 +216,7 @@ public class ZstdCompressor implements CanReinit, Compressor {
 
   // Package private
 
-  int maxCompressedLength(final int len) {
+  static int maxCompressedLength(final int len) {
     return (int) Zstd.compressBound(len);
   }
 
