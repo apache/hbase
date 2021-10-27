@@ -20,6 +20,60 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.4.8 - 2021-11-05
+
+
+
+### NEW FEATURES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26284](https://issues.apache.org/jira/browse/HBASE-26284) | Add HBase Thrift API to get all table names along with whether it is enabled or not |  Major | Thrift |
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-25773](https://issues.apache.org/jira/browse/HBASE-25773) | TestSnapshotScannerHDFSAclController.setupBeforeClass is flaky |  Major | . |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26190](https://issues.apache.org/jira/browse/HBASE-26190) | High rate logging of BucketAllocatorException: Allocation too big |  Major | BucketCache, Operability |
+| [HBASE-26392](https://issues.apache.org/jira/browse/HBASE-26392) | Update ClassSize.BYTE\_BUFFER for JDK17 |  Major | java, util |
+| [HBASE-26394](https://issues.apache.org/jira/browse/HBASE-26394) | Cache in RSRpcServices.executeProcedures does not take effect |  Major | . |
+| [HBASE-26385](https://issues.apache.org/jira/browse/HBASE-26385) | Clear CellScanner when replay |  Major | regionserver, rpc |
+| [HBASE-26383](https://issues.apache.org/jira/browse/HBASE-26383) | HBCK incorrectly reports inconsistencies for recently split regions following a master failover |  Critical | master |
+| [HBASE-26371](https://issues.apache.org/jira/browse/HBASE-26371) | Prioritize meta region move over other region moves in region\_mover |  Major | . |
+| [HBASE-26364](https://issues.apache.org/jira/browse/HBASE-26364) | TestThriftServer is failing 100% in our flaky test job |  Major | test, Thrift |
+| [HBASE-26350](https://issues.apache.org/jira/browse/HBASE-26350) | Missing server side debugging on failed SASL handshake |  Minor | . |
+| [HBASE-26344](https://issues.apache.org/jira/browse/HBASE-26344) | Fix Bug for MultiByteBuff.put(int, byte) |  Major | . |
+| [HBASE-26312](https://issues.apache.org/jira/browse/HBASE-26312) | Shell scan fails with timestamp |  Major | shell, test |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26390](https://issues.apache.org/jira/browse/HBASE-26390) | Upload src tarball to nightlies for nightly jobs |  Major | jenkins, scripts |
+| [HBASE-26382](https://issues.apache.org/jira/browse/HBASE-26382) | Use gen\_redirect\_html for linking flaky test logs |  Major | jenkins, scripts, test |
+| [HBASE-26362](https://issues.apache.org/jira/browse/HBASE-26362) | Upload mvn site artifacts for nightly build to nightlies |  Major | jenkins, scripts |
+| [HBASE-26360](https://issues.apache.org/jira/browse/HBASE-26360) | Use gen\_redirect\_html for linking test logs |  Major | jenkins, scripts |
+| [HBASE-26341](https://issues.apache.org/jira/browse/HBASE-26341) | Upload dashboard html for flaky find job to nightlies |  Major | flakies, jenkins, scripts |
+| [HBASE-26339](https://issues.apache.org/jira/browse/HBASE-26339) | SshPublisher will skip uploading artifacts if the build is failure |  Major | jenkins, scripts |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26329](https://issues.apache.org/jira/browse/HBASE-26329) | Upgrade commons-io to 2.11.0 |  Major | dependencies |
+| [HBASE-26186](https://issues.apache.org/jira/browse/HBASE-26186) | jenkins script for caching artifacts should verify cached file before relying on it |  Major | build, integration tests |
+
+
 ## Release 2.4.7 - 2021-10-15
 
 
