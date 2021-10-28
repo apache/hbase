@@ -215,7 +215,6 @@ public class CellCounter extends Configured implements Tool {
     Scan scan = getConfiguredScanForJob(conf, args);
     TableMapReduceUtil.initTableMapperJob(tableName, scan,
         CellCounterMapper.class, ImmutableBytesWritable.class, Result.class, job);
-    job.setNumReduceTasks(1);
     job.setMapOutputKeyClass(Text.class);
     job.setMapOutputValueClass(IntWritable.class);
     job.setOutputFormatClass(TextOutputFormat.class);
@@ -223,6 +222,7 @@ public class CellCounter extends Configured implements Tool {
     job.setOutputValueClass(IntWritable.class);
     FileOutputFormat.setOutputPath(job, outputDir);
     job.setReducerClass(IntSumReducer.class);
+    job.setCombinerClass(IntSumReducer.class);
     return job;
   }
 
