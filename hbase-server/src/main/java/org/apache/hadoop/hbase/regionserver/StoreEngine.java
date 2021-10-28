@@ -521,4 +521,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   public boolean requireWritingToTmpDirFirst() {
     return storeFileTracker.requireWritingToTmpDirFirst();
   }
+
+  public void resetCompactionWriter(){
+    compactor.resetWriter();
+  }
 }

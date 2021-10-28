@@ -93,5 +93,5 @@ public interface StoreFileTracker {
    * Whether the implementation of this tracker requires you to write to temp directory first, i.e,
    * does not allow broken store files under the actual data directory.
    */
-  public boolean requireWritingToTmpDirFirst();
+  boolean requireWritingToTmpDirFirst();
 }

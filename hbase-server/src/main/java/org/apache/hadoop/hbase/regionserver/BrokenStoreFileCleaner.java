@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -29,7 +30,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -39,34 +39,34 @@ import java.util.concurrent.atomic.AtomicLong;
  * This Chore, every time it runs, will clear the unsused HFiles in the data
  * folder.
  */
-@InterfaceAudience.Private public class FileBasedStoreFileCleaner extends ScheduledChore {
-  private static final Logger LOG = LoggerFactory.getLogger(FileBasedStoreFileCleaner.class);
-  public static final String FILEBASED_STOREFILE_CLEANER_ENABLED =
-      "hbase.region.filebased.storefilecleaner.enabled";
-  public static final boolean DEFAULT_FILEBASED_STOREFILE_CLEANER_ENABLED = false;
-  public static final String FILEBASED_STOREFILE_CLEANER_TTL =
-      "hbase.region.filebased.storefilecleaner.ttl";
-  public static final long DEFAULT_FILEBASED_STOREFILE_CLEANER_TTL = 1000 * 60 * 60 * 12; //12h
-  public static final String FILEBASED_STOREFILE_CLEANER_DELAY =
-      "hbase.region.filebased.storefilecleaner.delay";
-  public static final int DEFAULT_FILEBASED_STOREFILE_CLEANER_DELAY = 1000 * 60 * 60 * 2; //2h
-  public static final String FILEBASED_STOREFILE_CLEANER_DELAY_JITTER =
-      "hbase.region.filebased.storefilecleaner.delay.jitter";
-  public static final double DEFAULT_FILEBASED_STOREFILE_CLEANER_DELAY_JITTER = 0.25D;
-  public static final String FILEBASED_STOREFILE_CLEANER_PERIOD =
-      "hbase.region.filebased.storefilecleaner.period";
-  public static final int DEFAULT_FILEBASED_STOREFILE_CLEANER_PERIOD = 1000 * 60 * 60 * 6; //6h
+@InterfaceAudience.Private public class BrokenStoreFileCleaner extends ScheduledChore {
+  private static final Logger LOG = LoggerFactory.getLogger(BrokenStoreFileCleaner.class);
+  public static final String BROKEN_STOREFILE_CLEANER_ENABLED =
+      "hbase.region.broken.storefilecleaner.enabled";
+  public static final boolean DEFAULT_BROKEN_STOREFILE_CLEANER_ENABLED = false;
+  public static final String BROKEN_STOREFILE_CLEANER_TTL =
+      "hbase.region.broken.storefilecleaner.ttl";
+  public static final long DEFAULT_BROKEN_STOREFILE_CLEANER_TTL = 1000 * 60 * 60 * 12; //12h
+  public static final String BROKEN_STOREFILE_CLEANER_DELAY =
+      "hbase.region.broken.storefilecleaner.delay";
+  public static final int DEFAULT_BROKEN_STOREFILE_CLEANER_DELAY = 1000 * 60 * 60 * 2; //2h
+  public static final String BROKEN_STOREFILE_CLEANER_DELAY_JITTER =
+      "hbase.region.broken.storefilecleaner.delay.jitter";
+  public static final double DEFAULT_BROKEN_STOREFILE_CLEANER_DELAY_JITTER = 0.25D;
+  public static final String BROKEN_STOREFILE_CLEANER_PERIOD =
+      "hbase.region.broken.storefilecleaner.period";
+  public static final int DEFAULT_BROKEN_STOREFILE_CLEANER_PERIOD = 1000 * 60 * 60 * 6; //6h
 
   private HRegionServer regionServer;
   private final AtomicBoolean enabled = new AtomicBoolean(true);
   private long ttl;
 
-  public FileBasedStoreFileCleaner(final int delay, final int period, final Stoppable stopper, Configuration conf,
+  public BrokenStoreFileCleaner(final int delay, final int period, final Stoppable stopper, Configuration conf,
       HRegionServer regionServer) {
-    super("FileBasedStoreFileCleaner", stopper, period, delay);
+    super("BrokenStoreFileCleaner", stopper, period, delay);
     this.regionServer = regionServer;
-    setEnabled(conf.getBoolean(FILEBASED_STOREFILE_CLEANER_ENABLED, DEFAULT_FILEBASED_STOREFILE_CLEANER_ENABLED));
-    ttl = conf.getLong(FILEBASED_STOREFILE_CLEANER_TTL, DEFAULT_FILEBASED_STOREFILE_CLEANER_TTL);
+    setEnabled(conf.getBoolean(BROKEN_STOREFILE_CLEANER_ENABLED, DEFAULT_BROKEN_STOREFILE_CLEANER_ENABLED));
+    ttl = conf.getLong(BROKEN_STOREFILE_CLEANER_TTL, DEFAULT_BROKEN_STOREFILE_CLEANER_TTL);
   }
 
   public boolean setEnabled(final boolean enabled) {
@@ -85,7 +85,7 @@ import java.util.concurrent.atomic.AtomicLong;
       AtomicLong failedDeletes = new AtomicLong(0);
       for (HRegion region : regionServer.getRegions()) {
         for (HStore store : region.getStores()) {
-          //only clean do cleanup in store using file based storefile tracking
+          //only do cleanup in stores not using tmp directories
           if (store.getStoreEngine().requireWritingToTmpDirFirst()) {
             continue;
           }
@@ -102,11 +102,11 @@ import java.util.concurrent.atomic.AtomicLong;
         }
       }
       LOG.debug(
-        "FileBasedStoreFileCleaner on {} run for: {}ms. It deleted {} files and tried but failed to delete {}",
+        "BrokenStoreFileCleaner on {} run for: {}ms. It deleted {} files and tried but failed to delete {}",
         regionServer.getServerName().getServerName(), EnvironmentEdgeManager.currentTime() - start,
         deletedFiles.get(), failedDeletes.get());
     } else {
-      LOG.trace("File based storefile Cleaner chore disabled! Not cleaning.");
+      LOG.trace("Broken storefile Cleaner chore disabled! Not cleaning.");
     }
   }
 

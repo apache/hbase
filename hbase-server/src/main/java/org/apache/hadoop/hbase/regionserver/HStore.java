@@ -1157,6 +1157,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       }
     }
     replaceStoreFiles(filesToCompact, sfs, true);
+    storeEngine.resetCompactionWriter();
+
     if (cr.isMajor()) {
       majorCompactedCellsCount.addAndGet(getCompactionProgress().getTotalCompactingKVs());
       majorCompactedCellsSize.addAndGet(getCompactionProgress().totalCompactedSize);

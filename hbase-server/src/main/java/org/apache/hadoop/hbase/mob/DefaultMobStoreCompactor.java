@@ -670,7 +670,6 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     writer.appendMetadata(fd.maxSeqId, request.isAllFiles(), request.getFiles());
     writer.appendMobMetadata(mobRefSet.get());
     writer.close();
-    writer = null;
     clearThreadLocals();
     return newFiles;
   }

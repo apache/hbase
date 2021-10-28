@@ -357,7 +357,6 @@ public abstract class Compactor<T extends CellSink> {
         LOG.warn("Writer exists when it should not: " + getCompactionTargets().stream()
           .map(n -> n.toString())
           .collect(Collectors.joining(", ", "{ ", " }")));
-        writer = null;
       }
       writer = sinkFactory.createWriter(scanner, fd, dropCache, request.isMajor());
       finished = performCompaction(fd, scanner, smallestReadPoint, cleanSeqId,
@@ -559,5 +558,12 @@ public abstract class Compactor<T extends CellSink> {
       return ((AbstractMultiFileWriter)writer).writers().stream().map(sfw -> sfw.getPath()).collect(
         Collectors.toList());
     }
+  }
+
+  /**
+   * Reset the Writer when the new storefiles were successfully added
+   */
+  public  void resetWriter(){
+    writer = null;
   }
 }

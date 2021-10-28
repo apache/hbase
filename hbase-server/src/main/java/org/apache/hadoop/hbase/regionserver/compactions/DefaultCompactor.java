@@ -68,7 +68,6 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
     List<Path> newFiles = Lists.newArrayList(writer.getPath());
     writer.appendMetadata(fd.maxSeqId, request.isAllFiles(), request.getFiles());
     writer.close();
-    writer = null;
     return newFiles;
   }
 
