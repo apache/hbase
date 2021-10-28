@@ -86,7 +86,6 @@ class BalancerClusterState {
   int[] regionIndexToTableIndex; // regionIndex -> tableIndex
   int[][] numRegionsPerServerPerTable; // tableIndex -> serverIndex  -> # regions
   int[] numRegionsPerTable; // tableIndex -> region count
-  double[] meanRegionsPerTable; // mean region count per table
   int[] numMaxRegionsPerTable; // tableIndex -> max number of regions in a single RS
   int[] regionIndexToPrimaryIndex; // regionIndex -> regionIndex of the primary
   boolean hasRegionReplicas = false; // whether there is regions with replicas
