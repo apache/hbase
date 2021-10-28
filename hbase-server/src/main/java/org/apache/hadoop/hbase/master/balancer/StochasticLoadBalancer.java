@@ -884,7 +884,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     static final float DEFAULT_MOVE_COST = 7;
     static final float DEFAULT_MOVE_COST_OFFPEAK = 3;
     private static final int DEFAULT_MAX_MOVES = 600;
-    private static final float DEFAULT_MAX_MOVE_PERCENT = 0.25f;
+    private static final float DEFAULT_MAX_MOVE_PERCENT = 1.0f;
 
     private final float maxMovesPercent;
     private final OffPeakHours offPeakHours;
@@ -959,14 +959,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
           costs[i] = cluster.regionsPerServer[i].length;
         }
       });
-      LOG.debug("{} sees a total of {} servers and {} regions.", getClass().getSimpleName(),
-        cluster.numServers, cluster.numRegions);
-      if (LOG.isTraceEnabled()) {
-        for (int i =0; i < cluster.numServers; i++) {
-          LOG.trace("{} sees server '{}' has {} regions", getClass().getSimpleName(),
-              cluster.servers[i], cluster.regionsPerServer[i].length);
-        }
-      }
     }
 
     @Override
@@ -1052,18 +1044,43 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     private static final String TABLE_SKEW_COST_KEY =
         "hbase.master.balancer.stochastic.tableSkewCost";
     private static final float DEFAULT_TABLE_SKEW_COST = 35;
+    DoubleArrayCost[] costsPerTable;
 
     TableSkewCostFunction(Configuration conf) {
       super(conf);
       this.setMultiplier(conf.getFloat(TABLE_SKEW_COST_KEY, DEFAULT_TABLE_SKEW_COST));
+    }
+    @Override
+    void init(Cluster cluster) {
+      super.init(cluster);
+      costsPerTable = new DoubleArrayCost[cluster.numTables];
+      for (int tableIdx = 0; tableIdx < cluster.numTables; tableIdx++) {
+        costsPerTable[tableIdx] = new DoubleArrayCost();
+        costsPerTable[tableIdx].prepare(cluster.numServers);
+        final int tableIndex = tableIdx;
+        costsPerTable[tableIdx].applyCostsChange(costs -> {
+          // Keep a cached deep copy for change-only recomputation
+          for (int i = 0; i < cluster.numServers; i++) {
+            costs[i] = cluster.numRegionsPerServerPerTable[tableIndex][i];
+          }
+        });
+      }
+    }
+
+    @Override
+    protected void regionMoved(int region, int oldServer, int newServer) {
+      int tableIdx = cluster.regionIndexToTableIndex[region];
+      costsPerTable[tableIdx].applyCostsChange(costs -> {
+        costs[oldServer] = cluster.numRegionsPerServerPerTable[tableIdx][oldServer];
+        costs[newServer] = cluster.numRegionsPerServerPerTable[tableIdx][newServer];
+      });
     }
 
     @Override
     protected double cost() {
       double cost = 0;
       for (int tableIdx = 0; tableIdx < cluster.numTables; tableIdx++) {
-        cost += scale(cluster.minRegionSkewByTable[tableIdx],
-          cluster.maxRegionSkewByTable[tableIdx], cluster.regionSkewByTable[tableIdx]);
+        cost += costsPerTable[tableIdx].cost();
       }
       return cost;
     }
