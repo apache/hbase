@@ -24,7 +24,7 @@ pipeline {
     pollSCM('@daily')
   }
   options {
-    buildDiscarder(logRotator(numToKeepStr: '15'))
+    buildDiscarder(logRotator(numToKeepStr: '20'))
     timeout (time: 16, unit: 'HOURS')
     timestamps()
     skipDefaultCheckout()
