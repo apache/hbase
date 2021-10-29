@@ -46,7 +46,7 @@ public final class DictionaryCache {
   public static final String RESOURCE_SCHEME = "resource://";
 
   private static final Logger LOG = LoggerFactory.getLogger(DictionaryCache.class);
-  private static LoadingCache<String, byte[]> CACHE;
+  private static volatile LoadingCache<String, byte[]> CACHE;
 
   private DictionaryCache() { }
 
