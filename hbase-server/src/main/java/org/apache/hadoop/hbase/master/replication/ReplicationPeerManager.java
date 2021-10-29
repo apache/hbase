@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -51,7 +52,6 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
-import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -358,13 +358,13 @@ public class ReplicationPeerManager {
           e);
       }
     }
-    // Default is HBaseInterClusterReplicationEndpoint and only it need to check cluster key
-    if (endpoint == null || endpoint instanceof HBaseInterClusterReplicationEndpoint) {
+    // Endpoints implementing HBaseReplicationEndpoint need to check cluster key
+    if (endpoint == null || endpoint instanceof HBaseReplicationEndpoint) {
       checkClusterKey(peerConfig.getClusterKey());
-    }
-    // Default is HBaseInterClusterReplicationEndpoint which cannot replicate to same cluster
-    if (endpoint == null || !endpoint.canReplicateToSameCluster()) {
-      checkClusterId(peerConfig.getClusterKey());
+      // Check if endpoint can replicate to the same cluster
+      if (endpoint == null || !endpoint.canReplicateToSameCluster()) {
+        checkSameClusterKey(peerConfig.getClusterKey());
+      }
     }
 
     if (peerConfig.replicateAllUserTables()) {
@@ -510,7 +510,7 @@ public class ReplicationPeerManager {
     }
   }
 
-  private void checkClusterId(String clusterKey) throws DoNotRetryIOException {
+  private void checkSameClusterKey(String clusterKey) throws DoNotRetryIOException {
     String peerClusterId = "";
     try {
       // Create the peer cluster config for get peer cluster id
