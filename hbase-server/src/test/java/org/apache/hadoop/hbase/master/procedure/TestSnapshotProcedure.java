@@ -111,8 +111,8 @@ public class TestSnapshotProcedure {
   }
 
   @Test
-  public void testSimpleSnapshot() throws Exception {
-    TEST_UTIL.getAdmin().snapshot(snapshot);
+  public void testSimpleSnapshotTable() throws Exception {
+    TEST_UTIL.getAdmin().snapshotTable(snapshot);
     SnapshotTestingUtils.assertOneSnapshotThatMatches(TEST_UTIL.getAdmin(), snapshotProto);
     SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotProto, TABLE_NAME, CF);
   }

@@ -159,7 +159,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFil
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SnapshotRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -3194,13 +3193,6 @@ public final class ProtobufUtil {
     builder.setCloseProcId(closeProcId);
     return builder.build();
   }
-
-  public static AdminProtos.SnapshotRegionRequest buildSnapshotRegionRequest(RegionInfo region,
-    SnapshotProtos.SnapshotDescription snapshot, long procId) {
-    return SnapshotRegionRequest.newBuilder().setRegion(region).setSnapshot(snapshot)
-      .setSnapshotProcId(procId).build();
-  }
-
 
   public static ProcedureDescription buildProcedureDescription(String signature, String instance,
       Map<String, String> props) {

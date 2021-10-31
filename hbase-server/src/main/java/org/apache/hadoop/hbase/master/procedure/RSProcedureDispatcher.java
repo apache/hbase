@@ -52,8 +52,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProc
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RemoteProcedureRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SnapshotRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
  * A remote procecdure dispatcher for regionservers.
@@ -182,8 +180,6 @@ public class RSProcedureDispatcher
 
     void dispatchCloseRequests(MasterProcedureEnv env, List<RegionCloseOperation> operations);
 
-    void dispatchSnapshotRequest(MasterProcedureEnv env, List<RegionSnapshotOperation> operations);
-
     void dispatchServerOperations(MasterProcedureEnv env, List<ServerOperation> operations);
   }
 
@@ -210,12 +206,6 @@ public class RSProcedureDispatcher
     List<RegionCloseOperation> closeOps = fetchType(reqsByType, RegionCloseOperation.class);
     if (!closeOps.isEmpty()) {
       resolver.dispatchCloseRequests(env, closeOps);
-    }
-
-    List<RegionSnapshotOperation> snapshotOps =
-      fetchType(reqsByType, RegionSnapshotOperation.class);
-    if (!snapshotOps.isEmpty()) {
-      resolver.dispatchSnapshotRequest(env, snapshotOps);
     }
 
     List<ServerOperation> refreshOps = fetchType(reqsByType, ServerOperation.class);
@@ -391,14 +381,6 @@ public class RSProcedureDispatcher
     }
 
     @Override
-    public void dispatchSnapshotRequest(final MasterProcedureEnv env,
-      final List<RegionSnapshotOperation> operations) {
-      for (RegionSnapshotOperation op : operations) {
-        request.addSnapshotRegion(op.buildSnapshotRegionRequest());
-      }
-    }
-
-    @Override
     public void dispatchServerOperations(MasterProcedureEnv env, List<ServerOperation> operations) {
       operations.stream().map(o -> o.buildRequest()).forEachOrdered(request::addProc);
     }
@@ -496,22 +478,6 @@ public class RSProcedureDispatcher
     public CloseRegionRequest buildCloseRegionRequest(final ServerName serverName) {
       return ProtobufUtil.buildCloseRegionRequest(serverName, regionInfo.getRegionName(),
         getDestinationServer(), procId);
-    }
-  }
-
-
-  public static class RegionSnapshotOperation extends RegionOperation {
-    private final SnapshotDescription snapshot;
-
-    public RegionSnapshotOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo,
-      long procId, SnapshotDescription snapshot) {
-      super(remoteProcedure, regionInfo, procId);
-      this.snapshot = snapshot;
-    }
-
-    public SnapshotRegionRequest buildSnapshotRegionRequest() {
-      return ProtobufUtil.buildSnapshotRegionRequest(
-        ProtobufUtil.toRegionInfo(regionInfo), snapshot, procId);
     }
   }
 }

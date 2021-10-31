@@ -28,7 +28,6 @@ option optimize_for = SPEED;
 import "HBase.proto";
 import "server/Quota.proto";
 import "server/ClusterStatus.proto";
-import "server/Snapshot.proto";
 import "server/region/WAL.proto";
 import "server/region/TooSlowLog.proto";
 
@@ -127,12 +126,6 @@ message CloseRegionRequest {
 
 message CloseRegionResponse {
   required bool closed = 1;
-}
-
-message SnapshotRegionRequest {
-  required RegionInfo region = 1;
-  required SnapshotDescription snapshot = 2;
-  optional int64 snapshot_proc_id = 3 [default = -1];
 }
 
 /**
@@ -284,7 +277,6 @@ message ExecuteProceduresRequest {
   repeated OpenRegionRequest open_region = 1;
   repeated CloseRegionRequest close_region = 2;
   repeated RemoteProcedureRequest proc = 3;
-  repeated SnapshotRegionRequest snapshot_region = 4;
 }
 
 message ExecuteProceduresResponse {

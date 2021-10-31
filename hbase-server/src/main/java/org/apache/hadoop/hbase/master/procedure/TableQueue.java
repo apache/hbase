@@ -57,6 +57,7 @@ class TableQueue extends Queue<TableName> {
         return !proc.getTableName().equals(TableProcedureInterface.DUMMY_NAMESPACE_TABLE_NAME);
       case READ:
       case SNAPSHOT:
+      case REGION_SNAPSHOT:
         return false;
       // region operations are using the shared-lock on the table
       // and then they will grab an xlock on the region.
