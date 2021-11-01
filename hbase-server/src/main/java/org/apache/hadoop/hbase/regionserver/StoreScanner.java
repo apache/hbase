@@ -29,10 +29,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
@@ -627,22 +626,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           case INCLUDE:
           case INCLUDE_AND_SEEK_NEXT_ROW:
           case INCLUDE_AND_SEEK_NEXT_COL:
-
             Filter f = matcher.getFilter();
             if (f != null) {
               cell = f.transformCell(cell);
             }
             this.countPerRow++;
-            if (storeLimit > -1 && this.countPerRow > (storeLimit + storeOffset)) {
-              // do what SEEK_NEXT_ROW does.
-              if (!matcher.moreRowsMayExistAfter(cell)) {
-                close(false);// Do all cleanup except heap.close()
-                return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
-              }
-              matcher.clearCurrentRow();
-              seekToNextRow(cell);
-              break LOOP;
-            }
 
             // add to results only if we have skipped #storeOffset kvs
             // also update metric accordingly
@@ -670,6 +658,17 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
                     + store.getHRegion().getRegionInfo().getRegionNameAsString();
                 LOG.warn(message);
                 throw new RowTooBigException(message);
+              }
+
+              if (storeLimit > -1 && this.countPerRow >= (storeLimit + storeOffset)) {
+                // do what SEEK_NEXT_ROW does.
+                if (!matcher.moreRowsMayExistAfter(cell)) {
+                  close(false);// Do all cleanup except heap.close()
+                  return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
+                }
+                matcher.clearCurrentRow();
+                seekToNextRow(cell);
+                break LOOP;
               }
             }
 
@@ -738,15 +737,19 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
           case SEEK_NEXT_USING_HINT:
             Cell nextKV = matcher.getNextKeyHint(cell);
-            if (nextKV != null && comparator.compare(nextKV, cell) > 0) {
-              seekAsDirection(nextKV);
-              NextState stateAfterSeekByHint = needToReturn(outResult);
-              if (stateAfterSeekByHint != null) {
-                return scannerContext.setScannerState(stateAfterSeekByHint).hasMoreValues();
+            if (nextKV != null) {
+              int difference = comparator.compare(nextKV, cell);
+              if (((!scan.isReversed() && difference > 0)
+                || (scan.isReversed() && difference < 0))) {
+                seekAsDirection(nextKV);
+                NextState stateAfterSeekByHint = needToReturn(outResult);
+                if (stateAfterSeekByHint != null) {
+                  return scannerContext.setScannerState(stateAfterSeekByHint).hasMoreValues();
+                }
+                break;
               }
-            } else {
-              heap.next();
             }
+            heap.next();
             break;
 
           default:

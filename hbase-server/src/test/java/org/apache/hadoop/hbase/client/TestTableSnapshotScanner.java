@@ -189,6 +189,8 @@ public class TestTableSnapshotScanner {
 
       verifyScanner(scanner, bbb, yyy);
       scanner.close();
+    } catch (Exception e) {
+      e.printStackTrace();
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
@@ -460,9 +462,7 @@ public class TestTableSnapshotScanner {
       }
     } catch (Exception e) {
       LOG.error("scan snapshot error", e);
-      Assert.fail("Should not throw FileNotFoundException");
-      Assert.assertTrue(e.getCause() != null);
-      Assert.assertTrue(e.getCause().getCause() instanceof FileNotFoundException);
+      Assert.fail("Should not throw Exception: " + e.getMessage());
     } finally {
       tearDownCluster();
     }

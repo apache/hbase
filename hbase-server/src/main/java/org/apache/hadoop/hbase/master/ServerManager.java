@@ -735,7 +735,8 @@ public class ServerManager {
    */
   private int getMinToStart() {
     if (master.isInMaintenanceMode()) {
-      // If in maintenance mode, then master hosting meta will be the only server available
+      // If in maintenance mode, then in process region server hosting meta will be the only server
+      // available
       return 1;
     }
 
@@ -798,8 +799,9 @@ public class ServerManager {
         lastLogTime = now;
         String msg =
             "Waiting on regionserver count=" + count + "; waited="+
-                slept + "ms, expecting min=" + minToStart + " server(s), max="+ getStrForMax(maxToStart) +
-                " server(s), " + "timeout=" + timeout + "ms, lastChange=" + (lastCountChange - now) + "ms";
+                slept + "ms, expecting min=" + minToStart + " server(s), max="
+                + getStrForMax(maxToStart) + " server(s), " + "timeout=" + timeout
+                + "ms, lastChange=" + (now - lastCountChange) + "ms";
         LOG.info(msg);
         status.setStatus(msg);
       }

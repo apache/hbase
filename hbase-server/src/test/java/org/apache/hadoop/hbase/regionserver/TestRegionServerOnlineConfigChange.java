@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -76,13 +77,16 @@ public class TestRegionServerOnlineConfigChange {
   private final static String columnFamily1Str = "columnFamily1";
   private final static TableName TABLE1 = TableName.valueOf(table1Str);
   private final static byte[] COLUMN_FAMILY1 = Bytes.toBytes(columnFamily1Str);
+  private final static long MAX_FILE_SIZE = 20 * 1024 * 1024L;
 
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = hbaseTestingUtility.getConfiguration();
     hbaseTestingUtility.startMiniCluster(2);
-    t1 = hbaseTestingUtility.createTable(TABLE1, COLUMN_FAMILY1);
+    t1 = hbaseTestingUtility.createTable(
+      TableDescriptorBuilder.newBuilder(TABLE1).setMaxFileSize(MAX_FILE_SIZE).build(),
+      new byte[][] { COLUMN_FAMILY1 }, conf);
   }
 
   @AfterClass
@@ -258,5 +262,13 @@ public class TestRegionServerOnlineConfigChange {
         }
       });
     }
+  }
+
+  @Test
+  public void testStoreConfigurationOnlineChange() {
+    rs1.getConfigurationManager().notifyAllObservers(conf);
+    long actualMaxFileSize = r1.getStore(COLUMN_FAMILY1).getReadOnlyConfiguration()
+        .getLong(TableDescriptorBuilder.MAX_FILESIZE, -1);
+    assertEquals(MAX_FILE_SIZE, actualMaxFileSize);
   }
 }

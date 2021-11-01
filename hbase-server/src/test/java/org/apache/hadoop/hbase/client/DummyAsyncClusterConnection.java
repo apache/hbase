@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.security.token.Token;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
@@ -155,6 +156,17 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
 
   @Override
   public Connection toConnection() {
+    return null;
+  }
+
+  @Override
+  public CompletableFuture<List<ServerName>>
+    getLiveRegionServers(MasterAddressTracker masterAddrTracker, int count) {
+    return null;
+  }
+
+  @Override
+  public CompletableFuture<List<ServerName>> getAllBootstrapNodes(ServerName regionServer) {
     return null;
   }
 }

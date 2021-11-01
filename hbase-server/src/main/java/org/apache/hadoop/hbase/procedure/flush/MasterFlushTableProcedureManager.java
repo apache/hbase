@@ -27,7 +27,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -44,7 +43,6 @@ import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinator;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -130,15 +128,8 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     // It is possible that regions may move after we get the region server list.
     // Each region server will get its own online regions for the table.
     // We may still miss regions that need to be flushed.
-    List<Pair<RegionInfo, ServerName>> regionsAndLocations;
-
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
-      regionsAndLocations = MetaTableLocator.getMetaRegionsAndLocations(
-        master.getZooKeeper());
-    } else {
-      regionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(
-        master.getConnection(), tableName, false);
-    }
+    List<Pair<RegionInfo, ServerName>> regionsAndLocations =
+      master.getAssignmentManager().getTableRegionsAndLocations(tableName, false);
 
     Set<String> regionServers = new HashSet<>(regionsAndLocations.size());
     for (Pair<RegionInfo, ServerName> region : regionsAndLocations) {

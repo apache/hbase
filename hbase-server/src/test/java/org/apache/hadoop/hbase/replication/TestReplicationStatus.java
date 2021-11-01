@@ -109,7 +109,7 @@ public class TestReplicationStatus extends TestReplicationBase {
     // Stop rs1, then the queue of rs1 will be transfered to rs0
     HRegionServer hrs = UTIL1.getHBaseCluster().getRegionServer(1);
     hrs.stop("Stop RegionServer");
-    while(!hrs.isShutDown()) {
+    while(hrs.isAlive()) {
       Threads.sleep(100);
     }
     // To be sure it dead and references cleaned up. TODO: Change this to a barrier.

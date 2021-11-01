@@ -93,18 +93,16 @@ public class TestGetLastFlushedSequenceId {
     }
     assertNotNull(region);
     Thread.sleep(2000);
-    RegionStoreSequenceIds ids =
-        testUtil.getHBaseCluster().getMaster()
-            .getLastSequenceId(region.getRegionInfo().getEncodedNameAsBytes());
+    RegionStoreSequenceIds ids = testUtil.getHBaseCluster().getMaster().getServerManager()
+      .getLastFlushedSequenceId(region.getRegionInfo().getEncodedNameAsBytes());
     assertEquals(HConstants.NO_SEQNUM, ids.getLastFlushedSequenceId());
     // This will be the sequenceid just before that of the earliest edit in memstore.
     long storeSequenceId = ids.getStoreSequenceId(0).getSequenceId();
     assertTrue(storeSequenceId > 0);
     testUtil.getAdmin().flush(tableName);
     Thread.sleep(2000);
-    ids =
-        testUtil.getHBaseCluster().getMaster()
-            .getLastSequenceId(region.getRegionInfo().getEncodedNameAsBytes());
+    ids = testUtil.getHBaseCluster().getMaster().getServerManager()
+      .getLastFlushedSequenceId(region.getRegionInfo().getEncodedNameAsBytes());
     assertTrue(ids.getLastFlushedSequenceId() + " > " + storeSequenceId,
       ids.getLastFlushedSequenceId() > storeSequenceId);
     assertEquals(ids.getLastFlushedSequenceId(), ids.getStoreSequenceId(0).getSequenceId());

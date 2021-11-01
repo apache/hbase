@@ -97,7 +97,7 @@ public final class MiniClusterRule extends ExternalResource {
   }
 
   /**
-   * @return the underlying instance of {@link HBaseTestingUtil}
+   * Returns the underlying instance of {@link HBaseTestingUtil}
    */
   public HBaseTestingUtil getTestingUtility() {
     return testingUtility;

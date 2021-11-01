@@ -77,8 +77,8 @@ public class CompactionProgress {
    */
   public long getTotalCompactingKVs() {
     if (totalCompactingKVs < currentCompactedKVs) {
-      LOG.warn("totalCompactingKVs={} less than currentCompactedKVs={}",
-          totalCompactingKVs, currentCompactedKVs);
+      LOG.debug("totalCompactingKVs={} less than currentCompactedKVs={}",
+        totalCompactingKVs, currentCompactedKVs);
       return currentCompactedKVs;
     }
     return totalCompactingKVs;

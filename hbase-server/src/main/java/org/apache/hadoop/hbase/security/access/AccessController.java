@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -1000,7 +1001,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preBalance(ObserverContext<MasterCoprocessorEnvironment> c)
+  public void preBalance(ObserverContext<MasterCoprocessorEnvironment> c, BalanceRequest request)
       throws IOException {
     requirePermission(c, "balance", Action.ADMIN);
   }
@@ -2554,7 +2555,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String groupName) throws IOException {
+      String groupName, BalanceRequest request) throws IOException {
     accessChecker.requirePermission(getActiveUser(ctx), "balanceRSGroup",
         null, Permission.Action.ADMIN);
   }
@@ -2615,5 +2616,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       String newName) throws IOException {
     accessChecker.requirePermission(getActiveUser(ctx), "renameRSGroup",
       null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preUpdateRSGroupConfig(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+    final String groupName, final Map<String, String> configuration) throws IOException {
+    accessChecker
+      .requirePermission(getActiveUser(ctx), "updateRSGroupConfig", null, Permission.Action.ADMIN);
   }
 }

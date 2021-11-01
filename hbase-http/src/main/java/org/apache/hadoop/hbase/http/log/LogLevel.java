@@ -22,8 +22,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
+import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -58,6 +59,8 @@ public final class LogLevel {
 
   public static final String PROTOCOL_HTTP = "http";
   public static final String PROTOCOL_HTTPS = "https";
+
+  public static final String READONLY_LOGGERS_CONF_KEY = "hbase.ui.logLevels.readonly.loggers";
 
   /**
    * A command line implementation
@@ -247,11 +250,11 @@ public final class LogLevel {
      * @return a connected connection
      * @throws Exception if it can not establish a connection.
      */
-    private URLConnection connect(URL url) throws Exception {
+    private HttpURLConnection connect(URL url) throws Exception {
       AuthenticatedURL.Token token = new AuthenticatedURL.Token();
       AuthenticatedURL aUrl;
       SSLFactory clientSslFactory;
-      URLConnection connection;
+      HttpURLConnection connection;
       // If https is chosen, configures SSL client.
       if (PROTOCOL_HTTPS.equals(url.getProtocol())) {
         clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, this.getConf());
@@ -280,7 +283,9 @@ public final class LogLevel {
       URL url = new URL(urlString);
       System.out.println("Connecting to " + url);
 
-      URLConnection connection = connect(url);
+      HttpURLConnection connection = connect(url);
+
+      HttpExceptionUtils.validateResponse(connection, 200);
 
       // read from the servlet
 
@@ -317,8 +322,10 @@ public final class LogLevel {
       Configuration conf = (Configuration) getServletContext().getAttribute(
           HttpServer.CONF_CONTEXT_ATTRIBUTE);
       if (conf.getBoolean("hbase.master.ui.readonly", false)) {
-        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Modification of HBase via"
-            + " the UI is disallowed in configuration.");
+        sendError(
+          response,
+          HttpServletResponse.SC_FORBIDDEN,
+          "Modification of HBase via the UI is disallowed in configuration.");
         return;
       }
       response.setContentType("text/html");
@@ -336,6 +343,8 @@ public final class LogLevel {
       String logName = ServletUtil.getParameter(request, "log");
       String level = ServletUtil.getParameter(request, "level");
 
+      String[] readOnlyLogLevels = conf.getStrings(READONLY_LOGGERS_CONF_KEY);
+
       if (logName != null) {
         out.println("<p>Results:</p>");
         out.println(MARKER
@@ -345,6 +354,14 @@ public final class LogLevel {
         out.println(MARKER
             + "Log Class: <b>" + log.getClass().getName() +"</b><br />");
         if (level != null) {
+          if (!isLogLevelChangeAllowed(logName, readOnlyLogLevels)) {
+            sendError(
+              response,
+              HttpServletResponse.SC_PRECONDITION_FAILED,
+              "Modification of logger " + logName + " is disallowed in configuration.");
+            return;
+          }
+
           out.println(MARKER + "Submitted Level: <b>" + level + "</b><br />");
         }
         process(log, level, out);
@@ -358,6 +375,24 @@ public final class LogLevel {
         out.println(ServletUtil.HTML_TAIL);
       }
       out.close();
+    }
+
+    private boolean isLogLevelChangeAllowed(String logger, String[] readOnlyLogLevels) {
+      if (readOnlyLogLevels == null) {
+        return true;
+      }
+      for (String readOnlyLogLevel : readOnlyLogLevels) {
+        if (logger.startsWith(readOnlyLogLevel)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    private void sendError(HttpServletResponse response, int code, String message)
+      throws IOException {
+      response.setStatus(code, message);
+      response.sendError(code, message);
     }
 
     static final String FORMS = "<div class='container-fluid content'>\n"

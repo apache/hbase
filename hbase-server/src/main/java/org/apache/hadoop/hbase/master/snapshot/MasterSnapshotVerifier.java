@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -36,7 +35,6 @@ import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -157,12 +155,7 @@ public final class MasterSnapshotVerifier {
    * @throws IOException if we can't reach hbase:meta or read the files from the FS
    */
   private void verifyRegions(final SnapshotManifest manifest) throws IOException {
-    List<RegionInfo> regions;
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
-      regions = MetaTableLocator.getMetaRegions(services.getZooKeeper());
-    } else {
-      regions = MetaTableAccessor.getTableRegions(services.getConnection(), tableName);
-    }
+    List<RegionInfo> regions = services.getAssignmentManager().getTableRegions(tableName, false);
     // Remove the non-default regions
     RegionReplicaUtil.removeNonDefaultRegions(regions);
 

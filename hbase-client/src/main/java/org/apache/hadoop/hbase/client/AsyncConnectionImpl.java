@@ -86,11 +86,11 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   final AsyncConnectionConfiguration connConf;
 
-  private final User user;
+  protected final User user;
 
   final ConnectionRegistry registry;
 
-  private final int rpcTimeout;
+  protected final int rpcTimeout;
 
   protected final RpcClient rpcClient;
 
@@ -180,7 +180,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private void spawnRenewalChore(final UserGroupInformation user) {
     ChoreService service = getChoreService();
-    service.scheduleChore(AuthUtil.getAuthRenewalChore(user));
+    service.scheduleChore(AuthUtil.getAuthRenewalChore(user, conf));
   }
 
   /**

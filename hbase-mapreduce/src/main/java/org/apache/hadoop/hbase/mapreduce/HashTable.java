@@ -98,6 +98,7 @@ public class HashTable extends Configured implements Tool {
     long startTime = 0;
     long endTime = 0;
     boolean ignoreTimestamps;
+    boolean rawScan;
 
     List<ImmutableBytesWritable> partitions;
 
@@ -136,6 +137,7 @@ public class HashTable extends Configured implements Tool {
       if (endTime != 0) {
         p.setProperty("endTimestamp", Long.toString(endTime));
       }
+      p.setProperty("rawScan", Boolean.toString(rawScan));
 
       try (OutputStreamWriter osw = new OutputStreamWriter(fs.create(path), Charsets.UTF_8)) {
         p.store(osw, null);
@@ -173,6 +175,11 @@ public class HashTable extends Configured implements Tool {
         versions = Integer.parseInt(versionString);
       }
 
+      String rawScanString = p.getProperty("rawScan");
+      if (rawScanString != null) {
+        rawScan = Boolean.parseBoolean(rawScanString);
+      }
+
       String startTimeString = p.getProperty("startTimestamp");
       if (startTimeString != null) {
         startTime = Long.parseLong(startTimeString);
@@ -202,11 +209,13 @@ public class HashTable extends Configured implements Tool {
       if (!isTableEndRow(stopRow)) {
         scan.withStopRow(stopRow);
       }
-      if(families != null) {
-        for(String fam : families.split(",")) {
+      if (families != null) {
+        for (String fam : families.split(",")) {
           scan.addFamily(Bytes.toBytes(fam));
         }
       }
+      scan.setRaw(rawScan);
+
       return scan;
     }
 
@@ -304,6 +313,7 @@ public class HashTable extends Configured implements Tool {
       if (versions >= 0) {
         sb.append(", versions=").append(versions);
       }
+      sb.append(", rawScan=").append(rawScan);
       if (startTime != 0) {
         sb.append("startTime=").append(startTime);
       }
@@ -476,7 +486,6 @@ public class HashTable extends Configured implements Tool {
     private long batchSize = 0;
     boolean ignoreTimestamps;
 
-
     public ResultHasher() {
       try {
         digest = MessageDigest.getInstance("MD5");
@@ -626,6 +635,7 @@ public class HashTable extends Configured implements Tool {
     System.err.println("                   Ignored if no starttime specified.");
     System.err.println(" scanbatch         scanner batch size to support intra row scans");
     System.err.println(" versions          number of cell versions to include");
+    System.err.println(" rawScan           performs a raw scan (false if omitted)");
     System.err.println(" families          comma-separated list of families to include");
     System.err.println(" ignoreTimestamps  if true, ignores cell timestamps");
     System.err.println("                   when calculating hashes");
@@ -704,6 +714,12 @@ public class HashTable extends Configured implements Tool {
         final String versionsArgKey = "--versions=";
         if (cmd.startsWith(versionsArgKey)) {
           tableHash.versions = Integer.parseInt(cmd.substring(versionsArgKey.length()));
+          continue;
+        }
+
+        final String rawScanArgKey = "--rawScan=";
+        if (cmd.startsWith(rawScanArgKey)) {
+          tableHash.rawScan = Boolean.parseBoolean(cmd.substring(rawScanArgKey.length()));
           continue;
         }
 

@@ -208,7 +208,7 @@ public class CompactingMemStore extends AbstractMemStore {
       stopCompaction();
       // region level lock ensures pushing active to pipeline is done in isolation
       // no concurrent update operations trying to flush the active segment
-      pushActiveToPipeline(getActive());
+      pushActiveToPipeline(getActive(), true);
       resetTimeOfOldestEdit();
       snapshotId = EnvironmentEdgeManager.currentTime();
       // in both cases whatever is pushed to snapshot is cleared from the pipeline
@@ -413,34 +413,62 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   /**
-   * Check whether anything need to be done based on the current active set size.
-   * The method is invoked upon every addition to the active set.
-   * For CompactingMemStore, flush the active set to the read-only memory if it's
-   * size is above threshold
+   * Check whether anything need to be done based on the current active set size. The method is
+   * invoked upon every addition to the active set. For CompactingMemStore, flush the active set to
+   * the read-only memory if it's size is above threshold
    * @param currActive intended segment to update
    * @param cellToAdd cell to be added to the segment
    * @param memstoreSizing object to accumulate changed size
-   * @return true if the cell can be added to the
+   * @return true if the cell can be added to the currActive
    */
-  private boolean checkAndAddToActiveSize(MutableSegment currActive, Cell cellToAdd,
+  protected boolean checkAndAddToActiveSize(MutableSegment currActive, Cell cellToAdd,
       MemStoreSizing memstoreSizing) {
-    if (shouldFlushInMemory(currActive, cellToAdd, memstoreSizing)) {
-      if (currActive.setInMemoryFlushed()) {
-        flushInMemory(currActive);
-        if (setInMemoryCompactionFlag()) {
-          // The thread is dispatched to do in-memory compaction in the background
-          InMemoryCompactionRunnable runnable = new InMemoryCompactionRunnable();
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Dispatching the MemStore in-memory flush for store " + store
-                .getColumnFamilyName());
-          }
-          getPool().execute(runnable);
-        }
+    long cellSize = MutableSegment.getCellLength(cellToAdd);
+    boolean successAdd = false;
+    while (true) {
+      long segmentDataSize = currActive.getDataSize();
+      if (!inWalReplay && segmentDataSize > inmemoryFlushSize) {
+        // when replaying edits from WAL there is no need in in-memory flush regardless the size
+        // otherwise size below flush threshold try to update atomically
+        break;
       }
-      return false;
+      if (currActive.compareAndSetDataSize(segmentDataSize, segmentDataSize + cellSize)) {
+        if (memstoreSizing != null) {
+          memstoreSizing.incMemStoreSize(cellSize, 0, 0, 0);
+        }
+        successAdd = true;
+        break;
+      }
     }
-    return true;
- }
+
+    if (!inWalReplay && currActive.getDataSize() > inmemoryFlushSize) {
+      // size above flush threshold so we flush in memory
+      this.tryFlushInMemoryAndCompactingAsync(currActive);
+    }
+    return successAdd;
+  }
+
+  /**
+   * Try to flush the currActive in memory and submit the background
+   * {@link InMemoryCompactionRunnable} to
+   * {@link RegionServicesForStores#getInMemoryCompactionPool()}. Just one thread can do the actual
+   * flushing in memory.
+   * @param currActive current Active Segment to be flush in memory.
+   */
+  private void tryFlushInMemoryAndCompactingAsync(MutableSegment currActive) {
+    if (currActive.setInMemoryFlushed()) {
+      flushInMemory(currActive);
+      if (setInMemoryCompactionFlag()) {
+        // The thread is dispatched to do in-memory compaction in the background
+        InMemoryCompactionRunnable runnable = new InMemoryCompactionRunnable();
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(
+            "Dispatching the MemStore in-memory flush for store " + store.getColumnFamilyName());
+        }
+        getPool().execute(runnable);
+      }
+    }
+  }
 
   // externally visible only for tests
   // when invoked directly from tests it must be verified that the caller doesn't hold updatesLock,
@@ -453,9 +481,14 @@ public class CompactingMemStore extends AbstractMemStore {
     inMemoryCompaction();
   }
 
-  private void flushInMemory(MutableSegment currActive) {
+  protected void flushInMemory(MutableSegment currActive) {
     LOG.trace("IN-MEMORY FLUSH: Pushing active segment into compaction pipeline");
-    pushActiveToPipeline(currActive);
+    // NOTE: Due to concurrent writes and because we first add cell size to currActive.getDataSize
+    // and then actually add cell to currActive.cellSet, it is possible that
+    // currActive.getDataSize could not accommodate cellToAdd but currActive.cellSet is still
+    // empty if pending writes which not yet add cells to currActive.cellSet.
+    // so here we should not check currActive.isEmpty or not.
+    pushActiveToPipeline(currActive, false);
   }
 
   void inMemoryCompaction() {
@@ -492,26 +525,6 @@ public class CompactingMemStore extends AbstractMemStore {
     return getRegionServices().getInMemoryCompactionPool();
   }
 
-  protected boolean shouldFlushInMemory(MutableSegment currActive, Cell cellToAdd,
-      MemStoreSizing memstoreSizing) {
-    long cellSize = MutableSegment.getCellLength(cellToAdd);
-    long segmentDataSize = currActive.getDataSize();
-    while (segmentDataSize + cellSize < inmemoryFlushSize || inWalReplay) {
-      // when replaying edits from WAL there is no need in in-memory flush regardless the size
-      // otherwise size below flush threshold try to update atomically
-      if (currActive.compareAndSetDataSize(segmentDataSize, segmentDataSize + cellSize)) {
-        if (memstoreSizing != null) {
-          memstoreSizing.incMemStoreSize(cellSize, 0, 0, 0);
-        }
-        // enough space for cell - no need to flush
-        return false;
-      }
-      segmentDataSize = currActive.getDataSize();
-    }
-    // size above flush threshold
-    return true;
-  }
-
   /**
    * The request to cancel the compaction asynchronous task (caused by in-memory flush)
    * The compaction may still happen if the request was sent too late
@@ -523,8 +536,20 @@ public class CompactingMemStore extends AbstractMemStore {
     }
   }
 
-  protected void pushActiveToPipeline(MutableSegment currActive) {
-    if (!currActive.isEmpty()) {
+  /**
+   * NOTE: When {@link CompactingMemStore#flushInMemory(MutableSegment)} calls this method, due to
+   * concurrent writes and because we first add cell size to currActive.getDataSize and then
+   * actually add cell to currActive.cellSet, it is possible that currActive.getDataSize could not
+   * accommodate cellToAdd but currActive.cellSet is still empty if pending writes which not yet add
+   * cells to currActive.cellSet,so for
+   * {@link CompactingMemStore#flushInMemory(MutableSegment)},checkEmpty parameter is false. But if
+   * {@link CompactingMemStore#snapshot} called this method,because there is no pending
+   * write,checkEmpty parameter could be true.
+   * @param currActive
+   * @param checkEmpty
+   */
+  protected void pushActiveToPipeline(MutableSegment currActive, boolean checkEmpty) {
+    if (!checkEmpty || !currActive.isEmpty()) {
       pipeline.pushHead(currActive);
       resetActive();
     }

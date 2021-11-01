@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -98,4 +99,15 @@ public interface AsyncClusterConnection extends AsyncConnection {
    * Clean up after finishing bulk load, no matter success or not.
    */
   CompletableFuture<Void> cleanupBulkLoad(TableName tableName, String bulkToken);
+
+  /**
+   * Get live region servers from masters.
+   */
+  CompletableFuture<List<ServerName>> getLiveRegionServers(MasterAddressTracker masterAddrTracker,
+    int count);
+
+  /**
+   * Get the bootstrap node list of another region server.
+   */
+  CompletableFuture<List<ServerName>> getAllBootstrapNodes(ServerName regionServer);
 }

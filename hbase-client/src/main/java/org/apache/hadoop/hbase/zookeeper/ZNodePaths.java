@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.HConstants.SPLIT_LOGDIR_NAME;
 import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_ZNODE_PARENT;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -201,6 +202,10 @@ public class ZNodePaths {
       path.equals(clusterIdZNode) || path.equals(rsZNode) ||
       // /hbase/table and /hbase/table/foo is allowed, /hbase/table-lock is not
       path.equals(tableZNode) || path.startsWith(tableZNode + "/");
+  }
+
+  public String getRsPath(ServerName sn) {
+    return joinZNode(rsZNode, sn.toString());
   }
 
   /**

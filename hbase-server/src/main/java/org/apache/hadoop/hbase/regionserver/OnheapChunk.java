@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.regionserver.ChunkCreator.ChunkType;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -27,12 +28,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class OnheapChunk extends Chunk {
 
-  OnheapChunk(int size, int id) {
-    super(size, id);
+  OnheapChunk(int size, int id, ChunkType chunkType) {
+    super(size, id, chunkType);
   }
 
-  OnheapChunk(int size, int id, boolean fromPool) {
-    super(size, id, fromPool);
+  OnheapChunk(int size, int id, ChunkType chunkType, boolean fromPool) {
+    super(size, id, chunkType, fromPool);
   }
 
   @Override

@@ -119,6 +119,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.ReadOnlyConfiguration;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
@@ -1021,16 +1022,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // Remove temporary data left over from old regions
       status.setStatus("Cleaning up temporary data from old regions");
       fs.cleanupTempDir();
-    }
-
-    if (this.writestate.writesEnabled) {
-      status.setStatus("Cleaning up detritus from prior splits");
-      // Get rid of any splits or merges that were lost in-progress.  Clean out
-      // these directories here on open.  We may be opening a region that was
-      // being split but we crashed in the middle of it all.
-      LOG.debug("Cleaning up detritus for " + this.getRegionInfo().getEncodedName());
-      fs.cleanupAnySplitDetritus();
-      fs.cleanupMergesDir();
     }
 
     // Initialize split policy
@@ -1970,6 +1961,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.debug("Waited {} ms for region {} flush to complete", duration, this);
       return !(writestate.flushing);
     }
+  }
+
+  @Override
+  public Configuration getReadOnlyConfiguration() {
+    return new ReadOnlyConfiguration(this.conf);
   }
 
   private ThreadPoolExecutor getStoreOpenAndCloseThreadPool(

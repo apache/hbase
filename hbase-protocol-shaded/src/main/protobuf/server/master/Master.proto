@@ -293,11 +293,14 @@ message IsInMaintenanceModeResponse {
 }
 
 message BalanceRequest {
-  optional bool force = 1;
+  optional bool ignore_rit = 1;
+  optional bool dry_run = 2;
 }
 
 message BalanceResponse {
   required bool balancer_ran = 1;
+  optional uint32 moves_calculated = 2;
+  optional uint32 moves_executed = 3;
 }
 
 message SetBalancerRunningRequest {
@@ -1294,66 +1297,4 @@ service HbckService {
   /** Schedule a fix meta run. */
   rpc FixMeta(FixMetaRequest)
     returns(FixMetaResponse);
-}
-
-/** Request and response to get the clusterID for this cluster */
-message GetClusterIdRequest {
-}
-message GetClusterIdResponse {
-  /** Not set if cluster ID could not be determined. */
-  optional string cluster_id = 1;
-}
-
-/** Request and response to get the currently active master name for this cluster */
-message GetActiveMasterRequest {
-}
-message GetActiveMasterResponse {
-  /** Not set if an active master could not be determined. */
-  optional ServerName server_name = 1;
-}
-
-/** Request and response to get the current list of all registers master servers */
-message GetMastersRequest {
-}
-message GetMastersResponseEntry {
-  required ServerName server_name = 1;
-  required bool is_active = 2;
-}
-message GetMastersResponse {
-  repeated GetMastersResponseEntry master_servers = 1;
-}
-
-/** Request and response to get the current list of meta region locations */
-message GetMetaRegionLocationsRequest {
-}
-message GetMetaRegionLocationsResponse {
-  /** Not set if meta region locations could not be determined. */
-  repeated RegionLocation meta_locations = 1;
-}
-
-/**
- * Implements all the RPCs needed by clients to look up cluster meta information needed for
- * connection establishment.
- */
-service ClientMetaService {
-  /**
-   * Get Cluster ID for this cluster.
-   */
-  rpc GetClusterId(GetClusterIdRequest) returns(GetClusterIdResponse);
-
-  /**
-   * Get active master server name for this cluster. Retained for out of sync client and master
-   * rolling upgrades. Newer clients switched to GetMasters RPC request.
-   */
-  rpc GetActiveMaster(GetActiveMasterRequest) returns(GetActiveMasterResponse);
-
-  /**
-   * Get registered list of master servers in this cluster.
-   */
-  rpc GetMasters(GetMastersRequest) returns(GetMastersResponse);
-
-  /**
-   * Get current meta replicas' region locations.
-   */
-  rpc GetMetaRegionLocations(GetMetaRegionLocationsRequest) returns(GetMetaRegionLocationsResponse);
 }

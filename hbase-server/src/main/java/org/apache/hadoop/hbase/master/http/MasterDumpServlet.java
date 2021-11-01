@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.monitoring.StateDumpServlet;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.regionserver.http.RSDumpServlet;
 import org.apache.hadoop.hbase.util.LogMonitoring;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -102,11 +101,6 @@ public class MasterDumpServlet extends StateDumpServlet {
       long tailKb = getTailKbParam(request);
       LogMonitoring.dumpTailOfLogs(out, tailKb);
 
-      out.println("\n\nRS Queue:");
-      out.println(LINE);
-      if (isShowQueueDump(conf)) {
-        RSDumpServlet.dumpQueue(master, out);
-      }
       out.flush();
     }
   }

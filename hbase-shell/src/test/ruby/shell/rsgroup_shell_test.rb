@@ -89,6 +89,8 @@ module Hbase
 
       # just run it to verify jruby->java api binding
       @hbase.rsgroup_admin.balance_rs_group(group_name)
+      @hbase.rsgroup_admin.balance_rs_group(group_name, 'force')
+      @hbase.rsgroup_admin.balance_rs_group(group_name, 'dry_run')
 
       @shell.command(:disable, table_name)
       @shell.command(:drop, table_name)

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -61,7 +62,7 @@ public abstract class TableBackupClient {
   protected Connection conn;
   protected String backupId;
   protected List<TableName> tableList;
-  protected HashMap<String, Long> newTimestamps = null;
+  protected Map<String, Long> newTimestamps = null;
 
   protected BackupManager backupManager;
   protected BackupInfo backupInfo;
@@ -294,7 +295,7 @@ public abstract class TableBackupClient {
 
       if (type == BackupType.INCREMENTAL) {
         // We'll store the log timestamps for this table only in its manifest.
-        HashMap<TableName, HashMap<String, Long>> tableTimestampMap = new HashMap<>();
+        Map<TableName, Map<String, Long>> tableTimestampMap = new HashMap<>();
         tableTimestampMap.put(table, backupInfo.getIncrTimestampMap().get(table));
         manifest.setIncrTimestampMap(tableTimestampMap);
         ArrayList<BackupImage> ancestorss = backupManager.getAncestors(backupInfo);

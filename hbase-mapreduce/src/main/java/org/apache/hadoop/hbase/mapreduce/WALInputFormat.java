@@ -217,8 +217,9 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
         }
         return res;
       } catch (IOException e) {
-        Path archivedLog = AbstractFSWALProvider.getArchivedLogPath(logFile, conf);
-        if (logFile != archivedLog) {
+        Path archivedLog = AbstractFSWALProvider.findArchivedLog(logFile, conf);
+        // archivedLog can be null if unable to locate in archiveDir.
+        if (archivedLog != null) {
           openReader(archivedLog);
           // Try call again in recursion
           return nextKeyValue();

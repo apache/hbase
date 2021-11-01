@@ -223,10 +223,16 @@ public class CompactionPipeline {
         LOG.warn("Segment flattening failed, because versions do not match");
         return false;
       }
-      int i = 0;
+      int i = -1;
       for (ImmutableSegment s : pipeline) {
+        i++;
         if ( s.canBeFlattened() ) {
           s.waitForUpdates(); // to ensure all updates preceding s in-memory flush have completed
+          if (s.isEmpty()) {
+            // after s.waitForUpdates() is called, there is no updates pending,if no cells in s,
+            // we can skip it.
+            continue;
+          }
           // size to be updated
           MemStoreSizing newMemstoreAccounting = new NonThreadSafeMemStoreSizing();
           ImmutableSegment newS = SegmentFactory.instance().createImmutableSegmentByFlattening(
@@ -242,9 +248,7 @@ public class CompactionPipeline {
           LOG.debug("Compaction pipeline segment {} flattened", s);
           return true;
         }
-        i++;
       }
-
     }
     // do not update the global memstore size counter and do not increase the version,
     // because all the cells remain in place

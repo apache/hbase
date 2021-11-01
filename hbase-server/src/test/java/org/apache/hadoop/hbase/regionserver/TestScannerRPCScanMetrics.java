@@ -111,7 +111,7 @@ public class TestScannerRPCScanMetrics {
     scanNextIterate(ht, dummyScan);
 
     RSRpcServices testClusterRSRPCServices = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
-      .rpcServices;
+      .getRpcServices();
     assertEquals(4, testClusterRSRPCServices.rpcFullScanRequestCount.intValue());
   }
 

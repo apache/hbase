@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -371,12 +372,13 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               // Added to support migration
               try {
                 mobCell = mobStore.resolve(c, true, false).getCell();
-              } catch (FileNotFoundException fnfe) {
-                if (discardMobMiss) {
+              } catch (DoNotRetryIOException e) {
+                if (discardMobMiss && e.getCause() != null
+                  && e.getCause() instanceof FileNotFoundException) {
                   LOG.error("Missing MOB cell: file={} not found cell={}", fName, c);
                   continue;
                 } else {
-                  throw fnfe;
+                  throw e;
                 }
               }
 

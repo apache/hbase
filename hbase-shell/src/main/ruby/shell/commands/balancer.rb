@@ -22,31 +22,32 @@ module Shell
     class Balancer < Command
       def help
         <<-EOF
-Trigger the cluster balancer. Returns true if balancer ran and was able to
-tell the region servers to unassign all the regions to balance  (the re-assignment itself is async).
-Otherwise false (Will not run if regions in transition).
-Parameter tells master whether we should force balance even if there is region in transition.
+Trigger the cluster balancer. Returns true if balancer ran, otherwise false (Will not run if regions in transition).
 
-WARNING: For experts only. Forcing a balance may do more damage than repair
-when assignment is confused
+Parameter can be "force" or "dry_run":
+ - "dry_run" will run the balancer to generate a plan, but will not actually execute that plan.
+   This is useful for testing out new balance configurations. See the active HMaster logs for the results of the dry_run.
+ - "ignore_rit" tells master whether we should force the balancer to run even if there is region in transition.
+   WARNING: For experts only. Forcing a balance may do more damage than repair when assignment is confused
 
 Examples:
 
   hbase> balancer
-  hbase> balancer "force"
+  hbase> balancer "ignore_rit"
+  hbase> balancer "dry_run"
+  hbase> balancer "dry_run", "ignore_rit"
 EOF
       end
 
-      def command(force = nil)
-        force_balancer = 'false'
-        if force == 'force'
-          force_balancer = 'true'
-        elsif !force.nil?
-          raise ArgumentError, "Invalid argument #{force}."
+      def command(*args)
+        resp = admin.balancer(args)
+        if resp.isBalancerRan
+          formatter.row(["Balancer ran"])
+          formatter.row(["Moves calculated: #{resp.getMovesCalculated}, moves executed: #{resp.getMovesExecuted}"])
+        else
+          formatter.row(["Balancer did not run. See logs for details."])
         end
-        did_balancer_run = !!admin.balancer(force_balancer)
-        formatter.row([did_balancer_run.to_s])
-        did_balancer_run
+        resp.isBalancerRan
       end
     end
   end

@@ -53,6 +53,7 @@ pipeline {
       // TODO does hadoopcheck need to be jdk specific?
     SHALLOW_CHECKS = 'all,-shadedjars,-unit' // run by the 'yetus general check'
     DEEP_CHECKS = 'compile,htmlout,javac,maven,mvninstall,shadedjars,unit' // run by 'yetus jdkX (HadoopY) checks'
+    ASF_NIGHTLIES = 'https://nightlies.apache.org'
   }
   parameters {
     booleanParam(name: 'USE_YETUS_PRERELEASE', defaultValue: false, description: '''Check to use the current HEAD of apache/yetus rather than our configured release.
@@ -90,6 +91,7 @@ pipeline {
                   "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
                       --working-dir "${WORKSPACE}/downloads-yetus" \
                       --keys 'https://www.apache.org/dist/yetus/KEYS' \
+                      --verify-tar-gz \
                       "${WORKSPACE}/yetus-${YETUS_RELEASE}-bin.tar.gz" \
                       "yetus/${YETUS_RELEASE}/apache-yetus-${YETUS_RELEASE}-bin.tar.gz"
                   mv "yetus-${YETUS_RELEASE}-bin.tar.gz" yetus.tar.gz
@@ -136,6 +138,7 @@ pipeline {
               "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
                   --working-dir "${WORKSPACE}/downloads-hadoop-2" \
                   --keys 'http://www.apache.org/dist/hadoop/common/KEYS' \
+                  --verify-tar-gz \
                   "${WORKSPACE}/hadoop-${HADOOP2_VERSION}-bin.tar.gz" \
                   "hadoop/common/hadoop-${HADOOP2_VERSION}/hadoop-${HADOOP2_VERSION}.tar.gz"
               for stale in $(ls -1 "${WORKSPACE}"/hadoop-2*.tar.gz | grep -v ${HADOOP2_VERSION}); do
@@ -163,6 +166,7 @@ pipeline {
               "${WORKSPACE}/component/dev-support/jenkins-scripts/cache-apache-project-artifact.sh" \
                   --working-dir "${WORKSPACE}/downloads-hadoop-3" \
                   --keys 'http://www.apache.org/dist/hadoop/common/KEYS' \
+                  --verify-tar-gz \
                   "${WORKSPACE}/hadoop-${HADOOP3_VERSION}-bin.tar.gz" \
                   "hadoop/common/hadoop-${HADOOP3_VERSION}/hadoop-${HADOOP3_VERSION}.tar.gz"
               for stale in $(ls -1 "${WORKSPACE}"/hadoop-3*.tar.gz | grep -v ${HADOOP3_VERSION}); do
@@ -209,7 +213,7 @@ pipeline {
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               echo '(x) {color:red}-1 general checks{color}' >"${OUTPUT_DIR}/commentfile"
               echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
-'''
+            '''
             unstash 'yetus'
             // since we have a new node definition we need to re-do the scm checkout
             dir('component') {
@@ -221,20 +225,30 @@ pipeline {
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
               echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
               ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
-'''
-            // TODO roll this into the hbase_nightly_yetus script
-            sh '''#!/usr/bin/env bash
-              set -e
-              declare -i status=0
-              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                echo '(/) {color:green}+1 general checks{color}' > "${OUTPUT_DIR}/commentfile"
-              else
-                echo '(x) {color:red}-1 general checks{color}' > "${OUTPUT_DIR}/commentfile"
-                status=1
-              fi
-              echo "-- For more information [see general report|${BUILD_URL}General_20Nightly_20Build_20Report/]" >> "${OUTPUT_DIR}/commentfile"
-              exit "${status}"
             '''
+            // TODO roll this into the hbase_nightly_yetus script
+            script {
+              def ret = sh(
+                returnStatus: true,
+                script: '''#!/usr/bin/env bash
+                  set -e
+                  declare -i status=0
+                  if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                    echo '(/) {color:green}+1 general checks{color}' > "${OUTPUT_DIR}/commentfile"
+                  else
+                    echo '(x) {color:red}-1 general checks{color}' > "${OUTPUT_DIR}/commentfile"
+                    status=1
+                  fi
+                  echo "-- For more information [see general report|${BUILD_URL}General_20Nightly_20Build_20Report/]" >> "${OUTPUT_DIR}/commentfile"
+                  exit "${status}"
+                '''
+              )
+              if (ret != 0) {
+                // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                // test output. See HBASE-26339 for more details.
+                currentBuild.result = 'UNSTABLE'
+              }
+            }
           }
           post {
             always {
@@ -277,7 +291,7 @@ pipeline {
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               echo '(x) {color:red}-1 jdk7 checks{color}' >"${OUTPUT_DIR}/commentfile"
               echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
-'''
+            '''
             unstash 'yetus'
             dir('component') {
               checkout scm
@@ -288,19 +302,29 @@ pipeline {
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
               echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
               ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
-'''
-            sh '''#!/usr/bin/env bash
-              set -e
-              declare -i status=0
-              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                echo '(/) {color:green}+1 jdk7 checks{color}' > "${OUTPUT_DIR}/commentfile"
-              else
-                echo '(x) {color:red}-1 jdk7 checks{color}' > "${OUTPUT_DIR}/commentfile"
-                status=1
-              fi
-              echo "-- For more information [see jdk7 report|${BUILD_URL}/JDK7_20Nightly_20Build_20Report/]" >> "${OUTPUT_DIR}/commentfile"
-              exit "${status}"
             '''
+            script {
+              def ret = sh(
+                returnStatus: true,
+                script: '''#!/usr/bin/env bash
+                  set -e
+                  declare -i status=0
+                  if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                    echo '(/) {color:green}+1 jdk7 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                  else
+                    echo '(x) {color:red}-1 jdk7 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                    status=1
+                  fi
+                  echo "-- For more information [see jdk7 report|${BUILD_URL}/JDK7_20Nightly_20Build_20Report/]" >> "${OUTPUT_DIR}/commentfile"
+                  exit "${status}"
+                '''
+              )
+              if (ret != 0) {
+                // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                // test output. See HBASE-26339 for more details.
+                currentBuild.result = 'UNSTABLE'
+              }
+            }
           }
           post {
             always {
@@ -318,6 +342,25 @@ pipeline {
                   fi
                 else
                   echo "No archiver directory, skipping compressing."
+                fi
+'''
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "${env.OUTPUT_DIR_RELATIVE}/test_logs.zip"
+                    )
+                  ]
+                )
+              ])
+              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              sh '''#!/bin/bash -e
+                if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
+                  echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
+                  rm -rf "${OUTPUT_DIR}/test_logs.zip"
+                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
+                else
+                  echo "No test_logs.zip, skipping"
                 fi
 '''
               // Has to be relative to WORKSPACE.
@@ -358,7 +401,7 @@ pipeline {
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               echo '(x) {color:red}-1 jdk8 hadoop2 checks{color}' >"${OUTPUT_DIR}/commentfile"
               echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
-'''
+            '''
             unstash 'yetus'
             dir('component') {
               checkout scm
@@ -369,19 +412,29 @@ pipeline {
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
               echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
               ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
-'''
-            sh '''#!/usr/bin/env bash
-              set -e
-              declare -i status=0
-              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                echo '(/) {color:green}+1 jdk8 hadoop2 checks{color}' > "${OUTPUT_DIR}/commentfile"
-              else
-                echo '(x) {color:red}-1 jdk8 hadoop2 checks{color}' > "${OUTPUT_DIR}/commentfile"
-                status=1
-              fi
-              echo "-- For more information [see jdk8 (hadoop2) report|${BUILD_URL}JDK8_20Nightly_20Build_20Report_20_28Hadoop2_29/]" >> "${OUTPUT_DIR}/commentfile"
-              exit "${status}"
             '''
+            script {
+              def ret = sh(
+                returnStatus: true,
+                script: '''#!/usr/bin/env bash
+                  set -e
+                  declare -i status=0
+                  if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                    echo '(/) {color:green}+1 jdk8 hadoop2 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                  else
+                    echo '(x) {color:red}-1 jdk8 hadoop2 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                    status=1
+                  fi
+                  echo "-- For more information [see jdk8 (hadoop2) report|${BUILD_URL}JDK8_20Nightly_20Build_20Report_20_28Hadoop2_29/]" >> "${OUTPUT_DIR}/commentfile"
+                  exit "${status}"
+                '''
+              )
+              if (ret != 0) {
+                // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                // test output. See HBASE-26339 for more details.
+                currentBuild.result = 'UNSTABLE'
+              }
+            }
           }
           post {
             always {
@@ -399,6 +452,25 @@ pipeline {
                   fi
                 else
                   echo "No archiver directory, skipping compressing."
+                fi
+'''
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "${env.OUTPUT_DIR_RELATIVE}/test_logs.zip"
+                    )
+                  ]
+                )
+              ])
+              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              sh '''#!/bin/bash -e
+                if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
+                  echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
+                  rm -rf "${OUTPUT_DIR}/test_logs.zip"
+                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
+                else
+                  echo "No test_logs.zip, skipping"
                 fi
 '''
               // Has to be relative to WORKSPACE.
@@ -443,7 +515,7 @@ pipeline {
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               echo '(x) {color:red}-1 jdk8 hadoop3 checks{color}' >"${OUTPUT_DIR}/commentfile"
               echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
-'''
+            '''
             unstash 'yetus'
             dir('component') {
               checkout scm
@@ -454,19 +526,29 @@ pipeline {
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
               echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
               ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
-'''
-            sh '''#!/usr/bin/env bash
-              set -e
-              declare -i status=0
-              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                echo '(/) {color:green}+1 jdk8 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
-              else
-                echo '(x) {color:red}-1 jdk8 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
-                status=1
-              fi
-              echo "-- For more information [see jdk8 (hadoop3) report|${BUILD_URL}JDK8_20Nightly_20Build_20Report_20_28Hadoop3_29/]" >> "${OUTPUT_DIR}/commentfile"
-              exit "${status}"
             '''
+            script {
+              def ret = sh(
+                returnStatus: true,
+                script: '''#!/usr/bin/env bash
+                  set -e
+                  declare -i status=0
+                  if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                    echo '(/) {color:green}+1 jdk8 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                  else
+                    echo '(x) {color:red}-1 jdk8 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                    status=1
+                  fi
+                  echo "-- For more information [see jdk8 (hadoop3) report|${BUILD_URL}JDK8_20Nightly_20Build_20Report_20_28Hadoop3_29/]" >> "${OUTPUT_DIR}/commentfile"
+                  exit "${status}"
+                '''
+              )
+              if (ret != 0) {
+                // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                // test output. See HBASE-26339 for more details.
+                currentBuild.result = 'UNSTABLE'
+              }
+            }
           }
           post {
             always {
@@ -484,6 +566,25 @@ pipeline {
                   fi
                 else
                   echo "No archiver directory, skipping compressing."
+                fi
+'''
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "${env.OUTPUT_DIR_RELATIVE}/test_logs.zip"
+                    )
+                  ]
+                )
+              ])
+              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              sh '''#!/bin/bash -e
+                if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
+                  echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
+                  rm -rf "${OUTPUT_DIR}/test_logs.zip"
+                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
+                else
+                  echo "No test_logs.zip, skipping"
                 fi
 '''
               // Has to be relative to WORKSPACE.
@@ -530,7 +631,7 @@ pipeline {
               rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
               echo '(x) {color:red}-1 jdk11 hadoop3 checks{color}' >"${OUTPUT_DIR}/commentfile"
               echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
-'''
+            '''
             unstash 'yetus'
             dir('component') {
               checkout scm
@@ -541,19 +642,29 @@ pipeline {
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
               echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
               ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
-'''
-            sh '''#!/usr/bin/env bash
-              set -e
-              declare -i status=0
-              if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
-                echo '(/) {color:green}+1 jdk11 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
-              else
-                echo '(x) {color:red}-1 jdk11 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
-                status=1
-              fi
-              echo "-- For more information [see jdk11 report|${BUILD_URL}JDK11_20Nightly_20Build_20Report_20_28Hadoop3_29/]" >> "${OUTPUT_DIR}/commentfile"
-              exit "${status}"
             '''
+            script {
+              def ret = sh(
+                returnStatus: true,
+                script: '''#!/usr/bin/env bash
+                  set -e
+                  declare -i status=0
+                  if "${BASEDIR}/dev-support/hbase_nightly_yetus.sh" ; then
+                    echo '(/) {color:green}+1 jdk11 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                  else
+                    echo '(x) {color:red}-1 jdk11 hadoop3 checks{color}' > "${OUTPUT_DIR}/commentfile"
+                    status=1
+                  fi
+                  echo "-- For more information [see jdk11 report|${BUILD_URL}JDK11_20Nightly_20Build_20Report_20_28Hadoop3_29/]" >> "${OUTPUT_DIR}/commentfile"
+                  exit "${status}"
+                '''
+              )
+              if (ret != 0) {
+                // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                // test output. See HBASE-26339 for more details.
+                currentBuild.result = 'UNSTABLE'
+              }
+            }
           }
           post {
             always {
@@ -571,6 +682,25 @@ pipeline {
                   fi
                 else
                   echo "No archiver directory, skipping compressing."
+                fi
+'''
+              sshPublisher(publishers: [
+                sshPublisherDesc(configName: 'Nightlies',
+                  transfers: [
+                    sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+                      sourceFiles: "${env.OUTPUT_DIR_RELATIVE}/test_logs.zip"
+                    )
+                  ]
+                )
+              ])
+              // remove the big test logs zip file, store the nightlies url in test_logs.txt
+              sh '''#!/bin/bash -e
+                if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
+                  echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
+                  rm -rf "${OUTPUT_DIR}/test_logs.zip"
+                  python ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
+                else
+                  echo "No test_logs.zip, skipping"
                 fi
 '''
               // Has to be relative to WORKSPACE.

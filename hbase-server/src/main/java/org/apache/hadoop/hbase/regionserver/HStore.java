@@ -67,8 +67,10 @@ import org.apache.hadoop.hbase.backup.FailedArchiveException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
+import org.apache.hadoop.hbase.coprocessor.ReadOnlyConfiguration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -138,8 +140,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       "hbase.server.compactchecker.interval.multiplier";
   public static final String BLOCKING_STOREFILES_KEY = "hbase.hstore.blockingStoreFiles";
   public static final String BLOCK_STORAGE_POLICY_KEY = "hbase.hstore.block.storage.policy";
-  // keep in accordance with HDFS default storage policy
-  public static final String DEFAULT_BLOCK_STORAGE_POLICY = "HOT";
+  // "NONE" is not a valid storage policy and means we defer the policy to HDFS
+  public static final String DEFAULT_BLOCK_STORAGE_POLICY = "NONE";
   public static final int DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER = 1000;
   public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 16;
 
@@ -240,14 +242,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   protected HStore(final HRegion region, final ColumnFamilyDescriptor family,
       final Configuration confParam, boolean warmup) throws IOException {
 
-    // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
-    // CompoundConfiguration will look for keys in reverse order of addition, so we'd
-    // add global config first, then table and cf overrides, then cf metadata.
-    this.conf = new CompoundConfiguration()
-      .add(confParam)
-      .addBytesMap(region.getTableDescriptor().getValues())
-      .addStringMap(family.getConfiguration())
-      .addBytesMap(family.getValues());
+    this.conf = StoreUtils.createStoreConfiguration(confParam, region.getTableDescriptor(), family);
 
     this.region = region;
     this.storeContext = initializeStoreContext(family);
@@ -982,22 +977,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   /**
-   * Snapshot this stores memstore. Call before running
-   * {@link #flushCache(long, MemStoreSnapshot, MonitoredTask, ThroughputController,
-   * FlushLifeCycleTracker)}
-   *  so it has some work to do.
-   */
-  void snapshot() {
-    this.lock.writeLock().lock();
-    try {
-      this.memstore.snapshot();
-    } finally {
-      this.lock.writeLock().unlock();
-    }
-  }
-
-  /**
-   * Write out current snapshot. Presumes {@link #snapshot()} has been called previously.
+   * Write out current snapshot. Presumes {@code StoreFlusherImpl.prepare()} has been called
+   * previously.
    * @param logCacheFlushId flush sequence number
    * @return The path name of the tmp file to which the store was flushed
    * @throws IOException if exception occurs during process
@@ -1084,27 +1065,44 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   /**
-   * @param path The pathname of the tmp file into which the store was flushed
-   * @return store file created.
+   * Commit the given {@code files}.
+   * <p/>
+   * We will move the file into data directory, and open it.
+   * @param files the files want to commit
+   * @param validate whether to validate the store files
+   * @return the committed store files
    */
-  private HStoreFile commitFile(Path path, long logCacheFlushId, MonitoredTask status)
-      throws IOException {
-    // Write-out finished successfully, move into the right spot
-    Path dstPath = getRegionFileSystem().commitStoreFile(getColumnFamilyName(), path);
-
-    status.setStatus("Flushing " + this + ": reopening flushed file");
-    HStoreFile sf = createStoreFileAndReader(dstPath);
-
-    StoreFileReader r = sf.getReader();
-    this.storeSize.addAndGet(r.length());
-    this.totalUncompressedBytes.addAndGet(r.getTotalUncompressedBytes());
-
-    if (LOG.isInfoEnabled()) {
-      LOG.info("Added " + sf + ", entries=" + r.getEntries() +
-        ", sequenceid=" + logCacheFlushId +
-        ", filesize=" + TraditionalBinaryPrefix.long2String(r.length(), "", 1));
+  private List<HStoreFile> commitStoreFiles(List<Path> files, boolean validate) throws IOException {
+    List<HStoreFile> committedFiles = new ArrayList<>(files.size());
+    HRegionFileSystem hfs = getRegionFileSystem();
+    String familyName = getColumnFamilyName();
+    for (Path file : files) {
+      try {
+        if (validate) {
+          validateStoreFile(file);
+        }
+        Path committedPath = hfs.commitStoreFile(familyName, file);
+        HStoreFile sf = createStoreFileAndReader(committedPath);
+        committedFiles.add(sf);
+      } catch (IOException e) {
+        LOG.error("Failed to commit store file {}", file, e);
+        // Try to delete the files we have committed before.
+        // It is OK to fail when deleting as leaving the file there does not cause any data
+        // corruption problem. It just introduces some duplicated data which may impact read
+        // performance a little when reading before compaction.
+        for (HStoreFile sf : committedFiles) {
+          Path pathToDelete = sf.getPath();
+          try {
+            sf.deleteStoreFile();
+          } catch (IOException deleteEx) {
+            LOG.warn(HBaseMarkers.FATAL, "Failed to delete committed store file {}", pathToDelete,
+              deleteEx);
+          }
+        }
+        throw new IOException("Failed to commit the flush", e);
+      }
     }
-    return sf;
+    return committedFiles;
   }
 
   public StoreFileWriter createWriterInTmp(long maxKeyCount, Compression.Algorithm compression,
@@ -1223,9 +1221,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     this.lock.writeLock().lock();
     try {
       this.storeEngine.getStoreFileManager().insertNewFiles(sfs);
-      if (snapshotId > 0) {
-        this.memstore.clearSnapshot(snapshotId);
-      }
     } finally {
       // We need the lock, as long as we are updating the storeFiles
       // or changing the memstore. Let us release it before calling
@@ -1233,6 +1228,13 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       // deadlock scenario that could have happened if continue to hold
       // the lock.
       this.lock.writeLock().unlock();
+    }
+    // We do not need to call clearSnapshot method inside the write lock.
+    // The clearSnapshot itself is thread safe, which can be called at the same time with other
+    // memstore operations expect snapshot and clearSnapshot. And for these two methods, in HRegion
+    // we can guarantee that there is only one onging flush, so they will be no race.
+    if (snapshotId > 0) {
+      this.memstore.clearSnapshot(snapshotId);
     }
     // notify to be called here - only in case of flushes
     notifyChangedReadersObservers(sfs);
@@ -1501,7 +1503,12 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       List<Path> newFiles) throws IOException {
     // Do the steps necessary to complete the compaction.
     setStoragePolicyFromFileName(newFiles);
-    List<HStoreFile> sfs = moveCompactedFilesIntoPlace(cr, newFiles, user);
+    List<HStoreFile> sfs = commitStoreFiles(newFiles, true);
+    if (this.getCoprocessorHost() != null) {
+      for (HStoreFile sf : sfs) {
+        getCoprocessorHost().postCompact(this, sf, cr.getTracker(), cr, user);
+      }
+    }
     writeCompactionWalRecord(filesToCompact, sfs);
     replaceStoreFiles(filesToCompact, sfs);
     if (cr.isMajor()) {
@@ -1540,29 +1547,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
             newFile.getParent().getName().substring(prefix.length()));
       }
     }
-  }
-
-  private List<HStoreFile> moveCompactedFilesIntoPlace(CompactionRequestImpl cr,
-      List<Path> newFiles, User user) throws IOException {
-    List<HStoreFile> sfs = new ArrayList<>(newFiles.size());
-    for (Path newFile : newFiles) {
-      assert newFile != null;
-      HStoreFile sf = moveFileIntoPlace(newFile);
-      if (this.getCoprocessorHost() != null) {
-        getCoprocessorHost().postCompact(this, sf, cr.getTracker(), cr, user);
-      }
-      assert sf != null;
-      sfs.add(sf);
-    }
-    return sfs;
-  }
-
-  // Package-visible for tests
-  HStoreFile moveFileIntoPlace(Path newFile) throws IOException {
-    validateStoreFile(newFile);
-    // Move the file into the right spot
-    Path destPath = getRegionFileSystem().commitStoreFile(getColumnFamilyName(), newFile);
-    return createStoreFileAndReader(destPath);
   }
 
   /**
@@ -2346,42 +2330,31 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       if (CollectionUtils.isEmpty(this.tempFiles)) {
         return false;
       }
-      List<HStoreFile> storeFiles = new ArrayList<>(this.tempFiles.size());
-      for (Path storeFilePath : tempFiles) {
-        try {
-          HStoreFile sf = HStore.this.commitFile(storeFilePath, cacheFlushSeqNum, status);
-          outputFileSize += sf.getReader().length();
-          storeFiles.add(sf);
-        } catch (IOException ex) {
-          LOG.error("Failed to commit store file {}", storeFilePath, ex);
-          // Try to delete the files we have committed before.
-          for (HStoreFile sf : storeFiles) {
-            Path pathToDelete = sf.getPath();
-            try {
-              sf.deleteStoreFile();
-            } catch (IOException deleteEx) {
-              LOG.error(HBaseMarkers.FATAL, "Failed to delete store file we committed, "
-                  + "halting {}", pathToDelete, ex);
-              Runtime.getRuntime().halt(1);
-            }
-          }
-          throw new IOException("Failed to commit the flush", ex);
-        }
-      }
-
+      status.setStatus("Flushing " + this + ": reopening flushed file");
+      List<HStoreFile> storeFiles = commitStoreFiles(tempFiles, false);
       for (HStoreFile sf : storeFiles) {
-        if (HStore.this.getCoprocessorHost() != null) {
-          HStore.this.getCoprocessorHost().postFlush(HStore.this, sf, tracker);
+        StoreFileReader r = sf.getReader();
+        if (LOG.isInfoEnabled()) {
+          LOG.info("Added {}, entries={}, sequenceid={}, filesize={}", sf, r.getEntries(),
+            cacheFlushSeqNum, TraditionalBinaryPrefix.long2String(r.length(), "", 1));
         }
+        outputFileSize += r.length();
+        storeSize.addAndGet(r.length());
+        totalUncompressedBytes.addAndGet(r.getTotalUncompressedBytes());
         committedFiles.add(sf.getPath());
       }
 
-      HStore.this.flushedCellsCount.addAndGet(cacheFlushCount);
-      HStore.this.flushedCellsSize.addAndGet(cacheFlushSize);
-      HStore.this.flushedOutputFileSize.addAndGet(outputFileSize);
-
-      // Add new file to store files.  Clear snapshot too while we have the Store write lock.
-      return HStore.this.updateStorefiles(storeFiles, snapshot.getId());
+      flushedCellsCount.addAndGet(cacheFlushCount);
+      flushedCellsSize.addAndGet(cacheFlushSize);
+      flushedOutputFileSize.addAndGet(outputFileSize);
+      // call coprocessor after we have done all the accounting above
+      for (HStoreFile sf : storeFiles) {
+        if (getCoprocessorHost() != null) {
+          getCoprocessorHost().postFlush(HStore.this, sf, tracker);
+        }
+      }
+      // Add new file to store files. Clear snapshot too while we have the Store write lock.
+      return updateStorefiles(storeFiles, snapshot.getId());
     }
 
     @Override
@@ -2544,14 +2517,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     return this.offPeakHours;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public void onConfigurationChange(Configuration conf) {
-    this.conf = new CompoundConfiguration()
-            .add(conf)
-            .addBytesMap(getColumnFamilyDescriptor().getValues());
+    this.conf = StoreUtils.createStoreConfiguration(conf, region.getTableDescriptor(),
+      getColumnFamilyDescriptor());
     this.storeEngine.compactionPolicy.setConf(conf);
     this.offPeakHours = OffPeakHours.getInstance(conf);
   }
@@ -2821,6 +2790,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   @Override
   public long getMixedRowReadsCount() {
     return mixedRowReadsCount.sum();
+  }
+
+  @Override
+  public Configuration getReadOnlyConfiguration() {
+    return new ReadOnlyConfiguration(this.conf);
   }
 
   void updateMetricsStore(boolean memstoreRead) {

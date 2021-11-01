@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -40,13 +41,10 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
-import org.apache.hadoop.hbase.regionserver.MetricsRegionServerWrapperStub;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.Before;
@@ -111,14 +109,8 @@ public class TestMasterStatusServlet {
     Mockito.doReturn("fakequorum").when(zkw).getQuorum();
     Mockito.doReturn(zkw).when(master).getZooKeeper();
 
-    // Fake MasterAddressTracker
-    MasterAddressTracker tracker = Mockito.mock(MasterAddressTracker.class);
-    Mockito.doReturn(tracker).when(master).getMasterAddressTracker();
-    Mockito.doReturn(FAKE_HOST).when(tracker).getMasterAddress();
-
-    MetricsRegionServer rms = Mockito.mock(MetricsRegionServer.class);
-    Mockito.doReturn(new MetricsRegionServerWrapperStub()).when(rms).getRegionServerWrapper();
-    Mockito.doReturn(rms).when(master).getMetrics();
+    // Fake ActiveMaster
+    Mockito.doReturn(Optional.of(FAKE_HOST)).when(master).getActiveMaster();
 
     // Mock admin
     admin = Mockito.mock(Admin.class);

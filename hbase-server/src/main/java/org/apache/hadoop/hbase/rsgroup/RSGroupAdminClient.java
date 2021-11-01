@@ -24,6 +24,8 @@ import java.util.Set;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -161,13 +163,12 @@ public class RSGroupAdminClient {
 
   /**
    * Balance regions in the given RegionServer group.
-   * @return boolean Whether balance ran or not
+   * @return BalanceResponse details about the balancer run
    */
-  public boolean balanceRSGroup(String groupName) throws IOException {
-    BalanceRSGroupRequest request =
-      BalanceRSGroupRequest.newBuilder().setRSGroupName(groupName).build();
+  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
     try {
-      return stub.balanceRSGroup(null, request).getBalanceRan();
+      BalanceRSGroupRequest req = ProtobufUtil.createBalanceRSGroupRequest(groupName, request);
+      return ProtobufUtil.toBalanceResponse(stub.balanceRSGroup(null, req));
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }

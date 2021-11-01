@@ -236,7 +236,7 @@ public class VerifyReplication extends Configured implements Tool {
         if (rowCmpRet == 0) {
           // rowkey is same, need to compare the content of the row
           try {
-            Result.compareResults(value, currentCompareRowInPeerTable);
+            Result.compareResults(value, currentCompareRowInPeerTable, false);
             context.getCounter(Counters.GOODROWS).increment(1);
             if (verbose) {
               LOG.info("Good row key: " + delimiter
@@ -266,11 +266,12 @@ public class VerifyReplication extends Configured implements Tool {
         try {
           Result sourceResult = sourceTable.get(new Get(row.getRow()));
           Result replicatedResult = replicatedTable.get(new Get(row.getRow()));
-          Result.compareResults(sourceResult, replicatedResult);
+          Result.compareResults(sourceResult, replicatedResult, false);
           if (!sourceResult.isEmpty()) {
             context.getCounter(Counters.GOODROWS).increment(1);
             if (verbose) {
-              LOG.info("Good row key (with recompare): " + delimiter + Bytes.toStringBinary(row.getRow())
+              LOG.info("Good row key (with recompare): " + delimiter +
+                Bytes.toStringBinary(row.getRow())
               + delimiter);
             }
           }
@@ -480,12 +481,16 @@ public class VerifyReplication extends Configured implements Tool {
       TableMapReduceUtil.initTableMapperJob(tableName, scan, Verifier.class, null, null, job);
     }
 
+    Configuration peerClusterConf;
     if (peerId != null) {
       assert peerConfigPair != null;
-      Configuration peerClusterConf = peerConfigPair.getSecond();
-      // Obtain the auth token from peer cluster
-      TableMapReduceUtil.initCredentialsForCluster(job, peerClusterConf);
+      peerClusterConf = peerConfigPair.getSecond();
+    } else {
+      peerClusterConf = HBaseConfiguration.createClusterConf(conf,
+        peerQuorumAddress, PEER_CONFIG_PREFIX);
     }
+    // Obtain the auth token from peer cluster
+    TableMapReduceUtil.initCredentialsForCluster(job, peerClusterConf);
 
     job.setOutputFormatClass(NullOutputFormat.class);
     job.setNumReduceTasks(0);
@@ -668,7 +673,8 @@ public class VerifyReplication extends Configured implements Tool {
       // This is to avoid making recompare calls to source/peer tables when snapshots are used
       if ((sourceSnapshotName != null || peerSnapshotName != null) && sleepMsBeforeReCompare > 0) {
         printUsage(
-          "Using sleepMsBeforeReCompare along with snapshots is not allowed as snapshots are immutable");
+          "Using sleepMsBeforeReCompare along with snapshots is not allowed as snapshots are"
+            + " immutable");
         return false;
       }
 
@@ -708,8 +714,8 @@ public class VerifyReplication extends Configured implements Tool {
     System.err.println("              without endtime means from starttime to forever");
     System.err.println(" endtime      end of the time range");
     System.err.println(" versions     number of cell versions to verify");
-    System.err.println(" batch        batch count for scan, " +
-        "note that result row counts will no longer be actual number of rows when you use this option");
+    System.err.println(" batch        batch count for scan, note that"
+      + " result row counts will no longer be actual number of rows when you use this option");
     System.err.println(" raw          includes raw scan if given in options");
     System.err.println(" families     comma-separated list of families to copy");
     System.err.println(" row-prefixes comma-separated list of row key prefixes to filter on ");
@@ -726,16 +732,64 @@ public class VerifyReplication extends Configured implements Tool {
     System.err.println(" peerHBaseRootAddress  Peer cluster HBase root location");
     System.err.println();
     System.err.println("Args:");
-    System.err.println(" peerid       Id of the peer used for verification, must match the one given for replication");
+    System.err.println(" peerid       Id of the peer used for verification,"
+      + " must match the one given for replication");
     System.err.println(" peerQuorumAddress   quorumAdress of the peer used for verification. The "
       + "format is zk_quorum:zk_port:zk_hbase_path");
     System.err.println(" tablename    Name of the table to verify");
     System.err.println();
     System.err.println("Examples:");
-    System.err.println(" To verify the data replicated from TestTable for a 1 hour window with peer #5 ");
+    System.err.println(
+      " To verify the data replicated from TestTable for a 1 hour window with peer #5 ");
     System.err.println(" $ hbase " +
         "org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication" +
         " --starttime=1265875194289 --endtime=1265878794289 5 TestTable ");
+    System.err.println();
+    System.err.println(
+      " To verify the data in TestTable between the cluster runs VerifyReplication and cluster-b");
+    System.err.println(" Assume quorum address for cluster-b is"
+      + " cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:2181:/cluster-b");
+    System.err.println(
+      " $ hbase org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication \\\n" +
+        "     cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:"
+        + "2181:/cluster-b \\\n" +
+        "     TestTable");
+    System.err.println();
+    System.err.println(
+      " To verify the data in TestTable between the secured cluster runs VerifyReplication"
+        + " and insecure cluster-b");
+    System.err.println(
+      " $ hbase org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication \\\n" +
+        "     -D verifyrep.peer.hbase.security.authentication=simple \\\n" +
+        "     cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:"
+        + "2181:/cluster-b \\\n" +
+        "     TestTable");
+    System.err.println();
+    System.err.println(" To verify the data in TestTable between" +
+      " the secured cluster runs VerifyReplication and secured cluster-b");
+    System.err.println(" Assume cluster-b uses different kerberos principal, cluster-b/_HOST@E" +
+      ", for master and regionserver kerberos principal from another cluster");
+    System.err.println(
+      " $ hbase org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication \\\n" +
+        "     -D verifyrep.peer.hbase.regionserver.kerberos.principal="
+        + "cluster-b/_HOST@EXAMPLE.COM \\\n" +
+        "     -D verifyrep.peer.hbase.master.kerberos.principal=cluster-b/_HOST@EXAMPLE.COM \\\n" +
+        "     cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:"
+        + "2181:/cluster-b \\\n" +
+        "     TestTable");
+    System.err.println();
+    System.err.println(
+      " To verify the data in TestTable between the insecure cluster runs VerifyReplication"
+        + " and secured cluster-b");
+    System.err.println(
+      " $ hbase org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication \\\n" +
+        "     -D verifyrep.peer.hbase.security.authentication=kerberos \\\n" +
+        "     -D verifyrep.peer.hbase.regionserver.kerberos.principal="
+        + "cluster-b/_HOST@EXAMPLE.COM \\\n" +
+        "     -D verifyrep.peer.hbase.master.kerberos.principal=cluster-b/_HOST@EXAMPLE.COM \\\n" +
+        "     cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:"
+        + "2181:/cluster-b \\\n" +
+        "     TestTable");
   }
 
   @Override

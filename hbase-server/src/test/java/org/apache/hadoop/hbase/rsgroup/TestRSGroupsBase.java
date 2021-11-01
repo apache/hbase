@@ -43,6 +43,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.AbstractTestUpdateConfiguration;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -340,6 +342,8 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     boolean postGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
     boolean preRenameRSGroup = false;
     boolean postRenameRSGroup = false;
+    boolean preUpdateRSGroupConfig = false;
+    boolean postUpdateRSGroupConfig = false;
 
     public void resetFlags() {
       preBalanceRSGroupCalled = false;
@@ -372,6 +376,8 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
       postGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
       preRenameRSGroup = false;
       postRenameRSGroup = false;
+      preUpdateRSGroupConfig = false;
+      postUpdateRSGroupConfig = false;
     }
 
     @Override
@@ -453,13 +459,13 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
 
     @Override
     public void preBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String groupName) throws IOException {
+        String groupName, BalanceRequest request) throws IOException {
       preBalanceRSGroupCalled = true;
     }
 
     @Override
     public void postBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String groupName, boolean balancerRan) throws IOException {
+        String groupName, BalanceRequest request, BalanceResponse response) throws IOException {
       postBalanceRSGroupCalled = true;
     }
 
@@ -545,6 +551,18 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     public void postRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String oldName,
       String newName) throws IOException {
       postRenameRSGroup = true;
+    }
+
+    @Override
+    public void preUpdateRSGroupConfig(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String groupName, final Map<String, String> configuration) throws IOException {
+      preUpdateRSGroupConfig = true;
+    }
+
+    @Override
+    public void postUpdateRSGroupConfig(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String groupName, final Map<String, String> configuration) throws IOException {
+      postUpdateRSGroupConfig = true;
     }
   }
 }

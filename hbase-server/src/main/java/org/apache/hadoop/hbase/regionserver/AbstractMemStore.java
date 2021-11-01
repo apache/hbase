@@ -70,7 +70,9 @@ public abstract class AbstractMemStore implements MemStore {
 
   protected static void addToScanners(Segment segment, long readPt,
       List<KeyValueScanner> scanners) {
-    scanners.add(segment.getScanner(readPt));
+    if (!segment.isEmpty()) {
+      scanners.add(segment.getScanner(readPt));
+    }
   }
 
   protected AbstractMemStore(final Configuration conf, final CellComparator c,
@@ -156,7 +158,7 @@ public abstract class AbstractMemStore implements MemStore {
     }
   }
 
-  private void doAdd(MutableSegment currentActive, Cell cell, MemStoreSizing memstoreSizing) {
+  protected void doAdd(MutableSegment currentActive, Cell cell, MemStoreSizing memstoreSizing) {
     Cell toAdd = maybeCloneWithAllocator(currentActive, cell, false);
     boolean mslabUsed = (toAdd != cell);
     // This cell data is backed by the same byte[] where we read request in RPC(See

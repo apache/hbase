@@ -22,7 +22,6 @@ import java.util.Iterator;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 
 /**
@@ -71,15 +70,9 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     cacheBlock(cacheKey, buf, false);
   }
 
-  private boolean isMetaBlock(BlockType blockType) {
-    return blockType.getCategory() != BlockCategory.DATA;
-  }
-
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching,
       boolean repeat, boolean updateCacheMetrics) {
-    // TODO: is there a hole here, or just awkwardness since in the lruCache getBlock
-    // we end up calling l2Cache.getBlock.
     // We are not in a position to exactly look at LRU cache or BC as BlockType may not be getting
     // passed always.
     boolean existInL1 = l1Cache.containsBlock(cacheKey);

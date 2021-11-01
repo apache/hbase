@@ -102,7 +102,6 @@ public class TestRegionReplicasWithRestartScenarios {
 
   @AfterClass
   public static void afterClass() throws Exception {
-    HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
     HTU.shutdownMiniCluster();
   }
 

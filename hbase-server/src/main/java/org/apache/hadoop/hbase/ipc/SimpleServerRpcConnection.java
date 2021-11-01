@@ -28,19 +28,20 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 
@@ -212,14 +213,15 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
           SimpleServerCall reqTooBig = new SimpleServerCall(header.getCallId(), this.service, null,
               null, null, null, this, 0, this.addr, EnvironmentEdgeManager.currentTime(), 0,
               this.rpcServer.bbAllocator, this.rpcServer.cellBlockBuilder, null, responder);
-          this.rpcServer.metrics.exception(SimpleRpcServer.REQUEST_TOO_BIG_EXCEPTION);
+          RequestTooBigException reqTooBigEx = new RequestTooBigException(msg);
+          this.rpcServer.metrics.exception(reqTooBigEx);
           // Make sure the client recognizes the underlying exception
           // Otherwise, throw a DoNotRetryIOException.
           if (VersionInfoUtil.hasMinimumVersion(connectionHeader.getVersionInfo(),
             RequestTooBigException.MAJOR_VERSION, RequestTooBigException.MINOR_VERSION)) {
-            reqTooBig.setResponse(null, null, SimpleRpcServer.REQUEST_TOO_BIG_EXCEPTION, msg);
+            reqTooBig.setResponse(null, null, reqTooBigEx, msg);
           } else {
-            reqTooBig.setResponse(null, null, new DoNotRetryIOException(), msg);
+            reqTooBig.setResponse(null, null, new DoNotRetryIOException(msg), msg);
           }
           // In most cases we will write out the response directly. If not, it is still OK to just
           // close the connection without writing out the reqTooBig response. Do not try to write
