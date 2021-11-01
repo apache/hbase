@@ -1707,7 +1707,9 @@ public class CanaryTool implements Tool, Canary {
           new ConnectStringParser(ZKConfig.getZKQuorumServersString(configuration));
       hosts = Lists.newArrayList();
       for (InetSocketAddress server : parser.getServerAddresses()) {
-        hosts.add(server.toString());
+        hosts.add(server.isUnresolved() ?
+          server.toString().replace("/<unresolved>", "") :
+          server.toString());
       }
       if (allowedFailures > (hosts.size() - 1) / 2) {
         LOG.warn(
