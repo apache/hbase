@@ -47,7 +47,8 @@ class LoadCandidateGenerator extends CandidateGenerator {
         break;
       }
       // we don't know how many servers have the same region count, we will randomly select one
-      // using reservoir sampling (http://gregable.com/2007/10/reservoir-sampling.html)
+      // using a simplified inline reservoir sampling by assignmening a random number to  stream
+      // data and choose the greatest one. (http://gregable.com/2007/10/reservoir-sampling.html)
       double currentRandom = ThreadLocalRandom.current().nextDouble();
       if (currentRandom > currentLargestRandom) {
         selectedIndex = i;
@@ -72,7 +73,8 @@ class LoadCandidateGenerator extends CandidateGenerator {
         break;
       }
       // we don't know how many servers have the same region count, we will randomly select one
-      // using reservoir sampling (http://gregable.com/2007/10/reservoir-sampling.html)
+      // using a simplified inline reservoir sampling by assignmening a random number to  stream
+      // data and choose the greatest one. (http://gregable.com/2007/10/reservoir-sampling.html)
       double currentRandom = ThreadLocalRandom.current().nextDouble();
       if (currentRandom > currentLargestRandom) {
         selectedIndex = i;
