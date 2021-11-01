@@ -591,6 +591,7 @@ public final class CellUtil {
 
   /**
    * Note : Now only CPs can create cell with tags using the CP environment
+   * Within CP, use {@link RawCell#createCell(Cell, List)} method instead
    * @return A new cell which is having the extra tags also added to it.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    *
@@ -602,6 +603,7 @@ public final class CellUtil {
 
   /**
    * Now only CPs can create cell with tags using the CP environment
+   * Within CP, use {@link RawCell#createCell(Cell, List)} method instead
    * @return A new cell which is having the extra tags also added to it.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
@@ -612,6 +614,7 @@ public final class CellUtil {
 
   /**
    * Now only CPs can create cell with tags using the CP environment
+   * Within CP, use {@link RawCell#createCell(Cell, List)} method instead
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
