@@ -271,14 +271,13 @@ public class SnapshotProcedure
     int numRegions = (int) env.getAssignmentManager()
       .getTableRegions(snapshotTable, false)
       .stream().filter(r -> RegionReplicaUtil.isDefaultReplica(r)).count();
-    MasterSnapshotVerifier verifier =
-      new MasterSnapshotVerifier(env.getMasterServices(), snapshot, workingDirFS);
 
     if (numRegions >= verifyThreshold) {
-      verifier.verifySnapshot(false);
       addChildProcedure(createRemoteVerifyProcedures(env));
     } else {
-      verifier.verifySnapshot(workingDir, null);
+      MasterSnapshotVerifier verifier =
+        new MasterSnapshotVerifier(env.getMasterServices(), snapshot, workingDirFS);
+      verifier.verifySnapshot();
     }
   }
 
@@ -353,7 +352,7 @@ public class SnapshotProcedure
       .getMasterServices().getServerManager().getOnlineServersList();
     return env.getMasterServices().getLoadBalancer()
       .roundRobinAssignment(regions, servers).entrySet().stream()
-      .map(e -> new SnapshotVerifyProcedure(snapshot, e.getValue(), e.getKey()))
+      .map(e -> new SnapshotVerifyProcedure(snapshot, e.getValue(), e.getKey(), regions.size()))
       .toArray(SnapshotVerifyProcedure[]::new);
   }
 

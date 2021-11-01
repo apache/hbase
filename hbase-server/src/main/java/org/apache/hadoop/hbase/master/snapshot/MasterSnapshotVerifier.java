@@ -66,19 +66,13 @@ public final class MasterSnapshotVerifier {
    * @throws CorruptedSnapshotException if the snapshot is invalid
    * @throws IOException if there is an unexpected connection issue to the filesystem
    */
-  public void verifySnapshot(Path snapshotDir, Set<String> snapshotServers)
-    throws CorruptedSnapshotException, IOException {
-    verifySnapshot(true);
-  }
-
-  public void verifySnapshot(boolean verifyRegionDetails)
-    throws CorruptedSnapshotException, IOException {
+  public void verifySnapshot() throws CorruptedSnapshotException, IOException {
     List<RegionInfo> regions = services.getAssignmentManager().getTableRegions(tableName, false);
 
     // Remove the non-default regions
     RegionReplicaUtil.removeNonDefaultRegions(regions);
 
     SnapshotVerifyUtil.verifySnapshot(services.getConfiguration(), snapshot, tableName, regions,
-      true, verifyRegionDetails);
+      regions.size());
   }
 }

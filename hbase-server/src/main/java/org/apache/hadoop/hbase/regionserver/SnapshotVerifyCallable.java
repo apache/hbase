@@ -26,24 +26,21 @@ import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotVerifyUtil;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotVerifyParameter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 @InterfaceAudience.Private
 public class SnapshotVerifyCallable extends BaseRSProcedureCallable {
-  private static final Logger LOG = LoggerFactory.getLogger(SnapshotVerifyCallable.class);
-
   private SnapshotDescription snapshot;
   private List<RegionInfo> regions;
+  private int expectedNumRegion;
 
   @Override
   protected void doCall() throws Exception {
     Configuration conf = rs.getConfiguration();
     TableName tableName = TableName.valueOf(snapshot.getTable());
-    SnapshotVerifyUtil.verifySnapshot(conf, snapshot, tableName, regions, false, true);
+    SnapshotVerifyUtil.verifySnapshot(conf, snapshot, tableName, regions, expectedNumRegion);
   }
 
   @Override
@@ -52,6 +49,7 @@ public class SnapshotVerifyCallable extends BaseRSProcedureCallable {
     this.snapshot = param.getSnapshot();
     this.regions = param.getRegionList().stream()
       .map(ProtobufUtil::toRegionInfo).collect(Collectors.toList());
+    this.expectedNumRegion = param.getExpectedNumRegion();
   }
 
   @Override

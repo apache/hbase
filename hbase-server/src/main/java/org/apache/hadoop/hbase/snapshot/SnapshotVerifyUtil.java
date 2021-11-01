@@ -81,12 +81,11 @@ public class SnapshotVerifyUtil {
    *                master to verify snapshot, this will be the whole regions of table. If we use
    *                SnapshotVerifyProcedure to verify snapshot, this will be part of the whole
    *                regions.
-   * @param verifyTableDetails true if need to verify table info
-   * @param verifyRegionDetails true if need to verify region info and store files
+   * @param expectedNumRegion total num region of table taking snapshot, both include online
+   *                          regions and offline regions
    */
   public static void verifySnapshot(Configuration conf, SnapshotDescription snapshot,
-      TableName tableName, List<RegionInfo> regions, boolean verifyTableDetails,
-      boolean verifyRegionDetails) throws CorruptedSnapshotException, IOException {
+      TableName tableName, List<RegionInfo> regions, int expectedNumRegion) throws IOException {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir, conf);
     FileSystem workingDirFS = workingDir.getFileSystem(conf);
@@ -96,13 +95,14 @@ public class SnapshotVerifyUtil {
     verifySnapshotDescription(workingDirFS, workingDir, snapshot);
 
     // check that tableinfo is a valid table description
-    if (verifyTableDetails) {
-      verifyTableInfo(manifest, snapshot);
-    }
+    verifyTableInfo(manifest, snapshot);
 
     // check that each region is valid
-    verifyRegions(conf, manifest, regions, snapshot, tableName, verifyTableDetails,
-      verifyRegionDetails, workingDirFS, workingDir);
+    verifyRegions(manifest, regions, snapshot, tableName, expectedNumRegion);
+
+    // check that each store file is valid
+    verifyStoreFiles(conf, manifest, regions, CommonFSUtils.getRootDirFileSystem(conf),
+      snapshot, workingDir);
   }
 
   /**
@@ -141,59 +141,37 @@ public class SnapshotVerifyUtil {
   /**
    * Check that all the regions in the snapshot are valid, and accounted for.
    * @param manifest snapshot manifest to inspect
-   * @throws IOException if we can't reach hbase:meta or read the files from the FS
    */
-  private static void verifyRegions(Configuration conf, SnapshotManifest manifest,
-      List<RegionInfo> regions, SnapshotDescription snapshot, TableName tableName,
-      boolean verifyTableDetails, boolean verifyRegionDetails, FileSystem fs, Path snapshotDir)
-      throws CorruptedSnapshotException, IOException {
+  private static void verifyRegions(SnapshotManifest manifest, List<RegionInfo> regions,
+      SnapshotDescription snapshot, TableName tableName, int expectedNumRegion)
+      throws CorruptedSnapshotException {
     Map<String, SnapshotRegionManifest> regionManifests = manifest.getRegionManifestsMap();
     if (regionManifests == null) {
-      String msg = "Snapshot " + ClientSnapshotDescriptionUtils.toString(snapshot) + " looks empty";
-      LOG.error(msg);
-      throw new CorruptedSnapshotException(msg);
+      throw new CorruptedSnapshotException("Snapshot " +
+        ClientSnapshotDescriptionUtils.toString(snapshot) + " looks empty");
     }
 
-    String errorMsg = "";
-    if (verifyTableDetails) {
-      boolean hasMobStore = false;
+    // Verify Region Count
+    int realRegionCount = regionManifests.size();
+    if (regionManifests.get(MobUtils.getMobRegionInfo(tableName).getEncodedName()) != null) {
       // the mob region is a dummy region, it's not a real region in HBase.
       // the mob region has a special name, it could be found by the region name.
-      if (regionManifests.get(MobUtils.getMobRegionInfo(tableName).getEncodedName()) != null) {
-        hasMobStore = true;
-      }
-      int realRegionCount = hasMobStore ? regionManifests.size() - 1 : regionManifests.size();
-      if (realRegionCount != regions.size()) {
-        errorMsg = "Regions moved during the snapshot '" +
-          ClientSnapshotDescriptionUtils.toString(snapshot) + "'. expected=" +
-          regions.size() + " snapshotted=" + realRegionCount + ".";
-        LOG.error(errorMsg);
-      }
+      realRegionCount --;
+    }
+    if (realRegionCount != expectedNumRegion) {
+      throw new CorruptedSnapshotException("number of region didn't match for snapshot '" +
+        ClientSnapshotDescriptionUtils.toString(snapshot) + "', expected=" +
+        expectedNumRegion + ", snapshotted=" + realRegionCount);
     }
 
     // Verify RegionInfo
-    if (verifyRegionDetails) {
-      for (RegionInfo region : regions) {
-        SnapshotRegionManifest regionManifest = regionManifests.get(region.getEncodedName());
-        if (regionManifest == null) {
-          // could happen due to a move or split race.
-          String mesg = " No snapshot region directory found for region:" + region;
-          if (errorMsg.isEmpty()) {
-            errorMsg = mesg;
-          }
-          LOG.error(mesg);
-          continue;
-        }
-
-        verifyRegionInfo(region, snapshot, regionManifest);
+    for (RegionInfo region : regions) {
+      SnapshotRegionManifest regionManifest = regionManifests.get(region.getEncodedName());
+      if (regionManifest == null) {
+        LOG.warn("No snapshot region directory found for {}", region.getRegionNameAsString());
+        continue;
       }
-
-      if (!errorMsg.isEmpty()) {
-        throw new CorruptedSnapshotException(errorMsg);
-      }
-
-      verifyStoreFiles(conf, manifest, regions, CommonFSUtils.getRootDirFileSystem(conf),
-        snapshot, snapshotDir);
+      verifyRegionInfo(region, snapshot, regionManifest);
     }
   }
 
@@ -203,7 +181,7 @@ public class SnapshotVerifyUtil {
    * @param manifest snapshot manifest to inspect
    */
   private static void verifyRegionInfo(final RegionInfo region, final SnapshotDescription snapshot,
-    final SnapshotRegionManifest manifest) throws IOException {
+      final SnapshotRegionManifest manifest) throws CorruptedSnapshotException {
     RegionInfo manifestRegionInfo = ProtobufUtil.toRegionInfo(manifest.getRegionInfo());
     if (RegionInfo.COMPARATOR.compare(region, manifestRegionInfo) != 0) {
       String msg = "Manifest region info " + manifestRegionInfo +

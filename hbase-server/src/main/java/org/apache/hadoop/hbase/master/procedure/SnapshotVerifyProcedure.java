@@ -49,14 +49,16 @@ public class SnapshotVerifyProcedure
   private static final Logger LOG = LoggerFactory.getLogger(SnapshotProcedure.class);
   private SnapshotDescription snapshot;
   private List<RegionInfo> regions;
+  private int expectedNumRegion;
 
   public SnapshotVerifyProcedure() {}
 
-  public SnapshotVerifyProcedure(SnapshotDescription snapshot,
-                                 List<RegionInfo> regions, ServerName targetServer) {
+  public SnapshotVerifyProcedure(SnapshotDescription snapshot, List<RegionInfo> regions,
+      ServerName targetServer, int expectedNumRegion) {
     this.targetServer = targetServer;
     this.snapshot = snapshot;
     this.regions = regions;
+    this.expectedNumRegion = expectedNumRegion;
   }
 
   @Override
@@ -128,6 +130,7 @@ public class SnapshotVerifyProcedure
     for (RegionInfo region : regions) {
       builder.addRegion(ProtobufUtil.toRegionInfo(region));
     }
+    builder.setExpectedNumRegion(expectedNumRegion);
     serializer.serialize(builder.build());
   }
 
@@ -139,6 +142,7 @@ public class SnapshotVerifyProcedure
     this.snapshot = data.getSnapshot();
     this.regions = data.getRegionList().stream()
       .map(ProtobufUtil::toRegionInfo).collect(Collectors.toList());
+    this.expectedNumRegion = data.getExpectedNumRegion();
   }
 
   @Override
@@ -149,6 +153,7 @@ public class SnapshotVerifyProcedure
     for (RegionInfo region : regions) {
       builder.addRegion(ProtobufUtil.toRegionInfo(region));
     }
+    builder.setExpectedNumRegion(expectedNumRegion);
     return Optional.of(new RSProcedureDispatcher.ServerOperation(this, getProcId(),
       SnapshotVerifyCallable.class, builder.build().toByteArray()));
   }

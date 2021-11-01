@@ -214,7 +214,7 @@ public class TestSnapshotProcedure {
       @Override
       public void run() {
         try {
-          TEST_UTIL.getAdmin().snapshot(snapshot);
+          TEST_UTIL.getAdmin().snapshotTable(snapshot);
         } catch (IOException e) {
           LOG.error("first client failed taking snapshot", e);
           fail("first client failed taking snapshot");
@@ -226,7 +226,7 @@ public class TestSnapshotProcedure {
     // we don't allow different snapshot with same name
     SnapshotDescription snapshotWithSameName =
       new SnapshotDescription(SNAPSHOT_NAME, TABLE_NAME, SnapshotType.SKIPFLUSH);
-    TEST_UTIL.getAdmin().snapshot(snapshotWithSameName);
+    TEST_UTIL.getAdmin().snapshotTable(snapshotWithSameName);
   }
 
   @Test(expected = org.apache.hadoop.hbase.snapshot.SnapshotCreationException.class)
@@ -235,7 +235,7 @@ public class TestSnapshotProcedure {
       @Override
       public void run() {
         try {
-          TEST_UTIL.getAdmin().snapshot(snapshot);
+          TEST_UTIL.getAdmin().snapshotTable(snapshot);
         } catch (IOException e) {
           LOG.error("first client failed taking snapshot", e);
           fail("first client failed taking snapshot");
@@ -244,7 +244,7 @@ public class TestSnapshotProcedure {
     };
     first.start();
     Thread.sleep(1000);
-    TEST_UTIL.getAdmin().snapshot(snapshot);
+    TEST_UTIL.getAdmin().snapshotTable(snapshot);
   }
 
   @Test
@@ -254,7 +254,7 @@ public class TestSnapshotProcedure {
       @Override
       public void run() {
         try {
-          TEST_UTIL.getAdmin().snapshot(snapshot);
+          TEST_UTIL.getAdmin().snapshotTable(snapshot);
         } catch (IOException e) {
           LOG.error("procedure snapshot failed", e);
           fail("procedure snapshot failed");

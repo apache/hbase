@@ -222,11 +222,13 @@ message SnapshotVerifyProcedureStateData {
   required SnapshotDescription snapshot = 1;
   repeated RegionInfo region = 2;
   required ServerName target_server = 3;
+  required uint32 expected_num_region = 4;
 }
 
 message SnapshotVerifyParameter {
   required SnapshotDescription snapshot = 1;
   repeated RegionInfo region = 2;
+  required uint32 expected_num_region = 3;
 }
 
 enum CloneSnapshotState {

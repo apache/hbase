@@ -217,7 +217,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
 
       // verify the snapshot is valid
       status.setStatus("Verifying snapshot: " + snapshot.getName());
-      verifier.verifySnapshot(this.workingDir, serverNames);
+      verifier.verifySnapshot();
 
       // complete the snapshot, atomically moving from tmp to .snapshot dir.
       SnapshotDescriptionUtils.completeSnapshot(this.snapshotDir, this.workingDir, this.rootFs,
