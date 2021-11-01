@@ -567,12 +567,12 @@ public class CompactingMemStore extends AbstractMemStore {
     boolean done = false;
     while (!done) {
       iterationsCnt++;
-      VersionedSegmentsList segments = pipeline.getVersionedList();
+      VersionedSegmentsList segments = getImmutableSegments();
       pushToSnapshot(segments.getStoreSegments());
       // swap can return false in case the pipeline was updated by ongoing compaction
       // and the version increase, the chance of it happenning is very low
       // In Swap: don't close segments (they are in snapshot now) and don't update the region size
-      done = pipeline.swap(segments, null, false, false);
+      done = swapPipelineWithNull(segments);
       if (iterationsCnt>2) {
         // practically it is impossible that this loop iterates more than two times
         // (because the compaction is stopped and none restarts it while in snapshot request),
@@ -583,6 +583,10 @@ public class CompactingMemStore extends AbstractMemStore {
         break;
       }
     }
+  }
+
+  protected boolean swapPipelineWithNull(VersionedSegmentsList segments) {
+    return pipeline.swap(segments, null, false, false);
   }
 
   private void pushToSnapshot(List<ImmutableSegment> segments) {
