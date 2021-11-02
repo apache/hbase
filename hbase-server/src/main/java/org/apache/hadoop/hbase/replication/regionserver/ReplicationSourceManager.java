@@ -39,7 +39,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -49,8 +48,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
-import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
@@ -64,9 +61,7 @@ import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -181,16 +176,6 @@ public class ReplicationSourceManager {
   // Total buffer size on this RegionServer for holding batched edits to be shipped.
   private final long totalBufferLimit;
   private final MetricsReplicationGlobalSourceSource globalMetrics;
-
-  /**
-   * A special ReplicationSource for hbase:meta Region Read Replicas.
-   * Usually this reference remains empty. If an hbase:meta Region is opened on this server, we
-   * will create an instance of a hbase:meta CatalogReplicationSource and it will live the life of
-   * the Server thereafter; i.e. we will not shut it down even if the hbase:meta moves away from
-   * this server (in case it later gets moved back). We synchronize on this instance testing for
-   * presence and if absent, while creating so only created and started once.
-   */
-  AtomicReference<ReplicationSourceInterface> catalogReplicationSource = new AtomicReference<>();
 
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
@@ -1064,78 +1049,6 @@ public class ReplicationSourceManager {
 
   MetricsReplicationGlobalSourceSource getGlobalMetrics() {
     return this.globalMetrics;
-  }
-
-  /**
-   * Add an hbase:meta Catalog replication source. Called on open of an hbase:meta Region.
-   * Create it once only. If exists already, use the existing one.
-   * @see #removeCatalogReplicationSource(RegionInfo)
-   * @see #addSource(String) This is specialization on the addSource method.
-   */
-  public ReplicationSourceInterface addCatalogReplicationSource(RegionInfo regionInfo)
-      throws IOException {
-    // Poor-man's putIfAbsent
-    synchronized (this.catalogReplicationSource) {
-      ReplicationSourceInterface rs = this.catalogReplicationSource.get();
-      return rs != null ? rs :
-        this.catalogReplicationSource.getAndSet(createCatalogReplicationSource(regionInfo));
-    }
-  }
-
-  /**
-   * Remove the hbase:meta Catalog replication source.
-   * Called when we close hbase:meta.
-   * @see #addCatalogReplicationSource(RegionInfo regionInfo)
-   */
-  public void removeCatalogReplicationSource(RegionInfo regionInfo) {
-    // Nothing to do. Leave any CatalogReplicationSource in place in case an hbase:meta Region
-    // comes back to this server.
-  }
-
-  /**
-   * Create, initialize, and start the Catalog ReplicationSource.
-   * Presumes called one-time only (caller must ensure one-time only call).
-   * This ReplicationSource is NOT created via {@link ReplicationSourceFactory}.
-   * @see #addSource(String) This is a specialization of the addSource call.
-   * @see #catalogReplicationSource for a note on this ReplicationSource's lifecycle (and more on
-   *    why the special handling).
-   */
-  private ReplicationSourceInterface createCatalogReplicationSource(RegionInfo regionInfo)
-      throws IOException {
-    // Instantiate meta walProvider. Instantiated here or over in the #warmupRegion call made by the
-    // Master on a 'move' operation. Need to do extra work if we did NOT instantiate the provider.
-    WALProvider walProvider = this.walFactory.getMetaWALProvider();
-    boolean instantiate = walProvider == null;
-    if (instantiate) {
-      walProvider = this.walFactory.getMetaProvider();
-    }
-    // Here we do a specialization on what {@link ReplicationSourceFactory} does. There is no need
-    // for persisting offset into WALs up in zookeeper (via ReplicationQueueInfo) as the catalog
-    // read replicas feature that makes use of the source does a reset on a crash of the WAL
-    // source process. See "4.1 Skip maintaining zookeeper replication queue (offsets/WALs)" in the
-    // design doc attached to HBASE-18070 'Enable memstore replication for meta replica' for detail.
-    CatalogReplicationSourcePeer peer = new CatalogReplicationSourcePeer(this.conf,
-      this.clusterId.toString());
-    final ReplicationSourceInterface crs = new CatalogReplicationSource();
-    crs.init(conf, fs, this, new NoopReplicationQueueStorage(), peer, server, peer.getId(),
-      clusterId, walProvider.getWALFileLengthProvider(), new MetricsSource(peer.getId()));
-    // Add listener on the provider so we can pick up the WAL to replicate on roll.
-    WALActionsListener listener = new WALActionsListener() {
-      @Override public void postLogRoll(Path oldPath, Path newPath) throws IOException {
-        crs.enqueueLog(newPath);
-      }
-    };
-    walProvider.addWALActionsListener(listener);
-    if (!instantiate) {
-      // If we did not instantiate provider, need to add our listener on already-created WAL
-      // instance too (listeners are passed by provider to WAL instance on creation but if provider
-      // created already, our listener add above is missed). And add the current WAL file to the
-      // Replication Source so it can start replicating it.
-      WAL wal = walProvider.getWAL(regionInfo);
-      wal.registerWALActionsListener(listener);
-      crs.enqueueLog(((AbstractFSWAL)wal).getCurrentFileName());
-    }
-    return crs.startup();
   }
 
   ReplicationQueueStorage getQueueStorage() {

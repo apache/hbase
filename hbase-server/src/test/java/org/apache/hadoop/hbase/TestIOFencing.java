@@ -296,8 +296,8 @@ public class TestIOFencing {
         FAMILY, Lists.newArrayList(new Path("/a")), Lists.newArrayList(new Path("/b")),
         new Path("store_dir"));
       WALUtil.writeCompactionMarker(compactingRegion.getWAL(),
-          ((HRegion)compactingRegion).getReplicationScope(),
-        oldHri, compactionDescriptor, compactingRegion.getMVCC());
+        ((HRegion) compactingRegion).getReplicationScope(), oldHri, compactionDescriptor,
+        compactingRegion.getMVCC(), null);
 
       // Wait till flush has happened, otherwise there won't be multiple store files
       long startWaitTime = EnvironmentEdgeManager.currentTime();
