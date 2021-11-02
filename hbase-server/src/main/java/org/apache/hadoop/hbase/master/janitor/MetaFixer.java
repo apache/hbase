@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
@@ -40,10 +39,8 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -197,15 +194,9 @@ public class MetaFixer {
           MetaTableAccessor.addRegionsToMeta(masterServices.getConnection(), newRegions,
             td.getRegionReplication());
 
-          // Setup replication for region replicas if needed
-          if (td.getRegionReplication() > 1) {
-            ServerRegionReplicaUtil.setupRegionReplicaReplication(masterServices);
-          }
           return Either.<List<RegionInfo>, IOException> ofLeft(newRegions);
         } catch (IOException e) {
           return Either.<List<RegionInfo>, IOException> ofRight(e);
-        } catch (ReplicationException e) {
-          return Either.<List<RegionInfo>, IOException> ofRight(new HBaseIOException(e));
         }
       })
       .collect(Collectors.toList());

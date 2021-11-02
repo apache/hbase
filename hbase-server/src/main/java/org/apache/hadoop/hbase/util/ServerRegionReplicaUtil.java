@@ -22,31 +22,21 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.replication.ReplicationException;
-import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
-import org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint;
-import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Similar to {@link RegionReplicaUtil} but for the server side
  */
 @InterfaceAudience.Private
 public class ServerRegionReplicaUtil extends RegionReplicaUtil {
-
-  private static final Logger LOG = LoggerFactory.getLogger(ServerRegionReplicaUtil.class);
 
   /**
    * Whether asynchronous WAL replication to the secondary region replicas is enabled or not.
@@ -59,7 +49,6 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
   public static final String REGION_REPLICA_REPLICATION_CONF_KEY
     = "hbase.region.replica.replication.enabled";
   private static final boolean DEFAULT_REGION_REPLICA_REPLICATION = false;
-  public static final String REGION_REPLICA_REPLICATION_PEER = "region_replica_replication";
 
   /**
    * Same as for {@link #REGION_REPLICA_REPLICATION_CONF_KEY} but for catalog replication.
@@ -159,27 +148,6 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
     } else {
       throw new IOException("path=" + path + " doesn't look like a valid StoreFile");
     }
-  }
-
-  /**
-   * Create replication peer for replicating user-space Region Read Replicas.
-   * This methods should only be called at master side.
-   */
-  public static void setupRegionReplicaReplication(MasterServices services)
-    throws IOException, ReplicationException {
-    if (!isRegionReplicaReplicationEnabled(services.getConfiguration())) {
-      return;
-    }
-    if (services.getReplicationPeerManager().getPeerConfig(REGION_REPLICA_REPLICATION_PEER)
-      .isPresent()) {
-      return;
-    }
-    LOG.info("Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER +
-      " not exist. Creating...");
-    ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-      .setClusterKey(ZKConfig.getZooKeeperClusterKey(services.getConfiguration()))
-      .setReplicationEndpointImpl(RegionReplicaReplicationEndpoint.class.getName()).build();
-    services.addReplicationPeer(REGION_REPLICA_REPLICATION_PEER, peerConfig, true);
   }
 
   /**

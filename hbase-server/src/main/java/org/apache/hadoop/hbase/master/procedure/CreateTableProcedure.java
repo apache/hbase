@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.function.Supplier;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -38,12 +37,10 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
-import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -365,14 +362,6 @@ public class CreateTableProcedure
     // Add regions to META
     addRegionsToMeta(env, tableDescriptor, newRegions);
 
-    // Setup replication for region replicas if needed
-    if (tableDescriptor.getRegionReplication() > 1) {
-      try {
-        ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterServices());
-      } catch (ReplicationException e) {
-        throw new HBaseIOException(e);
-      }
-    }
     return newRegions;
   }
 
