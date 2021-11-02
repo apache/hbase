@@ -580,7 +580,7 @@ public class BalancerTestBase {
       List<ServerAndLoad> balancedCluster = reconcile(list, plans, serverMap);
 
       // Print out the cluster loads to make debugging easier.
-      LOG.info("Mock Balance : " + printMock(balancedCluster));
+      LOG.info("Mock after Balance : " + printMock(balancedCluster));
 
       if (assertFullyBalanced) {
         assertClusterAsBalanced(balancedCluster);
@@ -593,6 +593,42 @@ public class BalancerTestBase {
       if (assertFullyBalancedForReplicas) {
         assertRegionReplicaPlacement(serverMap, rackManager);
       }
+    }
+  }
+
+  protected void testWithClusterWithIteration(Map<ServerName, List<RegionInfo>> serverMap,
+    RackManager rackManager, boolean assertFullyBalanced, boolean assertFullyBalancedForReplicas) {
+    List<ServerAndLoad> list = convertToList(serverMap);
+    LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
+
+    loadBalancer.setRackManager(rackManager);
+    // Run the balancer.
+    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable = (Map) mockClusterServersWithTables(serverMap);
+    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
+    assertNotNull("Initial cluster balance should produce plans.", plans);
+
+    List<ServerAndLoad> balancedCluster = null;
+    // Run through iteration until done. Otherwise will be killed as test time out
+    while (plans != null && (assertFullyBalanced || assertFullyBalancedForReplicas)) {
+      // Apply the plan to the mock cluster.
+      balancedCluster = reconcile(list, plans, serverMap);
+
+      // Print out the cluster loads to make debugging easier.
+      LOG.info("Mock after balance: " + printMock(balancedCluster));
+
+      LoadOfAllTable = (Map) mockClusterServersWithTables(serverMap);
+      plans = loadBalancer.balanceCluster(LoadOfAllTable);
+    }
+
+    // Print out the cluster loads to make debugging easier.
+    LOG.info("Mock Final balance: " + printMock(balancedCluster));
+
+    if (assertFullyBalanced) {
+      assertNull("Given a requirement to be fully balanced, second attempt at plans should " +
+        "produce none.", plans);
+    }
+    if (assertFullyBalancedForReplicas) {
+      assertRegionReplicaPlacement(serverMap, rackManager);
     }
   }
 

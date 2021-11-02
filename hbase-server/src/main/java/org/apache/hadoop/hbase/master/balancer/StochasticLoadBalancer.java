@@ -545,10 +545,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       LOG.info("Finished computing new moving plan. Computation took {} ms" +
           " to try {} different iterations.  Found a solution that moves " +
           "{} regions; Going from a computed imbalance of {}" +
-          " to a new imbalance of {}. ",
+          " to a new imbalance of {}. funtionCost={}",
         endTime - startTime, step, plans.size(),
-        initCost / sumMultiplier, currentCost / sumMultiplier);
-
+        initCost / sumMultiplier, currentCost / sumMultiplier, functionCost());
       sendRegionPlansToRingBuffer(plans, currentCost, initCost, initFunctionTotalCosts, step);
       return plans;
     }
