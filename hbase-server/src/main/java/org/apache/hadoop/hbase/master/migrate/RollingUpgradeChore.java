@@ -81,7 +81,6 @@ public class RollingUpgradeChore extends ScheduledChore {
     }
   }
 
-
   private boolean isCompletelyMigrateSFT(int concurrentCount){
     Iterator<MigrateStoreFileTrackerProcedure> iter = processingProcs.iterator();
     while(iter.hasNext()){
