@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
+
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.opentelemetry.api.trace.Span;
 import java.io.EOFException;
@@ -135,6 +136,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.ipc.ServerCall;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -177,6 +179,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -191,6 +194,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceCall;
@@ -708,6 +712,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private final StoreHotnessProtector storeHotnessProtector;
 
+  private Optional<RegionReplicationSink> regionReplicationSink = Optional.empty();
+
   /**
    * HRegion constructor. This constructor should only be used for testing and
    * extensions.  Instances of HRegion should be instantiated with the
@@ -1080,9 +1086,26 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       status.setStatus("Running coprocessor post-open hooks");
       coprocessorHost.postOpen();
     }
-
+    initializeRegionReplicationSink(reporter, status);
     status.markComplete("Region opened successfully");
     return nextSeqId;
+  }
+
+  private void initializeRegionReplicationSink(CancelableProgressable reporter,
+    MonitoredTask status) {
+    RegionServerServices rss = getRegionServerServices();
+    TableDescriptor td = getTableDescriptor();
+    int regionReplication = td.getRegionReplication();
+    RegionInfo regionInfo = getRegionInfo();
+    if (regionReplication <= 1 || !RegionReplicaUtil.isDefaultReplica(regionInfo) ||
+      !ServerRegionReplicaUtil.isRegionReplicaReplicationEnabled(conf, regionInfo.getTable()) ||
+      rss == null) {
+      regionReplicationSink = Optional.empty();
+      return;
+    }
+    status.setStatus("Initializaing region replication sink");
+    regionReplicationSink = Optional.of(new RegionReplicationSink(conf, regionInfo,
+      regionReplication, td.hasRegionMemStoreReplication(), rss.getAsyncClusterConnection()));
   }
 
   /**
@@ -1207,7 +1230,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       RegionEventDescriptor.EventType.REGION_OPEN, getRegionInfo(), openSeqId,
       getRegionServerServices().getServerName(), storeFiles);
     WALUtil.writeRegionEventMarker(wal, getReplicationScope(), getRegionInfo(), regionOpenDesc,
-        mvcc);
+        mvcc, regionReplicationSink.orElse(null));
   }
 
   private void writeRegionCloseMarker(WAL wal) throws IOException {
@@ -1216,7 +1239,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       RegionEventDescriptor.EventType.REGION_CLOSE, getRegionInfo(), mvcc.getReadPoint(),
       getRegionServerServices().getServerName(), storeFiles);
     WALUtil.writeRegionEventMarker(wal, getReplicationScope(), getRegionInfo(), regionEventDesc,
-        mvcc);
+      mvcc, null);
 
     // Store SeqId in WAL FileSystem when a region closes
     // checking region folder exists is due to many tests which delete the table folder while a
@@ -1861,7 +1884,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         RegionReplicaUtil.isDefaultReplica(getRegionInfo())) {
         writeRegionCloseMarker(wal);
       }
-
+      if (regionReplicationSink.isPresent()) {
+        // stop replicating to secondary replicas
+        RegionReplicationSink sink = regionReplicationSink.get();
+        sink.stop();
+        try {
+          regionReplicationSink.get().waitUntilStopped();
+        } catch (InterruptedException e) {
+          throw throwOnInterrupt(e);
+        }
+      }
       this.closed.set(true);
       if (!canFlush) {
         decrMemStoreSize(this.memStoreSizing.getMemStoreSize());
@@ -2822,7 +2854,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             getRegionInfo(), flushOpSeqId, committedFiles);
         // No sync. Sync is below where no updates lock and we do FlushAction.COMMIT_FLUSH
         WALUtil.writeFlushMarker(wal, this.getReplicationScope(), getRegionInfo(), desc, false,
-            mvcc);
+          mvcc, null);
       }
 
       // Prepare flush (take a snapshot)
@@ -2883,8 +2915,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     try {
       FlushDescriptor desc = ProtobufUtil.toFlushDescriptor(FlushAction.ABORT_FLUSH,
           getRegionInfo(), flushOpSeqId, committedFiles);
-      WALUtil.writeFlushMarker(wal, this.getReplicationScope(), getRegionInfo(), desc, false,
-          mvcc);
+      WALUtil.writeFlushMarker(wal, this.getReplicationScope(), getRegionInfo(), desc, false, mvcc,
+        null);
     } catch (Throwable t) {
       LOG.warn("Received unexpected exception trying to write ABORT_FLUSH marker to WAL: {} in "
         + " region {}", StringUtils.stringifyException(t), this);
@@ -2928,8 +2960,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       FlushDescriptor desc = ProtobufUtil.toFlushDescriptor(FlushAction.CANNOT_FLUSH,
         getRegionInfo(), -1, new TreeMap<>(Bytes.BYTES_COMPARATOR));
       try {
-        WALUtil.writeFlushMarker(wal, this.getReplicationScope(), getRegionInfo(), desc, true,
-            mvcc);
+        WALUtil.writeFlushMarker(wal, this.getReplicationScope(), getRegionInfo(), desc, true, mvcc,
+          null);
         return true;
       } catch (IOException e) {
         LOG.warn(getRegionInfo().getEncodedName() + " : "
@@ -3008,8 +3040,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // write flush marker to WAL. If fail, we should throw DroppedSnapshotException
         FlushDescriptor desc = ProtobufUtil.toFlushDescriptor(FlushAction.COMMIT_FLUSH,
           getRegionInfo(), flushOpSeqId, committedFiles);
-        WALUtil.writeFlushMarker(wal, this.getReplicationScope(), getRegionInfo(), desc, true,
-            mvcc);
+        WALUtil.writeFlushMarker(wal, this.getReplicationScope(), getRegionInfo(), desc, true, mvcc,
+          regionReplicationSink.orElse(null));
       }
     } catch (Throwable t) {
       // An exception here means that the snapshot was not persisted.
@@ -3022,7 +3054,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         try {
           FlushDescriptor desc = ProtobufUtil.toFlushDescriptor(FlushAction.ABORT_FLUSH,
             getRegionInfo(), flushOpSeqId, committedFiles);
-          WALUtil.writeFlushMarker(wal, this.replicationScope, getRegionInfo(), desc, false, mvcc);
+          WALUtil.writeFlushMarker(wal, this.replicationScope, getRegionInfo(), desc, false, mvcc,
+            null);
         } catch (Throwable ex) {
           LOG.warn(getRegionInfo().getEncodedName() + " : "
               + "failed writing ABORT_FLUSH marker to WAL", ex);
@@ -7067,10 +7100,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         try {
           WALProtos.BulkLoadDescriptor loadDescriptor =
               ProtobufUtil.toBulkLoadDescriptor(this.getRegionInfo().getTable(),
-                  UnsafeByteOperations.unsafeWrap(this.getRegionInfo().getEncodedNameAsBytes()),
-                  storeFiles, storeFilesSizes, seqId, clusterIds, replicate);
+              UnsafeByteOperations.unsafeWrap(this.getRegionInfo().getEncodedNameAsBytes()),
+              storeFiles, storeFilesSizes, seqId, clusterIds, replicate);
           WALUtil.writeBulkLoadMarkerAndSync(this.wal, this.getReplicationScope(), getRegionInfo(),
-              loadDescriptor, mvcc);
+            loadDescriptor, mvcc, regionReplicationSink.orElse(null));
         } catch (IOException ioe) {
           if (this.rsServices != null) {
             // Have to abort region server because some hfiles has been loaded but we can't write
@@ -7757,21 +7790,25 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.coprocessorHost != null && !walEdit.isMetaEdit()) {
       this.coprocessorHost.preWALAppend(walKey, walEdit);
     }
-    WriteEntry writeEntry = null;
+    ServerCall<?> rpcCall = RpcServer.getCurrentServerCallWithCellScanner().orElse(null);
     try {
       long txid = this.wal.appendData(this.getRegionInfo(), walKey, walEdit);
+      WriteEntry writeEntry = walKey.getWriteEntry();
+      regionReplicationSink.ifPresent(sink -> writeEntry.attachCompletionAction(() -> {
+        sink.add(walKey, walEdit, rpcCall);
+      }));
       // Call sync on our edit.
       if (txid != 0) {
         sync(txid, durability);
       }
-      writeEntry = walKey.getWriteEntry();
+      return writeEntry;
     } catch (IOException ioe) {
-      if (walKey != null && walKey.getWriteEntry() != null) {
+      if (walKey.getWriteEntry() != null) {
         mvcc.complete(walKey.getWriteEntry());
       }
       throw ioe;
     }
-    return writeEntry;
+
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.estimateBase(HRegion.class, false);
@@ -8424,6 +8461,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             (plugins.equals("") ? "" : (plugins + ",")) + replicationCoprocessorClass);
       }
     }
+  }
+
+  public Optional<RegionReplicationSink> getRegionReplicationSink() {
+    return regionReplicationSink;
   }
 
   public void addReadRequestsCount(long readRequestsCount) {
