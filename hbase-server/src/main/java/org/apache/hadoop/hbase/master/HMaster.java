@@ -1225,13 +1225,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           (EnvironmentEdgeManager.currentTime() - start) / 1000) + " seconds");
     }
 
-    boolean isRollingUpgradeChoreEnabled = conf
-      .getBoolean(RollingUpgradeChore.ROLLING_UPGRADE_CHORE_ENABLED_KEY,
-        RollingUpgradeChore.DEFAULT_ROLLING_UPGRADE_CHORE_ENABLED);
-    if (isRollingUpgradeChoreEnabled) {
-      this.rollingUpgradeChore = new RollingUpgradeChore(this);
-      getChoreService().scheduleChore(rollingUpgradeChore);
-    }
+    this.rollingUpgradeChore = new RollingUpgradeChore(this);
+    getChoreService().scheduleChore(rollingUpgradeChore);
   }
 
   private void createMissingCFsInMetaDuringUpgrade(

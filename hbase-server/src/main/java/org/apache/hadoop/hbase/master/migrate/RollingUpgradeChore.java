@@ -47,25 +47,18 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class RollingUpgradeChore extends ScheduledChore {
 
-  public static final String ROLLING_UPGRADE_CHORE_ENABLED_KEY =
-    "hbase.master.rolling.upgrade.chore.enabled";
-  public static final boolean DEFAULT_ROLLING_UPGRADE_CHORE_ENABLED = true;
-
-  static final String ROLLING_UPGRADE_CHORE_TIMEUNIT_KEY =
-    "hbase.master.rolling.upgrade.chore.timeunit";
-  static final String DEFAULT_ROLLING_UPGRADE_CHORE_TIMEUNIT_KEY = TimeUnit.MILLISECONDS.name();
-
   static final String ROLLING_UPGRADE_CHORE_PERIOD_KEY = "hbase.master.rolling.upgrade.chore.period";
-  static final int DFAULT_ROLLING_UPGRADE_CHORE_PERIOD = 1000 * 60 * 5; // 5 minutes in millis
+  static final int DFAULT_ROLLING_UPGRADE_CHORE_PERIOD = 10; // 10 seconds by default
 
   static final String ROLLING_UPGRADE_CHORE_DELAY_KEY = "hbase.master.rolling.upgrade.chore.delay";
-  static final long DEFAULT_ROLLING_UPGRADE_CHORE_DELAY = 1000L * 60 * 10; // 10 minutes in millis
+  static final long DEFAULT_ROLLING_UPGRADE_CHORE_DELAY = 30; // 30 seconds
+
+  static final int CONCURRENT_PROCEDURES_COUNT = 5;
 
   private final static Logger LOG = LoggerFactory.getLogger(RollingUpgradeChore.class);
   ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
   private TableDescriptors tableDescriptors;
   private List<MigrateStoreFileTrackerProcedure> processingProcs = new ArrayList<>();
-  private boolean isMigratingDone;
 
   public RollingUpgradeChore(MasterServices masterServices) {
     this(masterServices.getConfiguration(), masterServices.getMasterProcedureExecutor(), masterServices.getTableDescriptors(), masterServices);
@@ -75,21 +68,21 @@ public class RollingUpgradeChore extends ScheduledChore {
     super(RollingUpgradeChore.class.getSimpleName(), stopper,
       conf.getInt(ROLLING_UPGRADE_CHORE_PERIOD_KEY, DFAULT_ROLLING_UPGRADE_CHORE_PERIOD),
       conf.getLong(ROLLING_UPGRADE_CHORE_DELAY_KEY, DEFAULT_ROLLING_UPGRADE_CHORE_DELAY),
-      TimeUnit.valueOf(conf.get(ROLLING_UPGRADE_CHORE_TIMEUNIT_KEY, DEFAULT_ROLLING_UPGRADE_CHORE_TIMEUNIT_KEY)));
+      TimeUnit.SECONDS);
     this.procedureExecutor = procedureExecutor;
     this.tableDescriptors = tableDescriptors;
   }
 
   @Override
   protected void chore() {
-    migrateStoreFileTracker(5);
-    if (isMigratingDone) {
+    if (isCompletelyMigrateSFT(CONCURRENT_PROCEDURES_COUNT)) {
       LOG.info("All Rolling-Upgrade tasks are complete, shutdown RollingUpgradeChore!");
       shutdown();
     }
   }
 
-  private void migrateStoreFileTracker(int concurrentCount){
+
+  private boolean isCompletelyMigrateSFT(int concurrentCount){
     Iterator<MigrateStoreFileTrackerProcedure> iter = processingProcs.iterator();
     while(iter.hasNext()){
       MigrateStoreFileTrackerProcedure proc = iter.next();
@@ -100,7 +93,7 @@ public class RollingUpgradeChore extends ScheduledChore {
     // No new migration procedures will be submitted until
     // all procedures executed last time are completed.
     if (!processingProcs.isEmpty()) {
-      return;
+      return false;
     }
 
     Map<String, TableDescriptor> migrateSFTTables;
@@ -111,13 +104,12 @@ public class RollingUpgradeChore extends ScheduledChore {
       }).limit(concurrentCount).collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
     } catch (IOException e) {
       LOG.warn("Failed to migrate StoreFileTracker", e);
-      return;
+      return false;
     }
 
     if (migrateSFTTables.isEmpty()) {
       LOG.info("There is no table to migrate StoreFileTracker!");
-      isMigratingDone = true;
-      return;
+      return true;
     }
 
     for (Map.Entry<String, TableDescriptor> entry : migrateSFTTables.entrySet()) {
@@ -127,5 +119,6 @@ public class RollingUpgradeChore extends ScheduledChore {
       procedureExecutor.submitProcedure(proc);
       processingProcs.add(proc);
     }
+    return false;
   }
 }
