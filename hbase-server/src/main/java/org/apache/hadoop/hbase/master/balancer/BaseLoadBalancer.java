@@ -338,6 +338,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         racks[entry.getValue()] = entry.getKey();
       }
 
+      LOG.debug("Hosts are {} racks are {}", hostsToIndex, racksToIndex);
       for (Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
         int serverIndex = serversToIndex.get(entry.getKey().getAddress());
         regionPerServerIndex = serverIndexToRegionsOffset[serverIndex];
@@ -365,6 +366,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         serversPerHost[i] = new int[serversPerHostList.get(i).size()];
         for (int j = 0; j < serversPerHost[i].length; j++) {
           serversPerHost[i][j] = serversPerHostList.get(i).get(j);
+          LOG.debug("server {} is on host {}",serversPerHostList.get(i).get(j), i);
         }
         if (serversPerHost[i].length > 1) {
           multiServersPerHost = true;
@@ -375,6 +377,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         serversPerRack[i] = new int[serversPerRackList.get(i).size()];
         for (int j = 0; j < serversPerRack[i].length; j++) {
           serversPerRack[i][j] = serversPerRackList.get(i).get(j);
+          LOG.info("server {} is on rack {}",serversPerRackList.get(i).get(j), i);
         }
       }
 
@@ -959,6 +962,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
 
     private Comparator<Integer> numRegionsComparator = Comparator.comparingInt(this::getNumRegions);
+
+    public Comparator<Integer> getNumRegionsComparator() {
+      return numRegionsComparator;
+    }
 
     int getLowestLocalityRegionOnServer(int serverIndex) {
       if (regionFinder != null) {
