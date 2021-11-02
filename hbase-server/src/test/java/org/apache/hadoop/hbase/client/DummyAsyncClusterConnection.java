@@ -126,12 +126,6 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
   }
 
   @Override
-  public CompletableFuture<Long> replay(TableName tableName, byte[] encodedRegionName, byte[] row,
-      List<Entry> entries, int replicaId, int numRetries, long operationTimeoutNs) {
-    return null;
-  }
-
-  @Override
   public CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
       boolean reload) {
     return null;
@@ -167,6 +161,13 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
 
   @Override
   public CompletableFuture<List<ServerName>> getAllBootstrapNodes(ServerName regionServer) {
+    return null;
+  }
+
+  @Override
+  public CompletableFuture<Void> replicate(RegionInfo replica,
+    List<Entry> entries, int numRetries, long rpcTimeoutNs,
+    long operationTimeoutNs) {
     return null;
   }
 }
