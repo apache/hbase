@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 /**
  * Constructs a {@link ReplicationSourceInterface}
  * Note, not used to create specialized ReplicationSources
- * @see CatalogReplicationSource
  */
 @InterfaceAudience.Private
 public final class ReplicationSourceFactory {
