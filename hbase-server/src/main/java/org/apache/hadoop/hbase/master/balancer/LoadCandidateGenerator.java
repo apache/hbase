@@ -40,7 +40,8 @@ class LoadCandidateGenerator extends CandidateGenerator {
       if (servers[i] == null || servers[i] == thisServer) {
         continue;
       }
-      if (selectedIndex != -1 && cluster.getNumRegionsComparator().compare(servers[i], servers[selectedIndex]) != 0) {
+      if (selectedIndex != -1 && cluster.getNumRegionsComparator().compare(servers[i],
+        servers[selectedIndex]) != 0) {
         // Exhausted servers of the same region count
         break;
       }

@@ -594,7 +594,8 @@ public class BalancerTestBase {
 
     loadBalancer.setRackManager(rackManager);
     // Run the balancer.
-    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable = (Map) mockClusterServersWithTables(serverMap);
+    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
+      (Map) mockClusterServersWithTables(serverMap);
     List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
     assertNotNull("Initial cluster balance should produce plans.", plans);
 
