@@ -179,6 +179,7 @@ class BalancerClusterState {
       serversPerHostList.get(hostIndex).add(serverIndex);
 
       String rack = this.rackManager.getRack(sn);
+
       if (!racksToIndex.containsKey(rack)) {
         racksToIndex.put(rack, numRacks++);
         serversPerRackList.add(new ArrayList<>());
@@ -187,6 +188,7 @@ class BalancerClusterState {
       serversPerRackList.get(rackIndex).add(serverIndex);
     }
 
+    LOG.debug("Hosts are {} racks are {}", hostsToIndex, racksToIndex);
     // Count how many regions there are.
     for (Map.Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
       numRegions += entry.getValue().size();
@@ -285,6 +287,7 @@ class BalancerClusterState {
       serversPerHost[i] = new int[serversPerHostList.get(i).size()];
       for (int j = 0; j < serversPerHost[i].length; j++) {
         serversPerHost[i][j] = serversPerHostList.get(i).get(j);
+        LOG.debug("server {} is on host {}",serversPerHostList.get(i).get(j), i);
       }
       if (serversPerHost[i].length > 1) {
         multiServersPerHost = true;
@@ -295,6 +298,7 @@ class BalancerClusterState {
       serversPerRack[i] = new int[serversPerRackList.get(i).size()];
       for (int j = 0; j < serversPerRack[i].length; j++) {
         serversPerRack[i][j] = serversPerRackList.get(i).get(j);
+        LOG.info("server {} is on rack {}",serversPerRackList.get(i).get(j), i);
       }
     }
 
@@ -791,6 +795,10 @@ class BalancerClusterState {
   }
 
   private Comparator<Integer> numRegionsComparator = Comparator.comparingInt(this::getNumRegions);
+
+  public Comparator<Integer> getNumRegionsComparator() {
+    return numRegionsComparator;
+  }
 
   int getLowestLocalityRegionOnServer(int serverIndex) {
     if (regionFinder != null) {
