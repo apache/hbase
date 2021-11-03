@@ -47,11 +47,11 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class RollingUpgradeChore extends ScheduledChore {
 
-  static final String ROLLING_UPGRADE_CHORE_PERIOD_KEY = "hbase.master.rolling.upgrade.chore.period";
-  static final int DFAULT_ROLLING_UPGRADE_CHORE_PERIOD = 10; // 10 seconds by default
+  static final String ROLLING_UPGRADE_CHORE_PERIOD_SECONDS_KEY = "hbase.master.rolling.upgrade.chore.period.secs";
+  static final int DFAULT_ROLLING_UPGRADE_CHORE_PERIOD_SECONDS = 10; // 10 seconds by default
 
-  static final String ROLLING_UPGRADE_CHORE_DELAY_KEY = "hbase.master.rolling.upgrade.chore.delay";
-  static final long DEFAULT_ROLLING_UPGRADE_CHORE_DELAY = 30; // 30 seconds
+  static final String ROLLING_UPGRADE_CHORE_DELAY_SECONDS_KEY = "hbase.master.rolling.upgrade.chore.delay.secs";
+  static final long DEFAULT_ROLLING_UPGRADE_CHORE_DELAY_SECONDS = 30; // 30 seconds
 
   static final int CONCURRENT_PROCEDURES_COUNT = 5;
 
@@ -66,8 +66,8 @@ public class RollingUpgradeChore extends ScheduledChore {
 
   private RollingUpgradeChore(Configuration conf, ProcedureExecutor<MasterProcedureEnv> procedureExecutor, TableDescriptors tableDescriptors, Stoppable stopper){
     super(RollingUpgradeChore.class.getSimpleName(), stopper,
-      conf.getInt(ROLLING_UPGRADE_CHORE_PERIOD_KEY, DFAULT_ROLLING_UPGRADE_CHORE_PERIOD),
-      conf.getLong(ROLLING_UPGRADE_CHORE_DELAY_KEY, DEFAULT_ROLLING_UPGRADE_CHORE_DELAY),
+      conf.getInt(ROLLING_UPGRADE_CHORE_PERIOD_SECONDS_KEY, DFAULT_ROLLING_UPGRADE_CHORE_PERIOD_SECONDS),
+      conf.getLong(ROLLING_UPGRADE_CHORE_DELAY_SECONDS_KEY, DEFAULT_ROLLING_UPGRADE_CHORE_DELAY_SECONDS),
       TimeUnit.SECONDS);
     this.procedureExecutor = procedureExecutor;
     this.tableDescriptors = tableDescriptors;
