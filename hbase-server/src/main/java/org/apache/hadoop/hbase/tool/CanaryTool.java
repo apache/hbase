@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.tool;
 
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT;
 import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_ZNODE_PARENT;
-import static org.apache.hadoop.hbase.util.Addressing.InetSocketAddress2String;
+import static org.apache.hadoop.hbase.util.Addressing.inetSocketAddress2String;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.BindException;
@@ -1708,7 +1708,7 @@ public class CanaryTool implements Tool, Canary {
           new ConnectStringParser(ZKConfig.getZKQuorumServersString(configuration));
       hosts = Lists.newArrayList();
       for (InetSocketAddress server : parser.getServerAddresses()) {
-        hosts.add(InetSocketAddress2String(server));
+        hosts.add(inetSocketAddress2String(server));
       }
       if (allowedFailures > (hosts.size() - 1) / 2) {
         LOG.warn(

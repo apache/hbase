@@ -161,7 +161,7 @@ public class Addressing {
    * @param address address to convert to a "host:port" String.
    * @return the String represent of the given address, like "foo:1234".
    */
-  public static String InetSocketAddress2String(InetSocketAddress address) {
+  public static String inetSocketAddress2String(InetSocketAddress address) {
     return address.isUnresolved() ?
       address.toString().replace("/<unresolved>", "") :
       address.toString();
