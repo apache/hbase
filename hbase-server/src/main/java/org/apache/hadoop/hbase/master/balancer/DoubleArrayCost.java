@@ -66,6 +66,9 @@ final class DoubleArrayCost {
   }
 
   private static double computeCost(double[] stats) {
+    if (stats == null || stats.length == 0) {
+      return 0;
+    }
     double totalCost = 0;
     double total = getSum(stats);
 
@@ -74,10 +77,11 @@ final class DoubleArrayCost {
 
     for (int i = 0; i < stats.length; i++) {
       double n = stats[i];
-      double diff = Math.abs(mean - n);
+      double diff = (mean - n) * (mean - n);
       totalCost += diff;
     }
-
+    // No need to compute standard deviation with division by cluster size when scaling.
+    totalCost = Math.sqrt(totalCost);
     return StochasticLoadBalancer.scale(getMinSkew(total, count),
       getMaxSkew(total, count), totalCost);
   }
@@ -95,18 +99,22 @@ final class DoubleArrayCost {
    * @param total is total number of regions
    */
   public static double getMinSkew(double total, double numServers) {
+    if (numServers == 0) {
+      return 0;
+    }
     double mean = total / numServers;
     // It's possible that there aren't enough regions to go around
     double min;
     if (numServers > total) {
-      min = ((numServers - total) * mean + (1 - mean) * total) ;
+      min = ((numServers - total) * mean * mean + (1 - mean) * (1 - mean) * total);
     } else {
       // Some will have 1 more than everything else.
       int numHigh = (int) (total - (Math.floor(mean) * numServers));
       int numLow = (int) (numServers - numHigh);
-      min = numHigh * (Math.ceil(mean) - mean) + numLow * (mean - Math.floor(mean));
+      min = numHigh * (Math.ceil(mean) - mean) * (Math.ceil(mean) - mean) +
+        numLow * (mean - Math.floor(mean)) * (mean - Math.floor(mean));
     }
-    return min;
+    return Math.sqrt(min);
   }
 
   /**
@@ -116,7 +124,10 @@ final class DoubleArrayCost {
    * @param total is total number of regions
    */
   public static double getMaxSkew(double total, double numServers) {
+    if (numServers == 0) {
+      return 0;
+    }
     double mean = total / numServers;
-    return (total - mean) + (numServers - 1) * mean;
+    return Math.sqrt((total - mean) * (total - mean) + (numServers - 1) * mean * mean);
   }
 }
