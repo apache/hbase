@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 class LoadCandidateGenerator extends CandidateGenerator {
 
-  @Override
-  BaseLoadBalancer.Cluster.Action generate(BaseLoadBalancer.Cluster cluster) {
+  @Override BaseLoadBalancer.Cluster.Action generate(BaseLoadBalancer.Cluster cluster) {
     cluster.sortServersByRegionCount();
     int thisServer = pickMostLoadedServer(cluster, -1);
     int otherServer = pickLeastLoadedServer(cluster, thisServer);
@@ -34,27 +34,53 @@ class LoadCandidateGenerator extends CandidateGenerator {
   private int pickLeastLoadedServer(final BaseLoadBalancer.Cluster cluster, int thisServer) {
     Integer[] servers = cluster.serverIndicesSortedByRegionCount;
 
-    int index = 0;
-    while (servers[index] == null || servers[index] == thisServer) {
-      index++;
-      if (index == servers.length) {
-        return -1;
+    int selectedIndex = -1;
+    double currentLargestRandom = -1;
+    for (int i = 0; i < servers.length; i++) {
+      if (servers[i] == null || servers[i] == thisServer) {
+        continue;
+      }
+      if (selectedIndex != -1 && cluster.getNumRegionsComparator().compare(servers[i],
+        servers[selectedIndex]) != 0) {
+        // Exhausted servers of the same region count
+        break;
+      }
+      // we don't know how many servers have the same region count, we will randomly select one
+      // using a simplified inline reservoir sampling by assignmening a random number to  stream
+      // data and choose the greatest one. (http://gregable.com/2007/10/reservoir-sampling.html)
+      double currentRandom = ThreadLocalRandom.current().nextDouble();
+      if (currentRandom > currentLargestRandom) {
+        selectedIndex = i;
+        currentLargestRandom = currentRandom;
       }
     }
-    return servers[index];
+    return selectedIndex == -1 ? -1 : servers[selectedIndex];
   }
 
   private int pickMostLoadedServer(final BaseLoadBalancer.Cluster cluster, int thisServer) {
     Integer[] servers = cluster.serverIndicesSortedByRegionCount;
 
-    int index = servers.length - 1;
-    while (servers[index] == null || servers[index] == thisServer) {
-      index--;
-      if (index < 0) {
-        return -1;
+    int selectedIndex = -1;
+    double currentLargestRandom = -1;
+    for (int i = servers.length - 1; i >= 0; i--) {
+      if (servers[i] == null || servers[i] == thisServer) {
+        continue;
+      }
+      if (selectedIndex != -1
+        && cluster.getNumRegionsComparator().compare(servers[i], servers[selectedIndex]) != 0) {
+        // Exhausted servers of the same region count
+        break;
+      }
+      // we don't know how many servers have the same region count, we will randomly select one
+      // using a simplified inline reservoir sampling by assignmening a random number to  stream
+      // data and choose the greatest one. (http://gregable.com/2007/10/reservoir-sampling.html)
+      double currentRandom = ThreadLocalRandom.current().nextDouble();
+      if (currentRandom > currentLargestRandom) {
+        selectedIndex = i;
+        currentLargestRandom = currentRandom;
       }
     }
-    return servers[index];
+    return selectedIndex == -1 ? -1 : servers[selectedIndex];
   }
 
 }
