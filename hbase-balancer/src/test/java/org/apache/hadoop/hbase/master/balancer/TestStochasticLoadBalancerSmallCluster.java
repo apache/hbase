@@ -58,7 +58,7 @@ public class TestStochasticLoadBalancerSmallCluster extends StochasticBalancerTe
     int numRegionsPerServer = 1; // all servers except one
     int replication = 1;
     int numTables = 10;
-    /* fails because of max moves */
+    // fails because of max moves
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, false,
       false);
   }

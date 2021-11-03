@@ -39,7 +39,6 @@ public class TestStochasticLoadBalancerLargeCluster extends StochasticBalancerTe
     int numTables = 100;
     int replication = 1;
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 6 * 60 * 1000);
-    conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     loadBalancer.onConfigurationChange(conf);
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }

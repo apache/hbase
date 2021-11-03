@@ -45,7 +45,6 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
   public static void beforeAllTests() throws Exception {
     conf = HBaseConfiguration.create();
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
-    conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
     conf.setFloat("hbase.regions.slop", 0.0f);
     conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
     conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", true);
