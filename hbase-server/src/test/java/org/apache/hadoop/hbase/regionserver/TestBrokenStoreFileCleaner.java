@@ -105,7 +105,7 @@ public class TestBrokenStoreFileCleaner {
   }
 
   @Test
-  public void testSkippningCompactedFiles() throws Exception {
+  public void testSkippingCompactedFiles() throws Exception {
     tableName = TableName.valueOf(getClass().getSimpleName() + "testSkippningCompactedFiles");
     createTableWithData(tableName);
 
@@ -125,7 +125,7 @@ public class TestBrokenStoreFileCleaner {
 
     cleaner.chore();
 
-    //verify none of the compacted files wee deleted
+    //verify none of the compacted files were deleted
     int existingCompactedFiles =  store.getCompactedFilesCount();
     assertEquals(compactedFiles, existingCompactedFiles);
 
@@ -145,6 +145,46 @@ public class TestBrokenStoreFileCleaner {
     //verify compacted files are still intact
     existingCompactedFiles =  store.getCompactedFilesCount();
     assertEquals(compactedFiles, existingCompactedFiles);
+  }
+
+  @Test
+  public void testJunkFileTTL() throws Exception {
+    tableName = TableName.valueOf(getClass().getSimpleName() + "testDeletingJunkFile");
+    createTableWithData(tableName);
+
+    HRegion region = testUtil.getMiniHBaseCluster().getRegions(tableName).get(0);
+    ServerName sn = testUtil.getMiniHBaseCluster().getServerHoldingRegion(tableName, region.getRegionInfo().getRegionName());
+    HRegionServer rs = testUtil.getMiniHBaseCluster().getRegionServer(sn);
+
+    //create junk file
+    HStore store = region.getStore(fam);
+    Path cfPath = store.getRegionFileSystem().getStoreDir(store.getColumnFamilyName());
+    Path junkFilePath = new Path(cfPath, junkFileName);
+
+    FSDataOutputStream junkFileOS = store.getFileSystem().create(junkFilePath);
+    junkFileOS.writeUTF("hello");
+    junkFileOS.close();
+
+    int storeFiles =  store.getStorefilesCount();
+    assertTrue(storeFiles > 0);
+
+    //verify the file exist before the chore
+    assertTrue(store.getFileSystem().exists(junkFilePath));
+
+    //set a 5 sec ttl
+    rs.getConfiguration().set(BrokenStoreFileCleaner.BROKEN_STOREFILE_CLEANER_TTL, "5000");
+    BrokenStoreFileCleaner cleaner = new BrokenStoreFileCleaner(15000000,
+      0, rs, rs.getConfiguration(), rs);
+    cleaner.chore();
+    //file is still present after chore run
+    assertTrue(store.getFileSystem().exists(junkFilePath));
+    Thread.sleep(5000);
+    cleaner.chore();
+    assertFalse(store.getFileSystem().exists(junkFilePath));
+
+    //verify no storefile got deleted
+    int currentStoreFiles =  store.getStorefilesCount();
+    assertEquals(currentStoreFiles, storeFiles);
   }
 
   private Table createTableWithData(TableName tableName) throws IOException {

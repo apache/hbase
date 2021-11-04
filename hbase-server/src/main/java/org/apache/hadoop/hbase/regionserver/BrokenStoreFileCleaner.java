@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -39,7 +38,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * This Chore, every time it runs, will clear the unsused HFiles in the data
  * folder.
  */
-@InterfaceAudience.Private public class BrokenStoreFileCleaner extends ScheduledChore {
+@InterfaceAudience.Private
+public class BrokenStoreFileCleaner extends ScheduledChore {
   private static final Logger LOG = LoggerFactory.getLogger(BrokenStoreFileCleaner.class);
   public static final String BROKEN_STOREFILE_CLEANER_ENABLED =
       "hbase.region.broken.storefilecleaner.enabled";
@@ -59,14 +59,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
   private HRegionServer regionServer;
   private final AtomicBoolean enabled = new AtomicBoolean(true);
-  private long ttl;
+  private long fileTtl;
 
   public BrokenStoreFileCleaner(final int delay, final int period, final Stoppable stopper, Configuration conf,
       HRegionServer regionServer) {
     super("BrokenStoreFileCleaner", stopper, period, delay);
     this.regionServer = regionServer;
     setEnabled(conf.getBoolean(BROKEN_STOREFILE_CLEANER_ENABLED, DEFAULT_BROKEN_STOREFILE_CLEANER_ENABLED));
-    ttl = conf.getLong(BROKEN_STOREFILE_CLEANER_TTL, DEFAULT_BROKEN_STOREFILE_CLEANER_TTL);
+    fileTtl = conf.getLong(BROKEN_STOREFILE_CLEANER_TTL, DEFAULT_BROKEN_STOREFILE_CLEANER_TTL);
   }
 
   public boolean setEnabled(final boolean enabled) {
@@ -165,7 +165,7 @@ import java.util.concurrent.atomic.AtomicLong;
   }
 
   boolean isOldEnough(FileStatus file){
-    return file.getModificationTime() + ttl < System.currentTimeMillis();
+    return file.getModificationTime() + fileTtl < EnvironmentEdgeManager.currentTime();
   }
 
   private void deleteFile(FileStatus file, HStore store, AtomicLong deletedFiles, AtomicLong failedDeletes) {

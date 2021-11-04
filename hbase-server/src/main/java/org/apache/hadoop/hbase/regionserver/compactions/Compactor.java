@@ -563,7 +563,7 @@ public abstract class Compactor<T extends CellSink> {
   /**
    * Reset the Writer when the new storefiles were successfully added
    */
-  public  void resetWriter(){
+  public void resetWriter(){
     writer = null;
   }
 }
