@@ -30,6 +30,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MigrateStoreFileTrackerProcedure extends ModifyTableDescriptorProcedure {
 
+  public MigrateStoreFileTrackerProcedure(){}
+
   public MigrateStoreFileTrackerProcedure(MasterProcedureEnv env, TableDescriptor unmodified) {
     super(env, unmodified);
   }
