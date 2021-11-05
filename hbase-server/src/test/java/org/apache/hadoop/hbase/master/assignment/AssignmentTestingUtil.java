@@ -159,6 +159,11 @@ public final class AssignmentTestingUtil {
 
   public static void insertData(final HBaseTestingUtility UTIL, final TableName tableName,
     int rowCount, int startRowNum, String... cfs) throws IOException {
+    insertData(UTIL, tableName, rowCount, startRowNum, false, cfs);
+  }
+
+  public static void insertData(final HBaseTestingUtility UTIL, final TableName tableName,
+    int rowCount, int startRowNum, boolean flushOnce, String... cfs) throws IOException {
     Table t = UTIL.getConnection().getTable(tableName);
     Put p;
     for (int i = 0; i < rowCount / 2; i++) {
@@ -172,9 +177,12 @@ public final class AssignmentTestingUtil {
         p.addColumn(Bytes.toBytes(cf), Bytes.toBytes("q"), Bytes.toBytes(i));
       }
       t.put(p);
-      if (i % 5 == 0) {
+      if (i % 5 == 0 && !flushOnce) {
         UTIL.getAdmin().flush(tableName);
       }
+    }
+    if (flushOnce) {
+      UTIL.getAdmin().flush(tableName);
     }
   }
 }
