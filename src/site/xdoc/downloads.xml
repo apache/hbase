@@ -89,7 +89,7 @@ under the License.
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.8/hbase-2.4.8-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.4.8/hbase-2.4.8-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.8/hbase-2.4.8-bin.tar.gz.asc">asc</a>) <br />
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.8/hbase-2.4.8-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.4.8/hbase-2.4.8-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.8/hbase-2.4.8-client-bin.tar.gz.asc">asc</a>)
       </td>
-      <td />
+      <td><em>stable release</em></td>
     </tr>
     <tr>
       <td style="test-align: left">
@@ -112,7 +112,7 @@ under the License.
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.3.7/hbase-2.3.7-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.3.7/hbase-2.3.7-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.3.7/hbase-2.3.7-bin.tar.gz.asc">asc</a>) <br />
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.3.7/hbase-2.3.7-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.3.7/hbase-2.3.7-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.3.7/hbase-2.3.7-client-bin.tar.gz.asc">asc</a>)
       </td>
-      <td><em>stable release</em></td>
+      <td />
     </tr>
     <tr>
       <td style="test-align: left">
