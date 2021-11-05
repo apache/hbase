@@ -87,8 +87,8 @@ NOTE: End-of-life releases are not included in this list.
 | Release
 | Release Manager
 
-| 1.4
-| Andrew Purtell
+| 1.7
+| Reid Chan
 
 | 2.3
 | Nick Dimiduk
