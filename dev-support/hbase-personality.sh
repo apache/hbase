@@ -599,9 +599,9 @@ function hadoopcheck_rebuild
   elif [[ "${PATCH_BRANCH}" = branch-2.* ]]; then
     yetus_info "Setting Hadoop 2 versions to test based on branch-2.3+ rules."
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.10.0"
+      hbase_hadoop2_versions="2.10.1"
     else
-      hbase_hadoop2_versions="2.10.0"
+      hbase_hadoop2_versions="2.10.0 2.10.1"
     fi
   else
     yetus_info "Setting Hadoop 2 versions to null on master/feature branch rules since we do not support hadoop 2 for hbase 3.x any more."
@@ -620,16 +620,16 @@ function hadoopcheck_rebuild
   elif [[ "${PATCH_BRANCH}" = branch-2.2 ]] || [[ "${PATCH_BRANCH}" = branch-2.3 ]]; then
     yetus_info "Setting Hadoop 3 versions to test based on branch-2.2/branch-2.3 rules"
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.1.2 3.2.1"
+      hbase_hadoop3_versions="3.1.2 3.2.2"
     else
-      hbase_hadoop3_versions="3.1.1 3.1.2 3.2.0 3.2.1"
+      hbase_hadoop3_versions="3.1.1 3.1.2 3.2.0 3.2.1 3.2.2"
     fi
   else
     yetus_info "Setting Hadoop 3 versions to test based on branch-2.4+/master/feature branch rules"
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.1.2 3.2.1 3.3.0"
+      hbase_hadoop3_versions="3.1.2 3.2.2 3.3.1"
     else
-      hbase_hadoop3_versions="3.1.1 3.1.2 3.2.0 3.2.1 3.3.0"
+      hbase_hadoop3_versions="3.1.1 3.1.2 3.2.0 3.2.1 3.2.2 3.3.0 3.3.1"
     fi
   fi
 
