@@ -133,6 +133,7 @@ import org.apache.hadoop.hbase.master.http.MasterStatusServlet;
 import org.apache.hadoop.hbase.master.http.api_v1.ResourceConfigFactory;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
+import org.apache.hadoop.hbase.master.migrate.RollingUpgradeChore;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerManager;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
@@ -360,6 +361,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private ExpiredMobFileCleanerChore expiredMobFileCleanerChore;
   private MobCompactionChore mobCompactChore;
   private MasterMobCompactionThread mobCompactThread;
+  private RollingUpgradeChore rollingUpgradeChore;
   // used to synchronize the mobCompactionStates
   private final IdLock mobCompactionLock = new IdLock();
   // save the information of mob compactions in tables.
@@ -1229,6 +1231,9 @@ public class HMaster extends HRegionServer implements MasterServices {
       LOG.debug("Balancer post startup initialization complete, took " + (
           (EnvironmentEdgeManager.currentTime() - start) / 1000) + " seconds");
     }
+
+    this.rollingUpgradeChore = new RollingUpgradeChore(this);
+    getChoreService().scheduleChore(rollingUpgradeChore);
   }
 
   private void createMissingCFsInMetaDuringUpgrade(
@@ -1712,6 +1717,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       shutdownChore(snapshotCleanerChore);
       shutdownChore(hbckChore);
       shutdownChore(regionsRecoveryChore);
+      shutdownChore(rollingUpgradeChore);
     }
   }
 
