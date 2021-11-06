@@ -440,6 +440,11 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public TableDescriptorBuilder removeValue(final String key) {
+    desc.removeValue(key);
+    return this;
+  }
+
   public TableDescriptorBuilder removeValue(Bytes key) {
     desc.removeValue(key);
     return this;
@@ -786,6 +791,17 @@ public class TableDescriptorBuilder {
       } else {
         return new Bytes(f.apply(t));
       }
+    }
+
+    /**
+     * Remove metadata represented by the key from the {@link #values} map
+     *
+     * @param key Key whose key and value we're to remove from TableDescriptor
+     * parameters.
+     * @return the modifyable TD
+     */
+    public ModifyableTableDescriptor removeValue(final String key) {
+      return setValue(key, (String) null);
     }
 
     /**
