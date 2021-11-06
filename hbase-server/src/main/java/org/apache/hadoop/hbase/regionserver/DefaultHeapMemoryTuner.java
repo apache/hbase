@@ -352,7 +352,18 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
         }
       }
     }
-    LOG.info(tunerLog.toString());
+    // Log NEUTRAL decisions at DEBUG, because they are the most frequent and not that interesting.
+    // Log other decisions at INFO because they are making meaningful operational changes.
+    switch (newTuneDirection) {
+      case NEUTRAL:
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(tunerLog.toString());
+        }
+        break;
+      default:
+        LOG.info(tunerLog.toString());
+        break;
+    }
     return newTuneDirection;
   }
 
