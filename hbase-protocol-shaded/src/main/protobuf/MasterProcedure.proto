@@ -563,3 +563,13 @@ enum SplitWALState {
   DISPATCH_WAL_TO_WORKER = 2;
   RELEASE_SPLIT_WORKER = 3;
 }
+
+enum ModifyTableDescriptorState {
+  MODIFY_TABLE_DESCRIPTOR_PREPARE = 1;
+  MODIFY_TABLE_DESCRIPTOR_UPDATE = 2;
+}
+
+message ModifyTableDescriptorStateData {
+  required TableSchema unmodified_table_schema = 1;
+  optional TableSchema modified_table_schema = 2;
+}
