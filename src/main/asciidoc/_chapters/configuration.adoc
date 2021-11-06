@@ -296,6 +296,7 @@ link:https://hadoop.apache.org/cve_list.html[CVEs] so we drop the support in new
 |Hadoop-3.1.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"]
 |Hadoop-3.1.1+ | icon:times-circle[role="red"] | icon:check-circle[role="green"]
 |Hadoop-3.2.x | icon:times-circle[role="red"] | icon:check-circle[role="green"]
+|Hadoop-3.3.x | icon:times-circle[role="red"] | icon:check-circle[role="green"]
 |===
 
 .Hadoop 2.y.0 Releases
