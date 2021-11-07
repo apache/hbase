@@ -61,7 +61,7 @@ class RegionCountSkewCostFunction extends CostFunction {
   }
 
   @Override
-  protected final void updateWeight(double[] weights) {
+  public final void updateWeight(double[] weights) {
     weights[StochasticLoadBalancer.GeneratorType.LOAD.ordinal()] += cost();
   }
 }

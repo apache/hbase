@@ -77,10 +77,9 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
     RULES_FILE = HTU.getDataTestDir(DEFAULT_RULES_FILE_NAME).toString();
     conf.set(HeterogeneousRegionCountCostFunction.HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE,
       RULES_FILE);
-    loadBalancer = new StochasticLoadBalancer();
+    loadBalancer = new StochasticLoadTestBalancer();
     loadBalancer.setClusterInfoProvider(new DummyClusterInfoProvider(conf));
     loadBalancer.initialize();
-    loadBalancer.getCandidateGenerators().add(new FairRandomCandidateGenerator());
   }
 
   @Test
@@ -300,6 +299,16 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
     @Override
     BalanceAction generate(BalancerClusterState cluster) {
       return super.generate(cluster);
+    }
+  }
+
+  static class StochasticLoadTestBalancer extends StochasticLoadBalancer {
+    private FairRandomCandidateGenerator fairRandomCandidateGenerator =
+      new FairRandomCandidateGenerator();
+
+    @Override
+    protected CandidateGenerator getRandomGenerator() {
+      return fairRandomCandidateGenerator;
     }
   }
 }

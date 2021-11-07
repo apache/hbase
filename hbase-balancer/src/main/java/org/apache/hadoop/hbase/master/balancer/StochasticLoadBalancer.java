@@ -129,7 +129,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private int numRegionLoadsToRemember = 15;
   private float minCostNeedBalance = 0.025f;
 
-  private List<CandidateGenerator> candidateGenerators;
   private List<CostFunction> costFunctions; // FindBugs: Wants this protected; IS2_INCONSISTENT_SYNC
   // To save currently configed sum of multiplier. Defaulted at 1 for cases that carry high cost
   private float sumMultiplier;
@@ -137,18 +136,32 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private double curOverallCost = 0d;
   private double[] tempFunctionCosts;
   private double[] curFunctionCosts;
-  private double[] weightOfGenerator;
+  private double[] weightsOfGenerators;
 
-  // Keep locality based picker and cost function to alert them
+  // Keep locality based   cost function to alert them
   // when new services are offered
-  private LocalityBasedCandidateGenerator localityCandidateGenerator;
   private ServerLocalityCostFunction localityCost;
   private RackLocalityCostFunction rackLocalityCost;
   private RegionReplicaHostCostFunction regionReplicaHostCostFunction;
   private RegionReplicaRackCostFunction regionReplicaRackCostFunction;
 
+  protected List<CandidateGenerator> candidateGenerators;
+
   public enum GeneratorType {
-    RANDOM, LOAD, LOCALITY, RACK,
+    RANDOM(new RandomCandidateGenerator()),
+    LOAD(new LoadCandidateGenerator()),
+    LOCALITY(new LocalityBasedCandidateGenerator()),
+    RACK(new RegionReplicaRackCandidateGenerator());
+
+    private final CandidateGenerator generator;
+
+    private GeneratorType(CandidateGenerator generator) {
+      this.generator = generator;
+    }
+
+    public CandidateGenerator getGenerator(){
+      return generator;
+    }
   }
 
   /**
@@ -196,12 +209,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
   }
 
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
-  List<CandidateGenerator> getCandidateGenerators() {
-    return this.candidateGenerators;
-  }
-
   @Override
   protected float getDefaultSlop() {
     return 0.001f;
@@ -209,11 +216,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   protected List<CandidateGenerator> createCandidateGenerators() {
     List<CandidateGenerator> candidateGenerators = new ArrayList<CandidateGenerator>(4);
-    candidateGenerators.add(GeneratorType.RANDOM.ordinal(), new RandomCandidateGenerator());
-    candidateGenerators.add(GeneratorType.LOAD.ordinal(), new LoadCandidateGenerator());
-    candidateGenerators.add(GeneratorType.LOCALITY.ordinal(), localityCandidateGenerator);
-    candidateGenerators.add(GeneratorType.RACK.ordinal(),
-      new RegionReplicaRackCandidateGenerator());
+    for (GeneratorType generatorType : GeneratorType.values()) {
+      candidateGenerators.add(generatorType.getGenerator());
+    }
     return candidateGenerators;
   }
 
@@ -227,7 +232,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     numRegionLoadsToRemember = conf.getInt(KEEP_REGION_LOADS, numRegionLoadsToRemember);
     minCostNeedBalance = conf.getFloat(MIN_COST_NEED_BALANCE_KEY, minCostNeedBalance);
-    localityCandidateGenerator = new LocalityBasedCandidateGenerator();
     localityCost = new ServerLocalityCostFunction(conf);
     rackLocalityCost = new RackLocalityCostFunction(conf);
 
@@ -386,25 +390,29 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
     allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   BalanceAction nextAction(BalancerClusterState cluster) {
-    return candidateGenerators.get(ThreadLocalRandom.current().nextInt(candidateGenerators.size()))
-      .generate(cluster);
+    return getRandomGenerator().generate(cluster);
   }
 
-  private CandidateGenerator getRandomGenerate() {
+  /**
+   * Select the candidate generator to use based on the cost of cost functions. The chance of
+   * selecting a candidate generator is propotional to the share of cost of all cost functions among
+   * all cost functions that benefit from it.
+   */
+  protected CandidateGenerator getRandomGenerator() {
     double sum = 0;
-    for (int i = 0; i < weightOfGenerator.length; i++) {
-      sum += weightOfGenerator[i];
-      weightOfGenerator[i] = sum;
+    for (int i = 0; i < weightsOfGenerators.length; i++) {
+      sum += weightsOfGenerators[i];
+      weightsOfGenerators[i] = sum;
     }
     if (sum == 0) {
       return candidateGenerators.get(0);
     }
-    for (int i = 0; i < weightOfGenerator.length; i++) {
-      weightOfGenerator[i] /= sum;
+    for (int i = 0; i < weightsOfGenerators.length; i++) {
+      weightsOfGenerators[i] /= sum;
     }
     double rand = ThreadLocalRandom.current().nextDouble();
-    for (int i = 0; i < weightOfGenerator.length; i++) {
-      if (rand <= weightOfGenerator[i]) {
+    for (int i = 0; i < weightsOfGenerators.length; i++) {
+      if (rand <= weightsOfGenerators[i]) {
         return candidateGenerators.get(i);
       }
     }
@@ -494,8 +502,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     long step;
 
     for (step = 0; step < computedMaxSteps; step++) {
-      // Initialize the weights of generator every time
-      weightOfGenerator = new double[this.candidateGenerators.size()];
       BalanceAction action = nextAction(cluster);
 
       if (action.getType() == BalanceAction.Type.NULL) {
@@ -503,7 +509,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
 
       cluster.doAction(action);
-      updateCostsWithAction(cluster, action);
+      updateCostsAndWeightsWithAction(cluster, action);
 
       newCost = computeCost(cluster, currentCost);
 
@@ -519,7 +525,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         // TODO: undo by remembering old values
         BalanceAction undoAction = action.undoAction();
         cluster.doAction(undoAction);
-        updateCostsWithAction(cluster, undoAction);
+        updateCostsAndWeightsWithAction(cluster, undoAction);
       }
 
       if (EnvironmentEdgeManager.currentTime() - startTime >
@@ -714,17 +720,28 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
     allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   void initCosts(BalancerClusterState cluster) {
+    // Initialize the weights of generator every time
+    weightsOfGenerators = new double[this.candidateGenerators.size()];
     for (CostFunction c : costFunctions) {
       c.prepare(cluster);
+      c.updateWeight(weightsOfGenerators);
     }
   }
 
+  /**
+   * Update both the costs of costfunctions and the weights of candidate generators
+   */
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
     allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
-  void updateCostsWithAction(BalancerClusterState cluster, BalanceAction action) {
+  void updateCostsAndWeightsWithAction(BalancerClusterState cluster, BalanceAction action) {
+    // Reset all the weights to 0
+    for (int i = 0; i < weightsOfGenerators.length; i++) {
+      weightsOfGenerators[i] = 0;
+    }
     for (CostFunction c : costFunctions) {
       if (c.isNeeded()) {
         c.postAction(action);
+        c.updateWeight(weightsOfGenerators);
       }
     }
   }

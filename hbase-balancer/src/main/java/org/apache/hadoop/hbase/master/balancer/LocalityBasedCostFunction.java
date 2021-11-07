@@ -89,7 +89,7 @@ abstract class LocalityBasedCostFunction extends CostFunction {
   }
 
   @Override
-  protected final void updateWeight(double[] weights) {
+  public final void updateWeight(double[] weights) {
     weights[StochasticLoadBalancer.GeneratorType.LOCALITY.ordinal()] += cost();
   }
 }

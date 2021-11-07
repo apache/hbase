@@ -27,6 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Generates a candidate action to be applied to the cluster for cost function search
  */
 @InterfaceAudience.Private
+@com.google.errorprone.annotations.Immutable
 abstract class CandidateGenerator {
 
   abstract BalanceAction generate(BalancerClusterState cluster);

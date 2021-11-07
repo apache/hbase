@@ -39,7 +39,8 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
 
   protected static StochasticLoadBalancer loadBalancer;
 
-  protected static DummyMetricsStochasticBalancer dummyMetricsStochasticBalancer = new DummyMetricsStochasticBalancer();
+  protected static DummyMetricsStochasticBalancer dummyMetricsStochasticBalancer = new
+    DummyMetricsStochasticBalancer();
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -58,7 +59,17 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
     boolean assertFullyBalancedForReplicas) {
     Map<ServerName, List<RegionInfo>> serverMap =
       createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
-    testWithCluster(serverMap, null, assertFullyBalanced, assertFullyBalancedForReplicas);
+    testWithCluster(serverMap, null, assertFullyBalanced,
+      assertFullyBalancedForReplicas);
+  }
+
+  protected void testWithClusterWithIteration(int numNodes, int numRegions, int numRegionsPerServer,
+    int replication, int numTables, boolean assertFullyBalanced,
+    boolean assertFullyBalancedForReplicas) {
+    Map<ServerName, List<RegionInfo>> serverMap =
+      createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
+    testWithClusterWithIteration(serverMap, null, assertFullyBalanced,
+      assertFullyBalancedForReplicas);
   }
 
   protected void testWithCluster(Map<ServerName, List<RegionInfo>> serverMap,
@@ -102,7 +113,8 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
 
     loadBalancer.setRackManager(rackManager);
     // Run the balancer.
-    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable = (Map) mockClusterServersWithTables(serverMap);
+    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
+      (Map) mockClusterServersWithTables(serverMap);
     List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
     assertNotNull("Initial cluster balance should produce plans.", plans);
 
