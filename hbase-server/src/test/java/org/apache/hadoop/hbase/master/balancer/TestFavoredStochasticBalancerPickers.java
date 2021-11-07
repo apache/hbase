@@ -197,8 +197,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
           + cluster.servers[servers[servers.length -1]]);
     }
     assertEquals(mostLoadedServer, cluster.servers[servers[servers.length - 1]]);
-    FavoredStochasticBalancer.FavoredNodeLoadPicker loadPicker =
-      balancer.new FavoredNodeLoadPicker();
+    FavoredNodeLoadPicker loadPicker = new FavoredNodeLoadPicker(fnm);
     boolean userRegionPicked = false;
     for (int i = 0; i < 100; i++) {
       if (userRegionPicked) {

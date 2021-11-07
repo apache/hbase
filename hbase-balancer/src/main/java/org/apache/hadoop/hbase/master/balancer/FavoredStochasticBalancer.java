@@ -75,7 +75,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
 
   private static final Logger LOG = LoggerFactory.getLogger(FavoredStochasticBalancer.class);
 
-  private FavoredNodesManager fnm;
+  protected FavoredNodesManager fnm;
 
   @Override
   public void setFavoredNodesManager(FavoredNodesManager fnm) {
@@ -85,8 +85,8 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   @Override
   protected List<CandidateGenerator> createCandidateGenerators() {
     List<CandidateGenerator> fnPickers = new ArrayList<>(2);
-    fnPickers.add(new FavoredNodeLoadPicker());
-    fnPickers.add(new FavoredNodeLocalityPicker());
+    fnPickers.add(new FavoredNodeLoadPicker(fnm));
+    fnPickers.add(new FavoredNodeLocalityPicker(fnm));
     return fnPickers;
   }
 
@@ -514,147 +514,6 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   public void generateFavoredNodesForMergedRegion(RegionInfo merged, RegionInfo [] mergeParents)
       throws IOException {
     updateFavoredNodesForRegion(merged, fnm.getFavoredNodes(mergeParents[0]));
-  }
-
-  /**
-   * Pick favored nodes with the highest locality for a region with lowest locality.
-   */
-  private class FavoredNodeLocalityPicker extends CandidateGenerator {
-
-    @Override
-    protected BalanceAction generate(BalancerClusterState cluster) {
-
-      int thisServer = pickRandomServer(cluster);
-      int thisRegion;
-      if (thisServer == -1) {
-        LOG.trace("Could not pick lowest local region server");
-        return BalanceAction.NULL_ACTION;
-      } else {
-        // Pick lowest local region on this server
-        thisRegion = pickLowestLocalRegionOnServer(cluster, thisServer);
-      }
-      if (thisRegion == -1) {
-        if (cluster.regionsPerServer[thisServer].length > 0) {
-          LOG.trace("Could not pick lowest local region even when region server held "
-            + cluster.regionsPerServer[thisServer].length + " regions");
-        }
-        return BalanceAction.NULL_ACTION;
-      }
-
-      RegionInfo hri = cluster.regions[thisRegion];
-      List<ServerName> favoredNodes = fnm.getFavoredNodes(hri);
-      int otherServer;
-      if (favoredNodes == null) {
-        if (!FavoredNodesManager.isFavoredNodeApplicable(hri)) {
-          otherServer = pickOtherRandomServer(cluster, thisServer);
-        } else {
-          // No FN, ignore
-          LOG.trace("Ignoring, no favored nodes for region: " + hri);
-          return BalanceAction.NULL_ACTION;
-        }
-      } else {
-        // Pick other favored node with the highest locality
-        otherServer = getDifferentFavoredNode(cluster, favoredNodes, thisServer);
-      }
-      return getAction(thisServer, thisRegion, otherServer, -1);
-    }
-
-    private int getDifferentFavoredNode(BalancerClusterState cluster, List<ServerName> favoredNodes,
-        int currentServer) {
-      List<Integer> fnIndex = new ArrayList<>();
-      for (ServerName sn : favoredNodes) {
-        if (cluster.serversToIndex.containsKey(sn.getAddress())) {
-          fnIndex.add(cluster.serversToIndex.get(sn.getAddress()));
-        }
-      }
-      float locality = 0;
-      int highestLocalRSIndex = -1;
-      for (Integer index : fnIndex) {
-        if (index != currentServer) {
-          float temp = cluster.localityPerServer[index];
-          if (temp >= locality) {
-            locality = temp;
-            highestLocalRSIndex = index;
-          }
-        }
-      }
-      return highestLocalRSIndex;
-    }
-
-    private int pickLowestLocalRegionOnServer(BalancerClusterState cluster, int server) {
-      return cluster.getLowestLocalityRegionOnServer(server);
-    }
-  }
-
-  /*
-   * This is like LoadCandidateGenerator, but we choose appropriate FN for the region on the
-   * most loaded server.
-   */
-  class FavoredNodeLoadPicker extends CandidateGenerator {
-
-    @Override
-    BalanceAction generate(BalancerClusterState cluster) {
-      cluster.sortServersByRegionCount();
-      int thisServer = pickMostLoadedServer(cluster);
-      int thisRegion = pickRandomRegion(cluster, thisServer, 0);
-      RegionInfo hri = cluster.regions[thisRegion];
-      int otherServer;
-      List<ServerName> favoredNodes = fnm.getFavoredNodes(hri);
-      if (favoredNodes == null) {
-        if (!FavoredNodesManager.isFavoredNodeApplicable(hri)) {
-          otherServer = pickLeastLoadedServer(cluster, thisServer);
-        } else {
-          return BalanceAction.NULL_ACTION;
-        }
-      } else {
-        otherServer = pickLeastLoadedFNServer(cluster, favoredNodes, thisServer);
-      }
-      return getAction(thisServer, thisRegion, otherServer, -1);
-    }
-
-    private int pickLeastLoadedServer(final BalancerClusterState cluster, int thisServer) {
-      Integer[] servers = cluster.serverIndicesSortedByRegionCount;
-      int index;
-      for (index = 0; index < servers.length ; index++) {
-        if ((servers[index] != null) && servers[index] != thisServer) {
-          break;
-        }
-      }
-      return servers[index];
-    }
-
-    private int pickLeastLoadedFNServer(final BalancerClusterState cluster,
-      List<ServerName> favoredNodes, int currentServerIndex) {
-      List<Integer> fnIndex = new ArrayList<>();
-      for (ServerName sn : favoredNodes) {
-        if (cluster.serversToIndex.containsKey(sn.getAddress())) {
-          fnIndex.add(cluster.serversToIndex.get(sn.getAddress()));
-        }
-      }
-      int leastLoadedFN = -1;
-      int load = Integer.MAX_VALUE;
-      for (Integer index : fnIndex) {
-        if (index != currentServerIndex) {
-          int temp = cluster.getNumRegions(index);
-          if (temp < load) {
-            load = temp;
-            leastLoadedFN = index;
-          }
-        }
-      }
-      return leastLoadedFN;
-    }
-
-    private int pickMostLoadedServer(final BalancerClusterState cluster) {
-      Integer[] servers = cluster.serverIndicesSortedByRegionCount;
-      int index;
-      for (index = servers.length - 1; index > 0 ; index--) {
-        if (servers[index] != null) {
-          break;
-        }
-      }
-      return servers[index];
-    }
   }
 
   /**
