@@ -28,7 +28,7 @@ public class LoadOnlyFavoredStochasticBalancer extends FavoredStochasticBalancer
   @Override
   protected List<CandidateGenerator> createCandidateGenerators() {
     List<CandidateGenerator> fnPickers = new ArrayList<>(1);
-    fnPickers.add(new FavoredNodeLoadPicker(fnm));
+    fnPickers.add(new FavoredNodeLoadPicker());
     return fnPickers;
   }
 }

@@ -138,8 +138,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private double[] curFunctionCosts;
   private double[] weightsOfGenerators;
 
-  // Keep locality based   cost function to alert them
+  // Keep locality based picker and cost function to alert them
   // when new services are offered
+  private LocalityBasedCandidateGenerator localityCandidateGenerator;
   private ServerLocalityCostFunction localityCost;
   private RackLocalityCostFunction rackLocalityCost;
   private RegionReplicaHostCostFunction regionReplicaHostCostFunction;
@@ -148,20 +149,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   protected List<CandidateGenerator> candidateGenerators;
 
   public enum GeneratorType {
-    RANDOM(new RandomCandidateGenerator()),
-    LOAD(new LoadCandidateGenerator()),
-    LOCALITY(new LocalityBasedCandidateGenerator()),
-    RACK(new RegionReplicaRackCandidateGenerator());
-
-    private final CandidateGenerator generator;
-
-    private GeneratorType(CandidateGenerator generator) {
-      this.generator = generator;
-    }
-
-    public CandidateGenerator getGenerator(){
-      return generator;
-    }
+    RANDOM, LOAD, LOCALITY, RACK
   }
 
   /**
@@ -209,6 +197,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  List<CandidateGenerator> getCandidateGenerators() {
+    return this.candidateGenerators;
+  }
+
   @Override
   protected float getDefaultSlop() {
     return 0.001f;
@@ -216,9 +210,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   protected List<CandidateGenerator> createCandidateGenerators() {
     List<CandidateGenerator> candidateGenerators = new ArrayList<CandidateGenerator>(4);
-    for (GeneratorType generatorType : GeneratorType.values()) {
-      candidateGenerators.add(generatorType.getGenerator());
-    }
+    candidateGenerators.add(GeneratorType.RANDOM.ordinal(), new RandomCandidateGenerator());
+    candidateGenerators.add(GeneratorType.LOAD.ordinal(), new LoadCandidateGenerator());
+    candidateGenerators.add(GeneratorType.LOCALITY.ordinal(), localityCandidateGenerator);
+    candidateGenerators.add(GeneratorType.RACK.ordinal(),
+      new RegionReplicaRackCandidateGenerator());
     return candidateGenerators;
   }
 
@@ -232,6 +228,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     numRegionLoadsToRemember = conf.getInt(KEEP_REGION_LOADS, numRegionLoadsToRemember);
     minCostNeedBalance = conf.getFloat(MIN_COST_NEED_BALANCE_KEY, minCostNeedBalance);
+    localityCandidateGenerator = new LocalityBasedCandidateGenerator();
     localityCost = new ServerLocalityCostFunction(conf);
     rackLocalityCost = new RackLocalityCostFunction(conf);
 
