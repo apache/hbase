@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_REGION_SPLIT_USE_HFILELINK_ENABLED;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
@@ -52,6 +54,8 @@ public abstract class RegionSplitPolicy extends Configured {
    */
   protected HRegion region;
 
+  protected boolean isLinkFileEnabledInSplit = false;
+
   /**
    * Upon construction, this method will be called with the region
    * to be governed. It will be called once and only once.
@@ -63,6 +67,17 @@ public abstract class RegionSplitPolicy extends Configured {
         this.region);
 
     this.region = region;
+  }
+
+  public void setLinkFileEnabledInSplit(TableDescriptor td, Configuration conf) {
+    String enabledValue = td.getValue(HBASE_REGION_SPLIT_USE_HFILELINK_ENABLED);
+    this.isLinkFileEnabledInSplit = StringUtils.isEmpty(enabledValue) ?
+      conf.getBoolean(HBASE_REGION_SPLIT_USE_HFILELINK_ENABLED, false) :
+      Boolean.parseBoolean(enabledValue);
+  }
+
+  public boolean isLinkFileEnabledInSplit() {
+    return this.isLinkFileEnabledInSplit;
   }
 
   /**
@@ -115,6 +130,7 @@ public abstract class RegionSplitPolicy extends Configured {
         region.getTableDescriptor(), conf);
     RegionSplitPolicy policy = ReflectionUtils.newInstance(clazz, conf);
     policy.configureForRegion(region);
+    policy.setLinkFileEnabledInSplit(region.getTableDescriptor(), conf);
     return policy;
   }
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.io.HFileLink.LINK_NAME_PATTERN;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Matcher;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -39,11 +41,13 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -53,7 +57,6 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -662,15 +665,17 @@ public class HRegionFileSystem {
       LOG.warn("Found an already existing split file for {}. Assuming this is a recovery.", p);
       return p;
     }
+    boolean createLinkFile = false;
     if (splitPolicy == null || !splitPolicy.skipStoreFileRangeCheck(familyName)) {
       // Check whether the split row lies in the range of the store file
       // If it is outside the range, return directly.
       f.initReader();
       try {
         Cell splitKey = PrivateCellUtil.createFirstOnRow(splitRow);
+        Optional<Cell> lastKey = f.getLastKey();
+        Optional<Cell> firstKey = f.getFirstKey();
         if (top) {
           //check if larger than last key.
-          Optional<Cell> lastKey = f.getLastKey();
           // If lastKey is null means storefile is empty.
           if (!lastKey.isPresent()) {
             return null;
@@ -678,9 +683,13 @@ public class HRegionFileSystem {
           if (f.getComparator().compare(splitKey, lastKey.get()) > 0) {
             return null;
           }
+          if (splitPolicy != null && splitPolicy.isLinkFileEnabledInSplit() && firstKey.isPresent()
+            && f.getComparator().compare(splitKey, firstKey.get()) <= 0) {
+            LOG.debug("Will create linkFile for " + f.getPath() + ", top=true");
+            createLinkFile = true;
+          }
         } else {
           //check if smaller than first key
-          Optional<Cell> firstKey = f.getFirstKey();
           // If firstKey is null means storefile is empty.
           if (!firstKey.isPresent()) {
             return null;
@@ -688,9 +697,43 @@ public class HRegionFileSystem {
           if (f.getComparator().compare(splitKey, firstKey.get()) < 0) {
             return null;
           }
+          if (splitPolicy != null && splitPolicy.isLinkFileEnabledInSplit() && lastKey.isPresent()
+            && f.getComparator().compare(splitKey, lastKey.get()) >= 0) {
+            LOG.debug("Will create linkFile for " + f.getPath() + ", top=false");
+            createLinkFile = true;
+          }
         }
       } finally {
         f.closeStoreFile(f.getCacheConf() != null ? f.getCacheConf().shouldEvictOnClose() : true);
+      }
+    }
+    if (createLinkFile) {
+      // create HFileLink file instead of Reference file for child
+      String hfileName = f.getPath().getName();
+      TableName linkedTable = regionInfoForFs.getTable();
+      String linkedRegion = regionInfoForFs.getEncodedName();
+      try {
+        if (HFileLink.isHFileLink(hfileName)) {
+          Matcher m = LINK_NAME_PATTERN.matcher(hfileName);
+          if (!m.matches()) {
+            throw new IllegalArgumentException(hfileName + " is not a valid HFileLink name!");
+          }
+          linkedTable = TableName.valueOf(m.group(1), m.group(2));
+          linkedRegion = m.group(3);
+          hfileName = m.group(4);
+        }
+        // must create back reference here
+        HFileLink.create(conf, fs, splitDir, familyName, hri.getTable().getNameAsString(),
+          hri.getEncodedName(), linkedTable, linkedRegion, hfileName, true);
+        Path path =
+          new Path(splitDir, HFileLink.createHFileLinkName(linkedTable, linkedRegion, hfileName));
+        LOG.info("Created linkFile:" + path.toString() + " for child: " + hri.getEncodedName()
+          + ", parent: " + regionInfoForFs.getEncodedName());
+        return path;
+      } catch (IOException e) {
+        // if create HFileLink file failed, then just skip the error and create Reference file
+        LOG.error("Create link file for " + hfileName + " for child " + hri.getEncodedName()
+          + "failed, will create Reference file", e);
       }
     }
     // A reference to the bottom half of the hsf store file.

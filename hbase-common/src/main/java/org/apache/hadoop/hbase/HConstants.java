@@ -1038,6 +1038,9 @@ public final class HConstants {
   public static final String HBASE_REGION_SPLIT_POLICY_KEY =
     "hbase.regionserver.region.split.policy";
 
+  public static final String HBASE_REGION_SPLIT_USE_HFILELINK_ENABLED =
+    "hbase.regionserver.region.split.use.hfilelink.enabled";
+
   /** Whether nonces are enabled; default is true. */
   public static final String HBASE_RS_NONCES_ENABLED = "hbase.regionserver.nonces.enabled";
 
