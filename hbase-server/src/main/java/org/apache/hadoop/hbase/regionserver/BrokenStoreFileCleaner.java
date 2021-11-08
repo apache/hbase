@@ -77,8 +77,8 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
     return this.enabled.get();
   }
 
-  @InterfaceAudience.Private
-  @Override public void chore() {
+  @Override
+  public void chore() {
     if (getEnabled()) {
       long start = EnvironmentEdgeManager.currentTime();
       AtomicLong deletedFiles = new AtomicLong(0);
@@ -132,12 +132,14 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
       return;
     }
 
+    // Compacted files can still have readers and are cleaned by a separate chore, so they have to
+    // be skipped here
     if(isCompactedFile(file, store)){
       LOG.trace("Cleanup is done by a different chore for file {}, skip cleanup", file.getPath());
       return;
     }
 
-    if(isCompactingFile(file, store)){
+    if(isCompactionResultFile(file, store)){
       LOG.trace("The file is the result of an ongoing compaction {}, skip cleanup", file.getPath());
       return;
     }
@@ -145,7 +147,7 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
     deleteFile(file, store, deletedFiles, failedDeletes);
   }
 
-  private boolean isCompactingFile(FileStatus file, HStore store) {
+  private boolean isCompactionResultFile(FileStatus file, HStore store) {
     return store.getStoreEngine().getCompactor().getCompactionTargets().contains(file.getPath());
   }
 
