@@ -30,4 +30,12 @@ public class  ConfigUtil {
     // To change the default, please also update ZooKeeperWatcher.java
     return conf.getBoolean("hbase.assignment.usezk", true);
   }
+
+  public static boolean isZKAssignmentInUse(Configuration conf) {
+    // ZK based region assignment is in use only if "hbase.assignment.usezk" is true
+    // and "hbase.assignment.usezk.migrating" is false.
+    return ConfigUtil.useZKForAssignment(conf) && !conf
+      .getBoolean("hbase.assignment.usezk.migrating", false);
+  }
+
 }

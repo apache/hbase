@@ -75,8 +75,7 @@ public class RegionStateStore {
    */
   static ServerName getRegionServer(final Result r, int replicaId, Configuration config) {
     Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getServerNameColumn(replicaId));
-    boolean isZKAssignmentInUse = ConfigUtil.useZKForAssignment(config) && !config
-      .getBoolean("hbase.assignment.usezk.migrating", false);
+    boolean isZKAssignmentInUse = ConfigUtil.isZKAssignmentInUse(config);
     if (cell == null || cell.getValueLength() == 0 || isZKAssignmentInUse) {
       RegionLocations locations = MetaTableAccessor.getRegionLocations(r);
       if (locations != null) {
@@ -105,8 +104,7 @@ public class RegionStateStore {
    */
   static State getRegionState(final Result r, int replicaId, Configuration config) {
     Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getStateColumn(replicaId));
-    boolean isZKAssignmentInUse = ConfigUtil.useZKForAssignment(config) && !config
-      .getBoolean("hbase.assignment.usezk.migrating", false);
+    boolean isZKAssignmentInUse = ConfigUtil.isZKAssignmentInUse(config);
     if (cell == null || cell.getValueLength() == 0 || isZKAssignmentInUse) {
       return State.OPEN;
     }

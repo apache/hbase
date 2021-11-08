@@ -3347,9 +3347,7 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   void deleteNonZkBasedQualifiersForZkBasedAssignment() throws IOException {
-    boolean isZKAssignmentInUse =
-      ConfigUtil.useZKForAssignment(server.getConfiguration()) && !server.getConfiguration()
-        .getBoolean("hbase.assignment.usezk.migrating", false);
+    boolean isZKAssignmentInUse = ConfigUtil.isZKAssignmentInUse(server.getConfiguration());
     if (isZKAssignmentInUse) {
       List<Result> results = MetaTableAccessor.fullScanOfMeta(server.getConnection());
       List<Delete> redundantCQDeletes = new ArrayList<>();
