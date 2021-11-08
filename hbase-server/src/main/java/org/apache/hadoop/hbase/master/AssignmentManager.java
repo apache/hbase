@@ -3358,6 +3358,7 @@ public class AssignmentManager extends ZooKeeperListener {
         }
         HRegionLocation[] locations = rl.getRegionLocations();
         if (locations == null) {
+          LOG.error("No location found for " + rl);
           continue;
         }
         for (HRegionLocation hrl : locations) {
@@ -3366,6 +3367,7 @@ public class AssignmentManager extends ZooKeeperListener {
           }
           HRegionInfo regionInfo = hrl.getRegionInfo();
           if (regionInfo == null) {
+            LOG.error("No region info found " + hrl);
             continue;
           }
           int replicaId = regionInfo.getReplicaId();
@@ -3374,7 +3376,8 @@ public class AssignmentManager extends ZooKeeperListener {
           if (cell != null && cell.getValueLength() > 0) {
             Delete delete =
               new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-            delete.addColumns(HConstants.CATALOG_FAMILY, HConstants.SERVERNAME_QUALIFIER);
+            delete.addColumns(HConstants.CATALOG_FAMILY,
+              RegionStateStore.getServerNameColumn(replicaId));
             redundantCQDeletes.add(delete);
           }
           cell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
@@ -3382,12 +3385,16 @@ public class AssignmentManager extends ZooKeeperListener {
           if (cell != null && cell.getValueLength() > 0) {
             Delete delete =
               new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-            delete.addColumns(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER);
+            delete
+              .addColumns(HConstants.CATALOG_FAMILY, RegionStateStore.getStateColumn(replicaId));
             redundantCQDeletes.add(delete);
           }
         }
       }
       if (!redundantCQDeletes.isEmpty()) {
+        LOG.info("Meta contains multiple info:sn and/or info:state values that are not required "
+          + "for ZK based region assignment workflows. Preparing to delete these CQs. Number of"
+          + " Deletes: " + redundantCQDeletes.size());
         MetaTableAccessor.deleteFromMetaTable(server.getConnection(), redundantCQDeletes);
       }
     }
