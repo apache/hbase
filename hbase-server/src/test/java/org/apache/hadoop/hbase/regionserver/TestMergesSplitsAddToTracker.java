@@ -18,11 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.
-<<<<<<< HEAD
   TRACKER_IMPL;
-=======
-  TRACK_IMPL;
->>>>>>> HBASE-26079 Use StoreFileTracker when splitting and merging (#3617)
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
