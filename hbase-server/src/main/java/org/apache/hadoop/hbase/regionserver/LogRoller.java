@@ -157,11 +157,13 @@ public class LogRoller extends HasThread {
           }
         }
         if (!periodic) {
-          try {
-            rollLog.wait(this.threadWakeFrequency);
-          } catch (InterruptedException e) {
-            // Fall through
-            LOG.info("LogRoller interrupted ", e);
+          synchronized (rollLog) {
+            try {
+              rollLog.wait(this.threadWakeFrequency);
+            } catch (InterruptedException e) {
+              // Fall through
+              LOG.info("LogRoller interrupted ", e);
+            }
           }
           continue;
         }
