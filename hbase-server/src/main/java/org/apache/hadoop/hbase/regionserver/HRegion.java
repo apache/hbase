@@ -1107,8 +1107,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return;
     }
     status.setStatus("Initializaing region replication sink");
-    regionReplicationSink = Optional.of(new RegionReplicationSink(conf, regionInfo,
-      regionReplication, td.hasRegionMemStoreReplication(), rss.getAsyncClusterConnection()));
+    regionReplicationSink = Optional.of(new RegionReplicationSink(conf, regionInfo, td, () -> {
+      rss.getFlushRequester().requestFlush(this, new ArrayList<>(td.getColumnFamilyNames()),
+        FlushLifeCycleTracker.DUMMY);
+    }, rss.getAsyncClusterConnection()));
+
   }
 
   /**
