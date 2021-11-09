@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.apache.hadoop.hbase.regionserver.StripeStoreConfig.MAX_FILES_KEY;
+import static org.apache.hadoop.hbase.regionserver.StripeStoreConfig.MIN_FILES_KEY;
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
 import static org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY;
 import static org.junit.Assert.assertEquals;
@@ -38,6 +39,7 @@ import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +47,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.OptionalLong;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -91,6 +94,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentMatcher;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -537,6 +541,44 @@ public class TestStripeCompactionPolicy {
     }
     verifyCompaction(policy, si, compactFile, false, 1, null, si.getStartRow(0), si.getEndRow(0),
       true);
+  }
+
+  @Test
+  public void testCheckExpiredL0Compaction() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    int minL0 = 100;
+    conf.setInt(StripeStoreConfig.MIN_FILES_L0_KEY, minL0);
+    conf.setInt(MIN_FILES_KEY, 4);
+
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    long now = defaultTtl + 2;
+    edge.setValue(now);
+    EnvironmentEdgeManager.injectEdge(edge);
+    HStoreFile expiredFile = createFile(10), notExpiredFile = createFile(10);
+    when(expiredFile.getReader().getMaxTimestamp()).thenReturn(now - defaultTtl - 1);
+    when(notExpiredFile.getReader().getMaxTimestamp()).thenReturn(now - defaultTtl + 1);
+    List<HStoreFile> expired = Lists.newArrayList(expiredFile, expiredFile);
+    List<HStoreFile> mixed = Lists.newArrayList(expiredFile, notExpiredFile);
+
+    StripeCompactionPolicy policy =
+        createPolicy(conf, defaultSplitSize, defaultSplitCount, defaultInitialCount, true);
+    // Merge expired if there are eligible stripes.
+    StripeCompactionPolicy.StripeInformationProvider si =
+        createStripesWithFiles(null, new ArrayList<>(), mixed);
+    assertFalse(policy.needsCompactions(si, al()));
+
+    List<HStoreFile> largeMixed = new ArrayList<>();
+    for (int i = 0; i < minL0 - 1; i++) {
+      largeMixed.add(i % 2 == 0 ? notExpiredFile : expiredFile);
+    }
+    si = createStripesWithFiles(null, new ArrayList<>(), largeMixed);
+    assertFalse(policy.needsCompactions(si, al()));
+
+    si = createStripesWithFiles(null, new ArrayList<>(), expired);
+    assertFalse(policy.needsSingleStripeCompaction(si));
+    assertFalse(policy.hasExpiredStripes(si));
+    assertTrue(policy.allL0FilesExpired(si));
+    assertTrue(policy.needsCompactions(si, al()));
   }
 
   /********* HELPER METHODS ************/
