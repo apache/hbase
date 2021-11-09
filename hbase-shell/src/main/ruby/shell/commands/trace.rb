@@ -17,9 +17,6 @@
 # limitations under the License.
 #
 
-# Disable tracing for now as HTrace does not work any more
-# java_import org.apache.hadoop.hbase.trace.SpanReceiverHost
-
 module Shell
   module Commands
     class Trace < Command
