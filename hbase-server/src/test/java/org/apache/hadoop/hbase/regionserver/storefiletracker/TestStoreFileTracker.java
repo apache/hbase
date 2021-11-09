@@ -44,7 +44,6 @@ public class TestStoreFileTracker extends DefaultStoreFileTracker {
     } else {
       LOG.info("ctx.getRegionFileSystem() returned null. Leaving storeId null.");
     }
-
   }
 
   @Override
