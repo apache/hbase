@@ -17,18 +17,29 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.CompletableFuture;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.ipc.ServerCall;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -38,6 +49,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
 
 /**
  * The class for replicating WAL edits to secondary replicas, one instance per region.
@@ -97,13 +110,17 @@ public class RegionReplicationSink {
 
   private final RegionInfo primary;
 
-  private final int regionReplication;
+  private final TableDescriptor tableDesc;
 
-  private final boolean hasRegionMemStoreReplication;
-
-  private final Queue<SinkEntry> entries = new ArrayDeque<>();
+  private final Runnable flushRequester;
 
   private final AsyncClusterConnection conn;
+
+  // used to track the replicas which we failed to replicate edits to them
+  // will be cleared after we get a flush edit.
+  private final Set<Integer> failedReplicas = new HashSet<>();
+
+  private final Queue<SinkEntry> entries = new ArrayDeque<>();
 
   private final int retries;
 
@@ -111,27 +128,57 @@ public class RegionReplicationSink {
 
   private final long operationTimeoutNs;
 
-  private CompletableFuture<Void> future;
+  private boolean sending;
 
   private boolean stopping;
 
   private boolean stopped;
 
-  RegionReplicationSink(Configuration conf, RegionInfo primary, int regionReplication,
-    boolean hasRegionMemStoreReplication, AsyncClusterConnection conn) {
+  RegionReplicationSink(Configuration conf, RegionInfo primary, TableDescriptor td,
+    Runnable flushRequester, AsyncClusterConnection conn) {
     Preconditions.checkArgument(RegionReplicaUtil.isDefaultReplica(primary), "%s is not primary",
       primary);
-    Preconditions.checkArgument(regionReplication > 1,
-      "region replication should be greater than 1 but got %s", regionReplication);
+    Preconditions.checkArgument(td.getRegionReplication() > 1,
+      "region replication should be greater than 1 but got %s", td.getRegionReplication());
     this.primary = primary;
-    this.regionReplication = regionReplication;
-    this.hasRegionMemStoreReplication = hasRegionMemStoreReplication;
+    this.tableDesc = td;
+    this.flushRequester = flushRequester;
     this.conn = conn;
     this.retries = conf.getInt(RETRIES_NUMBER, RETRIES_NUMBER_DEFAULT);
     this.rpcTimeoutNs =
       TimeUnit.MILLISECONDS.toNanos(conf.getLong(RPC_TIMEOUT_MS, RPC_TIMEOUT_MS_DEFAULT));
     this.operationTimeoutNs = TimeUnit.MILLISECONDS
       .toNanos(conf.getLong(OPERATION_TIMEOUT_MS, OPERATION_TIMEOUT_MS_DEFAULT));
+  }
+
+  private void onComplete(List<SinkEntry> sent,
+    Map<Integer, MutableObject<Throwable>> replica2Error) {
+    sent.forEach(SinkEntry::replicated);
+    Set<Integer> failed = new HashSet<>();
+    for (Map.Entry<Integer, MutableObject<Throwable>> entry : replica2Error.entrySet()) {
+      Integer replicaId = entry.getKey();
+      Throwable error = entry.getValue().getValue();
+      if (error != null) {
+        LOG.warn("Failed to replicate to secondary replica {} for {}, stop replicating" +
+          " for a while and trigger a flush", replicaId, primary, error);
+        failed.add(replicaId);
+      }
+    }
+    synchronized (entries) {
+      if (!failed.isEmpty()) {
+        failedReplicas.addAll(failed);
+        flushRequester.run();
+      }
+      sending = false;
+      if (stopping) {
+        stopped = true;
+        entries.notifyAll();
+        return;
+      }
+      if (!entries.isEmpty()) {
+        send();
+      }
+    }
   }
 
   private void send() {
@@ -143,32 +190,37 @@ public class RegionReplicationSink {
       }
       toSend.add(entry);
     }
+    int toSendReplicaCount = tableDesc.getRegionReplication() - 1 - failedReplicas.size();
+    if (toSendReplicaCount <= 0) {
+      return;
+    }
+    sending = true;
     List<WAL.Entry> walEntries =
       toSend.stream().map(e -> new WAL.Entry(e.key, e.edit)).collect(Collectors.toList());
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
-    for (int replicaId = 1; replicaId < regionReplication; replicaId++) {
+    AtomicInteger remaining = new AtomicInteger(toSendReplicaCount);
+    Map<Integer, MutableObject<Throwable>> replica2Error = new HashMap<>();
+    for (int replicaId = 1; replicaId < tableDesc.getRegionReplication(); replicaId++) {
+      MutableObject<Throwable> error = new MutableObject<>();
+      replica2Error.put(replicaId, error);
       RegionInfo replica = RegionReplicaUtil.getRegionInfoForReplica(primary, replicaId);
-      futures.add(conn.replicate(replica, walEntries, retries, rpcTimeoutNs, operationTimeoutNs));
+      FutureUtils.addListener(
+        conn.replicate(replica, walEntries, retries, rpcTimeoutNs, operationTimeoutNs), (r, e) -> {
+          error.setValue(e);
+          if (remaining.decrementAndGet() == 0) {
+            onComplete(toSend, replica2Error);
+          }
+        });
     }
-    future = CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]));
-    FutureUtils.addListener(future, (r, e) -> {
-      if (e != null) {
-        // TODO: drop pending edits and issue a flush
-        LOG.warn("Failed to replicate to secondary replicas for {}", primary, e);
-      }
-      toSend.forEach(SinkEntry::replicated);
-      synchronized (entries) {
-        future = null;
-        if (stopping) {
-          stopped = true;
-          entries.notifyAll();
-          return;
-        }
-        if (!entries.isEmpty()) {
-          send();
-        }
-      }
-    });
+  }
+
+  private boolean flushAllStores(FlushDescriptor flushDesc) {
+    Set<byte[]> storesFlushed =
+      flushDesc.getStoreFlushesList().stream().map(sfd -> sfd.getFamilyName().toByteArray())
+        .collect(Collectors.toCollection(() -> new TreeSet<>(Bytes.BYTES_COMPARATOR)));
+    if (storesFlushed.size() != tableDesc.getColumnFamilyCount()) {
+      return false;
+    }
+    return storesFlushed.containsAll(tableDesc.getColumnFamilyNames());
   }
 
   /**
@@ -178,7 +230,7 @@ public class RegionReplicationSink {
    * rpc call has cell scanner, which is off heap.
    */
   public void add(WALKeyImpl key, WALEdit edit, ServerCall<?> rpcCall) {
-    if (!hasRegionMemStoreReplication && !edit.isMetaEdit()) {
+    if (!tableDesc.hasRegionMemStoreReplication() && !edit.isMetaEdit()) {
       // only replicate meta edit if region memstore replication is not enabled
       return;
     }
@@ -186,10 +238,31 @@ public class RegionReplicationSink {
       if (stopping) {
         return;
       }
+      if (edit.isMetaEdit()) {
+        // check whether we flushed all stores, which means we could drop all the previous edits,
+        // and also, recover from the previous failure of some replicas
+        for (Cell metaCell : edit.getCells()) {
+          if (CellUtil.matchingFamily(metaCell, WALEdit.METAFAMILY)) {
+            FlushDescriptor flushDesc;
+            try {
+              flushDesc = WALEdit.getFlushDescriptor(metaCell);
+            } catch (IOException e) {
+              LOG.warn("Failed to parse FlushDescriptor from {}", metaCell);
+              continue;
+            }
+            if (flushDesc != null && flushAllStores(flushDesc)) {
+              LOG.debug("Got a flush all request, clear failed replicas {} and {} pending" +
+                " replication entries", failedReplicas, entries.size());
+              entries.clear();
+              failedReplicas.clear();
+            }
+          }
+        }
+      }
       // TODO: limit the total cached entries here, and we should have a global limitation, not for
       // only this region.
       entries.add(new SinkEntry(key, edit, rpcCall));
-      if (future == null) {
+      if (!sending) {
         send();
       }
     }
@@ -203,7 +276,7 @@ public class RegionReplicationSink {
   void stop() {
     synchronized (entries) {
       stopping = true;
-      if (future == null) {
+      if (!sending) {
         stopped = true;
         entries.notifyAll();
       }
