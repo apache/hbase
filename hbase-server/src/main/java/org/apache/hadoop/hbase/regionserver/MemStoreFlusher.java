@@ -673,9 +673,9 @@ public class MemStoreFlusher implements FlushRequester {
     FlushType type = null;
     if (emergencyFlush) {
       type = isAboveHighWaterMark();
-      if (type == null) {
-        type = isAboveLowWaterMark();
-      }
+    }
+    if (type == null) {
+      type = isAboveLowWaterMark();
     }
     for (FlushRequestListener listener : flushRequestListeners) {
       listener.flushRequested(type, region);
