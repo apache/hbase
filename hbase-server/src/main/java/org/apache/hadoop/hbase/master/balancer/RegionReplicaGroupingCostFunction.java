@@ -93,4 +93,9 @@ abstract class RegionReplicaGroupingCostFunction extends CostFunction {
     });
     return cost.longValue();
   }
+
+  @Override
+  public final void updateWeight(double[] weights) {
+    weights[StochasticLoadBalancer.GeneratorType.RACK.ordinal()] += cost();
+  }
 }

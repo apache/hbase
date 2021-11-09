@@ -561,6 +561,15 @@ public class BalancerTestBase {
     testWithCluster(serverMap, null, assertFullyBalanced, assertFullyBalancedForReplicas);
   }
 
+  protected void testWithClusterWithIteration(int numNodes, int numRegions, int numRegionsPerServer,
+    int replication, int numTables, boolean assertFullyBalanced,
+    boolean assertFullyBalancedForReplicas) {
+    Map<ServerName, List<RegionInfo>> serverMap =
+      createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
+    testWithClusterWithIteration(serverMap, null, assertFullyBalanced,
+      assertFullyBalancedForReplicas);
+  }
+
   protected void testWithCluster(Map<ServerName, List<RegionInfo>> serverMap,
       RackManager rackManager, boolean assertFullyBalanced, boolean assertFullyBalancedForReplicas) {
     List<ServerAndLoad> list = convertToList(serverMap);

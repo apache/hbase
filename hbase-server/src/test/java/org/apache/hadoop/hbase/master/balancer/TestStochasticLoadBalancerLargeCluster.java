@@ -41,6 +41,7 @@ public class TestStochasticLoadBalancerLargeCluster extends BalancerTestBase {
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 6 * 60 * 1000);
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 20000000L);
     loadBalancer.onConfigurationChange(conf);
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
+    testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
+      true, true);
   }
 }
