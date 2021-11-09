@@ -541,6 +541,8 @@ public class HRegionServer extends Thread implements
   protected final ConfigurationManager configurationManager;
 
   @InterfaceAudience.Private
+  private BrokenStoreFileCleaner brokenStoreFileCleaner;
+
   CompactedHFilesDischarger compactedFileDischarger;
 
   private volatile ThroughputController flushThroughputController;
@@ -2070,6 +2072,9 @@ public class HRegionServer extends Thread implements
     if (this.fsUtilizationChore != null) {
       choreService.scheduleChore(fsUtilizationChore);
     }
+    if (this.brokenStoreFileCleaner != null) {
+      choreService.scheduleChore(brokenStoreFileCleaner);
+    }
     if (this.slowLogTableOpsChore != null) {
       choreService.scheduleChore(slowLogTableOpsChore);
     }
@@ -2153,6 +2158,22 @@ public class HRegionServer extends Thread implements
       this.storefileRefresher = new StorefileRefresherChore(storefileRefreshPeriod,
           onlyMetaRefresh, this, this);
     }
+
+    int brokenStoreFileCleanerPeriod  = conf.getInt(
+      BrokenStoreFileCleaner.BROKEN_STOREFILE_CLEANER_PERIOD,
+      BrokenStoreFileCleaner.DEFAULT_BROKEN_STOREFILE_CLEANER_PERIOD);
+    int brokenStoreFileCleanerDelay  = conf.getInt(
+      BrokenStoreFileCleaner.BROKEN_STOREFILE_CLEANER_DELAY,
+      BrokenStoreFileCleaner.DEFAULT_BROKEN_STOREFILE_CLEANER_DELAY);
+    double brokenStoreFileCleanerDelayJitter = conf.getDouble(
+      BrokenStoreFileCleaner.BROKEN_STOREFILE_CLEANER_DELAY_JITTER,
+      BrokenStoreFileCleaner.DEFAULT_BROKEN_STOREFILE_CLEANER_DELAY_JITTER);
+    double jitterRate = (RandomUtils.nextDouble() - 0.5D) * brokenStoreFileCleanerDelayJitter;
+    long jitterValue = Math.round(brokenStoreFileCleanerDelay * jitterRate);
+    this.brokenStoreFileCleaner =
+      new BrokenStoreFileCleaner((int) (brokenStoreFileCleanerDelay + jitterValue),
+        brokenStoreFileCleanerPeriod, this, conf, this);
+
     registerConfigurationObservers();
   }
 
@@ -2637,15 +2658,15 @@ public class HRegionServer extends Thread implements
   protected void stopServiceThreads() {
     // clean up the scheduled chores
     if (this.choreService != null) {
-      shutdownChore(nonceManagerChore);
-      shutdownChore(compactionChecker);
-      shutdownChore(periodicFlusher);
-      shutdownChore(healthCheckChore);
-      shutdownChore(storefileRefresher);
-      shutdownChore(fsUtilizationChore);
-      shutdownChore(slowLogTableOpsChore);
-      // cancel the remaining scheduled chores (in case we missed out any)
-      // TODO: cancel will not cleanup the chores, so we need make sure we do not miss any
+      choreService.cancelChore(nonceManagerChore);
+      choreService.cancelChore(compactionChecker);
+      choreService.cancelChore(periodicFlusher);
+      choreService.cancelChore(healthCheckChore);
+      choreService.cancelChore(storefileRefresher);
+      choreService.cancelChore(fsUtilizationChore);
+      choreService.cancelChore(slowLogTableOpsChore);
+      choreService.cancelChore(brokenStoreFileCleaner);
+      // clean up the remaining scheduled chores (in case we missed out any)
       choreService.shutdown();
     }
 
@@ -3914,4 +3935,11 @@ public class HRegionServer extends Thread implements
   public CompactedHFilesDischarger getCompactedHFilesDischarger() {
     return compactedFileDischarger;
   }
+
+  @InterfaceAudience.Private
+  public BrokenStoreFileCleaner getBrokenStoreFileCleaner(){
+    return brokenStoreFileCleaner;
+  }
+
 }
+

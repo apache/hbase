@@ -207,5 +207,5 @@ public final class StoreUtils {
     }
     return f.applyAsLong(reader);
   }
-  
+
 }

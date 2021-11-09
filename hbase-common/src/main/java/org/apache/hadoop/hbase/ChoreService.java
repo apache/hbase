@@ -199,7 +199,7 @@ public class ChoreService {
    */
   @RestrictedApi(explanation = "Should only be called in ScheduledChore", link = "",
     allowedOnPath = ".*/org/apache/hadoop/hbase/(ScheduledChore|ChoreService).java")
-  synchronized void cancelChore(ScheduledChore chore) {
+  public synchronized void cancelChore(ScheduledChore chore) {
     cancelChore(chore, true);
   }
 
