@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -28,11 +33,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This Chore, every time it runs, will clear the unsused HFiles in the data
@@ -61,11 +61,12 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
   private final AtomicBoolean enabled = new AtomicBoolean(true);
   private long fileTtl;
 
-  public BrokenStoreFileCleaner(final int delay, final int period, final Stoppable stopper, Configuration conf,
-      HRegionServer regionServer) {
+  public BrokenStoreFileCleaner(final int delay, final int period, final Stoppable stopper,
+    Configuration conf, HRegionServer regionServer) {
     super("BrokenStoreFileCleaner", stopper, period, delay);
     this.regionServer = regionServer;
-    setEnabled(conf.getBoolean(BROKEN_STOREFILE_CLEANER_ENABLED, DEFAULT_BROKEN_STOREFILE_CLEANER_ENABLED));
+    setEnabled(
+      conf.getBoolean(BROKEN_STOREFILE_CLEANER_ENABLED, DEFAULT_BROKEN_STOREFILE_CLEANER_ENABLED));
     fileTtl = conf.getLong(BROKEN_STOREFILE_CLEANER_TTL, DEFAULT_BROKEN_STOREFILE_CLEANER_TTL);
   }
 
@@ -93,8 +94,10 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
               new Path(region.getRegionFileSystem().getRegionDir(), store.getColumnFamilyName());
 
           try {
-            List<FileStatus> fsStoreFiles = Arrays.asList(region.getRegionFileSystem().fs.listStatus(storePath));
-            fsStoreFiles.forEach(file -> cleanFileIfNeeded(file, store, deletedFiles, failedDeletes));
+            List<FileStatus> fsStoreFiles =
+              Arrays.asList(region.getRegionFileSystem().fs.listStatus(storePath));
+            fsStoreFiles.forEach(
+              file -> cleanFileIfNeeded(file, store, deletedFiles, failedDeletes));
           } catch (IOException e) {
             LOG.warn("Failed to list files in {}, cleanup is skipped there",storePath);
             continue;
@@ -102,7 +105,8 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
         }
       }
       LOG.debug(
-        "BrokenStoreFileCleaner on {} run for: {}ms. It deleted {} files and tried but failed to delete {}",
+        "BrokenStoreFileCleaner on {} run for: {}ms. It deleted {} files and tried but failed "
+        + "to delete {}",
         regionServer.getServerName().getServerName(), EnvironmentEdgeManager.currentTime() - start,
         deletedFiles.get(), failedDeletes.get());
     } else {
@@ -151,12 +155,16 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
     return store.getStoreEngine().getCompactor().getCompactionTargets().contains(file.getPath());
   }
 
+  // Compacted files can still have readers and are cleaned by a separate chore, so they have to
+  // be skipped here
   private boolean isCompactedFile(FileStatus file, HStore store) {
-    return store.getStoreEngine().getStoreFileManager().getCompactedfiles().stream().anyMatch(sf -> sf.getPath().equals(file.getPath()));
+    return store.getStoreEngine().getStoreFileManager().getCompactedfiles().stream()
+      .anyMatch(sf -> sf.getPath().equals(file.getPath()));
   }
 
   private boolean isActiveStorefile(FileStatus file, HStore store) {
-    return store.getStoreEngine().getStoreFileManager().getStorefiles().stream().anyMatch(sf -> sf.getPath().equals(file.getPath()));
+    return store.getStoreEngine().getStoreFileManager().getStorefiles().stream()
+      .anyMatch(sf -> sf.getPath().equals(file.getPath()));
   }
 
   boolean validate(Path file) {
@@ -170,7 +178,8 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
     return file.getModificationTime() + fileTtl < EnvironmentEdgeManager.currentTime();
   }
 
-  private void deleteFile(FileStatus file, HStore store, AtomicLong deletedFiles, AtomicLong failedDeletes) {
+  private void deleteFile(FileStatus file, HStore store, AtomicLong deletedFiles,
+    AtomicLong failedDeletes) {
     Path filePath = file.getPath();
     LOG.debug("Removing {} from store", filePath);
     try {

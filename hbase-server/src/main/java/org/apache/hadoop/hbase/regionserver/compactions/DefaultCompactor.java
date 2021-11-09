@@ -83,6 +83,7 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
     } catch (IOException e) {
       LOG.warn("Failed to close the writer after an unfinished compaction.", e);
     } finally {
+      //this step signals that the target file is no longer writen and can be cleaned up
       writer = null;
     }
     try {

@@ -17,13 +17,16 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import java.io.IOException;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
@@ -35,10 +38,6 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import java.io.IOException;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 @Category({ MediumTests.class, RegionServerTests.class })
 public class TestBrokenStoreFileCleaner {
@@ -57,10 +56,13 @@ public class TestBrokenStoreFileCleaner {
 
   @Before
   public void setUp() throws Exception {
-    testUtil.getConfiguration().set(StoreFileTrackerFactory.TRACKER_IMPL, "org.apache.hadoop.hbase.regionserver.storefiletracker.FileBasedStoreFileTracker");
-    testUtil.getConfiguration().set(BrokenStoreFileCleaner.BROKEN_STOREFILE_CLEANER_ENABLED, "true");
+    testUtil.getConfiguration().set(StoreFileTrackerFactory.TRACKER_IMPL,
+      "org.apache.hadoop.hbase.regionserver.storefiletracker.FileBasedStoreFileTracker");
+    testUtil.getConfiguration()
+      .set(BrokenStoreFileCleaner.BROKEN_STOREFILE_CLEANER_ENABLED, "true");
     testUtil.getConfiguration().set(BrokenStoreFileCleaner.BROKEN_STOREFILE_CLEANER_TTL, "0");
-    testUtil.getConfiguration().set(BrokenStoreFileCleaner.BROKEN_STOREFILE_CLEANER_PERIOD, "15000000");
+    testUtil.getConfiguration()
+      .set(BrokenStoreFileCleaner.BROKEN_STOREFILE_CLEANER_PERIOD, "15000000");
     testUtil.getConfiguration().set(BrokenStoreFileCleaner.BROKEN_STOREFILE_CLEANER_DELAY, "0");
     testUtil.startMiniCluster(1);
   }
@@ -77,7 +79,8 @@ public class TestBrokenStoreFileCleaner {
     createTableWithData(tableName);
 
     HRegion region = testUtil.getMiniHBaseCluster().getRegions(tableName).get(0);
-    ServerName sn = testUtil.getMiniHBaseCluster().getServerHoldingRegion(tableName, region.getRegionInfo().getRegionName());
+    ServerName sn = testUtil.getMiniHBaseCluster()
+      .getServerHoldingRegion(tableName, region.getRegionInfo().getRegionName());
     HRegionServer rs = testUtil.getMiniHBaseCluster().getRegionServer(sn);
     BrokenStoreFileCleaner cleaner = rs.getBrokenStoreFileCleaner();
 
@@ -111,7 +114,8 @@ public class TestBrokenStoreFileCleaner {
 
     HRegion region = testUtil.getMiniHBaseCluster().getRegions(tableName).get(0);
 
-    ServerName sn = testUtil.getMiniHBaseCluster().getServerHoldingRegion(tableName, region.getRegionInfo().getRegionName());
+    ServerName sn = testUtil.getMiniHBaseCluster()
+      .getServerHoldingRegion(tableName, region.getRegionInfo().getRegionName());
     HRegionServer rs = testUtil.getMiniHBaseCluster().getRegionServer(sn);
     BrokenStoreFileCleaner cleaner = rs.getBrokenStoreFileCleaner();
 
@@ -153,7 +157,8 @@ public class TestBrokenStoreFileCleaner {
     createTableWithData(tableName);
 
     HRegion region = testUtil.getMiniHBaseCluster().getRegions(tableName).get(0);
-    ServerName sn = testUtil.getMiniHBaseCluster().getServerHoldingRegion(tableName, region.getRegionInfo().getRegionName());
+    ServerName sn = testUtil.getMiniHBaseCluster()
+      .getServerHoldingRegion(tableName, region.getRegionInfo().getRegionName());
     HRegionServer rs = testUtil.getMiniHBaseCluster().getRegionServer(sn);
 
     //create junk file

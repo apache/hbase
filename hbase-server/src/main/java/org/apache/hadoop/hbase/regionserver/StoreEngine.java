@@ -41,9 +41,11 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -531,7 +533,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
    * This step is necessary for the correctness of BrokenStoreFileCleanerChore. It lets the
    * CleanerChore know that compaction is done and the file can be cleaned up if compaction
    * have failed. Currently called in
-   * @see org.apache.hadoop.hbase.regionserver.HStore#doCompaction(CompactionRequestImpl,Collection<HStoreFile>, User, long, List<Path>)
+   * @see HStore#doCompaction(CompactionRequestImpl, Collection, User, long, List)
    */
   public void resetCompactionWriter(){
     compactor.resetWriter();

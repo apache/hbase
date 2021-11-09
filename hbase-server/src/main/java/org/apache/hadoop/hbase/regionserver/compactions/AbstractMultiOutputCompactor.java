@@ -79,6 +79,7 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
           e);
       }
     }
+    //this step signals that the target file is no longer writen and can be cleaned up
     writer = null;
   }
 }
