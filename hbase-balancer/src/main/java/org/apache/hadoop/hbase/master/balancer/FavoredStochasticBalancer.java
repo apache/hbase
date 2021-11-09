@@ -91,6 +91,14 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   }
 
   /**
+   * @return any candidate generator in random
+   */
+  @Override
+  protected CandidateGenerator getRandomGenerator() {
+    return candidateGenerators.get(ThreadLocalRandom.current().nextInt(candidateGenerators.size()));
+  }
+
+  /**
    * Round robin assignment: Segregate the regions into two types:
    *
    * 1. The regions that have favored node assignment where at least one of the favored node
