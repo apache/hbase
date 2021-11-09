@@ -114,6 +114,7 @@ public class TestDrainReplicationQueuesForStandBy extends SyncReplicationTestBas
     for (int i = 0; i < 100; i++) {
       assertTrue(region2.get(new Get(Bytes.toBytes(i))).isEmpty());
     }
+  }
 
   @After
   public void tearDown() throws Exception {
@@ -121,5 +122,4 @@ public class TestDrainReplicationQueuesForStandBy extends SyncReplicationTestBas
       SyncReplicationState.DOWNGRADE_ACTIVE);
     }
 
-  }
 }
