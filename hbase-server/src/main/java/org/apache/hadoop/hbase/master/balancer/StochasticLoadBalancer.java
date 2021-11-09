@@ -770,16 +770,16 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
     allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
   void updateCostsAndWeightsWithAction(BalancerClusterState cluster, BalanceAction action) {
-      // Reset all the weights to 0
-      for (int i = 0; i < weightsOfGenerators.length; i++) {
-        weightsOfGenerators[i] = 0;
+    // Reset all the weights to 0
+    for (int i = 0; i < weightsOfGenerators.length; i++) {
+      weightsOfGenerators[i] = 0;
+    }
+    for (CostFunction c : costFunctions) {
+      if (c.isNeeded()) {
+        c.postAction(action);
+        c.updateWeight(weightsOfGenerators);
       }
-      for (CostFunction c : costFunctions) {
-        if (c.isNeeded()) {
-          c.postAction(action);
-          c.updateWeight(weightsOfGenerators);
-        }
-      }
+    }
   }
 
   /**
