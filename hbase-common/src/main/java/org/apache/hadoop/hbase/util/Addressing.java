@@ -153,6 +153,21 @@ public class Addressing {
   }
 
   /**
+   * Given an InetSocketAddress object returns a String represent of it.
+   * This is a util method for Java 17. The toString() function of InetSocketAddress
+   * will flag the unresolved address with a substring in the string, which will result
+   * in unexpected problem. We should use this util function to get the string when we
+   * not sure whether the input address is resolved or not.
+   * @param address address to convert to a "host:port" String.
+   * @return the String represent of the given address, like "foo:1234".
+   */
+  public static String inetSocketAddress2String(InetSocketAddress address) {
+    return address.isUnresolved() ?
+      address.toString().replace("/<unresolved>", "") :
+      address.toString();
+  }
+
+  /**
    * Interface for AddressSelectionCondition to check if address is acceptable
    */
   public interface AddressSelectionCondition{
