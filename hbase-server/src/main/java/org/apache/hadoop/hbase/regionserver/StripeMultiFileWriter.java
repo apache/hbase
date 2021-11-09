@@ -58,7 +58,7 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
   }
 
   @Override
-  protected Collection<StoreFileWriter> writers() {
+  public Collection<StoreFileWriter> writers() {
     return existingWriters;
   }
 
