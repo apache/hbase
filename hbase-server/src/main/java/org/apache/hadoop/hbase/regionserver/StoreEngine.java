@@ -42,9 +42,11 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -530,6 +532,25 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     } catch (Exception e) {
       throw new IOException("Unable to load configured store engine '" + className + "'", e);
     }
+  }
+
+  /**
+   * Whether the implementation of the used storefile tracker requires you to write to temp
+   * directory first, i.e, does not allow broken store files under the actual data directory.
+   */
+  public boolean requireWritingToTmpDirFirst() {
+    return storeFileTracker.requireWritingToTmpDirFirst();
+  }
+
+  /**
+   * Resets the compaction writer when the new file is committed and used as active storefile.
+   * This step is necessary for the correctness of BrokenStoreFileCleanerChore. It lets the
+   * CleanerChore know that compaction is done and the file can be cleaned up if compaction
+   * have failed. Currently called in
+   * @see HStore#doCompaction(CompactionRequestImpl, Collection, User, long, List)
+   */
+  public void resetCompactionWriter(){
+    compactor.resetWriter();
   }
 
   @RestrictedApi(explanation = "Should only be called in TestHStore", link = "",
