@@ -73,9 +73,9 @@ public class RegionStateStore {
    * @return A ServerName instance or {@link HRegionInfo#getServerName(Result)}
    * if necessary fields not found or empty.
    */
-  static ServerName getRegionServer(final Result r, int replicaId) {
+  static ServerName getRegionServer(final Result r, int replicaId, boolean isZKAssignmentInUse) {
     Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getServerNameColumn(replicaId));
-    if (cell == null || cell.getValueLength() == 0) {
+    if (cell == null || cell.getValueLength() == 0 || isZKAssignmentInUse) {
       RegionLocations locations = MetaTableAccessor.getRegionLocations(r);
       if (locations != null) {
         HRegionLocation location = locations.getRegionLocation(replicaId);
@@ -89,7 +89,7 @@ public class RegionStateStore {
       cell.getValueOffset(), cell.getValueLength()));
   }
 
-  private static byte[] getServerNameColumn(int replicaId) {
+  static byte[] getServerNameColumn(int replicaId) {
     return replicaId == 0
         ? HConstants.SERVERNAME_QUALIFIER
         : Bytes.toBytes(HConstants.SERVERNAME_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
@@ -101,14 +101,16 @@ public class RegionStateStore {
    * @param r Result to pull the region state from
    * @return the region state, or OPEN if there's no value written.
    */
-  static State getRegionState(final Result r, int replicaId) {
+  static State getRegionState(final Result r, int replicaId, boolean isZKAssignmentInUse) {
     Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getStateColumn(replicaId));
-    if (cell == null || cell.getValueLength() == 0) return State.OPEN;
-    return State.valueOf(Bytes.toString(cell.getValueArray(),
-      cell.getValueOffset(), cell.getValueLength()));
+    if (cell == null || cell.getValueLength() == 0 || isZKAssignmentInUse) {
+      return State.OPEN;
+    }
+    return State
+      .valueOf(Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
   }
 
-  private static byte[] getStateColumn(int replicaId) {
+  static byte[] getStateColumn(int replicaId) {
     return replicaId == 0
         ? HConstants.STATE_QUALIFIER
         : Bytes.toBytes(HConstants.STATE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER

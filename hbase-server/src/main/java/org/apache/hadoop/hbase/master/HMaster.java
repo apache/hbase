@@ -938,6 +938,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // Set master as 'initialized'.
     setInitialized(true);
 
+    this.assignmentManager.deleteNonZkBasedQualifiersForZkBasedAssignment();
+
     assignmentManager.checkIfShouldMoveSystemRegionAsync();
 
     status.setStatus("Starting quota manager");

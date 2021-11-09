@@ -50,6 +50,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -68,6 +69,7 @@ import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Admin.MasterSwitchType;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
@@ -3293,7 +3295,8 @@ public class AssignmentManager extends ZooKeeperListener {
         HRegionInfo regionInfo = hrl.getRegionInfo();
         if (regionInfo == null) continue;
         int replicaId = regionInfo.getReplicaId();
-        State state = RegionStateStore.getRegionState(result, replicaId);
+        State state = RegionStateStore.getRegionState(result, replicaId,
+          ConfigUtil.isZKAssignmentInUse(server.getConfiguration()));
         // keep a track of replicas to close. These were the replicas of the split parents
         // from the previous life of the master. The master should have closed them before
         // but it couldn't maybe because it crashed
@@ -3303,7 +3306,8 @@ public class AssignmentManager extends ZooKeeperListener {
           }
         }
         ServerName lastHost = hrl.getServerName();
-        ServerName regionLocation = RegionStateStore.getRegionServer(result, replicaId);
+        ServerName regionLocation = RegionStateStore.getRegionServer(result, replicaId,
+          ConfigUtil.isZKAssignmentInUse(server.getConfiguration()));
         if (tableStateManager.isTableState(regionInfo.getTable(),
              ZooKeeperProtos.Table.State.DISABLED)) {
           // force region to forget it hosts for disabled/disabling tables.
@@ -3341,6 +3345,61 @@ public class AssignmentManager extends ZooKeeperListener {
       }
     }
     return offlineServers;
+  }
+
+  void deleteNonZkBasedQualifiersForZkBasedAssignment() throws IOException {
+    boolean isZKAssignmentInUse = ConfigUtil.isZKAssignmentInUse(server.getConfiguration());
+    if (isZKAssignmentInUse) {
+      List<Result> results = MetaTableAccessor.fullScanOfMeta(server.getConnection());
+      List<Delete> redundantCQDeletes = new ArrayList<>();
+      for (Result result : results) {
+        RegionLocations rl =  MetaTableAccessor.getRegionLocations(result);
+        if (rl == null) {
+          LOG.error("No location found for " + result);
+          continue;
+        }
+        HRegionLocation[] locations = rl.getRegionLocations();
+        if (locations == null) {
+          LOG.error("No location found for " + rl);
+          continue;
+        }
+        for (HRegionLocation hrl : locations) {
+          if (hrl == null) {
+            continue;
+          }
+          HRegionInfo regionInfo = hrl.getRegionInfo();
+          if (regionInfo == null) {
+            LOG.error("No region info found " + hrl);
+            continue;
+          }
+          int replicaId = regionInfo.getReplicaId();
+          Cell cell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+            RegionStateStore.getServerNameColumn(replicaId));
+          if (cell != null && cell.getValueLength() > 0) {
+            Delete delete =
+              new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+            delete.addColumns(HConstants.CATALOG_FAMILY,
+              RegionStateStore.getServerNameColumn(replicaId));
+            redundantCQDeletes.add(delete);
+          }
+          cell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+            RegionStateStore.getStateColumn(replicaId));
+          if (cell != null && cell.getValueLength() > 0) {
+            Delete delete =
+              new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+            delete
+              .addColumns(HConstants.CATALOG_FAMILY, RegionStateStore.getStateColumn(replicaId));
+            redundantCQDeletes.add(delete);
+          }
+        }
+      }
+      if (!redundantCQDeletes.isEmpty()) {
+        LOG.info("Meta contains multiple info:sn and/or info:state values that are not required "
+          + "for ZK based region assignment workflows. Preparing to delete these CQs. Number of"
+          + " Deletes: " + redundantCQDeletes.size());
+        MetaTableAccessor.deleteFromMetaTable(server.getConnection(), redundantCQDeletes);
+      }
+    }
   }
 
   /**
