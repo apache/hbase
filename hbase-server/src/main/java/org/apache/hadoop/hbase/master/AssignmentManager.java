@@ -3295,7 +3295,8 @@ public class AssignmentManager extends ZooKeeperListener {
         HRegionInfo regionInfo = hrl.getRegionInfo();
         if (regionInfo == null) continue;
         int replicaId = regionInfo.getReplicaId();
-        State state = RegionStateStore.getRegionState(result, replicaId, server.getConfiguration());
+        State state = RegionStateStore.getRegionState(result, replicaId,
+          ConfigUtil.isZKAssignmentInUse(server.getConfiguration()));
         // keep a track of replicas to close. These were the replicas of the split parents
         // from the previous life of the master. The master should have closed them before
         // but it couldn't maybe because it crashed
@@ -3305,8 +3306,8 @@ public class AssignmentManager extends ZooKeeperListener {
           }
         }
         ServerName lastHost = hrl.getServerName();
-        ServerName regionLocation =
-          RegionStateStore.getRegionServer(result, replicaId, server.getConfiguration());
+        ServerName regionLocation = RegionStateStore.getRegionServer(result, replicaId,
+          ConfigUtil.isZKAssignmentInUse(server.getConfiguration()));
         if (tableStateManager.isTableState(regionInfo.getTable(),
              ZooKeeperProtos.Table.State.DISABLED)) {
           // force region to forget it hosts for disabled/disabling tables.
@@ -3354,6 +3355,7 @@ public class AssignmentManager extends ZooKeeperListener {
       for (Result result : results) {
         RegionLocations rl =  MetaTableAccessor.getRegionLocations(result);
         if (rl == null) {
+          LOG.error("No location found for " + result);
           continue;
         }
         HRegionLocation[] locations = rl.getRegionLocations();

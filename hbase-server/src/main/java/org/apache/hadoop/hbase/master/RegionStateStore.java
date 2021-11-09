@@ -73,9 +73,8 @@ public class RegionStateStore {
    * @return A ServerName instance or {@link HRegionInfo#getServerName(Result)}
    * if necessary fields not found or empty.
    */
-  static ServerName getRegionServer(final Result r, int replicaId, Configuration config) {
+  static ServerName getRegionServer(final Result r, int replicaId, boolean isZKAssignmentInUse) {
     Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getServerNameColumn(replicaId));
-    boolean isZKAssignmentInUse = ConfigUtil.isZKAssignmentInUse(config);
     if (cell == null || cell.getValueLength() == 0 || isZKAssignmentInUse) {
       RegionLocations locations = MetaTableAccessor.getRegionLocations(r);
       if (locations != null) {
@@ -102,9 +101,8 @@ public class RegionStateStore {
    * @param r Result to pull the region state from
    * @return the region state, or OPEN if there's no value written.
    */
-  static State getRegionState(final Result r, int replicaId, Configuration config) {
+  static State getRegionState(final Result r, int replicaId, boolean isZKAssignmentInUse) {
     Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getStateColumn(replicaId));
-    boolean isZKAssignmentInUse = ConfigUtil.isZKAssignmentInUse(config);
     if (cell == null || cell.getValueLength() == 0 || isZKAssignmentInUse) {
       return State.OPEN;
     }
