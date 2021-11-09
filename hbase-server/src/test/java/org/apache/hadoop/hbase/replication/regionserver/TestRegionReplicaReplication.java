@@ -53,8 +53,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 
 /**
- * Tests RegionReplicaReplicationEndpoint class by setting up region replicas and verifying
- * async wal replication replays the edits to the secondary region in various scenarios.
+ * Tests region replication by setting up region replicas and verifying async wal replication
+ * replays the edits to the secondary region in various scenarios.
  */
 @Category({FlakeyTests.class, LargeTests.class})
 public class TestRegionReplicaReplication {
