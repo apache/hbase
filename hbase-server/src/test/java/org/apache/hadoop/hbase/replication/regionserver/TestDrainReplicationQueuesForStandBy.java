@@ -114,7 +114,12 @@ public class TestDrainReplicationQueuesForStandBy extends SyncReplicationTestBas
     for (int i = 0; i < 100; i++) {
       assertTrue(region2.get(new Get(Bytes.toBytes(i))).isEmpty());
     }
-    UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
+    
+  @After 
+  public void tearDown() throws Exception {
+     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
       SyncReplicationState.DOWNGRADE_ACTIVE);
+    }
+    
   }
 }
