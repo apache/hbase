@@ -549,7 +549,7 @@ public class RestoreSnapshotHelper {
                   " of snapshot=" + snapshotName+
                   " to region=" + regionInfo.getEncodedName() + " table=" + tableName);
           String fileName = restoreStoreFile(familyDir, regionInfo, storeFile, createBackRefs);
-          //mark the reference file to be added to tracker
+          // mark the reference file to be added to tracker
           filesToTrack.add(new StoreFileInfo(conf, fs,
             new Path(familyDir, fileName), true));
         }

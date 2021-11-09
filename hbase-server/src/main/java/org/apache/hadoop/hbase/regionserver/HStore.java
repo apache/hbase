@@ -1156,6 +1156,12 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       }
     }
     replaceStoreFiles(filesToCompact, sfs, true);
+
+    // This step is necessary for the correctness of BrokenStoreFileCleanerChore. It lets the
+    // CleanerChore know that compaction is done and the file can be cleaned up if compaction
+    // have failed.
+    storeEngine.resetCompactionWriter();
+
     if (cr.isMajor()) {
       majorCompactedCellsCount.addAndGet(getCompactionProgress().getTotalCompactingKVs());
       majorCompactedCellsSize.addAndGet(getCompactionProgress().totalCompactedSize);
