@@ -101,4 +101,14 @@ abstract class CostFunction {
 
     return Math.max(0d, Math.min(1d, (value - min) / (max - min)));
   }
+
+  /**
+   * Add the cost of this cost function to the weight of the candidate generator that is optimized
+   * for this cost function. By default it is the RandomCandiateGenerator for a cost function.
+   * Called once per init or after postAction.
+   * @param weights the weights for every generator.
+   */
+  public void updateWeight(double[] weights) {
+    weights[StochasticLoadBalancer.GeneratorType.RANDOM.ordinal()] += cost();
+  }
 }

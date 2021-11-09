@@ -60,4 +60,9 @@ class RegionCountSkewCostFunction extends CostFunction {
       costs[newServer] = cluster.regionsPerServer[newServer].length;
     });
   }
+
+  @Override
+  public final void updateWeight(double[] weights) {
+    weights[StochasticLoadBalancer.GeneratorType.LOAD.ordinal()] += cost();
+  }
 }

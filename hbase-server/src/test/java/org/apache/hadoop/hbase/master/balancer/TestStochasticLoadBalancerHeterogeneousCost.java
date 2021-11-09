@@ -76,7 +76,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
     BalancerTestBase.conf.set(
       HeterogeneousRegionCountCostFunction.HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE,
       RULES_FILE);
-    loadBalancer = new StochasticLoadBalancer();
+    loadBalancer = new StochasticLoadTestBalancer();
     MasterServices services = mock(MasterServices.class);
     when(services.getConfiguration()).thenReturn(conf);
     BalancerTestBase.loadBalancer.setMasterServices(services);
@@ -305,6 +305,16 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
     @Override
     BalanceAction generate(BalancerClusterState cluster) {
       return super.generate(cluster);
+    }
+  }
+
+  static class StochasticLoadTestBalancer extends StochasticLoadBalancer {
+    private FairRandomCandidateGenerator fairRandomCandidateGenerator =
+      new FairRandomCandidateGenerator();
+
+    @Override
+    protected CandidateGenerator getRandomGenerator() {
+      return fairRandomCandidateGenerator;
     }
   }
 }
