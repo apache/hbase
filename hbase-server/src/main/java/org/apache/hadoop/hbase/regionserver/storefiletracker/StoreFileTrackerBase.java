@@ -173,12 +173,6 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     return builder.build();
   }
 
-  /**
-   * Whether the implementation of this tracker requires you to write to temp directory first, i.e,
-   * does not allow broken store files under the actual data directory.
-   */
-  protected abstract boolean requireWritingToTmpDirFirst();
-
   protected abstract void doAddNewStoreFiles(Collection<StoreFileInfo> newFiles) throws IOException;
 
   protected abstract void doAddCompactionResults(Collection<StoreFileInfo> compactedFiles,

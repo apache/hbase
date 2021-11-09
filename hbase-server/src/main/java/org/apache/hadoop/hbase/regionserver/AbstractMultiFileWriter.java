@@ -110,7 +110,11 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
     return paths;
   }
 
-  protected abstract Collection<StoreFileWriter> writers();
+  /**
+   * Returns all writers. This is used to prevent deleting currently writen storefiles
+   * during cleanup.
+   */
+  public abstract Collection<StoreFileWriter> writers();
 
   /**
    * Subclasses override this method to be called at the end of a successful sequence of append; all
