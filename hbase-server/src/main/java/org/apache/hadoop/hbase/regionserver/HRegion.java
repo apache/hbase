@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
+
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.opentelemetry.api.trace.Span;
 import java.io.EOFException;
@@ -68,6 +69,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -177,6 +179,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -7050,11 +7053,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           HStore store = getStore(family);
           try {
             if (this.rsServices != null && store.needsCompaction()) {
-              this.rsServices.getCompactionRequestor().requestCompaction(this, store,
-                "bulkload hfiles request compaction", Store.PRIORITY_USER + 1,
-                CompactionLifeCycleTracker.DUMMY, null);
-              LOG.debug("bulkload hfiles request compaction region : {}, family : {}",
-                this.getRegionInfo(), family);
+              this.rsServices.getCompactionRequestor().requestSystemCompaction(this, store,
+                  "bulkload hfiles request compaction", true);
+              LOG.info("Request compaction for region {} family {} after bulk load",
+                  this.getRegionInfo().getEncodedName(), store.getColumnFamilyName());
             }
           } catch (IOException e) {
             LOG.error("bulkload hfiles request compaction error ", e);
