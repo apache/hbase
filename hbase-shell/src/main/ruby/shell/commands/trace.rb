@@ -26,7 +26,7 @@ module Shell
 
       def help
         <<-EOF
-Start or Stop tracing using HTrace.
+Start or Stop tracing using Opentelemetry.
 Always returns true if tracing is running, otherwise false.
 If the first argument is 'start', new span is started.
 If the first argument is 'stop', current running span is stopped.
