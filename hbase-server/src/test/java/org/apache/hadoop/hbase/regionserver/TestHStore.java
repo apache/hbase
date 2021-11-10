@@ -1812,6 +1812,7 @@ public class TestHStore {
     store.add(cell, memStoreSizing);
     assertTrue(memStoreSizing.getCellsCount() == 1);
     assertTrue(memStoreSizing.getDataSize() == cellByteSize);
+    // Waiting the in memory compaction completed, see HBASE-26438
     myCompactingMemStore.inMemoryCompactionEndCyclicBarrier.await();
   }
 
