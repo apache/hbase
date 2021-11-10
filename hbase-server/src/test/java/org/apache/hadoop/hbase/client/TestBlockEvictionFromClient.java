@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -82,7 +83,7 @@ public class TestBlockEvictionFromClient {
       HBaseClassTestRule.forClass(TestBlockEvictionFromClient.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBlockEvictionFromClient.class);
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   static byte[][] ROWS = new byte[2][];
   private static int NO_OF_THREADS = 3;
   private static byte[] ROW = Bytes.toBytes("testRow");
@@ -1478,12 +1479,13 @@ public class TestBlockEvictionFromClient {
 
   private void waitForStoreFileCount(HStore store, int count, int timeout)
       throws InterruptedException {
-    long start = System.currentTimeMillis();
-    while (start + timeout > System.currentTimeMillis() && store.getStorefilesCount() != count) {
+    long start = EnvironmentEdgeManager.currentTime();
+    while (start + timeout > EnvironmentEdgeManager.currentTime() &&
+        store.getStorefilesCount() != count) {
       Thread.sleep(100);
     }
-    System.out.println("start=" + start + ", now=" + System.currentTimeMillis() + ", cur=" +
-        store.getStorefilesCount());
+    System.out.println("start=" + start + ", now=" + EnvironmentEdgeManager.currentTime() +
+      ", cur=" + store.getStorefilesCount());
     assertEquals(count, store.getStorefilesCount());
   }
 

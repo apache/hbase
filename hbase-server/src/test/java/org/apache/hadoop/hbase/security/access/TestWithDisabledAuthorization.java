@@ -18,14 +18,13 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertEquals;
-
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -78,7 +78,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({SecurityTests.class, LargeTests.class})
@@ -89,7 +88,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       HBaseClassTestRule.forClass(TestWithDisabledAuthorization.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWithDisabledAuthorization.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");
   private static final byte[] TEST_FAMILY2 = Bytes.toBytes("f2");
@@ -574,7 +573,8 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preBalance(ObserverContextImpl.createAndPrepare(CP_ENV));
+        ACCESS_CONTROLLER.preBalance(ObserverContextImpl.createAndPrepare(CP_ENV),
+          BalanceRequest.defaultInstance());
         return null;
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);

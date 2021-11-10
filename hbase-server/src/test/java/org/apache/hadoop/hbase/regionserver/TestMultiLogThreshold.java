@@ -32,7 +32,7 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -73,7 +73,7 @@ public class TestMultiLogThreshold {
   private static final TableName NAME = TableName.valueOf("tableName");
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
 
-  private HBaseTestingUtility util;
+  private HBaseTestingUtil util;
   private Configuration conf;
   private int threshold;
   private HRegionServer rs;
@@ -106,7 +106,7 @@ public class TestMultiLogThreshold {
 
   @Before
   public void setupTest() throws Exception {
-    util = new HBaseTestingUtility();
+    util = new HBaseTestingUtil();
     conf = util.getConfiguration();
     threshold =
       conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
@@ -178,7 +178,6 @@ public class TestMultiLogThreshold {
   }
 
   private void assertLogBatchWarnings(boolean expected) {
-    assertFalse(logs.isEmpty());
     boolean actual = false;
     for (LevelAndMessage event : logs) {
       if (event.level == org.apache.logging.log4j.Level.WARN &&

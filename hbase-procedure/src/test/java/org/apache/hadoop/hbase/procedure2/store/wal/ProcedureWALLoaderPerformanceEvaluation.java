@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.procedure2.store.wal;
 
-import static java.lang.System.currentTimeMillis;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,19 +27,19 @@ import java.util.Set;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
-
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
 public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
-  protected static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+  protected static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
   // Command line options and defaults.
   public static int DEFAULT_NUM_PROCS = 1000000;  // 1M
@@ -166,7 +164,7 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
     List<Integer> procStates = shuffleProcWriteSequence();
     TestProcedure[] procs = new TestProcedure[numProcs + 1];  // 0 is not used.
     int numProcsPerWal = numWals > 0 ? procStates.size() / numWals : Integer.MAX_VALUE;
-    long startTime = currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     long lastTime = startTime;
     for (int i = 0; i < procStates.size(); ++i) {
       int procId = procStates.get(i);
@@ -181,14 +179,14 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
         store.update(procs[procId]);
       }
       if (i > 0 && i % numProcsPerWal == 0) {
-        long currentTime = currentTimeMillis();
+        long currentTime = EnvironmentEdgeManager.currentTime();
         System.out.println("Forcing wall roll. Time taken on last WAL: " +
             (currentTime - lastTime) / 1000.0f + " sec");
         store.rollWriterForTesting();
         lastTime = currentTime;
       }
     }
-    long timeTaken = currentTimeMillis() - startTime;
+    long timeTaken = EnvironmentEdgeManager.currentTime() - startTime;
     System.out.println("\n\nDone writing WALs.\nNum procs : " + numProcs + "\nTotal time taken : "
         + StringUtils.humanTimeDiff(timeTaken) + "\n\n");
   }
@@ -199,9 +197,9 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
     store.start(1);
     store.recoverLease();
 
-    long startTime = currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     store.load(loader);
-    long timeTaken = System.currentTimeMillis() - startTime;
+    long timeTaken = EnvironmentEdgeManager.currentTime() - startTime;
     System.out.println("******************************************");
     System.out.println("Load time : " + (timeTaken / 1000.0f) + "sec");
     System.out.println("******************************************");

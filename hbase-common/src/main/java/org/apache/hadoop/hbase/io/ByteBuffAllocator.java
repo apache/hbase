@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,6 +72,13 @@ public class ByteBuffAllocator {
   public static final String MIN_ALLOCATE_SIZE_KEY = "hbase.server.allocator.minimal.allocate.size";
 
   /**
+   * Set an alternate bytebuffallocator by setting this config,
+   * e.g. we can config {@link DeallocateRewriteByteBuffAllocator} to find out
+   * prematurely release issues
+   */
+  public static final String BYTEBUFF_ALLOCATOR_CLASS = "hbase.bytebuff.allocator.class";
+
+  /**
    * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
    *   {@link ByteBuffAllocator#ALLOCATOR_POOL_ENABLED_KEY} instead.
    */
@@ -91,20 +99,6 @@ public class ByteBuffAllocator {
    */
   @Deprecated
   static final String DEPRECATED_BUFFER_SIZE_KEY = "hbase.ipc.server.reservoir.initial.buffer.size";
-
-  /**
-   * The hbase.ipc.server.reservoir.initial.max and hbase.ipc.server.reservoir.initial.buffer.size
-   * were introduced in HBase2.0.0, while in HBase3.0.0 the two config keys will be replaced by
-   * {@link ByteBuffAllocator#MAX_BUFFER_COUNT_KEY} and {@link ByteBuffAllocator#BUFFER_SIZE_KEY}.
-   * Also the hbase.ipc.server.reservoir.enabled will be replaced by
-   * hbase.server.allocator.pool.enabled. Keep the three old config keys here for HBase2.x
-   * compatibility.
-   */
-  static {
-    Configuration.addDeprecation(DEPRECATED_ALLOCATOR_POOL_ENABLED_KEY, ALLOCATOR_POOL_ENABLED_KEY);
-    Configuration.addDeprecation(DEPRECATED_MAX_BUFFER_COUNT_KEY, MAX_BUFFER_COUNT_KEY);
-    Configuration.addDeprecation(DEPRECATED_BUFFER_SIZE_KEY, BUFFER_SIZE_KEY);
-  }
 
   /**
    * There're some reasons why better to choose 65KB(rather than 64KB) as the default buffer size:
@@ -131,8 +125,8 @@ public class ByteBuffAllocator {
     void free();
   }
 
-  private final boolean reservoirEnabled;
-  private final int bufSize;
+  protected final boolean reservoirEnabled;
+  protected final int bufSize;
   private final int maxBufCount;
   private final AtomicInteger usedBufCount = new AtomicInteger(0);
 
@@ -163,13 +157,6 @@ public class ByteBuffAllocator {
    * @return ByteBuffAllocator to manage the byte buffers.
    */
   public static ByteBuffAllocator create(Configuration conf, boolean reservoirEnabled) {
-    if (conf.get(DEPRECATED_BUFFER_SIZE_KEY) != null
-        || conf.get(DEPRECATED_MAX_BUFFER_COUNT_KEY) != null) {
-      LOG.warn("The config keys {} and {} are deprecated now, instead please use {} and {}. In "
-            + "future release we will remove the two deprecated configs.",
-        DEPRECATED_BUFFER_SIZE_KEY, DEPRECATED_MAX_BUFFER_COUNT_KEY, BUFFER_SIZE_KEY,
-        MAX_BUFFER_COUNT_KEY);
-    }
     int poolBufSize = conf.getInt(BUFFER_SIZE_KEY, DEFAULT_BUFFER_SIZE);
     if (reservoirEnabled) {
       // The max number of buffers to be pooled in the ByteBufferPool. The default value been
@@ -190,7 +177,9 @@ public class ByteBuffAllocator {
           conf.getInt(MAX_BUFFER_COUNT_KEY, conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
             HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * bufsForTwoMB * 2);
       int minSizeForReservoirUse = conf.getInt(MIN_ALLOCATE_SIZE_KEY, poolBufSize / 6);
-      return new ByteBuffAllocator(true, maxBuffCount, poolBufSize, minSizeForReservoirUse);
+      Class<?> clazz = conf.getClass(BYTEBUFF_ALLOCATOR_CLASS, ByteBuffAllocator.class);
+      return (ByteBuffAllocator) ReflectionUtils
+        .newInstance(clazz, true, maxBuffCount, poolBufSize, minSizeForReservoirUse);
     } else {
       return HEAP;
     }
@@ -205,8 +194,8 @@ public class ByteBuffAllocator {
     return new ByteBuffAllocator(false, 0, DEFAULT_BUFFER_SIZE, Integer.MAX_VALUE);
   }
 
-  ByteBuffAllocator(boolean reservoirEnabled, int maxBufCount, int bufSize,
-      int minSizeForReservoirUse) {
+  protected ByteBuffAllocator(boolean reservoirEnabled, int maxBufCount, int bufSize,
+    int minSizeForReservoirUse) {
     this.reservoirEnabled = reservoirEnabled;
     this.maxBufCount = maxBufCount;
     this.bufSize = bufSize;
@@ -398,7 +387,7 @@ public class ByteBuffAllocator {
    * Return back a ByteBuffer after its use. Don't read/write the ByteBuffer after the returning.
    * @param buf ByteBuffer to return.
    */
-  private void putbackBuffer(ByteBuffer buf) {
+  protected void putbackBuffer(ByteBuffer buf) {
     if (buf.capacity() != bufSize || (reservoirEnabled ^ buf.isDirect())) {
       LOG.warn("Trying to put a buffer, not created by this pool! Will be just ignored");
       return;

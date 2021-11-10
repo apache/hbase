@@ -24,7 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -53,7 +53,7 @@ public class TestCompactSplitThread {
       HBaseClassTestRule.forClass(TestCompactSplitThread.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCompactSplitThread.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final TableName tableName = TableName.valueOf(getClass().getSimpleName());
   private final byte[] family = Bytes.toBytes("f");
   private static final int NUM_RS = 1;
@@ -120,39 +120,39 @@ public class TestCompactSplitThread {
       HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
 
       // check initial configuration of thread pool sizes
-      assertEquals(3, regionServer.compactSplitThread.getLargeCompactionThreadNum());
-      assertEquals(4, regionServer.compactSplitThread.getSmallCompactionThreadNum());
-      assertEquals(5, regionServer.compactSplitThread.getSplitThreadNum());
+      assertEquals(3, regionServer.getCompactSplitThread().getLargeCompactionThreadNum());
+      assertEquals(4, regionServer.getCompactSplitThread().getSmallCompactionThreadNum());
+      assertEquals(5, regionServer.getCompactSplitThread().getSplitThreadNum());
 
       // change bigger configurations and do online update
       conf.setInt(CompactSplit.LARGE_COMPACTION_THREADS, 4);
       conf.setInt(CompactSplit.SMALL_COMPACTION_THREADS, 5);
       conf.setInt(CompactSplit.SPLIT_THREADS, 6);
       try {
-        regionServer.compactSplitThread.onConfigurationChange(conf);
+        regionServer.getCompactSplitThread().onConfigurationChange(conf);
       } catch (IllegalArgumentException iae) {
         Assert.fail("Update bigger configuration failed!");
       }
 
       // check again after online update
-      assertEquals(4, regionServer.compactSplitThread.getLargeCompactionThreadNum());
-      assertEquals(5, regionServer.compactSplitThread.getSmallCompactionThreadNum());
-      assertEquals(6, regionServer.compactSplitThread.getSplitThreadNum());
+      assertEquals(4, regionServer.getCompactSplitThread().getLargeCompactionThreadNum());
+      assertEquals(5, regionServer.getCompactSplitThread().getSmallCompactionThreadNum());
+      assertEquals(6, regionServer.getCompactSplitThread().getSplitThreadNum());
 
       // change smaller configurations and do online update
       conf.setInt(CompactSplit.LARGE_COMPACTION_THREADS, 2);
       conf.setInt(CompactSplit.SMALL_COMPACTION_THREADS, 3);
       conf.setInt(CompactSplit.SPLIT_THREADS, 4);
       try {
-        regionServer.compactSplitThread.onConfigurationChange(conf);
+        regionServer.getCompactSplitThread().onConfigurationChange(conf);
       } catch (IllegalArgumentException iae) {
         Assert.fail("Update smaller configuration failed!");
       }
 
       // check again after online update
-      assertEquals(2, regionServer.compactSplitThread.getLargeCompactionThreadNum());
-      assertEquals(3, regionServer.compactSplitThread.getSmallCompactionThreadNum());
-      assertEquals(4, regionServer.compactSplitThread.getSplitThreadNum());
+      assertEquals(2, regionServer.getCompactSplitThread().getLargeCompactionThreadNum());
+      assertEquals(3, regionServer.getCompactSplitThread().getSmallCompactionThreadNum());
+      assertEquals(4, regionServer.getCompactSplitThread().getSplitThreadNum());
     } finally {
       conn.close();
     }

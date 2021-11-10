@@ -27,6 +27,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -82,8 +83,8 @@ public final class BackupUtils {
    * @param rsLogTimestampMap timestamp map
    * @return the min timestamp of each RS
    */
-  public static HashMap<String, Long> getRSLogTimestampMins(
-      HashMap<TableName, HashMap<String, Long>> rsLogTimestampMap) {
+  public static Map<String, Long> getRSLogTimestampMins(
+      Map<TableName, Map<String, Long>> rsLogTimestampMap) {
     if (rsLogTimestampMap == null || rsLogTimestampMap.isEmpty()) {
       return null;
     }
@@ -91,18 +92,14 @@ public final class BackupUtils {
     HashMap<String, Long> rsLogTimestampMins = new HashMap<>();
     HashMap<String, HashMap<TableName, Long>> rsLogTimestampMapByRS = new HashMap<>();
 
-    for (Entry<TableName, HashMap<String, Long>> tableEntry : rsLogTimestampMap.entrySet()) {
+    for (Entry<TableName, Map<String, Long>> tableEntry : rsLogTimestampMap.entrySet()) {
       TableName table = tableEntry.getKey();
-      HashMap<String, Long> rsLogTimestamp = tableEntry.getValue();
+      Map<String, Long> rsLogTimestamp = tableEntry.getValue();
       for (Entry<String, Long> rsEntry : rsLogTimestamp.entrySet()) {
         String rs = rsEntry.getKey();
         Long ts = rsEntry.getValue();
-        if (!rsLogTimestampMapByRS.containsKey(rs)) {
-          rsLogTimestampMapByRS.put(rs, new HashMap<>());
-          rsLogTimestampMapByRS.get(rs).put(table, ts);
-        } else {
-          rsLogTimestampMapByRS.get(rs).put(table, ts);
-        }
+        rsLogTimestampMapByRS.putIfAbsent(rs, new HashMap<>());
+        rsLogTimestampMapByRS.get(rs).put(table, ts);
       }
     }
 
@@ -349,7 +346,7 @@ public final class BackupUtils {
    * @param map map
    * @return the min value
    */
-  public static <T> Long getMinValue(HashMap<T, Long> map) {
+  public static <T> Long getMinValue(Map<T, Long> map) {
     Long minTimestamp = null;
     if (map != null) {
       ArrayList<Long> timestampList = new ArrayList<>(map.values());

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.StripeStoreConfig;
 import org.apache.hadoop.hbase.regionserver.StripeStoreEngine;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.apache.hadoop.hbase.util.MultiThreadedAction;
 import org.apache.hadoop.hbase.util.MultiThreadedReader;
@@ -206,14 +207,14 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
 
     if (preloadKeys > 0) {
       MultiThreadedWriter preloader = new MultiThreadedWriter(dataGen, conf, TABLE_NAME);
-      long time = System.currentTimeMillis();
+      long time = EnvironmentEdgeManager.currentTime();
       preloader.start(0, startKey, writeThreads);
       preloader.waitForFinish();
       if (preloader.getNumWriteFailures() > 0) {
         throw new IOException("Preload failed");
       }
       int waitTime = (int)Math.min(preloadKeys / 100, 30000); // arbitrary
-      status(description + " preload took " + (System.currentTimeMillis()-time)/1000
+      status(description + " preload took " + (EnvironmentEdgeManager.currentTime()-time)/1000
           + "sec; sleeping for " + waitTime/1000 + "sec for store to stabilize");
       Thread.sleep(waitTime);
     }
@@ -223,7 +224,7 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
     // reader.getMetrics().enable();
     reader.linkToWriter(writer);
 
-    long testStartTime = System.currentTimeMillis();
+    long testStartTime = EnvironmentEdgeManager.currentTime();
     writer.start(startKey, endKey, writeThreads);
     reader.start(startKey, endKey, readThreads);
     writer.waitForFinish();
@@ -257,7 +258,8 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
       }
     }
     LOG.info("Performance data dump for " + description + " test: \n" + perfDump.toString());*/
-    status(description + " test took " + (System.currentTimeMillis()-testStartTime)/1000 + "sec");
+    status(description + " test took " +
+      (EnvironmentEdgeManager.currentTime() - testStartTime) / 1000 + "sec");
     Assert.assertTrue(success);
   }
 
@@ -294,7 +296,7 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
   private void createTable(TableDescriptorBuilder builder)
       throws Exception {
     deleteTable();
-    if (util.getHBaseClusterInterface() instanceof MiniHBaseCluster) {
+    if (util.getHBaseClusterInterface() instanceof SingleProcessHBaseCluster) {
       LOG.warn("Test does not make a lot of sense for minicluster. Will set flush size low.");
       builder.setValue(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, "1048576");
     }

@@ -30,7 +30,7 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -73,7 +73,7 @@ public class TestTableResource {
   private static final int NUM_REGIONS = 4;
   private static List<HRegionLocation> regionMap;
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL =
     new HBaseRESTTestingUtility();
   private static Client client;

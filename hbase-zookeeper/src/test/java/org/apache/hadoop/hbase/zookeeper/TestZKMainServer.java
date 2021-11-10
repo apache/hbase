@@ -23,7 +23,7 @@ import java.security.Permission;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
@@ -72,7 +72,7 @@ public class TestZKMainServer {
   @Test
   public void testCommandLineWorks() throws Exception {
     System.setSecurityManager(new NoExitSecurityManager());
-    HBaseZKTestingUtility htu = new HBaseZKTestingUtility();
+    HBaseZKTestingUtil htu = new HBaseZKTestingUtil();
     // Make it long so for sure succeeds.
     htu.getConfiguration().setInt(HConstants.ZK_SESSION_TIMEOUT, 30000);
     htu.startMiniZKCluster();

@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 import java.text.MessageFormat;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -171,7 +172,7 @@ public final class Waiter {
    */
   public static <E extends Exception> long waitFor(Configuration conf, long timeout, long interval,
       boolean failIfTimeout, Predicate<E> predicate) {
-    long started = System.currentTimeMillis();
+    long started = EnvironmentEdgeManager.currentTime();
     long adjustedTimeout = (long) (getWaitForRatio(conf) * timeout);
     long mustEnd = started + adjustedTimeout;
     long remainderWait;
@@ -183,7 +184,7 @@ public final class Waiter {
       LOG.info(MessageFormat.format("Waiting up to [{0}] milli-secs(wait.for.ratio=[{1}])",
         adjustedTimeout, getWaitForRatio(conf)));
       while (!(eval = predicate.evaluate())
-              && (remainderWait = mustEnd - System.currentTimeMillis()) > 0) {
+              && (remainderWait = mustEnd - EnvironmentEdgeManager.currentTime()) > 0) {
         try {
           // handle tail case when remainder wait is less than one interval
           sleepInterval = Math.min(remainderWait, interval);
@@ -197,7 +198,7 @@ public final class Waiter {
       if (!eval) {
         if (interrupted) {
           LOG.warn(MessageFormat.format("Waiting interrupted after [{0}] msec",
-            System.currentTimeMillis() - started));
+            EnvironmentEdgeManager.currentTime() - started));
         } else if (failIfTimeout) {
           String msg = getExplanation(predicate);
           fail(MessageFormat
@@ -208,7 +209,7 @@ public final class Waiter {
               MessageFormat.format("Waiting timed out after [{0}] msec", adjustedTimeout) + msg);
         }
       }
-      return (eval || interrupted) ? (System.currentTimeMillis() - started) : -1;
+      return (eval || interrupted) ? (EnvironmentEdgeManager.currentTime() - started) : -1;
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }

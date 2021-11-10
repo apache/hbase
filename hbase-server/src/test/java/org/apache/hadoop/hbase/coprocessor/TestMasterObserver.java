@@ -31,13 +31,15 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -690,13 +692,14 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preBalance(ObserverContext<MasterCoprocessorEnvironment> env)
-        throws IOException {
+    public void preBalance(ObserverContext<MasterCoprocessorEnvironment> env,
+      BalanceRequest request) throws IOException {
       preBalanceCalled = true;
     }
 
     @Override
     public void postBalance(ObserverContext<MasterCoprocessorEnvironment> env,
+        BalanceRequest request,
         List<RegionPlan> plans) throws IOException {
       postBalanceCalled = true;
     }
@@ -1162,12 +1165,12 @@ public class TestMasterObserver {
 
     @Override
     public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                  String groupName) throws IOException {
+                                  String groupName, BalanceRequest request) throws IOException {
     }
 
     @Override
     public void postBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        String groupName, boolean balancerRan) throws IOException {
+        String groupName, BalanceRequest request, BalanceResponse response) throws IOException {
     }
 
     @Override
@@ -1272,7 +1275,7 @@ public class TestMasterObserver {
 
   }
 
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static String TEST_SNAPSHOT = "observed_snapshot";
   private static TableName TEST_CLONE = TableName.valueOf("observed_clone");
   private static byte[] TEST_FAMILY = Bytes.toBytes("fam1");
@@ -1295,7 +1298,7 @@ public class TestMasterObserver {
 
   @Test
   public void testStarted() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     assertTrue("Master should be active", master.isActiveMaster());
@@ -1314,7 +1317,7 @@ public class TestMasterObserver {
 
   @Test
   public void testTableOperations() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1328,8 +1331,8 @@ public class TestMasterObserver {
     try(Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
         Admin admin = connection.getAdmin()) {
       tableCreationLatch = new CountDownLatch(1);
-      admin.createTable(tableDescriptor, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
-        1, HBaseTestingUtility.KEYS.length));
+      admin.createTable(tableDescriptor, Arrays.copyOfRange(HBaseTestingUtil.KEYS,
+        1, HBaseTestingUtil.KEYS.length));
 
       assertTrue("Test table should be created", cp.wasCreateTableCalled());
       tableCreationLatch.await();
@@ -1446,7 +1449,7 @@ public class TestMasterObserver {
   @Test
   public void testSnapshotOperations() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
@@ -1506,7 +1509,7 @@ public class TestMasterObserver {
 
   @Test
   public void testNamespaceOperations() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     String testNamespace = "observed_ns";
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1545,7 +1548,7 @@ public class TestMasterObserver {
   @Test
   public void testRegionTransitionOperations() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1621,7 +1624,7 @@ public class TestMasterObserver {
       UTIL.waitUntilNoRegionsInTransition();
       // now trigger a balance
       master.balanceSwitch(true);
-      boolean balanceRun = master.balance();
+      master.balance();
       assertTrue("Coprocessor should be called on region rebalancing",
           cp.wasBalanceCalled());
     } finally {
@@ -1633,7 +1636,7 @@ public class TestMasterObserver {
 
   @Test
   public void testTableDescriptorsEnumeration() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1650,7 +1653,7 @@ public class TestMasterObserver {
 
   @Test
   public void testTableNamesEnumeration() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1665,7 +1668,7 @@ public class TestMasterObserver {
 
   @Test
   public void testAbortProcedureOperation() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1680,7 +1683,7 @@ public class TestMasterObserver {
 
   @Test
   public void testGetProceduresOperation() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
@@ -1695,7 +1698,7 @@ public class TestMasterObserver {
 
   @Test
   public void testGetLocksOperation() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();

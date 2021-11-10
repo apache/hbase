@@ -185,7 +185,7 @@ public class MultiThreadedReader extends MultiThreadedAction
         LOG.info("Started thread #" + readerId + " for reads...");
       }
 
-      startTimeMs = System.currentTimeMillis();
+      startTimeMs = EnvironmentEdgeManager.currentTime();
       curKey = startKey;
       long [] keysForThisReader = new long[batchSize];
       while (curKey < endKey && !aborted) {
@@ -281,7 +281,7 @@ public class MultiThreadedReader extends MultiThreadedAction
           numReadFailures.addAndGet(1);
           LOG.debug("[" + readerId + "] FAILED read, key = " + (keyToRead + "")
               + ", time from start: "
-              + (System.currentTimeMillis() - startTimeMs) + " ms");
+              + (EnvironmentEdgeManager.currentTime() - startTimeMs) + " ms");
           if (printExceptionTrace) {
             LOG.warn(e.toString(), e);
             printExceptionTrace = false;
@@ -296,7 +296,7 @@ public class MultiThreadedReader extends MultiThreadedAction
           for (long keyToRead : keysToRead) {
             LOG.debug("[" + readerId + "] FAILED read, key = " + (keyToRead + "")
                 + ", time from start: "
-                + (System.currentTimeMillis() - startTimeMs) + " ms");
+                + (EnvironmentEdgeManager.currentTime() - startTimeMs) + " ms");
           }
           if (printExceptionTrace) {
             LOG.warn(e.toString(), e);

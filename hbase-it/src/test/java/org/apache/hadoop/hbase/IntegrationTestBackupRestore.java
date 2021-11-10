@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -215,11 +216,11 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     ColumnFamilyDescriptor[] columns = new ColumnFamilyDescriptor[] { cbuilder.build() };
     LOG.info("Creating table {} with {} splits.", tableName,
       regionsCountPerServer * regionServerCount);
-    startTime = System.currentTimeMillis();
-    HBaseTestingUtility.createPreSplitLoadTestTable(util.getConfiguration(), desc, columns,
+    startTime = EnvironmentEdgeManager.currentTime();
+    HBaseTestingUtil.createPreSplitLoadTestTable(util.getConfiguration(), desc, columns,
       regionsCountPerServer);
     util.waitTableAvailable(tableName);
-    endTime = System.currentTimeMillis();
+    endTime = EnvironmentEdgeManager.currentTime();
     LOG.info("Pre-split table created successfully in {}ms.", (endTime - startTime));
   }
 

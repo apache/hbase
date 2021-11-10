@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
@@ -65,7 +65,7 @@ public class TestLazyDataBlockDecompression {
       HBaseClassTestRule.forClass(TestLazyDataBlockDecompression.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLazyDataBlockDecompression.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private FileSystem fs;
 

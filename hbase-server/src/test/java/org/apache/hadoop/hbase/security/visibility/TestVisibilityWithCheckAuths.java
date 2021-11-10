@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -63,7 +63,7 @@ public class TestVisibilityWithCheckAuths {
 
   private static final String TOPSECRET = "TOPSECRET";
   private static final String PUBLIC = "PUBLIC";
-  public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  public static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] row1 = Bytes.toBytes("row1");
   private final static byte[] fam = Bytes.toBytes("info");
   private final static byte[] qual = Bytes.toBytes("qual");

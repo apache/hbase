@@ -139,11 +139,11 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
     }
 
     public void insert(Table table, Put put, long keyBase) {
-      long start = System.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       try {
         put = (Put) dataGenerator.beforeMutate(keyBase, put);
         table.put(put);
-        totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+        totalOpTimeMs.addAndGet(EnvironmentEdgeManager.currentTime() - start);
       } catch (IOException e) {
         failedKeySet.add(keyBase);
         String exceptionInfo;
@@ -157,9 +157,9 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
           pw.flush();
           exceptionInfo = StringUtils.stringifyException(e);
         }
-        LOG.error("Failed to insert: " + keyBase + " after " + (System.currentTimeMillis() - start)
-            + "ms; region information: " + getRegionDebugInfoSafe(table, put.getRow())
-            + "; errors: " + exceptionInfo);
+        LOG.error("Failed to insert: " + keyBase + " after " +
+          (EnvironmentEdgeManager.currentTime() - start) + "ms; region information: " +
+            getRegionDebugInfoSafe(table, put.getRow()) + "; errors: " + exceptionInfo);
       }
     }
     protected void closeHTable() {

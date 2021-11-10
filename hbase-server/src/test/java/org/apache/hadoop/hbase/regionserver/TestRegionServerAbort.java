@@ -33,10 +33,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -86,14 +85,14 @@ public class TestRegionServerAbort {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerAbort.class);
 
-  private HBaseTestingUtility testUtil;
+  private HBaseTestingUtil testUtil;
   private Configuration conf;
   private MiniDFSCluster dfsCluster;
-  private MiniHBaseCluster cluster;
+  private SingleProcessHBaseCluster cluster;
 
   @Before
   public void setup() throws Exception {
-    testUtil = new HBaseTestingUtility();
+    testUtil = new HBaseTestingUtil();
     conf = testUtil.getConfiguration();
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
         StopBlockingRegionObserver.class.getName());
@@ -107,7 +106,8 @@ public class TestRegionServerAbort {
 
     testUtil.startMiniZKCluster();
     dfsCluster = testUtil.startMiniDFSCluster(2);
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(2).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numRegionServers(2).build();
     cluster = testUtil.startMiniHBaseCluster(option);
   }
 
@@ -119,12 +119,6 @@ public class TestRegionServerAbort {
       RegionServerCoprocessorHost cpHost = rs.getRegionServerCoprocessorHost();
       StopBlockingRegionObserver cp = (StopBlockingRegionObserver)cpHost.findCoprocessor(className);
       cp.setStopAllowed(true);
-    }
-    HMaster master = cluster.getMaster();
-    RegionServerCoprocessorHost host = master.getRegionServerCoprocessorHost();
-    if (host != null) {
-      StopBlockingRegionObserver obs = (StopBlockingRegionObserver) host.findCoprocessor(className);
-      if (obs != null) obs.setStopAllowed(true);
     }
     testUtil.shutdownMiniCluster();
   }

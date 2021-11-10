@@ -26,7 +26,7 @@ import java.security.cert.X509Certificate;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
@@ -40,6 +40,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import sun.security.x509.AlgorithmId;
 
 @Category({ RestTests.class, MediumTests.class})
 public class TestRESTServerSSL {
@@ -51,7 +52,7 @@ public class TestRESTServerSSL {
   private static final String KEY_STORE_PASSWORD = "myKSPassword";
   private static final String TRUST_STORE_PASSWORD = "myTSPassword";
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
   private static Client sslClient;
   private static File keyDir;
@@ -59,6 +60,10 @@ public class TestRESTServerSSL {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
+    // Workaround for jdk8 252 bug. See https://github.com/bcgit/bc-java/issues/941
+    // Below is a workaround described in above URL. Issue fingered first in comments in
+    // HBASE-25920 Support Hadoop 3.3.1
+    AlgorithmId.get("PBEWithSHA1AndDESede");
     keyDir = initKeystoreDir();
     KeyPair keyPair = KeyStoreTestUtil.generateKeyPair("RSA");
     X509Certificate serverCertificate = KeyStoreTestUtil.generateCertificate(

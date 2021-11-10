@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -72,7 +73,7 @@ public class TestExportSnapshot {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshot.class);
 
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected final static byte[] FAMILY = Bytes.toBytes("cf");
 
@@ -327,13 +328,14 @@ public class TestExportSnapshot {
 
   private Path getHdfsDestinationDir() {
     Path rootDir = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
-    Path path = new Path(new Path(rootDir, "export-test"), "export-" + System.currentTimeMillis());
+    Path path = new Path(new Path(rootDir, "export-test"), "export-" +
+      EnvironmentEdgeManager.currentTime());
     LOG.info("HDFS export destination path: " + path);
     return path;
   }
 
-  static Path getLocalDestinationDir(HBaseTestingUtility htu) {
-    Path path = htu.getDataTestDir("local-export-" + System.currentTimeMillis());
+  static Path getLocalDestinationDir(HBaseTestingUtil htu) {
+    Path path = htu.getDataTestDir("local-export-" + EnvironmentEdgeManager.currentTime());
     try {
       FileSystem fs = FileSystem.getLocal(htu.getConfiguration());
       LOG.info("Local export destination path: " + path);

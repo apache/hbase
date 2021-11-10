@@ -43,7 +43,7 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.JMXListener;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -74,7 +74,7 @@ public class TestMetaTableMetrics {
       HBaseClassTestRule.forClass(TestMetaTableMetrics.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableMetrics.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final TableName NAME1 = TableName.valueOf("TestExampleMetaTableMetricsOne");
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
@@ -104,7 +104,7 @@ public class TestMetaTableMetrics {
       do {
         int sign = i % 2 == 0 ? 1 : -1;
         connectorPort += sign * rand.nextInt(100);
-      } while (!HBaseTestingUtility.available(connectorPort));
+      } while (!HBaseTestingUtil.available(connectorPort));
       try {
         conf.setInt("regionserver.rmi.registry.port", connectorPort);
         UTIL.startMiniCluster(1);

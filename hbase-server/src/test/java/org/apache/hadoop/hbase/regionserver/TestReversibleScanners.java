@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -80,10 +81,10 @@ public class TestReversibleScanners {
       HBaseClassTestRule.forClass(TestReversibleScanners.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReversibleScanners.class);
-  HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static byte[] FAMILYNAME = Bytes.toBytes("testCf");
-  private static long TS = System.currentTimeMillis();
+  private static long TS = EnvironmentEdgeManager.currentTime();
   private static int MAXMVCC = 7;
   private static byte[] ROW = Bytes.toBytes("testRow");
   private static final int ROWSIZE = 200;

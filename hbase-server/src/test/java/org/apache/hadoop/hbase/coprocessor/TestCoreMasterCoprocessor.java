@@ -23,7 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.MockMasterServices;
@@ -48,7 +48,7 @@ public class TestCoreMasterCoprocessor {
       HBaseClassTestRule.forClass(TestCoreMasterCoprocessor.class);
 
   @Rule public TestName name = new TestName();
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private MasterServices ms;
   private MasterCoprocessorHost mch;
 

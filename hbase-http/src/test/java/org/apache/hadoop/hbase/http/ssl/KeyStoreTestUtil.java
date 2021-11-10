@@ -43,7 +43,7 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.security.auth.x500.X500Principal;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.bouncycastle.x509.X509V1CertificateGenerator;
@@ -281,10 +281,10 @@ public final class KeyStoreTestUtil {
     String trustPassword = "trustP";
 
     File sslClientConfFile = new File(
-        sslConfDir + "/ssl-client-" + System.nanoTime() + "-" + HBaseCommonTestingUtility
+        sslConfDir + "/ssl-client-" + System.nanoTime() + "-" + HBaseCommonTestingUtil
             .getRandomUUID() + ".xml");
     File sslServerConfFile = new File(
-        sslConfDir + "/ssl-server-" + System.nanoTime() + "-" + HBaseCommonTestingUtility
+        sslConfDir + "/ssl-server-" + System.nanoTime() + "-" + HBaseCommonTestingUtil
             .getRandomUUID() + ".xml");
 
     Map<String, X509Certificate> certs = new HashMap<>();

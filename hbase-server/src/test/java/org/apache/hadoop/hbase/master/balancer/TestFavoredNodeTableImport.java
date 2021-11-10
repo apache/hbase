@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -64,7 +64,7 @@ public class TestFavoredNodeTableImport {
 
   private static final int SLAVES = 3;
   private static final int REGION_NUM = 20;
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final Configuration conf = UTIL.getConfiguration();
 
   @After

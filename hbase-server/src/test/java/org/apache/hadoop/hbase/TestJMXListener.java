@@ -46,7 +46,7 @@ public class TestJMXListener {
       HBaseClassTestRule.forClass(TestJMXListener.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestJMXListener.class);
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static int CONNECTOR_PORT;
 
   @BeforeClass
@@ -60,7 +60,7 @@ public class TestJMXListener {
     // To test what happens when the jmx listener can't put up its port, uncomment the below.
     BoundSocketMaker bsm = null; // new BoundSocketMaker(HBaseTestingUtility::randomFreePort);
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
-    CONNECTOR_PORT = bsm == null? HBaseTestingUtility.randomFreePort(): bsm.getPort();
+    CONNECTOR_PORT = bsm == null? HBaseTestingUtil.randomFreePort(): bsm.getPort();
     // Make sure the JMX listener is up before we proceed. If it is not up, retry. It may not
     // come up if there is a port clash/bind exception except its called something else in rmi.
     for (int i = 0; i < 10; i++) {
@@ -75,7 +75,7 @@ public class TestJMXListener {
         break;
       } catch (IOException ioe) {
         UTIL.shutdownMiniCluster();
-        CONNECTOR_PORT = HBaseTestingUtility.randomFreePort();
+        CONNECTOR_PORT = HBaseTestingUtil.randomFreePort();
       } finally {
         if (connector != null) {
           connector.close();
@@ -110,7 +110,7 @@ public class TestJMXListener {
   public ExpectedException expectedEx = ExpectedException.none();
   @Test
   public void testStop() throws Exception {
-    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
     LOG.info("shutdown hbase cluster...");
     cluster.shutdown();
     LOG.info("wait for the hbase cluster shutdown...");

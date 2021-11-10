@@ -22,15 +22,16 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -59,7 +60,7 @@ public class TestClientScannerRPCTimeout {
       HBaseClassTestRule.forClass(TestClientScannerRPCTimeout.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClientScannerRPCTimeout.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
   private static final byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   private static final byte[] VALUE = Bytes.toBytes("testValue");
@@ -109,9 +110,9 @@ public class TestClientScannerRPCTimeout {
     result = scanner.next();
     assertTrue("Expected row: row-1", Bytes.equals(r1, result.getRow()));
     LOG.info("Got expected first row");
-    long t1 = System.currentTimeMillis();
+    long t1 = EnvironmentEdgeManager.currentTime();
     result = scanner.next();
-    assertTrue((System.currentTimeMillis() - t1) > rpcTimeout);
+    assertTrue((EnvironmentEdgeManager.currentTime() - t1) > rpcTimeout);
     assertTrue("Expected row: row-2", Bytes.equals(r2, result.getRow()));
     RSRpcServicesWithScanTimeout.seqNoToSleepOn = -1;// No need of sleep
     result = scanner.next();

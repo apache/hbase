@@ -153,6 +153,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 <%if master.isActiveMaster() %>
                     <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
                     <li><a href="/hbck.jsp">HBCK Report</a></li>
+                    <li><a href="/operationDetails.jsp">Operation Details</a></li>
                     <%if master.getConfiguration().getBoolean(QuotaUtil.QUOTA_CONF_KEY, false) %>
                         <li><a href="/quotas.jsp">Quotas</a></li>
                     </%if>
@@ -451,8 +452,20 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                     return $.tablesorter.formatFloat( s.replace(/,/g,'') );
                 }, type: "numeric"
             });
+            $.tablesorter.addParser(
+            {
+                id: "dateTime",
+                is: function (s) {
+                    return /^([a-zA-Z]{3}\s){2}\d{2}\s\d{2}:\d{2}:\d{2}\s[a-zA-Z]{3}\s\d{4}$/.test(s);
+                }, format: function (s) {
+                    var split = s.split(" ");
+                    var time = Date.parse(split[1] + " " + split[2] + " " + split[3] + " " + split[5]);
+                    return $.tablesorter.formatFloat(time);
+                }, type: "numeric"
+            });
             $("#baseStatsTable").tablesorter({
                 headers: {
+                    1: {sorter: 'dateTime'},
                     4: {sorter: 'separator'},
                     5: {sorter: 'separator'}
                 }
@@ -594,7 +607,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
         </%if>
         <th style="vertical-align:middle;" rowspan="2">State</th>
-        <th style="text-align: center" colspan="8">Regions</th>
+        <th style="text-align: center" colspan="7">Regions</th>
         <th style="vertical-align:middle;" rowspan="2">Description</th>
     </tr>
     <tr>

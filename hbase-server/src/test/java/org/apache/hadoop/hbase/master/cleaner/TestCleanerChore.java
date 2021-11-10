@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -56,12 +56,12 @@ public class TestCleanerChore {
     HBaseClassTestRule.forClass(TestCleanerChore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCleanerChore.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static DirScanPool POOL;
 
   @BeforeClass
   public static void setup() {
-    POOL = new DirScanPool(UTIL.getConfiguration());
+    POOL = DirScanPool.getHFileCleanerScanPool(UTIL.getConfiguration());
   }
 
   @AfterClass
@@ -313,7 +313,7 @@ public class TestCleanerChore {
     Stoppable stop = new StoppableImplementation();
     // need to use a localutil to not break the rest of the test that runs on the local FS, which
     // gets hosed when we start to use a minicluster.
-    HBaseTestingUtility localUtil = new HBaseTestingUtility();
+    HBaseTestingUtil localUtil = new HBaseTestingUtil();
     Configuration conf = localUtil.getConfiguration();
     final Path testDir = UTIL.getDataTestDir();
     final FileSystem fs = UTIL.getTestFileSystem();
@@ -464,6 +464,57 @@ public class TestCleanerChore {
     // Change size of chore's pool
     conf.set(CleanerChore.CHORE_POOL_SIZE, String.valueOf(changedPoolSize));
     POOL.onConfigurationChange(conf);
+    assertEquals(changedPoolSize, chore.getChorePoolSize());
+    // Stop chore
+    t.join();
+  }
+
+  @Test
+  public void testOnConfigurationChangeLogCleaner() throws Exception {
+    int availableProcessorNum = Runtime.getRuntime().availableProcessors();
+    if (availableProcessorNum == 1) { // no need to run this test
+      return;
+    }
+
+    DirScanPool pool = DirScanPool.getLogCleanerScanPool(UTIL.getConfiguration());
+
+    // have at least 2 available processors/cores
+    int initPoolSize = availableProcessorNum / 2;
+    int changedPoolSize = availableProcessorNum;
+
+    Stoppable stop = new StoppableImplementation();
+    Configuration conf = UTIL.getConfiguration();
+    Path testDir = UTIL.getDataTestDir();
+    FileSystem fs = UTIL.getTestFileSystem();
+    String confKey = "hbase.test.cleaner.delegates";
+    conf.set(confKey, AlwaysDelete.class.getName());
+    conf.set(CleanerChore.LOG_CLEANER_CHORE_SIZE, String.valueOf(initPoolSize));
+    final AllValidPaths chore =
+        new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, pool);
+    chore.setEnabled(true);
+    // Create subdirs under testDir
+    int dirNums = 6;
+    Path[] subdirs = new Path[dirNums];
+    for (int i = 0; i < dirNums; i++) {
+      subdirs[i] = new Path(testDir, "subdir-" + i);
+      fs.mkdirs(subdirs[i]);
+    }
+    // Under each subdirs create 6 files
+    for (Path subdir : subdirs) {
+      createFiles(fs, subdir, 6);
+    }
+    // Start chore
+    Thread t = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        chore.chore();
+      }
+    });
+    t.setDaemon(true);
+    t.start();
+    // Change size of chore's pool
+    conf.set(CleanerChore.LOG_CLEANER_CHORE_SIZE, String.valueOf(changedPoolSize));
+    pool.onConfigurationChange(conf);
     assertEquals(changedPoolSize, chore.getChorePoolSize());
     // Stop chore
     t.join();

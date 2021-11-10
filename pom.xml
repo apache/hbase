@@ -39,7 +39,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>pom</packaging>
-  <version>3.0.0-SNAPSHOT</version>
+  <version>3.0.0-alpha-2-SNAPSHOT</version>
   <name>Apache HBase</name>
   <description>
     Apache HBase is the Hadoop database. Use it when you need
@@ -93,6 +93,7 @@
     <module>hbase-hbtop</module>
     <module>hbase-asyncfs</module>
     <module>hbase-logging</module>
+    <module>hbase-compression</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
@@ -318,6 +319,12 @@
         <name>Guangxu Cheng</name>
         <email>gxcheng@apache.org</email>
         <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>haxiaolin</id>
+      <name>Xiaolin Ha</name>
+      <email>haxiaolin@apache.org</email>
+      <timezone>+8</timezone>
     </developer>
     <developer>
       <id>huaxiangsun</id>
@@ -631,6 +638,12 @@
       <timezone>0</timezone>
     </developer>
     <developer>
+      <id>weichiu</id>
+      <name>Wei-Chiu Chuang</name>
+      <email>weichiu@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>
+    <developer>
       <id>xucang</id>
       <name>Xu Cang</name>
       <email>xucang@apache.org</email>
@@ -652,6 +665,12 @@
       <id>zhangduo</id>
       <name>Duo Zhang</name>
       <email>zhangduo@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>zhaobaiqiang</id>
+      <name>Baiqiang Zhao</name>
+      <email>zhaobaiqiang@apache.org</email>
       <timezone>+8</timezone>
     </developer>
     <developer>
@@ -694,6 +713,12 @@
       <id>sunxin</id>
       <name>Xin Sun</name>
       <email>sunxin@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>huangzhuoyue</id>
+      <name>Zhuoyue Huang</name>
+      <email>huangzhuoyue@apache.org</email>
       <timezone>+8</timezone>
     </developer>
   </developers>
@@ -770,6 +795,7 @@
           <configuration>
             <groups>${surefire.firstPartGroups}</groups>
             <failIfNoTests>false</failIfNoTests>
+            <trimStackTrace>false</trimStackTrace>
             <skip>${surefire.skipFirstPart}</skip>
             <forkCount>${surefire.firstPartForkCount}</forkCount>
             <reuseForks>false</reuseForks>
@@ -956,6 +982,8 @@
               <exclude>**/shaded/com/google/protobuf/**</exclude>
               <exclude>**/src/main/patches/**</exclude>
               <exclude>**/vote.tmpl</exclude>
+              <!-- gzipped list of S3N URIs for hbase-it -->
+              <exclude>**/CC-MAIN-2021-10-warc.paths.gz</exclude>
             </excludes>
           </configuration>
         </plugin>
@@ -1695,8 +1723,7 @@
     <caffeine.version>2.8.1</caffeine.version>
     <commons-codec.version>1.13</commons-codec.version>
     <commons-validator.version>1.6</commons-validator.version>
-    <!-- pretty outdated -->
-    <commons-io.version>2.8.0</commons-io.version>
+    <commons-io.version>2.11.0</commons-io.version>
     <commons-lang3.version>3.9</commons-lang3.version>
     <commons-math.version>3.6.1</commons-math.version>
     <disruptor.version>3.4.2</disruptor.version>
@@ -1765,7 +1792,13 @@
     <surefire.version>3.0.0-M4</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <hbase-thirdparty.version>3.4.1</hbase-thirdparty.version>
+    <!-- compression -->
+    <aircompressor.version>0.21</aircompressor.version>
+    <lz4.version>1.8.0</lz4.version>
+    <snappy.version>1.1.8.4</snappy.version>
+    <xz.version>1.9</xz.version>
+    <zstd-jni.version>1.5.0-4</zstd-jni.version>
+    <hbase-thirdparty.version>3.5.1</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -1926,6 +1959,13 @@
         <artifactId>hbase-balancer</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-balancer</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <artifactId>hbase-http</artifactId>
@@ -2108,6 +2148,31 @@
         <type>test-jar</type>
         <scope>test</scope>
       </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-compression-aircompressor</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-compression-lz4</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-compression-snappy</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-compression-xz</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-compression-zstd</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <!-- General dependencies -->
       <dependency>
         <groupId>com.github.stephenc.findbugs</groupId>
@@ -2256,6 +2321,10 @@
           <exclusion>
             <groupId>io.netty</groupId>
             <artifactId>netty</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
           </exclusion>
           <exclusion>
             <groupId>org.slf4j</groupId>
@@ -2500,6 +2569,33 @@
         <artifactId>audience-annotations</artifactId>
         <version>${audience-annotations.version}</version>
       </dependency>
+      <!-- compression -->
+      <dependency>
+        <groupId>io.airlift</groupId>
+        <artifactId>aircompressor</artifactId>
+        <version>${aircompressor.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.lz4</groupId>
+        <artifactId>lz4-java</artifactId>
+        <version>${lz4.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.tukaani</groupId>
+        <artifactId>xz</artifactId>
+        <version>${xz.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.xerial.snappy</groupId>
+        <artifactId>snappy-java</artifactId>
+        <version>${snappy.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.luben</groupId>
+        <artifactId>zstd-jni</artifactId>
+        <version>${zstd-jni.version}</version>
+      </dependency>
+      <!-- shaded thirdparty -->
       <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
         <artifactId>hbase-shaded-gson</artifactId>
@@ -2829,6 +2925,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
+             </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
@@ -2912,6 +3012,10 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
+             </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
@@ -2936,6 +3040,10 @@
              <exclusion>
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
              </exclusion>
               <exclusion>
                 <groupId>javax.servlet</groupId>
@@ -3121,6 +3229,13 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+             <!-- MiniMRCluster needs the hadoop netty-all transitive include... a
+               netty-all 4.0.52 version.... so we have to let it through.
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
+             </exclusion>
+             -->
              <exclusion>
                <groupId>com.google.code.findbugs</groupId>
                <artifactId>jsr305</artifactId>
@@ -3145,6 +3260,14 @@
                <groupId>log4j</groupId>
                <artifactId>log4j</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -3178,6 +3301,10 @@
              <exclusion>
                <groupId>log4j</groupId>
                <artifactId>log4j</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
@@ -3229,6 +3356,10 @@
              <exclusion>
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty-all</artifactId>
              </exclusion>
              <exclusion>
                <groupId>com.google.code.findbugs</groupId>

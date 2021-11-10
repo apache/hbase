@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -212,9 +213,9 @@ public class HFileWriterImpl implements HFile.Writer {
       throws IOException {
     trailer.setFileInfoOffset(outputStream.getPos());
     finishFileInfo();
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     fileInfo.write(out);
-    HFile.updateWriteLatency(System.currentTimeMillis() - startTime);
+    HFile.updateWriteLatency(EnvironmentEdgeManager.currentTime() - startTime);
   }
 
   public long getPos() throws IOException {
@@ -301,7 +302,7 @@ public class HFileWriterImpl implements HFile.Writer {
     if (blockWriter != null) {
       throw new IllegalStateException("finishInit called twice");
     }
-    blockWriter = new HFileBlock.Writer(blockEncoder, hFileContext,
+    blockWriter = new HFileBlock.Writer(conf, blockEncoder, hFileContext,
         cacheConf.getByteBuffAllocator());
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
@@ -841,9 +842,9 @@ public class HFileWriterImpl implements HFile.Writer {
     trailer.setEntryCount(entryCount);
     trailer.setCompressionCodec(hFileContext.getCompression());
 
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     trailer.serialize(outputStream);
-    HFile.updateWriteLatency(System.currentTimeMillis() - startTime);
+    HFile.updateWriteLatency(EnvironmentEdgeManager.currentTime() - startTime);
 
     if (closeOutputStream) {
       outputStream.close();

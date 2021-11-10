@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -90,8 +91,8 @@ public class TestFromClientSide3 {
       HBaseClassTestRule.forClass(TestFromClientSide3.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFromClientSide3.class);
-  private final static HBaseTestingUtility TEST_UTIL
-    = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL
+    = new HBaseTestingUtil();
   private static final int WAITTABLE_MILLIS = 10000;
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static Random random = new Random();
@@ -218,7 +219,7 @@ public class TestFromClientSide3 {
       byte[] row = Bytes.toBytes("SpecifiedRow");
       byte[] qual0 = Bytes.toBytes("qual0");
       byte[] qual1 = Bytes.toBytes("qual1");
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       Delete d = new Delete(row, now);
       table.delete(d);
 

@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,7 +86,7 @@ public class MajorCompactionTTLRequest extends MajorCompactionRequest {
     if (colDesc.getTimeToLive() == HConstants.FOREVER) {
       return -1;
     }
-    return System.currentTimeMillis() - (colDesc.getTimeToLive() * 1000L);
+    return EnvironmentEdgeManager.currentTime() - (colDesc.getTimeToLive() * 1000L);
   }
 
   @Override

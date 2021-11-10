@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * The class that is able to determine some unique strings for the client,
@@ -45,7 +46,7 @@ final class ClientIdGenerator {
     byte[] selfBytes = getIpAddressBytes();
     Long pid = getPid();
     long tid = Thread.currentThread().getId();
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
 
     byte[] id = new byte[selfBytes.length + ((pid != null ? 1 : 0) + 2) * Bytes.SIZEOF_LONG];
     int offset = Bytes.putBytes(id, 0, selfBytes, 0, selfBytes.length);

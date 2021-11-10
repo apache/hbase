@@ -28,7 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -80,7 +81,7 @@ public class TestRecoverStandbyProcedure {
 
   private static final byte[] qualifier = Bytes.toBytes("q");
 
-  private static final long timestamp = System.currentTimeMillis();
+  private static final long timestamp = EnvironmentEdgeManager.currentTime();
 
   private static final int ROW_COUNT = 1000;
 
@@ -90,7 +91,7 @@ public class TestRecoverStandbyProcedure {
 
   private static final String PEER_ID = "1";
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static SyncReplicationReplayWALManager syncReplicationReplayWALManager;
 

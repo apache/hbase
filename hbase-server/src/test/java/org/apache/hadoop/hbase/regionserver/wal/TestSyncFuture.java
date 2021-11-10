@@ -38,10 +38,10 @@ public class TestSyncFuture {
   public void testGet() throws Exception {
     long timeout = 5000;
     long txid = 100000;
-    SyncFuture syncFulture = new SyncFuture().reset(txid);
+    SyncFuture syncFulture = new SyncFuture().reset(txid, false);
     syncFulture.done(txid, null);
     assertEquals(txid, syncFulture.get(timeout));
 
-    syncFulture.reset(txid).get(timeout);
+    syncFulture.reset(txid, false).get(timeout);
   }
 }

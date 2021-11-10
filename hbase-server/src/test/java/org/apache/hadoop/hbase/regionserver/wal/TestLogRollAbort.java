@@ -25,11 +25,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -77,8 +78,8 @@ public class TestLogRollAbort {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractTestLogRolling.class);
   private static MiniDFSCluster dfsCluster;
   private static Admin admin;
-  private static MiniHBaseCluster cluster;
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static SingleProcessHBaseCluster cluster;
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   /* For the split-then-roll test */
   private static final Path HBASEDIR = new Path("/hbase");
@@ -189,7 +190,7 @@ public class TestLogRollAbort {
   public void testLogRollAfterSplitStart() throws IOException {
     LOG.info("Verify wal roll after split starts will fail.");
     String logName = ServerName.valueOf("testLogRollAfterSplitStart",
-        16010, System.currentTimeMillis()).toString();
+        16010, EnvironmentEdgeManager.currentTime()).toString();
     Path thisTestsDir = new Path(HBASELOGDIR, AbstractFSWALProvider.getWALDirectoryName(logName));
     final WALFactory wals = new WALFactory(conf, logName);
 
@@ -208,7 +209,7 @@ public class TestLogRollAbort {
         NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         scopes.put(Bytes.toBytes("column"), 0);
         log.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis(), mvcc, scopes), kvs);
+          EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
       }
       // Send the data to HDFS datanodes and close the HDFS writer
       log.sync();

@@ -374,6 +374,11 @@ class AdminOverAsyncAdmin implements Admin {
     return get(admin.balancerSwitch(onOrOff, synchronous));
   }
 
+
+  public BalanceResponse balance(BalanceRequest request) throws IOException {
+    return get(admin.balance(request));
+  }
+
   @Override
   public boolean balance() throws IOException {
     return get(admin.balance());
@@ -782,6 +787,11 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public void updateConfiguration(String groupName) throws IOException {
+    get(admin.updateConfiguration(groupName));
+  }
+
+  @Override
   public List<SecurityCapability> getSecurityCapabilities() throws IOException {
     return get(admin.getSecurityCapabilities());
   }
@@ -1001,8 +1011,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public boolean balanceRSGroup(String groupName) throws IOException {
-    return get(admin.balanceRSGroup(groupName));
+  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
+    return get(admin.balanceRSGroup(groupName, request));
   }
 
   @Override

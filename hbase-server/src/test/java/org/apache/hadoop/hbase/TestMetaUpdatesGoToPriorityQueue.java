@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -56,7 +57,7 @@ public class TestMetaUpdatesGoToPriorityQueue {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMetaUpdatesGoToPriorityQueue.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -110,18 +111,13 @@ public class TestMetaUpdatesGoToPriorityQueue {
       .setEndKey(parent.getEndKey()).setSplit(false).setRegionId(rid).build();
 
     // find the meta server
-    MiniHBaseCluster cluster = UTIL.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = UTIL.getMiniHBaseCluster();
     int rsIndex = cluster.getServerWithMeta();
-    HRegionServer rs;
-    if (rsIndex >= 0) {
-      rs = cluster.getRegionServer(rsIndex);
-    } else {
-      // it is in master
-      rs = cluster.getMaster();
-    }
+    assertTrue(rsIndex >= 0);
+    HRegionServer rs = cluster.getRegionServer(rsIndex);
     SpyingRpcScheduler scheduler = (SpyingRpcScheduler) rs.getRpcServer().getScheduler();
     long prevCalls = scheduler.numPriorityCalls;
-    long time = System.currentTimeMillis();
+    long time = EnvironmentEdgeManager.currentTime();
     Put putParent = MetaTableAccessor.makePutFromRegionInfo(
       RegionInfoBuilder.newBuilder(parent).setOffline(true).setSplit(true).build(), time);
     MetaTableAccessor.addDaughtersToPut(putParent, splitA, splitB);

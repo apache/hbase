@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.WrongRegionException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -96,7 +98,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.
  * MultiRowMutationService.BlockingInterface service =
  *   MultiRowMutationService.newBlockingStub(channel);
  * MutateRowsRequest mrm = mrmBuilder.build();
- * service.mutateRows(null, mrm);
+ * MutateRowsResponse response = service.mutateRows(null, mrm);
+ *
+ * // We can get the result of the conditional update
+ * boolean processed = response.getProcessed();
  * </code>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
@@ -109,8 +114,7 @@ public class MultiRowMutationEndpoint extends MultiRowMutationService implements
   @Override
   public void mutateRows(RpcController controller, MutateRowsRequest request,
       RpcCallback<MutateRowsResponse> done) {
-    MutateRowsResponse response = MutateRowsResponse.getDefaultInstance();
-
+    boolean matches = true;
     List<Region.RowLock> rowLocks = null;
     try {
       // set of rows to lock, sorted to avoid deadlocks
@@ -141,7 +145,6 @@ public class MultiRowMutationEndpoint extends MultiRowMutationService implements
         rowsToLock.add(m.getRow());
       }
 
-      boolean matches = true;
       if (request.getConditionCount() > 0) {
         // Get row locks for the mutations and the conditions
         rowLocks = new ArrayList<>();
@@ -184,7 +187,7 @@ public class MultiRowMutationEndpoint extends MultiRowMutationService implements
         }
       }
     }
-    done.run(response);
+    done.run(MutateRowsResponse.newBuilder().setProcessed(matches).build());
   }
 
   private boolean matches(Region region, ClientProtos.Condition condition) throws IOException {
@@ -220,22 +223,27 @@ public class MultiRowMutationEndpoint extends MultiRowMutationService implements
       get.setTimeRange(timeRange.getMin(), timeRange.getMax());
     }
 
-    List<Cell> result = region.get(get, false);
     boolean matches = false;
-    if (filter != null) {
-      if (!result.isEmpty()) {
-        matches = true;
-      }
-    } else {
-      boolean valueIsNull = comparator.getValue() == null || comparator.getValue().length == 0;
-      if (result.isEmpty() && valueIsNull) {
-        matches = true;
-      } else if (result.size() > 0 && result.get(0).getValueLength() == 0 && valueIsNull) {
-        matches = true;
-      } else if (result.size() == 1 && !valueIsNull) {
-        Cell kv = result.get(0);
-        int compareResult = PrivateCellUtil.compareValue(kv, comparator);
-        matches = matches(op, compareResult);
+    try (RegionScanner scanner = region.getScanner(new Scan(get))) {
+      // NOTE: Please don't use HRegion.get() instead,
+      // because it will copy cells to heap. See HBASE-26036
+      List<Cell> result = new ArrayList<>();
+      scanner.next(result);
+      if (filter != null) {
+        if (!result.isEmpty()) {
+          matches = true;
+        }
+      } else {
+        boolean valueIsNull = comparator.getValue() == null || comparator.getValue().length == 0;
+        if (result.isEmpty() && valueIsNull) {
+          matches = true;
+        } else if (result.size() > 0 && result.get(0).getValueLength() == 0 && valueIsNull) {
+          matches = true;
+        } else if (result.size() == 1 && !valueIsNull) {
+          Cell kv = result.get(0);
+          int compareResult = PrivateCellUtil.compareValue(kv, comparator);
+          matches = matches(op, compareResult);
+        }
       }
     }
     return matches;

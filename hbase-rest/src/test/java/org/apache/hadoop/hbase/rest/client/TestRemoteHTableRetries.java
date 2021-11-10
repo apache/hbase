@@ -31,7 +31,7 @@ import java.util.Arrays;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -58,7 +59,7 @@ public class TestRemoteHTableRetries {
   private static final int RETRIES = 3;
   private static final long MAX_TIME = SLEEP_TIME * (RETRIES - 1);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final byte[] ROW_1 = Bytes.toBytes("testrow1");
   private static final byte[] COLUMN_1 = Bytes.toBytes("a");
@@ -182,14 +183,14 @@ public class TestRemoteHTableRetries {
   }
 
   private void testTimedOutCall(CallExecutor callExecutor) throws Exception {
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     try {
       callExecutor.run();
       fail("should be timeout exception!");
     } catch (IOException e) {
       assertTrue(Pattern.matches(".*request timed out", e.toString()));
     }
-    assertTrue((System.currentTimeMillis() - start) > MAX_TIME);
+    assertTrue((EnvironmentEdgeManager.currentTime() - start) > MAX_TIME);
   }
 
   private interface CallExecutor {

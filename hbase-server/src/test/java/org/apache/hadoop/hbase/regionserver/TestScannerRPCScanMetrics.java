@@ -18,20 +18,19 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TestClientScannerRPCTimeout;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -44,7 +43,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
 
 @Category({ RegionServerTests.class, MediumTests.class})
 public class TestScannerRPCScanMetrics {
@@ -54,7 +52,7 @@ public class TestScannerRPCScanMetrics {
     HBaseClassTestRule.forClass(TestScannerRPCScanMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScannerRPCScanMetrics.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
   private static final byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   private static final byte[] VALUE = Bytes.toBytes("testValue");
@@ -113,7 +111,7 @@ public class TestScannerRPCScanMetrics {
     scanNextIterate(ht, dummyScan);
 
     RSRpcServices testClusterRSRPCServices = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
-      .rpcServices;
+      .getRpcServices();
     assertEquals(4, testClusterRSRPCServices.rpcFullScanRequestCount.intValue());
   }
 

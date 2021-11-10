@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.thrift.Constants;
 import org.apache.hadoop.hbase.thrift2.client.ThriftConnection;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -99,11 +100,11 @@ public class TestThriftConnection {
   private static final byte[] VALUE_2 = Bytes.toBytes("testvalue2");
 
   private static final long ONE_HOUR = 60 * 60 * 1000;
-  private static final long TS_2 = System.currentTimeMillis();
+  private static final long TS_2 = EnvironmentEdgeManager.currentTime();
   private static final long TS_1 = TS_2 - ONE_HOUR;
 
 
-  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected static ThriftServer thriftServer;
 
@@ -164,8 +165,8 @@ public class TestThriftConnection {
     // Do not start info server
     TEST_UTIL.getConfiguration().setInt(THRIFT_INFO_SERVER_PORT , -1);
     TEST_UTIL.startMiniCluster();
-    thriftPort = HBaseTestingUtility.randomFreePort();
-    httpPort = HBaseTestingUtility.randomFreePort();
+    thriftPort = HBaseTestingUtil.randomFreePort();
+    httpPort = HBaseTestingUtil.randomFreePort();
     // Start a thrift server
     thriftServer = startThriftServer(thriftPort, false);
     // Start an HTTP thrift server

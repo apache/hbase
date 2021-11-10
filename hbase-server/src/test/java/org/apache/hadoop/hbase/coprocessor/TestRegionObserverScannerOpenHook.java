@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -83,7 +83,7 @@ public class TestRegionObserverScannerOpenHook {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRegionObserverScannerOpenHook.class);
 
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   static final Path DIR = UTIL.getDataTestDir();
 
   @Rule
@@ -196,7 +196,7 @@ public class TestRegionObserverScannerOpenHook {
       0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     Path path = new Path(DIR + callingMethod);
-    WAL wal = HBaseTestingUtility.createWal(conf, path, info);
+    WAL wal = HBaseTestingUtil.createWal(conf, path, info);
     HRegion r = HRegion.createHRegion(info, path, conf, tableDescriptor, wal);
     // this following piece is a hack. currently a coprocessorHost
     // is secretly loaded at OpenRegionHandler. we don't really
@@ -215,7 +215,7 @@ public class TestRegionObserverScannerOpenHook {
     byte[][] FAMILIES = new byte[][] { A };
 
     // Use new HTU to not overlap with the DFS cluster started in #CompactionStacking
-    Configuration conf = new HBaseTestingUtility().getConfiguration();
+    Configuration conf = new HBaseTestingUtil().getConfiguration();
     HRegion region = initHRegion(TABLE, getClass().getName(), conf, FAMILIES);
     RegionCoprocessorHost h = region.getCoprocessorHost();
     h.load(NoDataFromScan.class, Coprocessor.PRIORITY_HIGHEST, conf);
@@ -230,7 +230,7 @@ public class TestRegionObserverScannerOpenHook {
     assertNull(
       "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor. Found: "
           + r, r.listCells());
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   @Test
@@ -241,7 +241,7 @@ public class TestRegionObserverScannerOpenHook {
     byte[][] FAMILIES = new byte[][] { A };
 
     // Use new HTU to not overlap with the DFS cluster started in #CompactionStacking
-    Configuration conf = new HBaseTestingUtility().getConfiguration();
+    Configuration conf = new HBaseTestingUtil().getConfiguration();
     HRegion region = initHRegion(TABLE, getClass().getName(), conf, FAMILIES);
     RegionCoprocessorHost h = region.getCoprocessorHost();
     h.load(NoDataFromFlush.class, Coprocessor.PRIORITY_HIGHEST, conf);
@@ -257,7 +257,7 @@ public class TestRegionObserverScannerOpenHook {
     assertNull(
       "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor. Found: "
           + r, r.listCells());
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   /*

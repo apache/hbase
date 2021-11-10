@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -63,7 +63,7 @@ public class TestFSTableDescriptors {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestFSTableDescriptors.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestFSTableDescriptors.class);
 
   @Rule
@@ -413,10 +413,10 @@ public class TestFSTableDescriptors {
         new Path("/tmp", FSTableDescriptors.TABLEINFO_FILE_PREFIX));
     FileStatus future =
       new FileStatus(0, false, 0, 0, -1,
-        new Path("/tmp/tablinfo." + System.currentTimeMillis()));
+        new Path("/tmp/tablinfo." + EnvironmentEdgeManager.currentTime()));
     FileStatus farFuture =
       new FileStatus(0, false, 0, 0, -1,
-        new Path("/tmp/tablinfo." + System.currentTimeMillis() + 1000));
+        new Path("/tmp/tablinfo." + EnvironmentEdgeManager.currentTime() + 1000));
     FileStatus [] alist = {bare, future, farFuture};
     FileStatus [] blist = {bare, farFuture, future};
     FileStatus [] clist = {farFuture, bare, future};

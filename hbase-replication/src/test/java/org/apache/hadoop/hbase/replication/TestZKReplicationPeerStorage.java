@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.replication;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -26,6 +28,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -36,7 +39,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -57,7 +60,7 @@ public class TestZKReplicationPeerStorage {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestZKReplicationPeerStorage.class);
 
-  private static final HBaseZKTestingUtility UTIL = new HBaseZKTestingUtility();
+  private static final HBaseZKTestingUtil UTIL = new HBaseZKTestingUtil();
 
   private static ZKReplicationPeerStorage STORAGE;
 
@@ -224,7 +227,8 @@ public class TestZKReplicationPeerStorage {
       STORAGE.getNewSyncReplicationStateNode(peerId)));
   }
 
-  @Test public void testBaseReplicationPeerConfig() throws ReplicationException{
+  @Test
+  public void testBaseReplicationPeerConfig() throws ReplicationException {
     String customPeerConfigKey = "hbase.xxx.custom_config";
     String customPeerConfigValue = "test";
     String customPeerConfigUpdatedValue = "testUpdated";
@@ -267,7 +271,8 @@ public class TestZKReplicationPeerStorage {
       getConfiguration().get(customPeerConfigSecondKey));
   }
 
-  @Test public void testBaseReplicationRemovePeerConfig() throws ReplicationException {
+  @Test
+  public void testBaseReplicationRemovePeerConfig() throws ReplicationException {
     String customPeerConfigKey = "hbase.xxx.custom_config";
     String customPeerConfigValue = "test";
     ReplicationPeerConfig existingReplicationPeerConfig = getConfig(1);
@@ -296,7 +301,8 @@ public class TestZKReplicationPeerStorage {
     assertNull(replicationPeerConfigRemoved.getConfiguration().get(customPeerConfigKey));
   }
 
-  @Test public void testBaseReplicationRemovePeerConfigWithNoExistingConfig()
+  @Test
+  public void testBaseReplicationRemovePeerConfigWithNoExistingConfig()
     throws ReplicationException {
     String customPeerConfigKey = "hbase.xxx.custom_config";
     ReplicationPeerConfig existingReplicationPeerConfig = getConfig(1);
@@ -310,5 +316,23 @@ public class TestZKReplicationPeerStorage {
     ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.
       updateReplicationBasePeerConfigs(conf, existingReplicationPeerConfig);
     assertNull(updatedReplicationPeerConfig.getConfiguration().get(customPeerConfigKey));
+  }
+
+  @Test
+  public void testPeerNameControl() throws Exception {
+    String clusterKey = "key";
+    STORAGE.addPeer("6", ReplicationPeerConfig.newBuilder().setClusterKey(clusterKey).build(), true,
+      SyncReplicationState.NONE);
+
+    try {
+      STORAGE.addPeer("6", ReplicationPeerConfig.newBuilder().setClusterKey(clusterKey).build(),
+        true, SyncReplicationState.NONE);
+      fail();
+    } catch (ReplicationException e) {
+      assertThat(e.getCause(), instanceOf(KeeperException.NodeExistsException.class));
+    } finally {
+      // clean up
+      STORAGE.removePeer("6");
+    }
   }
 }

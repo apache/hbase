@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.compress.Compressor;
 import org.junit.After;
@@ -109,7 +110,7 @@ public class TestHFileBlock {
   private static int FIELD_LENGTH = 10;
   private static float CHANCE_TO_REPEAT = 0.6f;
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private FileSystem fs;
 
   private final boolean includesMemstoreTS;
@@ -268,7 +269,7 @@ public class TestHFileBlock {
                         .withIncludesTags(includesTag)
                         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                         .build();
-    HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
+    HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null, meta);
     DataOutputStream dos = hbw.startWriting(blockType);
     writeTestBlockContents(dos);
     dos.flush();
@@ -350,8 +351,9 @@ public class TestHFileBlock {
   }
 
   protected void testReaderV2Internals() throws IOException {
-    if(includesTag) {
-      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+    final Configuration conf = TEST_UTIL.getConfiguration();
+    if (includesTag) {
+      conf.setInt("hfile.format.version", 3);
     }
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
@@ -366,7 +368,7 @@ public class TestHFileBlock {
                            .withIncludesTags(includesTag)
                            .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                            .build();
-        HFileBlock.Writer hbw = new HFileBlock.Writer(null,
+        HFileBlock.Writer hbw = new HFileBlock.Writer(conf, null,
            meta);
         long totalSize = 0;
         for (int blockId = 0; blockId < 2; ++blockId) {
@@ -390,7 +392,8 @@ public class TestHFileBlock {
             .withFilePath(path)
             .withFileSystem(fs)
             .build();
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context, meta, alloc);
+        HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context, meta, alloc,
+          TEST_UTIL.getConfiguration());
         HFileBlock b = hbr.readBlockData(0, -1, pread, false, true);
         is.close();
         assertEquals(0, HFile.getAndResetChecksumFailuresCount());
@@ -409,7 +412,8 @@ public class TestHFileBlock {
               .withFilePath(path)
               .withFileSystem(fs)
               .build();
-          hbr = new HFileBlock.FSReaderImpl(readerContext, meta, alloc);
+          hbr = new HFileBlock.FSReaderImpl(readerContext, meta, alloc,
+            TEST_UTIL.getConfiguration());
           b = hbr.readBlockData(0,
             2173 + HConstants.HFILEBLOCK_HEADER_SIZE + b.totalChecksumBytes(), pread, false, true);
           assertEquals(expected, b);
@@ -443,8 +447,9 @@ public class TestHFileBlock {
 
   private void testInternals() throws IOException {
     final int numBlocks = 5;
+    final Configuration conf = TEST_UTIL.getConfiguration();
     if(includesTag) {
-      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+      conf.setInt("hfile.format.version", 3);
     }
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
@@ -462,7 +467,7 @@ public class TestHFileBlock {
                               .withIncludesTags(includesTag)
                               .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                               .build();
-          HFileBlock.Writer hbw = new HFileBlock.Writer(dataBlockEncoder, meta);
+          HFileBlock.Writer hbw = new HFileBlock.Writer(conf, dataBlockEncoder, meta);
           long totalSize = 0;
           final List<Integer> encodedSizes = new ArrayList<>();
           final List<ByteBuff> encodedBlocks = new ArrayList<>();
@@ -499,8 +504,8 @@ public class TestHFileBlock {
               .withFileSystem(fs)
               .build();
           HFileBlock.FSReaderImpl hbr =
-              new HFileBlock.FSReaderImpl(context, meta, alloc);
-          hbr.setDataBlockEncoder(dataBlockEncoder);
+              new HFileBlock.FSReaderImpl(context, meta, alloc, conf);
+          hbr.setDataBlockEncoder(dataBlockEncoder, conf);
           hbr.setIncludesMemStoreTS(includesMemstoreTS);
           HFileBlock blockFromHFile, blockUnpacked;
           int pos = 0;
@@ -608,6 +613,7 @@ public class TestHFileBlock {
 
   protected void testPreviousOffsetInternals() throws IOException {
     // TODO: parameterize these nested loops.
+    Configuration conf = TEST_UTIL.getConfiguration();
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : BOOLEAN_VALUES) {
         for (boolean cacheOnWrite : BOOLEAN_VALUES) {
@@ -619,8 +625,8 @@ public class TestHFileBlock {
           List<Long> expectedPrevOffsets = new ArrayList<>();
           List<BlockType> expectedTypes = new ArrayList<>();
           List<ByteBuffer> expectedContents = cacheOnWrite ? new ArrayList<>() : null;
-          long totalSize = writeBlocks(rand, algo, path, expectedOffsets,
-              expectedPrevOffsets, expectedTypes, expectedContents);
+          long totalSize = writeBlocks(TEST_UTIL.getConfiguration(), rand, algo, path,
+            expectedOffsets, expectedPrevOffsets, expectedTypes, expectedContents);
 
           FSDataInputStream is = fs.open(path);
           HFileContext meta = new HFileContextBuilder()
@@ -634,8 +640,7 @@ public class TestHFileBlock {
               .withFilePath(path)
               .withFileSystem(fs)
               .build();
-          HFileBlock.FSReader hbr =
-              new HFileBlock.FSReaderImpl(context, meta, alloc);
+          HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context, meta, alloc, conf);
           long curOffset = 0;
           for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
             if (!pread) {
@@ -760,11 +765,11 @@ public class TestHFileBlock {
     @Override
     public Boolean call() throws Exception {
       Random rand = new Random(clientId.hashCode());
-      long endTime = System.currentTimeMillis() + 10000;
+      long endTime = EnvironmentEdgeManager.currentTime() + 10000;
       int numBlocksRead = 0;
       int numPositionalRead = 0;
       int numWithOnDiskSize = 0;
-      while (System.currentTimeMillis() < endTime) {
+      while (EnvironmentEdgeManager.currentTime() < endTime) {
         int blockId = rand.nextInt(NUM_TEST_BLOCKS);
         long offset = offsets.get(blockId);
         // now we only support concurrent read with pread = true
@@ -818,12 +823,14 @@ public class TestHFileBlock {
 
   protected void testConcurrentReadingInternals() throws IOException,
       InterruptedException, ExecutionException {
+    Configuration conf = TEST_UTIL.getConfiguration();
     for (Compression.Algorithm compressAlgo : COMPRESSION_ALGORITHMS) {
       Path path = new Path(TEST_UTIL.getDataTestDir(), "concurrent_reading");
       Random rand = defaultRandom();
       List<Long> offsets = new ArrayList<>();
       List<BlockType> types = new ArrayList<>();
-      writeBlocks(rand, compressAlgo, path, offsets, null, types, null);
+      writeBlocks(TEST_UTIL.getConfiguration(), rand, compressAlgo, path, offsets, null,
+        types, null);
       FSDataInputStream is = fs.open(path);
       long fileSize = fs.getFileStatus(path).getLen();
       HFileContext meta = new HFileContextBuilder()
@@ -838,7 +845,7 @@ public class TestHFileBlock {
           .withFilePath(path)
           .withFileSystem(fs)
           .build();
-      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context, meta, alloc);
+      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(context, meta, alloc, conf);
 
       Executor exec = Executors.newFixedThreadPool(NUM_READER_THREADS);
       ExecutorCompletionService<Boolean> ecs = new ExecutorCompletionService<>(exec);
@@ -861,7 +868,7 @@ public class TestHFileBlock {
     }
   }
 
-  private long writeBlocks(Random rand, Compression.Algorithm compressAlgo,
+  private long writeBlocks(Configuration conf, Random rand, Compression.Algorithm compressAlgo,
       Path path, List<Long> expectedOffsets, List<Long> expectedPrevOffsets,
       List<BlockType> expectedTypes, List<ByteBuffer> expectedContents
   ) throws IOException {
@@ -874,7 +881,7 @@ public class TestHFileBlock {
                         .withCompression(compressAlgo)
                         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                         .build();
-    HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
+    HFileBlock.Writer hbw = new HFileBlock.Writer(conf, null, meta);
     Map<BlockType, Long> prevOffsetByType = new HashMap<>();
     long totalSize = 0;
     for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {

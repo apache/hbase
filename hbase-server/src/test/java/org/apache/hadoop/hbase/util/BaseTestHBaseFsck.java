@@ -38,9 +38,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -83,7 +84,7 @@ import org.slf4j.LoggerFactory;
 public class BaseTestHBaseFsck {
   static final int POOL_SIZE = 7;
   protected static final Logger LOG = LoggerFactory.getLogger(BaseTestHBaseFsck.class);
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected final static Configuration conf = TEST_UTIL.getConfiguration();
   protected final static String FAM_STR = "fam";
   protected final static byte[] FAM = Bytes.toBytes(FAM_STR);
@@ -108,9 +109,10 @@ public class BaseTestHBaseFsck {
    * Debugging method to dump the contents of meta.
    */
   protected void dumpMeta(TableName tableName) throws IOException {
-    List<byte[]> metaRows = TEST_UTIL.getMetaTableRows(tableName);
-    for (byte[] row : metaRows) {
-      LOG.info(Bytes.toString(row));
+    List<RegionInfo> regions =
+      MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tableName);
+    for (RegionInfo region : regions) {
+      LOG.info(region.getRegionNameAsString());
     }
   }
 
@@ -210,7 +212,6 @@ public class BaseTestHBaseFsck {
       LOG.info(hri.toString() + hsa.toString());
     }
 
-    TEST_UTIL.getMetaTableRows(htd.getTableName());
     LOG.info("*** After delete:");
     dumpMeta(htd.getTableName());
   }
@@ -608,7 +609,7 @@ public class BaseTestHBaseFsck {
     }
   }
 
-  public static void createTable(HBaseTestingUtility testUtil, TableDescriptor tableDescriptor,
+  public static void createTable(HBaseTestingUtil testUtil, TableDescriptor tableDescriptor,
       byte[][] splitKeys) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
@@ -625,7 +626,7 @@ public class BaseTestHBaseFsck {
     testUtil.waitUntilAllRegionsAssigned(tableDescriptor.getTableName());
   }
 
-  public static void deleteTable(HBaseTestingUtility testUtil, TableName tableName)
+  public static void deleteTable(HBaseTestingUtil testUtil, TableName tableName)
     throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.

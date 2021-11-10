@@ -18,16 +18,19 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
@@ -47,7 +50,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
  * Test BalancerDecision ring buffer using namedQueue interface
  */
 @Category({ MasterTests.class, MediumTests.class })
-public class TestBalancerDecision extends BalancerTestBase {
+public class TestBalancerDecision extends StochasticBalancerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -56,7 +59,11 @@ public class TestBalancerDecision extends BalancerTestBase {
   @Test
   public void testBalancerDecisions() {
     conf.setBoolean("hbase.master.balancer.decision.buffer.enabled", true);
-    loadBalancer.setConf(conf);
+    MasterServices services = mock(MasterServices.class);
+    when(services.getConfiguration()).thenReturn(conf);
+    MasterClusterInfoProvider provider = new MasterClusterInfoProvider(services);
+    loadBalancer.setClusterInfoProvider(provider);
+    loadBalancer.onConfigurationChange(conf);
     float minCost = conf.getFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
     conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 1.0f);
     try {
@@ -64,7 +71,7 @@ public class TestBalancerDecision extends BalancerTestBase {
       boolean[] perTableBalancerConfigs = {true, false};
       for (boolean isByTable : perTableBalancerConfigs) {
         conf.setBoolean(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, isByTable);
-        loadBalancer.setConf(conf);
+        loadBalancer.onConfigurationChange(conf);
         for (int[] mockCluster : clusterStateMocks) {
           Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
           Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
@@ -79,7 +86,7 @@ public class TestBalancerDecision extends BalancerTestBase {
       namedQueueGetRequest
         .setBalancerDecisionsRequest(MasterProtos.BalancerDecisionsRequest.getDefaultInstance());
       NamedQueueGetResponse namedQueueGetResponse =
-        loadBalancer.namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
+        provider.getNamedQueueRecorder().getNamedQueueRecords(namedQueueGetRequest);
       List<RecentLogs.BalancerDecision> balancerDecisions =
         namedQueueGetResponse.getBalancerDecisions();
       MasterProtos.BalancerDecisionsResponse response =
@@ -93,7 +100,7 @@ public class TestBalancerDecision extends BalancerTestBase {
       // reset config
       conf.unset(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE);
       conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", minCost);
-      loadBalancer.setConf(conf);
+      loadBalancer.onConfigurationChange(conf);
     }
   }
 
@@ -101,5 +108,4 @@ public class TestBalancerDecision extends BalancerTestBase {
     return (Arrays.stream(cluster).anyMatch(x -> x > 1)) && (Arrays.stream(cluster)
       .anyMatch(x -> x < 1));
   }
-
 }

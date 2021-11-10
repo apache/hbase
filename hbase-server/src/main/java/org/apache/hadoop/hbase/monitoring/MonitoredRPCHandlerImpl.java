@@ -22,10 +22,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
@@ -43,6 +44,8 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
   private String methodName = "";
   private Object [] params = {};
   private Message packet;
+  private boolean snapshot = false;
+  private Map<String, Object> callInfoMap = new HashMap<>();
 
   public MonitoredRPCHandlerImpl() {
     super();
@@ -53,11 +56,14 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
 
   @Override
   public synchronized MonitoredRPCHandlerImpl clone() {
-    return (MonitoredRPCHandlerImpl) super.clone();
+    MonitoredRPCHandlerImpl clone = (MonitoredRPCHandlerImpl) super.clone();
+    clone.callInfoMap = generateCallInfoMap();
+    clone.snapshot = true;
+    return clone;
   }
 
   /**
-   * Gets the status of this handler; if it is currently servicing an RPC, 
+   * Gets the status of this handler; if it is currently servicing an RPC,
    * this status will include the RPC information.
    * @return a String describing the current status.
    */
@@ -196,7 +202,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
       long queueTime) {
     this.methodName = methodName;
     this.params = params;
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     this.rpcStartTime = now;
     setWarnTime(now);
     this.rpcQueueTime = queueTime;
@@ -233,6 +239,10 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
 
   @Override
   public synchronized Map<String, Object> toMap() {
+    return this.snapshot ? this.callInfoMap : generateCallInfoMap();
+  }
+
+  private Map<String, Object> generateCallInfoMap() {
     // only include RPC info if the Handler is actively servicing an RPC call
     Map<String, Object> map = super.toMap();
     if (getState() != State.RUNNING) {

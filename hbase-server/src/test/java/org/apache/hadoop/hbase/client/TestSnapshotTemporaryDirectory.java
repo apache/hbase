@@ -35,7 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -90,7 +91,7 @@ public class TestSnapshotTemporaryDirectory {
       Paths.get("").toAbsolutePath().toString() + Path.SEPARATOR + UUID.randomUUID().toString();
 
   protected static Admin admin;
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected static final String STRING_TABLE_NAME = "test";
   protected static final byte[] TEST_FAM = Bytes.toBytes("fam");
   protected static final TableName TABLE_NAME = TableName.valueOf(STRING_TABLE_NAME);
@@ -156,7 +157,7 @@ public class TestSnapshotTemporaryDirectory {
   @Test
   public void testRestoreDisabledSnapshot()
       throws IOException, InterruptedException {
-    long tid = System.currentTimeMillis();
+    long tid = EnvironmentEdgeManager.currentTime();
     TableName tableName = TableName.valueOf("testtb-" + tid);
     String emptySnapshot = "emptySnaptb-" + tid;
     String snapshotName0 = "snaptb0-" + tid;
@@ -223,7 +224,7 @@ public class TestSnapshotTemporaryDirectory {
   @Test
   public void testRestoreEnabledSnapshot()
       throws IOException, InterruptedException {
-    long tid = System.currentTimeMillis();
+    long tid = EnvironmentEdgeManager.currentTime();
     TableName tableName = TableName.valueOf("testtb-" + tid);
     String emptySnapshot = "emptySnaptb-" + tid;
     String snapshotName0 = "snaptb0-" + tid;

@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -55,11 +57,18 @@ public class TestRemoteBackup extends TestBackupBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRemoteBackup.class);
 
-  @Override
-  public void setUp() throws Exception {
-    useSecondCluster = true;
+  /**
+   * Setup Cluster with appropriate configurations before running tests.
+   *
+   * @throws Exception if starting the mini cluster or setting up the tables fails
+   */
+  @BeforeClass
+  public static void setUp() throws Exception {
+    TEST_UTIL = new HBaseTestingUtil();
+    conf1 = TEST_UTIL.getConfiguration();
     conf1.setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 10);
-    super.setUp();
+    useSecondCluster = true;
+    setUpHelper();
   }
 
   /**

@@ -41,19 +41,19 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
-import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
+import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -176,8 +176,6 @@ public abstract class RpcServer implements RpcServerInterface,
   protected HBaseRPCErrorHandler errorHandler = null;
 
   public static final String MAX_REQUEST_SIZE = "hbase.ipc.max.request.size";
-  protected static final RequestTooBigException REQUEST_TOO_BIG_EXCEPTION =
-      new RequestTooBigException();
 
   protected static final String WARN_RESPONSE_TIME = "hbase.ipc.warn.response.time";
   protected static final String WARN_RESPONSE_SIZE = "hbase.ipc.warn.response.size";
@@ -395,7 +393,7 @@ public abstract class RpcServer implements RpcServerInterface,
       Message result = call.getService().callBlockingMethod(md, controller, param);
       long receiveTime = call.getReceiveTime();
       long startTime = call.getStartTime();
-      long endTime = System.currentTimeMillis();
+      long endTime = EnvironmentEdgeManager.currentTime();
       int processingTime = (int) (endTime - startTime);
       int qTime = (int) (startTime - receiveTime);
       int totalTime = (int) (endTime - receiveTime);

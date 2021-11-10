@@ -25,7 +25,7 @@ import java.io.UncheckedIOException;
 import java.util.UUID;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
@@ -51,7 +51,7 @@ import org.junit.rules.TestName;
  */
 public class SerialReplicationTestBase {
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   protected static String PEER_ID = "1";
 

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,7 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -43,6 +44,8 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
+import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.DelegatingInternalScanner;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -72,7 +75,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAvoidCellReferencesIntoShippedBlocks.class);
 
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   static byte[][] ROWS = new byte[2][];
   private static byte[] ROW = Bytes.toBytes("testRow");
   private static byte[] ROW1 = Bytes.toBytes("testRow1");
@@ -372,7 +375,11 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
               CachedBlock next = iterator.next();
               BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
               cacheList.add(cacheKey);
-              cache.evictBlock(cacheKey);
+              /**
+               * There is only one Block referenced by rpc,here we evict blocks which have no rpc
+               * referenced.
+               */
+              evictBlock(cache, cacheKey);
             }
             try {
               Thread.sleep(1);
@@ -433,5 +440,21 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       }
       assertEquals("Count should give all rows ", 10, count);
     }
+  }
+
+  /**
+   * For {@link BucketCache},we only evict Block if there is no rpc referenced.
+   */
+  private void evictBlock(BlockCache blockCache, BlockCacheKey blockCacheKey) {
+    assertTrue(blockCache instanceof CombinedBlockCache);
+    BlockCache[] blockCaches = blockCache.getBlockCaches();
+    for (BlockCache currentBlockCache : blockCaches) {
+      if (currentBlockCache instanceof BucketCache) {
+        ((BucketCache) currentBlockCache).evictBlockIfNoRpcReferenced(blockCacheKey);
+      } else {
+        currentBlockCache.evictBlock(blockCacheKey);
+      }
+    }
+
   }
 }

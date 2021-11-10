@@ -22,7 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -57,7 +57,7 @@ public class TestMobWithByteBuffAllocator {
   private static final String TABLE_NAME = "TestMobWithByteBuffAllocator";
   private static final Logger LOG = LoggerFactory.getLogger(TestMobWithByteBuffAllocator.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final Configuration CONF = UTIL.getConfiguration();
   private static final byte[] FAMILY = Bytes.toBytes("f");
 

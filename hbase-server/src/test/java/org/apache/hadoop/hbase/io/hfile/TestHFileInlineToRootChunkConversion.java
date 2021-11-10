@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -53,7 +53,7 @@ public class TestHFileInlineToRootChunkConversion {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHFileInlineToRootChunkConversion.class);
 
-  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
   private final Configuration conf = testUtil.getConfiguration();
 
   @Test
@@ -95,7 +95,7 @@ public class TestHFileInlineToRootChunkConversion {
 
     HFile.Reader reader = HFile.createReader(fs, hfPath, cacheConf, true, conf);
     // Scanner doesn't do Cells yet.  Fix.
-    HFileScanner scanner = reader.getScanner(true, true);
+    HFileScanner scanner = reader.getScanner(conf, true, true);
     for (int i = 0; i < keys.size(); ++i) {
       scanner.seekTo(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
         .setRow(keys.get(i))

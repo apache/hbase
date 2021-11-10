@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.junit.ClassRule;
@@ -48,7 +48,7 @@ public class TestHBaseMRTestingUtility {
     dummyProps.put("mapreduce.jobhistory.webapp.address", "dummyhost:11238");
     dummyProps.put("yarn.resourcemanager.webapp.address", "dummyhost:11239");
 
-    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    HBaseTestingUtil hbt = new HBaseTestingUtil();
 
     // populate the mr props to the Configuration instance
     for (Map.Entry<String, String> entry : dummyProps.entrySet()) {

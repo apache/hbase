@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -61,7 +61,7 @@ public class TestWithDisabledAuthorization {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestWithDisabledAuthorization.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";

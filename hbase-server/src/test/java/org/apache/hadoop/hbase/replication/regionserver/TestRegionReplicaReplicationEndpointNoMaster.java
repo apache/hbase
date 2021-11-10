@@ -32,10 +32,10 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
@@ -98,7 +98,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
   private static RegionInfo hriPrimary;
   private static RegionInfo hriSecondary;
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   @BeforeClass
@@ -116,8 +116,8 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     }
     HTU.getConfiguration().set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
       walCoprocs);
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numAlwaysStandByMasters(1).
-        numRegionServers(NB_SERVERS).numDataNodes(NB_SERVERS).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
+      .numAlwaysStandByMasters(1).numRegionServers(NB_SERVERS).numDataNodes(NB_SERVERS).build();
     HTU.startMiniCluster(option);
 
     // Create table then get the single region for our new table.
@@ -134,19 +134,20 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     hriSecondary = RegionReplicaUtil.getRegionInfoForReplica(hriPrimary, 1);
 
     // No master
-    TestRegionServerNoMaster.stopMasterAndAssignMeta(HTU);
+    TestRegionServerNoMaster.stopMasterAndCacheMetaLocation(HTU);
     rs0 = HTU.getMiniHBaseCluster().getRegionServer(0);
     rs1 = HTU.getMiniHBaseCluster().getRegionServer(1);
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
+    HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
     table.close();
     HTU.shutdownMiniCluster();
   }
 
   @Before
-  public void before() throws Exception{
+  public void before() throws Exception {
     entries.clear();
   }
 

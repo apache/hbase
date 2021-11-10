@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -69,7 +70,7 @@ public class TestRowPrefixBloomFilter {
       HBaseClassTestRule.forClass(TestRowPrefixBloomFilter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRowPrefixBloomFilter.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
   private static final ChecksumType CKTYPE = ChecksumType.CRC32C;
   private static final int CKBYTES = 512;
@@ -149,7 +150,7 @@ public class TestRowPrefixBloomFilter {
         .withMaxKeyCount(expKeys)
         .withFileContext(meta)
         .build();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     try {
       //Put with valid row style
       for (int i = 0; i < prefixRowCount; i += 2) { // prefix rows

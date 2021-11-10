@@ -46,7 +46,7 @@ public class IntegrationTestIngestStripeCompactions extends IntegrationTestInges
       .setValue(HStore.BLOCKING_STOREFILES_KEY, "100").build();
     ColumnFamilyDescriptor familyDescriptor =
       ColumnFamilyDescriptorBuilder.of(HFileTestUtil.DEFAULT_COLUMN_FAMILY);
-    HBaseTestingUtility.createPreSplitLoadTestTable(util.getConfiguration(),
+    HBaseTestingUtil.createPreSplitLoadTestTable(util.getConfiguration(),
       tableDescriptor, familyDescriptor);
   }
 

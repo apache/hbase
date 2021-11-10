@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -57,7 +57,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
       HBaseClassTestRule.forClass(TestAccessControlFilter.class);
 
   @Rule public TestName name = new TestName();
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
 
   private static User READER;
   private static User LIMITED;
@@ -75,7 +75,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     Configuration conf = TEST_UTIL.getConfiguration();
     // Up the handlers; this test needs more than usual.
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);

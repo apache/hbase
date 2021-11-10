@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.ClassRule;
@@ -220,7 +221,7 @@ public class TestIOFencing {
     }
   }
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static TableName TABLE_NAME =
       TableName.valueOf("tabletest");
   private final static byte[] FAMILY = Bytes.toBytes("family");
@@ -299,7 +300,7 @@ public class TestIOFencing {
         oldHri, compactionDescriptor, compactingRegion.getMVCC());
 
       // Wait till flush has happened, otherwise there won't be multiple store files
-      long startWaitTime = System.currentTimeMillis();
+      long startWaitTime = EnvironmentEdgeManager.currentTime();
       while (compactingRegion.getEarliestFlushTimeForAllStores() <= lastFlushTime ||
           compactingRegion.countStoreFiles() <= 1) {
         LOG.info("Waiting for the region to flush " +
@@ -307,7 +308,7 @@ public class TestIOFencing {
         Thread.sleep(1000);
         admin.flush(table.getName());
         assertTrue("Timed out waiting for the region to flush",
-          System.currentTimeMillis() - startWaitTime < 30000);
+          EnvironmentEdgeManager.currentTime() - startWaitTime < 30000);
       }
       assertTrue(compactingRegion.countStoreFiles() > 1);
       final byte REGION_NAME[] = compactingRegion.getRegionInfo().getRegionName();
@@ -321,7 +322,7 @@ public class TestIOFencing {
       LOG.info("Killing region server ZK lease");
       TEST_UTIL.expireRegionServerSession(0);
       CompactionBlockerRegion newRegion = null;
-      startWaitTime = System.currentTimeMillis();
+      startWaitTime = EnvironmentEdgeManager.currentTime();
       LOG.info("Waiting for the new server to pick up the region " + Bytes.toString(REGION_NAME));
 
       // wait for region to be assigned and to go out of log replay if applicable
@@ -355,16 +356,16 @@ public class TestIOFencing {
       TEST_UTIL.loadNumericRows(table, FAMILY, FIRST_BATCH_COUNT,
         FIRST_BATCH_COUNT + SECOND_BATCH_COUNT);
       admin.majorCompact(TABLE_NAME);
-      startWaitTime = System.currentTimeMillis();
+      startWaitTime = EnvironmentEdgeManager.currentTime();
       while (newRegion.compactCount.get() == 0) {
         Thread.sleep(1000);
         assertTrue("New region never compacted",
-          System.currentTimeMillis() - startWaitTime < 180000);
+          EnvironmentEdgeManager.currentTime() - startWaitTime < 180000);
       }
       int count;
       for (int i = 0;; i++) {
         try {
-          count = HBaseTestingUtility.countRows(table);
+          count = HBaseTestingUtil.countRows(table);
           break;
         } catch (DoNotRetryIOException e) {
           // wait up to 30s

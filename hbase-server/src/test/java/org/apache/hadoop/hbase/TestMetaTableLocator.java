@@ -25,6 +25,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -58,9 +59,9 @@ public class TestMetaTableLocator {
     HBaseClassTestRule.forClass(TestMetaTableLocator.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableLocator.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final ServerName SN =
-    ServerName.valueOf("example.org", 1234, System.currentTimeMillis());
+    ServerName.valueOf("example.org", 1234, EnvironmentEdgeManager.currentTime());
   private ZKWatcher watcher;
   private Abortable abortable;
 

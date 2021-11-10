@@ -63,6 +63,7 @@
               <exclude>org.apache.yetus:audience-annotations</exclude>
               <exclude>org.slf4j:*</exclude>
               <exclude>org.apache.logging.log4j:*</exclude>
+              <exclude>io.opentelemetry.javaagent:*</exclude>
             </excludes>
           </dependencySet>
         </dependencySets>
@@ -149,6 +150,13 @@
         <include>org.apache.yetus:audience-annotations</include>
         <include>org.slf4j:*</include>
         <include>org.apache.logging.log4j:*</include>
+        <include>io.opentelemetry:*</include>
+      </includes>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>lib/trace</outputDirectory>
+      <includes>
+        <include>io.opentelemetry.javaagent:*</include>
       </includes>
     </dependencySet>
   </dependencySets>

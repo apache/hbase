@@ -31,12 +31,13 @@ import java.util.NavigableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
@@ -56,7 +57,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  */
 public abstract class MultiTableInputFormatTestBase {
   static final Logger LOG = LoggerFactory.getLogger(TestMultiTableInputFormat.class);
-  public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  public static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   static final String TABLE_NAME = "scantest";
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   static final String KEY_STARTROW = "startRow";
@@ -73,7 +74,7 @@ public abstract class MultiTableInputFormatTestBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // switch TIF to log at DEBUG level
-    TEST_UTIL.enableDebug(MultiTableInputFormatBase.class);
+    Log4jUtils.enableDebug(MultiTableInputFormatBase.class);
     // start mini hbase cluster
     TEST_UTIL.startMiniCluster(3);
     // create and fill table

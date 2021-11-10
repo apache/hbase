@@ -21,10 +21,10 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
@@ -50,9 +50,9 @@ public class TestRemoveRegionMetrics {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRemoveRegionMetrics.class);
 
-  private static MiniHBaseCluster cluster;
+  private static SingleProcessHBaseCluster cluster;
   private static Configuration conf;
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
   private static MetricsAssertHelper metricsHelper;
 
   @Rule
@@ -61,7 +61,7 @@ public class TestRemoveRegionMetrics {
   @BeforeClass
   public static void startCluster() throws Exception {
     metricsHelper = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     conf = TEST_UTIL.getConfiguration();
     conf.getLong("hbase.splitlog.max.resubmit", 0);
     // Make the failure test faster

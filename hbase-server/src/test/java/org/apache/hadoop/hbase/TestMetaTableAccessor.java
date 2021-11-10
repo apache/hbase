@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -78,7 +77,7 @@ public class TestMetaTableAccessor {
     HBaseClassTestRule.forClass(TestMetaTableAccessor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableAccessor.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static Connection connection;
   private Random random = new Random();
 
@@ -156,7 +155,7 @@ public class TestMetaTableAccessor {
     // it as a fail. We can't put that in the @Test tag as we want to close
     // the threads nicely
     final long timeOut = 180000;
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
 
     try {
       // Make sure reader and writer are working.
@@ -171,7 +170,7 @@ public class TestMetaTableAccessor {
         int index = -1;
         do {
           index = UTIL.getMiniHBaseCluster().getServerWithMeta();
-        } while (index == -1 && startTime + timeOut < System.currentTimeMillis());
+        } while (index == -1 && startTime + timeOut < EnvironmentEdgeManager.currentTime());
 
         if (index != -1) {
           UTIL.getMiniHBaseCluster().abortRegionServer(index);
@@ -190,7 +189,7 @@ public class TestMetaTableAccessor {
       writer.join();
       t.close();
     }
-    long exeTime = System.currentTimeMillis() - startTime;
+    long exeTime = EnvironmentEdgeManager.currentTime() - startTime;
     assertTrue("Timeout: test took " + exeTime / 1000 + " sec", exeTime < timeOut);
   }
 
@@ -240,13 +239,6 @@ public class TestMetaTableAccessor {
     }
 
     abstract void metaTask() throws Throwable;
-  }
-
-  @Test
-  public void testGetRegionsFromMetaTable() throws IOException, InterruptedException {
-    List<RegionInfo> regions = MetaTableLocator.getMetaRegions(UTIL.getZooKeeperWatcher());
-    assertTrue(regions.size() >= 1);
-    assertTrue(MetaTableLocator.getMetaRegionsAndLocations(UTIL.getZooKeeperWatcher()).size() >= 1);
   }
 
   @Test
@@ -304,7 +296,7 @@ public class TestMetaTableAccessor {
     ServerName serverName1 = ServerName.valueOf("bar", 60010, random.nextLong());
     ServerName serverName100 = ServerName.valueOf("baz", 60010, random.nextLong());
 
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     RegionInfo primary = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
       .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
       .setRegionId(regionId).setReplicaId(0).build();
@@ -379,7 +371,7 @@ public class TestMetaTableAccessor {
 
   @Test
   public void testMetaLocationForRegionReplicasIsAddedAtTableCreation() throws IOException {
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     RegionInfo primary = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
       .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
       .setRegionId(regionId).setReplicaId(0).build();
@@ -408,7 +400,7 @@ public class TestMetaTableAccessor {
     UTIL.createTable(tableName, FAMILY, SPLIT_KEYS);
     Table table = connection.getTable(tableName);
     // Make sure all the regions are deployed
-    HBaseTestingUtility.countRows(table);
+    HBaseTestingUtil.countRows(table);
 
     ClientMetaTableAccessor.Visitor visitor = mock(ClientMetaTableAccessor.Visitor.class);
     doReturn(true).when(visitor).visit((Result) anyObject());
@@ -444,7 +436,7 @@ public class TestMetaTableAccessor {
    */
   @Test
   public void testMastersSystemTimeIsUsedInUpdateLocations() throws IOException {
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
       .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
       .setRegionId(regionId).setReplicaId(0).build();

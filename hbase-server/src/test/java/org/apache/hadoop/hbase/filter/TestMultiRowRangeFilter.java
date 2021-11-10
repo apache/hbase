@@ -25,7 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -55,7 +55,7 @@ public class TestMultiRowRangeFilter {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMultiRowRangeFilter.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiRowRangeFilter.class);
   private byte[] family = Bytes.toBytes("family");
   private byte[] qf = Bytes.toBytes("qf");

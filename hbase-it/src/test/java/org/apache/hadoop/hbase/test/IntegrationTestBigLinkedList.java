@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.IntegrationTestBase;
@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Random64;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -152,11 +153,11 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
  * </p>
  * <p>
  * <ol>
- * <li>Write out 1 million nodes</li>
+ * <li>Write out 1 million nodes (1M is the configurable 'width' mentioned below)</li>
  * <li>Flush the client</li>
  * <li>Write out 1 million that reference previous million</li>
  * <li>If this is the 25th set of 1 million nodes, then update 1st set of
- * million to point to last</li>
+ * million to point to last (25 is configurable; its the 'wrap multiplier' referred to below)</li>
  * <li>goto 1</li>
  * </ol>
  * </p>
@@ -224,11 +225,8 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 @Category(IntegrationTests.class)
 public class IntegrationTestBigLinkedList extends IntegrationTestBase {
   protected static final byte[] NO_KEY = new byte[1];
-
   protected static String TABLE_NAME_KEY = "IntegrationTestBigLinkedList.table";
-
   protected static String DEFAULT_TABLE_NAME = "IntegrationTestBigLinkedList";
-
   protected static byte[] FAMILY_NAME = Bytes.toBytes("meta");
   private static byte[] BIG_FAMILY_NAME = Bytes.toBytes("big");
   private static byte[] TINY_FAMILY_NAME = Bytes.toBytes("tiny");
@@ -263,6 +261,10 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
   private static final int MISSING_ROWS_TO_LOG = 10; // YARN complains when too many counters
 
   private static final int WIDTH_DEFAULT = 1000000;
+
+  /**
+   * The 'wrap multipler' default.
+   */
   private static final int WRAP_DEFAULT = 25;
   private static final int ROWKEY_LENGTH = 16;
 
@@ -282,7 +284,6 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
    * A Map only job that generates random linked list and stores them.
    */
   static class Generator extends Configured implements Tool {
-
     private static final Logger LOG = LoggerFactory.getLogger(Generator.class);
 
     /**
@@ -307,16 +308,18 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
      */
     public static final String BIG_FAMILY_VALUE_SIZE_KEY = "generator.big.family.value.size";
 
-
     public static enum Counts {
       SUCCESS, TERMINATING, UNDEFINED, IOEXCEPTION
     }
 
     public static final String USAGE =  "Usage : " + Generator.class.getSimpleName() +
-        " <num mappers> <num nodes per map> <tmp output dir> [<width> <wrap multiplier>" +
-        " <num walker threads>] \n" +
-        "where <num nodes per map> should be a multiple of width*wrap multiplier, 25M by default \n" +
-        "walkers will verify random flushed loop during Generation.";
+      " <num mappers> <num nodes per map> <tmp output dir> [<width> <wrap multiplier>" +
+      " <num walker threads>] \n" +
+      "Where <num nodes per map> should be a multiple of 'width' * 'wrap multiplier'.\n" +
+      "25M is default because default 'width' is 1M and default 'wrap multiplier' is 25.\n" +
+      "We write out 1M nodes and then flush the client. After 25 flushes, we connect \n" +
+      "first written nodes back to the 25th set.\n" +
+      "Walkers verify random flushed loops during Generation.";
 
     public Job job;
 
@@ -709,9 +712,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           while (numQueries < maxQueries) {
             numQueries++;
             byte[] prev = node.prev;
-            long t1 = System.currentTimeMillis();
+            long t1 = EnvironmentEdgeManager.currentTime();
             node = getNode(prev, table, node);
-            long t2 = System.currentTimeMillis();
+            long t2 = EnvironmentEdgeManager.currentTime();
             if (node == null) {
               LOG.error("ConcurrentWalker found UNDEFINED NODE: " + Bytes.toStringBinary(prev));
               context.getCounter(Counts.UNDEFINED).increment(1l);
@@ -773,14 +776,14 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
             .build();
 
           // If we want to pre-split compute how many splits.
-          if (conf.getBoolean(HBaseTestingUtility.PRESPLIT_TEST_TABLE_KEY,
-              HBaseTestingUtility.PRESPLIT_TEST_TABLE)) {
+          if (conf.getBoolean(HBaseTestingUtil.PRESPLIT_TEST_TABLE_KEY,
+              HBaseTestingUtil.PRESPLIT_TEST_TABLE)) {
             int numberOfServers = admin.getRegionServers().size();
             if (numberOfServers == 0) {
               throw new IllegalStateException("No live regionservers");
             }
-            int regionsPerServer = conf.getInt(HBaseTestingUtility.REGIONS_PER_SERVER_KEY,
-                HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER);
+            int regionsPerServer = conf.getInt(HBaseTestingUtil.REGIONS_PER_SERVER_KEY,
+                HBaseTestingUtil.DEFAULT_REGIONS_PER_SERVER);
             int totalNumberOfRegions = numberOfServers * regionsPerServer;
             LOG.info("Number of live regionservers: " + numberOfServers + ", " +
                 "pre-splitting table into " + totalNumberOfRegions + " regions " +
@@ -1089,17 +1092,14 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
    * {@link Generator} do not have any holes.
    */
   static class Verify extends Configured implements Tool {
-
     private static final Logger LOG = LoggerFactory.getLogger(Verify.class);
     protected static final BytesWritable DEF = new BytesWritable(new byte[] { 0 });
     protected static final BytesWritable DEF_LOST_FAMILIES = new BytesWritable(new byte[] { 1 });
-
     protected Job job;
 
     public static class VerifyMapper extends TableMapper<BytesWritable, BytesWritable> {
       private BytesWritable row = new BytesWritable();
       private BytesWritable ref = new BytesWritable();
-
       private boolean multipleUnevenColumnFamilies;
 
       @Override
@@ -1141,7 +1141,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     }
 
     /**
-     * Per reducer, we output problem rows as byte arrasy so can be used as input for
+     * Per reducer, we output problem rows as byte arrays so can be used as input for
      * subsequent investigative mapreduce jobs. Each emitted value is prefaced by a one byte flag
      * saying what sort of emission it is. Flag is the Count enum ordinal as a short.
      */
@@ -1715,10 +1715,10 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       scan.setBatch(1);
       scan.addColumn(FAMILY_NAME, COLUMN_PREV);
 
-      long t1 = System.currentTimeMillis();
+      long t1 = EnvironmentEdgeManager.currentTime();
       ResultScanner scanner = table.getScanner(scan);
       Result result = scanner.next();
-      long t2 = System.currentTimeMillis();
+      long t2 = EnvironmentEdgeManager.currentTime();
       scanner.close();
 
       if ( result != null) {
@@ -1798,9 +1798,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         while (node != null && node.prev.length != NO_KEY.length &&
             numQueries < maxQueries) {
           byte[] prev = node.prev;
-          long t1 = System.currentTimeMillis();
+          long t1 = EnvironmentEdgeManager.currentTime();
           node = getNode(prev, table, node);
-          long t2 = System.currentTimeMillis();
+          long t2 = EnvironmentEdgeManager.currentTime();
           if (logEvery > 0 && numQueries % logEvery == 0) {
             System.out.printf("CQ %d: %d %s \n", numQueries, t2 - t1, Bytes.toStringBinary(prev));
           }
@@ -1932,9 +1932,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     System.err.println(" -D"+ TABLE_NAME_KEY+ "=<tableName>");
     System.err.println("    Run using the <tableName> as the tablename.  Defaults to "
         + DEFAULT_TABLE_NAME);
-    System.err.println(" -D"+ HBaseTestingUtility.REGIONS_PER_SERVER_KEY+ "=<# regions>");
+    System.err.println(" -D"+ HBaseTestingUtil.REGIONS_PER_SERVER_KEY+ "=<# regions>");
     System.err.println("    Create table with presplit regions per server.  Defaults to "
-        + HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER);
+        + HBaseTestingUtil.DEFAULT_REGIONS_PER_SERVER);
 
     System.err.println(" -DuseMob=<true|false>");
     System.err.println("    Create table so that the mob read/write path is forced.  " +

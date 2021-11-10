@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -81,7 +81,7 @@ public class TestMobCompactionWithDefaults {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobCompactionWithDefaults.class);
 
-  protected static HBaseTestingUtility HTU;
+  protected static HBaseTestingUtil HTU;
   protected static Configuration conf;
   protected static long minAgeToArchive = 10000;
 
@@ -105,7 +105,7 @@ public class TestMobCompactionWithDefaults {
 
   @BeforeClass
   public static void htuStart() throws Exception {
-    HTU = new HBaseTestingUtility();
+    HTU = new HBaseTestingUtil();
     conf = HTU.getConfiguration();
     conf.setInt("hfile.format.version", 3);
     // Disable automatic MOB compaction

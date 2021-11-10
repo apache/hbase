@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -56,7 +56,7 @@ public class TestMobFileCache {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobFileCache.class);
 
-  private HBaseTestingUtility UTIL;
+  private HBaseTestingUtil UTIL;
   private HRegion region;
   private Configuration conf;
   private MobFileCache mobFileCache;
@@ -84,7 +84,7 @@ public class TestMobFileCache {
 
   @Before
   public void setUp() throws Exception {
-    UTIL = new HBaseTestingUtility();
+    UTIL = new HBaseTestingUtil();
     conf = UTIL.getConfiguration();
     conf.set(MobConstants.MOB_FILE_CACHE_SIZE_KEY, TEST_CACHE_SIZE);
     TableDescriptorBuilder tableDescriptorBuilder =
@@ -112,7 +112,7 @@ public class TestMobFileCache {
     TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     mobFileCache = new MobFileCache(conf);
-    region = HBaseTestingUtility
+    region = HBaseTestingUtil
       .createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf, tableDescriptor, mobFileCache);
   }
 

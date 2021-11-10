@@ -1760,6 +1760,12 @@ public final class ZKUtil {
     }
   }
 
+  // Static boolean for warning about useMulti because ideally there will be one warning per
+  // process instance. It is fine if two threads end up racing on this for a bit. We do not
+  // need to use an atomic type for this, that is overkill. The goal of reducing the number of
+  // warnings from many to one or a few at startup is still achieved.
+  private static boolean useMultiWarn = true;
+
   /**
    * Use ZooKeeper's multi-update functionality.
    *
@@ -1780,14 +1786,16 @@ public final class ZKUtil {
    * @throws KeeperException if a ZooKeeper operation fails
    */
   public static void multiOrSequential(ZKWatcher zkw, List<ZKUtilOp> ops,
-                                       boolean runSequentialOnMultiFailure) throws KeeperException {
-    if (zkw.getConfiguration().get("hbase.zookeeper.useMulti") != null) {
-      LOG.warn("hbase.zookeeper.useMulti is deprecated. Default to true always.");
-    }
+      boolean runSequentialOnMultiFailure) throws KeeperException {
     if (ops == null) {
       return;
     }
-
+    if (useMultiWarn) { // Only check and warn at first use
+      if (zkw.getConfiguration().get("hbase.zookeeper.useMulti") != null) {
+        LOG.warn("hbase.zookeeper.useMulti is deprecated. Default to true always.");
+      }
+      useMultiWarn = false;
+    }
     List<Op> zkOps = new LinkedList<>();
     for (ZKUtilOp op : ops) {
       zkOps.add(toZooKeeperOp(zkw, op));
@@ -1845,7 +1853,7 @@ public final class ZKUtil {
       sb.append("HBase is rooted at ").append(zkw.getZNodePaths().baseZNode);
       sb.append("\nActive master address: ");
       try {
-        sb.append(MasterAddressTracker.getMasterAddress(zkw));
+        sb.append("\n ").append(MasterAddressTracker.getMasterAddress(zkw));
       } catch (IOException e) {
         sb.append("<<FAILED LOOKUP: " + e.getMessage() + ">>");
       }
@@ -1857,12 +1865,12 @@ public final class ZKUtil {
           sb.append("\n ").append(child);
         }
       }
-      sb.append("\nRegion server holding hbase:meta: "
-        + MetaTableLocator.getMetaRegionLocation(zkw));
+      sb.append("\nRegion server holding hbase:meta:");
+      sb.append("\n ").append(MetaTableLocator.getMetaRegionLocation(zkw));
       int numMetaReplicas = zkw.getMetaReplicaNodes().size();
       for (int i = 1; i < numMetaReplicas; i++) {
-        sb.append("\nRegion server holding hbase:meta, replicaId " + i + " "
-                    + MetaTableLocator.getMetaRegionLocation(zkw, i));
+        sb.append("\n replica" + i + ": "
+          + MetaTableLocator.getMetaRegionLocation(zkw, i));
       }
       sb.append("\nRegion servers:");
       final List<String> rsChildrenNoWatchList =

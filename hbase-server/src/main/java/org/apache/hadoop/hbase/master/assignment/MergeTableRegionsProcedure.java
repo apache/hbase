@@ -24,6 +24,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
@@ -53,6 +55,7 @@ import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
@@ -582,44 +585,45 @@ public class MergeTableRegionsProcedure
    */
   private void createMergedRegion(final MasterProcedureEnv env) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tabledir = CommonFSUtils.getTableDir(mfs.getRootDir(), regionsToMerge[0].getTable());
+    final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), regionsToMerge[0].getTable());
     final FileSystem fs = mfs.getFileSystem();
-    HRegionFileSystem mergeRegionFs = null;
+
+    HRegionFileSystem mergeRegionFs = HRegionFileSystem.createRegionOnFileSystem(
+      env.getMasterConfiguration(), fs, tableDir, mergedRegion);
+
     for (RegionInfo ri: this.regionsToMerge) {
       HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
-          env.getMasterConfiguration(), fs, tabledir, ri, false);
-      if (mergeRegionFs == null) {
-        mergeRegionFs = regionFs;
-        mergeRegionFs.createMergesDir();
-      }
-      mergeStoreFiles(env, regionFs, mergeRegionFs.getMergesDir());
+          env.getMasterConfiguration(), fs, tableDir, ri, false);
+      mergeStoreFiles(env, regionFs, mergeRegionFs, mergedRegion);
     }
     assert mergeRegionFs != null;
-    mergeRegionFs.commitMergedRegion(mergedRegion);
+    mergeRegionFs.commitMergedRegion();
 
     // Prepare to create merged regions
     env.getAssignmentManager().getRegionStates().
         getOrCreateRegionStateNode(mergedRegion).setState(State.MERGING_NEW);
   }
 
-  /**
-   * Create reference file(s) to parent region hfiles in the <code>mergeDir</code>
-   * @param regionFs merge parent region file system
-   * @param mergeDir the temp directory in which we are accumulating references.
-   */
-  private void mergeStoreFiles(final MasterProcedureEnv env, final HRegionFileSystem regionFs,
-      final Path mergeDir) throws IOException {
-    final TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
+  private void mergeStoreFiles(MasterProcedureEnv env, HRegionFileSystem regionFs,
+    HRegionFileSystem mergeRegionFs, RegionInfo mergedRegion) throws IOException {
+    final TableDescriptor htd = env.getMasterServices().getTableDescriptors()
+      .get(mergedRegion.getTable());
     for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
       String family = hcd.getNameAsString();
       final Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family);
       if (storeFiles != null && storeFiles.size() > 0) {
+        final Configuration storeConfiguration =
+          StoreUtils.createStoreConfiguration(env.getMasterConfiguration(), htd, hcd);
         for (StoreFileInfo storeFileInfo : storeFiles) {
           // Create reference file(s) to parent region file here in mergedDir.
           // As this procedure is running on master, use CacheConfig.DISABLED means
           // don't cache any block.
-          regionFs.mergeStoreFile(mergedRegion, family, new HStoreFile(
-              storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED), mergeDir);
+          // We also need to pass through a suitable CompoundConfiguration as if this
+          // is running in a regionserver's Store context, or we might not be able
+          // to read the hfiles.
+          storeFileInfo.setConf(storeConfiguration);
+          mergeRegionFs.mergeStoreFile(regionFs.getRegionInfo(), family,
+            new HStoreFile(storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED));
         }
       }
     }

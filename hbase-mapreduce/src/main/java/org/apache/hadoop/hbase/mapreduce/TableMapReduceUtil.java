@@ -585,7 +585,7 @@ public class TableMapReduceUtil {
    */
   public static void initCredentialsForCluster(Job job, Configuration conf)
       throws IOException {
-    UserProvider userProvider = UserProvider.instantiate(job.getConfiguration());
+    UserProvider userProvider = UserProvider.instantiate(conf);
     if (userProvider.isHBaseSecurityEnabled()) {
       try {
         Connection peerConn = ConnectionFactory.createConnection(conf);
@@ -831,7 +831,9 @@ public class TableMapReduceUtil {
       org.apache.zookeeper.ZooKeeper.class,                          // zookeeper
       org.apache.htrace.core.Tracer.class,                           // htrace
       com.codahale.metrics.MetricRegistry.class,                     // metrics-core
-      org.apache.commons.lang3.ArrayUtils.class);                    // commons-lang
+      org.apache.commons.lang3.ArrayUtils.class,                     // commons-lang
+      io.opentelemetry.api.trace.Span.class,                         // opentelemetry-api
+      io.opentelemetry.semconv.trace.attributes.SemanticAttributes.class); // opentelemetry-semconv
   }
 
   /**

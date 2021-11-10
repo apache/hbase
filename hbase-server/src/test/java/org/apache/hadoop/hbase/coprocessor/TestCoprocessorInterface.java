@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam3;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam2;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam3;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.TableName;
@@ -79,7 +79,7 @@ public class TestCoprocessorInterface {
       HBaseClassTestRule.forClass(TestCoprocessorInterface.class);
 
   @Rule public TestName name = new TestName();
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   static final Path DIR = TEST_UTIL.getDataTestDir();
 
   private static class CustomScanner implements RegionScanner {
@@ -342,7 +342,7 @@ public class TestCoprocessorInterface {
     // hence the old entry was indeed removed by the GC and new one has been created
     Object o3 = ((CoprocessorII)c2).getSharedData().get("test2");
     assertFalse(o3 == o2);
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
   @Test
@@ -367,7 +367,7 @@ public class TestCoprocessorInterface {
     // this would throw an exception before HBASE-4197
     scanner.next(new ArrayList<>());
 
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    HBaseTestingUtil.closeRegionAndWAL(region);
     Coprocessor c = region.getCoprocessorHost().findCoprocessor(CoprocessorImpl.class);
 
     assertTrue("Coprocessor not started", ((CoprocessorImpl)c).wasStarted());
@@ -420,7 +420,7 @@ public class TestCoprocessorInterface {
         .setSplit(false)
         .build();
     Path path = new Path(DIR + callingMethod);
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, builder.build());
+    HRegion r = HBaseTestingUtil.createRegionAndWAL(info, path, conf, builder.build());
 
     // this following piece is a hack.
     RegionCoprocessorHost host =

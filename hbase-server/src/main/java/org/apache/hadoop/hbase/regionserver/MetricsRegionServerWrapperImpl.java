@@ -225,7 +225,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getTotalRequestCount() {
-    return regionServer.rpcServices.requestCount.sum();
+    return regionServer.getRpcServices().requestCount.sum();
   }
 
   @Override
@@ -235,37 +235,26 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public int getSplitQueueSize() {
-    if (this.regionServer.compactSplitThread == null) {
-      return 0;
-    }
-    return this.regionServer.compactSplitThread.getSplitQueueSize();
+    final CompactSplit compactSplit = regionServer.getCompactSplitThread();
+    return compactSplit == null ? 0 : compactSplit.getSplitQueueSize();
   }
 
   @Override
   public int getCompactionQueueSize() {
-    //The thread could be zero.  if so assume there is no queue.
-    if (this.regionServer.compactSplitThread == null) {
-      return 0;
-    }
-    return this.regionServer.compactSplitThread.getCompactionQueueSize();
+    final CompactSplit compactSplit = regionServer.getCompactSplitThread();
+    return compactSplit == null ? 0 : compactSplit.getCompactionQueueSize();
   }
 
   @Override
   public int getSmallCompactionQueueSize() {
-    //The thread could be zero.  if so assume there is no queue.
-    if (this.regionServer.compactSplitThread == null) {
-      return 0;
-    }
-    return this.regionServer.compactSplitThread.getSmallCompactionQueueSize();
+    final CompactSplit compactSplit = regionServer.getCompactSplitThread();
+    return compactSplit == null ? 0 : compactSplit.getSmallCompactionQueueSize();
   }
 
   @Override
   public int getLargeCompactionQueueSize() {
-    //The thread could be zero.  if so assume there is no queue.
-    if (this.regionServer.compactSplitThread == null) {
-      return 0;
-    }
-    return this.regionServer.compactSplitThread.getLargeCompactionQueueSize();
+    final CompactSplit compactSplit = regionServer.getCompactSplitThread();
+    return compactSplit == null ? 0 : compactSplit.getLargeCompactionQueueSize();
   }
 
   @Override
@@ -490,27 +479,27 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getRpcGetRequestsCount() {
-    return regionServer.rpcServices.rpcGetRequestCount.sum();
+    return regionServer.getRpcServices().rpcGetRequestCount.sum();
   }
 
   @Override
   public long getRpcScanRequestsCount() {
-    return regionServer.rpcServices.rpcScanRequestCount.sum();
+    return regionServer.getRpcServices().rpcScanRequestCount.sum();
   }
 
   @Override
   public long getRpcFullScanRequestsCount() {
-    return regionServer.rpcServices.rpcFullScanRequestCount.sum();
+    return regionServer.getRpcServices().rpcFullScanRequestCount.sum();
   }
 
   @Override
   public long getRpcMultiRequestsCount() {
-    return regionServer.rpcServices.rpcMultiRequestCount.sum();
+    return regionServer.getRpcServices().rpcMultiRequestCount.sum();
   }
 
   @Override
   public long getRpcMutateRequestsCount() {
-    return regionServer.rpcServices.rpcMutateRequestCount.sum();
+    return regionServer.getRpcServices().rpcMutateRequestCount.sum();
   }
 
   @Override

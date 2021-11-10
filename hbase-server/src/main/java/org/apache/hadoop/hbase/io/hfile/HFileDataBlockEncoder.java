@@ -18,13 +18,13 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Controls what kind of data block encoding is used. If data block encoding is
@@ -97,11 +97,12 @@ public interface HFileDataBlockEncoder {
    * encoding context should also perform compression if compressionAlgorithm is
    * valid.
    *
+   * @param conf store configuration
    * @param headerBytes header bytes
    * @param fileContext HFile meta data
    * @return a new {@link HFileBlockEncodingContext} object
    */
-  HFileBlockEncodingContext newDataBlockEncodingContext(byte[] headerBytes,
+  HFileBlockEncodingContext newDataBlockEncodingContext(Configuration conf, byte[] headerBytes,
       HFileContext fileContext);
 
   /**
@@ -109,8 +110,10 @@ public interface HFileDataBlockEncoder {
    * decoding context should also do decompression if compressionAlgorithm
    * is valid.
    *
+   * @param conf store configuration
    * @param fileContext - HFile meta data
    * @return a new {@link HFileBlockDecodingContext} object
    */
-  HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext fileContext);
+  HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf,
+      HFileContext fileContext);
 }

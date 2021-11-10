@@ -19,14 +19,16 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import static org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil.insertData;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -39,6 +41,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -60,7 +63,7 @@ public class TestRegionSplit {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionSplit.class);
 
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static String columnFamilyName = "cf";
 
@@ -76,8 +79,8 @@ public class TestRegionSplit {
   @BeforeClass
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
-    StartMiniClusterOption option =
-        StartMiniClusterOption.builder().numMasters(1).numRegionServers(3).numDataNodes(3).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numMasters(1).numRegionServers(3).numDataNodes(3).build();
     UTIL.startMiniCluster(option);
   }
 
@@ -148,6 +151,54 @@ public class TestRegionSplit {
     // enable table
     UTIL.getAdmin().enableTable(tableName);
     Thread.sleep(500);
+
+    List<HRegion> tableRegions = UTIL.getHBaseCluster().getRegions(tableName);
+    assertEquals("Table region not correct.", 2, tableRegions.size());
+    Map<RegionInfo, ServerName> regionInfoMap = UTIL.getHBaseCluster().getMaster()
+      .getAssignmentManager().getRegionStates().getRegionAssignments();
+    assertEquals(regionInfoMap.get(tableRegions.get(0).getRegionInfo()),
+      regionInfoMap.get(tableRegions.get(1).getRegionInfo()));
+  }
+
+  @Test
+  public void testSplitStoreFiles() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(procExec, tableName,
+      null, columnFamilyName);
+    // flush the memstore
+    insertData(UTIL, tableName, rowCount, startRowNum, true, columnFamilyName);
+
+    // assert the hfile count of the table
+    int storeFilesCountSum = 0;
+    for(HRegion region : UTIL.getHBaseCluster().getRegions(tableName)){
+      storeFilesCountSum += region.getStore(Bytes.toBytes(columnFamilyName)).getStorefiles().size();
+    }
+    assertEquals(1, storeFilesCountSum);
+
+    // split at the start row
+    byte[] splitKey = Bytes.toBytes("" + startRowNum);
+
+    assertNotNull("Not able to find a splittable region", regions);
+    assertEquals("Not able to find a splittable region", 1, regions.length);
+
+    // Split region of the table
+    long procId = procExec.submitProcedure(
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
+    // Wait the completion
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
+    ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
+
+    assertEquals("Not able to split table",
+      2, UTIL.getHBaseCluster().getRegions(tableName).size());
+
+    // assert sum of the hfiles of all regions
+    int childStoreFilesSum = 0;
+    for(HRegion region : UTIL.getHBaseCluster().getRegions(tableName)){
+      childStoreFilesSum += region.getStore(Bytes.toBytes(columnFamilyName)).getStorefiles().size();
+    }
+    assertEquals(1, childStoreFilesSum);
 
     List<HRegion> tableRegions = UTIL.getHBaseCluster().getRegions(tableName);
     assertEquals("Table region not correct.", 2, tableRegions.size());

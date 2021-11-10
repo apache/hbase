@@ -26,9 +26,9 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
@@ -68,7 +68,7 @@ public class TestFIFOCompactionPolicy {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestFIFOCompactionPolicy.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private final TableName tableName = TableName.valueOf(getClass().getSimpleName());
 
@@ -80,7 +80,7 @@ public class TestFIFOCompactionPolicy {
   public ExpectedException error = ExpectedException.none();
 
   private HStore getStoreWithName(TableName tableName) {
-    MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();
@@ -216,7 +216,7 @@ public class TestFIFOCompactionPolicy {
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
         .build();
     Table table = TEST_UTIL.createTable(desc, null);
-    long ts = System.currentTimeMillis() - 10 * 1000;
+    long ts = EnvironmentEdgeManager.currentTime() - 10 * 1000;
     Put put =
         new Put(Bytes.toBytes("row1")).addColumn(family, qualifier, ts, Bytes.toBytes("value0"));
     table.put(put);

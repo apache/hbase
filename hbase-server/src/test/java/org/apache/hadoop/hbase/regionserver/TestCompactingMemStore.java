@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
@@ -111,12 +111,12 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     conf.setBoolean(MemStoreLAB.USEMSLAB_KEY, true);
     conf.setFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, 0.2f);
     conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, 1000);
-    HBaseTestingUtility hbaseUtility = new HBaseTestingUtility(conf);
+    HBaseTestingUtil hbaseUtility = new HBaseTestingUtil(conf);
     ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.of(FAMILY);
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TableName.valueOf("foobar"))
       .setColumnFamily(familyDescriptor).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf("foobar")).build();
-    WAL wal = HBaseTestingUtility.createWal(conf, hbaseUtility.getDataTestDir(), info);
+    WAL wal = HBaseTestingUtil.createWal(conf, hbaseUtility.getDataTestDir(), info);
     this.region = HRegion.createHRegion(info, hbaseUtility.getDataTestDir(), conf,
       tableDescriptor, wal, true);
     this.regionServicesForStores = Mockito.spy(region.getRegionServicesForStores());
@@ -178,11 +178,15 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     // use case 1: both kvs in kvset
     this.memstore.add(kv1.clone(), null);
     this.memstore.add(kv2.clone(), null);
-    verifyScanAcrossSnapshot2(kv1, kv2);
+    // snapshot is empty,active segment is not empty,
+    // empty segment is skipped.
+    verifyOneScanAcrossSnapshot2(kv1, kv2);
 
     // use case 2: both kvs in snapshot
     this.memstore.snapshot();
-    verifyScanAcrossSnapshot2(kv1, kv2);
+    // active segment is empty,snapshot is not empty,
+    // empty segment is skipped.
+    verifyOneScanAcrossSnapshot2(kv1, kv2);
 
     // use case 3: first in snapshot second in kvset
     this.memstore = new CompactingMemStore(HBaseConfiguration.create(),
@@ -230,15 +234,15 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     addRows(this.memstore);
     Cell closestToEmpty = ((CompactingMemStore)this.memstore).getNextRow(KeyValue.LOWESTKEY);
     assertTrue(CellComparator.getInstance().compareRows(closestToEmpty,
-        new KeyValue(Bytes.toBytes(0), System.currentTimeMillis())) == 0);
+        new KeyValue(Bytes.toBytes(0), EnvironmentEdgeManager.currentTime())) == 0);
     for (int i = 0; i < ROW_COUNT; i++) {
       Cell nr = ((CompactingMemStore)this.memstore).getNextRow(new KeyValue(Bytes.toBytes(i),
-          System.currentTimeMillis()));
+        EnvironmentEdgeManager.currentTime()));
       if (i + 1 == ROW_COUNT) {
         assertNull(nr);
       } else {
         assertTrue(CellComparator.getInstance().compareRows(nr,
-            new KeyValue(Bytes.toBytes(i + 1), System.currentTimeMillis())) == 0);
+            new KeyValue(Bytes.toBytes(i + 1), EnvironmentEdgeManager.currentTime())) == 0);
       }
     }
     //starting from each row, validate results should contain the starting row
@@ -865,7 +869,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     int cellsCount = hmc.getActive().getCellsCount();
     int totalLen = 0;
     for (int i = 0; i < keys.length; i++) {
-      long timestamp = System.currentTimeMillis();
+      long timestamp = EnvironmentEdgeManager.currentTime();
       Threads.sleep(1); // to make sure each kv gets a different ts
       byte[] row = Bytes.toBytes(keys[i]);
       byte[] val = Bytes.toBytes(keys[i] + i);
@@ -889,7 +893,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     int cellsCount = hmc.getActive().getCellsCount();
     int totalLen = 0;
     for (int i = 0; i < keys.length; i++) {
-      long timestamp = System.currentTimeMillis();
+      long timestamp = EnvironmentEdgeManager.currentTime();
       Threads.sleep(1); // to make sure each kv gets a different ts
       byte[] row = Bytes.toBytes(keys[i]);
       KeyValue kv = new KeyValue(row, fam, qf, timestamp, val);

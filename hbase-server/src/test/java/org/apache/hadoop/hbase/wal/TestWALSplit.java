@@ -50,7 +50,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
@@ -111,7 +111,7 @@ public class TestWALSplit {
   private static Configuration conf;
   private FileSystem fs;
 
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private Path HBASEDIR;
   private Path HBASELOGDIR;
@@ -188,7 +188,7 @@ public class TestWALSplit {
     wals = new WALFactory(conf, name.getMethodName());
     WALDIR = new Path(HBASELOGDIR,
         AbstractFSWALProvider.getWALDirectoryName(ServerName.valueOf(name.getMethodName(),
-            16010, System.currentTimeMillis()).toString()));
+            16010, EnvironmentEdgeManager.currentTime()).toString()));
     //fs.mkdirs(WALDIR);
   }
 
@@ -395,7 +395,7 @@ public class TestWALSplit {
 
   private Path createRecoveredEditsPathForRegion() throws IOException {
     byte[] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     Entry entry = new Entry(
         new WALKeyImpl(encoded, TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
         new WALEdit());

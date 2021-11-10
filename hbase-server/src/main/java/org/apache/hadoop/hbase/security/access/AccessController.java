@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.BalanceRequest;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -127,7 +128,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -1001,7 +1001,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preBalance(ObserverContext<MasterCoprocessorEnvironment> c)
+  public void preBalance(ObserverContext<MasterCoprocessorEnvironment> c, BalanceRequest request)
       throws IOException {
     requirePermission(c, "balance", Action.ADMIN);
   }
@@ -1740,7 +1740,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       List<Pair<Cell, Cell>> cellPairs) throws IOException {
     // If the HFile version is insufficient to persist tags, we won't have any
     // work to do here
-    if (!cellFeaturesEnabled) {
+    if (!cellFeaturesEnabled || mutation.getACL() == null) {
       return cellPairs;
     }
     return cellPairs.stream().map(pair -> new Pair<>(pair.getFirst(),
@@ -1754,7 +1754,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       List<Pair<Cell, Cell>> cellPairs) throws IOException {
     // If the HFile version is insufficient to persist tags, we won't have any
     // work to do here
-    if (!cellFeaturesEnabled) {
+    if (!cellFeaturesEnabled || mutation.getACL() == null) {
       return cellPairs;
     }
     return cellPairs.stream().map(pair -> new Pair<>(pair.getFirst(),
@@ -1763,50 +1763,28 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   private Cell createNewCellWithTags(Mutation mutation, Cell oldCell, Cell newCell) {
-    // Collect any ACLs from the old cell
+    // As Increment and Append operations have already copied the tags of oldCell to the newCell,
+    // there is no need to rewrite them again. Just extract non-acl tags of newCell if we need to
+    // add a new acl tag for the cell. Actually, oldCell is useless here.
     List<Tag> tags = Lists.newArrayList();
-    List<Tag> aclTags = Lists.newArrayList();
-    ListMultimap<String,Permission> perms = ArrayListMultimap.create();
-    if (oldCell != null) {
-      Iterator<Tag> tagIterator = PrivateCellUtil.tagsIterator(oldCell);
+    if (newCell != null) {
+      Iterator<Tag> tagIterator = PrivateCellUtil.tagsIterator(newCell);
       while (tagIterator.hasNext()) {
         Tag tag = tagIterator.next();
         if (tag.getType() != PermissionStorage.ACL_TAG_TYPE) {
           // Not an ACL tag, just carry it through
           if (LOG.isTraceEnabled()) {
-            LOG.trace("Carrying forward tag from " + oldCell + ": type " + tag.getType()
-                + " length " + tag.getValueLength());
+            LOG.trace("Carrying forward tag from " + newCell + ": type " + tag.getType()
+              + " length " + tag.getValueLength());
           }
           tags.add(tag);
-        } else {
-          aclTags.add(tag);
         }
       }
     }
 
-    // Do we have an ACL on the operation?
-    byte[] aclBytes = mutation.getACL();
-    if (aclBytes != null) {
-      // Yes, use it
-      tags.add(new ArrayBackedTag(PermissionStorage.ACL_TAG_TYPE, aclBytes));
-    } else {
-      // No, use what we carried forward
-      if (perms != null) {
-        // TODO: If we collected ACLs from more than one tag we may have a
-        // List<Permission> of size > 1, this can be collapsed into a single
-        // Permission
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Carrying forward ACLs from " + oldCell + ": " + perms);
-        }
-        tags.addAll(aclTags);
-      }
-    }
-
-    // If we have no tags to add, just return
-    if (tags.isEmpty()) {
-      return newCell;
-    }
-
+    // We have checked the ACL tag of mutation is not null.
+    // So that the tags could not be empty.
+    tags.add(new ArrayBackedTag(PermissionStorage.ACL_TAG_TYPE, mutation.getACL()));
     return PrivateCellUtil.createCell(newCell, tags);
   }
 
@@ -2577,7 +2555,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String groupName) throws IOException {
+      String groupName, BalanceRequest request) throws IOException {
     accessChecker.requirePermission(getActiveUser(ctx), "balanceRSGroup",
         null, Permission.Action.ADMIN);
   }
@@ -2638,5 +2616,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       String newName) throws IOException {
     accessChecker.requirePermission(getActiveUser(ctx), "renameRSGroup",
       null, Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preUpdateRSGroupConfig(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+    final String groupName, final Map<String, String> configuration) throws IOException {
+    accessChecker
+      .requirePermission(getActiveUser(ctx), "updateRSGroupConfig", null, Permission.Action.ADMIN);
   }
 }

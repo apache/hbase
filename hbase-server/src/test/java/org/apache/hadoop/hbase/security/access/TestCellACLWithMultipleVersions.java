@@ -28,7 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -72,7 +72,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
   @Rule
   public TableNameTestRule testTable = new TableNameTestRule();
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] TEST_FAMILY1 = Bytes.toBytes("f1");
   private static final byte[] TEST_FAMILY2 = Bytes.toBytes("f2");
   private static final byte[] TEST_ROW = Bytes.toBytes("cellpermtest");
@@ -161,7 +161,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             Table t = connection.getTable(testTable.getTableName())) {
           Put p;
           // with ro ACL
-          long now = System.currentTimeMillis();
+          long now = EnvironmentEdgeManager.currentTime();
           p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, now, ZERO);
           p.setACL(writePerms);
           t.put(p);

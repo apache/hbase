@@ -22,15 +22,16 @@ import java.io.UncheckedIOException;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PleaseHoldException;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -52,7 +53,7 @@ public class TestCloseAnOpeningRegion {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCloseAnOpeningRegion.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName TABLE_NAME = TableName.valueOf("race");
 
@@ -69,12 +70,13 @@ public class TestCloseAnOpeningRegion {
     }
 
     @Override
-    protected AssignmentManager createAssignmentManager(MasterServices master) {
-      return new AssignmentManager(master) {
+    protected AssignmentManager createAssignmentManager(MasterServices master,
+      MasterRegion masterRegion) {
+      return new AssignmentManager(master, masterRegion) {
 
         @Override
         public ReportRegionStateTransitionResponse reportRegionStateTransition(
-            ReportRegionStateTransitionRequest req) throws PleaseHoldException {
+          ReportRegionStateTransitionRequest req) throws PleaseHoldException {
           ReportRegionStateTransitionResponse resp = super.reportRegionStateTransition(req);
           TransitionCode code = req.getTransition(0).getTransitionCode();
           if (code == TransitionCode.OPENED && ARRIVE != null) {
@@ -94,8 +96,8 @@ public class TestCloseAnOpeningRegion {
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY, 60000);
-    UTIL.startMiniCluster(
-      StartMiniClusterOption.builder().numRegionServers(2).masterClass(MockHMaster.class).build());
+    UTIL.startMiniCluster(StartTestingClusterOption.builder().numRegionServers(2)
+      .masterClass(MockHMaster.class).build());
     UTIL.createTable(TABLE_NAME, CF);
     UTIL.getAdmin().balancerSwitch(false, true);
   }

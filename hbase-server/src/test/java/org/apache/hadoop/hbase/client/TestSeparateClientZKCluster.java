@@ -24,11 +24,11 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -51,7 +51,7 @@ import org.slf4j.LoggerFactory;
 @Category({ ClientTests.class, MediumTests.class })
 public class TestSeparateClientZKCluster {
   private static final Logger LOG = LoggerFactory.getLogger(TestSeparateClientZKCluster.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final File clientZkDir =
     new File(TEST_UTIL.getDataTestDir("TestSeparateClientZKCluster").toString());
   private static final int ZK_SESSION_TIMEOUT = 5000;
@@ -88,8 +88,8 @@ public class TestSeparateClientZKCluster {
     // reduce zk session timeout to easier trigger session expiration
     TEST_UTIL.getConfiguration().setInt(HConstants.ZK_SESSION_TIMEOUT, ZK_SESSION_TIMEOUT);
     // Start a cluster with 2 masters and 3 regionservers.
-    StartMiniClusterOption option =
-      StartMiniClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
     TEST_UTIL.startMiniCluster(option);
   }
 
@@ -128,12 +128,12 @@ public class TestSeparateClientZKCluster {
     Connection conn = TEST_UTIL.getConnection();
     try (Admin admin = conn.getAdmin()) {
       LOG.debug("Tables: " + admin.listTableDescriptors());
-      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       // switch active master
       HMaster master = cluster.getMaster();
       master.stopMaster();
       LOG.info("Stopped master {}", master.getServerName());
-      while (!master.isShutDown()) {
+      while (master.isAlive()) {
         Thread.sleep(200);
       }
       LOG.info("Shutdown master {}", master.getServerName());
@@ -144,7 +144,7 @@ public class TestSeparateClientZKCluster {
       }
       LOG.info("Got master {}", cluster.getMaster().getServerName());
       // confirm client access still works
-      assertTrue(admin.balance(false));
+      assertTrue(admin.balance(BalanceRequest.defaultInstance()).isBalancerRan());
     }
   }
 
@@ -156,7 +156,7 @@ public class TestSeparateClientZKCluster {
     try (Admin admin = conn.getAdmin();
       Table table = conn.getTable(tn);
       RegionLocator locator = conn.getRegionLocator(tn)) {
-      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       ColumnFamilyDescriptorBuilder cfDescBuilder =
         ColumnFamilyDescriptorBuilder.newBuilder(family);
       TableDescriptorBuilder tableDescBuilder =
@@ -221,11 +221,11 @@ public class TestSeparateClientZKCluster {
       clientZkCluster.shutdown();
       // stop current meta server and confirm the server shutdown process
       // is not affected by client ZK crash
-      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       int metaServerId = cluster.getServerWithMeta();
       HRegionServer metaServer = cluster.getRegionServer(metaServerId);
       metaServer.stop("Stop current RS holding meta region");
-      while (!metaServer.isShutDown()) {
+      while (metaServer.isAlive()) {
         Thread.sleep(200);
       }
       // wait for meta region online
@@ -270,11 +270,11 @@ public class TestSeparateClientZKCluster {
     try (RegionLocator locator =
       TEST_UTIL.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
       assertEquals(1, locator.getAllRegionLocations().size());
-      HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, 3);
+      HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, 3);
       TEST_UTIL.waitFor(30000, () -> locator.getAllRegionLocations().size() == 3);
-      HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, 2);
+      HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, 2);
       TEST_UTIL.waitFor(30000, () -> locator.getAllRegionLocations().size() == 2);
-      HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, 1);
+      HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, 1);
       TEST_UTIL.waitFor(30000, () -> locator.getAllRegionLocations().size() == 1);
     }
   }

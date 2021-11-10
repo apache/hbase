@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.FailedArchiveException;
@@ -73,7 +73,7 @@ public class TestCompactionArchiveIOException {
 
   private static final String ERROR_FILE = "fffffffffffffffffdeadbeef";
 
-  public HBaseTestingUtility testUtil;
+  public HBaseTestingUtil testUtil;
 
   private Path testDir;
 
@@ -82,7 +82,7 @@ public class TestCompactionArchiveIOException {
 
   @Before
   public void setup() throws Exception {
-    testUtil = new HBaseTestingUtility();
+    testUtil = new HBaseTestingUtil();
     testUtil.startMiniDFSCluster(1);
     testDir = testUtil.getDataTestDirOnTestFS();
     CommonFSUtils.setRootDir(testUtil.getConfiguration(), testDir);

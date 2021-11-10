@@ -27,12 +27,13 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -44,9 +45,14 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
@@ -67,7 +73,7 @@ public class TestCatalogJanitorInMemoryStates {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCatalogJanitorInMemoryStates.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
 
@@ -120,6 +126,22 @@ public class TestCatalogJanitorInMemoryStates {
     Result r = MetaMockingUtil.getMetaTableRowResult(parent.getRegion(), null,
       daughters.get(0).getRegion(), daughters.get(1).getRegion());
     CatalogJanitor.cleanParent(master, parent.getRegion(), r);
+
+    // wait for procedures to complete
+    Waiter.waitFor(TEST_UTIL.getConfiguration(), 10 * 1000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        ProcedureExecutor<MasterProcedureEnv> pe = master.getMasterProcedureExecutor();
+        for (Procedure<MasterProcedureEnv> proc: pe.getProcedures()) {
+          if (proc.getClass().isAssignableFrom(GCRegionProcedure.class) &&
+              proc.isFinished()) {
+            return true;
+          }          
+        }
+        return false;
+      }
+    });
+
     assertFalse("Parent region should have been removed from RegionStates",
       am.getRegionStates().isRegionInRegionStates(parent.getRegion()));
     assertFalse("Parent region should have been removed from ServerManager",
@@ -158,13 +180,13 @@ public class TestCatalogJanitorInMemoryStates {
    * @return Daughter regions; caller needs to check table actually split.
    */
   private PairOfSameType<RegionInfo> waitOnDaughters(final RegionInfo r) throws IOException {
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     PairOfSameType<RegionInfo> pair = null;
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
       Table metaTable = conn.getTable(TableName.META_TABLE_NAME)) {
       Result result = null;
       RegionInfo region = null;
-      while ((System.currentTimeMillis() - start) < 60000) {
+      while ((EnvironmentEdgeManager.currentTime() - start) < 60000) {
         result = metaTable.get(new Get(r.getRegionName()));
         if (result == null) {
           break;

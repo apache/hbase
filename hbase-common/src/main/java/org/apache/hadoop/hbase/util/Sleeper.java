@@ -71,7 +71,7 @@ public class Sleeper {
     if (this.stopper.isStopped()) {
       return;
     }
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     long currentSleepTime = sleepTime;
     while (currentSleepTime > 0) {
       long woke = -1;
@@ -83,7 +83,7 @@ public class Sleeper {
 
           sleepLock.wait(currentSleepTime);
         }
-        woke = System.currentTimeMillis();
+        woke = EnvironmentEdgeManager.currentTime();
         long slept = woke - now;
         if (slept - this.period > MINIMAL_DELTA_FOR_LOGGING) {
           LOG.warn("We slept {}ms instead of {}ms, this is likely due to a long " +
@@ -98,7 +98,7 @@ public class Sleeper {
         }
       }
       // Recalculate waitTime.
-      woke = (woke == -1)? System.currentTimeMillis(): woke;
+      woke = (woke == -1)? EnvironmentEdgeManager.currentTime() : woke;
       currentSleepTime = this.period - (woke - now);
     }
     synchronized(sleepLock) {

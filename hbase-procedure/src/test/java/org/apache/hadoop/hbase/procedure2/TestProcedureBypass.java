@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -56,7 +56,7 @@ public class TestProcedureBypass {
 
   private static ProcedureExecutor<TestProcEnv> procExecutor;
 
-  private static HBaseCommonTestingUtility htu;
+  private static HBaseCommonTestingUtil htu;
 
   private static FileSystem fs;
   private static Path testDir;
@@ -67,7 +67,7 @@ public class TestProcedureBypass {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    htu = new HBaseCommonTestingUtility();
+    htu = new HBaseCommonTestingUtil();
 
     // NOTE: The executor will be created by each test
     procEnv = new TestProcEnv();

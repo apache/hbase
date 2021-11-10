@@ -58,7 +58,7 @@ public class TestIPv6NIOServerSocketChannel {
    */
   private void bindServerSocket(InetAddress inetAddr) throws IOException {
     while(true) {
-      int port = HBaseTestingUtility.randomFreePort();
+      int port = HBaseTestingUtil.randomFreePort();
       InetSocketAddress addr = new InetSocketAddress(inetAddr, port);
       ServerSocket serverSocket = null;
       try {
@@ -84,7 +84,7 @@ public class TestIPv6NIOServerSocketChannel {
    */
   private void bindNIOServerSocket(InetAddress inetAddr) throws IOException {
     while (true) {
-      int port = HBaseTestingUtility.randomFreePort();
+      int port = HBaseTestingUtil.randomFreePort();
       InetSocketAddress addr = new InetSocketAddress(inetAddr, port);
       ServerSocketChannel channel = null;
       ServerSocket serverSocket = null;

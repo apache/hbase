@@ -202,7 +202,13 @@ module Hbase
       did_balancer_run = command(:balancer)
       assert(did_balancer_run == true)
       output = capture_stdout { command(:balancer, 'force') }
-      assert(output.include?('true'))
+      assert(output.include?('Balancer ran'))
+
+      command(:balance_switch, false)
+      output = capture_stdout { command(:balancer) }
+      assert(output.include?('Balancer did not run'))
+      output = capture_stdout { command(:balancer, 'dry_run') }
+      assert(output.include?('Balancer ran'))
     end
 
     #-------------------------------------------------------------------------------
@@ -915,6 +921,13 @@ module Hbase
                    modification per alter.")
       assert_equal(['x:', 'z:'], table(@test_name).get_all_columns.sort)
       assert_match(/12345678/, admin.describe(@test_name))
+    end
+
+    define_test 'alter should be able to set the TargetRegionSizeMB and TargetRegionCount' do
+      command(:alter, @test_name, 'NORMALIZER_TARGET_REGION_COUNT' => 156)
+      assert_match(/156/, admin.describe(@test_name))
+      command(:alter, @test_name, 'NORMALIZER_TARGET_REGION_SIZE_MB' => 234)
+      assert_match(/234/, admin.describe(@test_name))
     end
 
     define_test 'alter should be able to set the TargetRegionSize and TargetRegionCount' do

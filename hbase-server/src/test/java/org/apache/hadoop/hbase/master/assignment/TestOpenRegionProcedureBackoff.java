@@ -23,7 +23,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ProcedureTestUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -55,8 +56,8 @@ public class TestOpenRegionProcedureBackoff {
 
   private static final class AssignmentManagerForTest extends AssignmentManager {
 
-    public AssignmentManagerForTest(MasterServices master) {
-      super(master);
+    public AssignmentManagerForTest(MasterServices master, MasterRegion masterRegion) {
+      super(master, masterRegion);
     }
 
     @Override
@@ -75,12 +76,13 @@ public class TestOpenRegionProcedureBackoff {
     }
 
     @Override
-    protected AssignmentManager createAssignmentManager(MasterServices master) {
-      return new AssignmentManagerForTest(master);
+    protected AssignmentManager createAssignmentManager(MasterServices master,
+      MasterRegion masterRegion) {
+      return new AssignmentManagerForTest(master, masterRegion);
     }
   }
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName NAME = TableName.valueOf("Open");
 

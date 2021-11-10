@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.HConstants.HIGH_QOS;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.util.FutureUtils.unwrapCompletionException;
-
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -147,14 +146,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringP
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClearDeadServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClearDeadServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceRequest;
@@ -2906,6 +2904,42 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> updateConfiguration(String groupName) {
+    CompletableFuture<Void> future = new CompletableFuture<Void>();
+    addListener(
+      getRSGroup(groupName),
+      (rsGroupInfo, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else if (rsGroupInfo == null) {
+          future.completeExceptionally(
+            new IllegalArgumentException("Group does not exist: " + groupName));
+        } else {
+          addListener(getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)), (status, err2) -> {
+            if (err2 != null) {
+              future.completeExceptionally(err2);
+            } else {
+              List<CompletableFuture<Void>> futures = new ArrayList<>();
+              List<ServerName> groupServers = status.getServersName().stream().filter(
+                s -> rsGroupInfo.containsServer(s.getAddress())).collect(Collectors.toList());
+              groupServers.forEach(server -> futures.add(updateConfiguration(server)));
+              addListener(
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()])),
+                (result, err3) -> {
+                  if (err3 != null) {
+                    future.completeExceptionally(err3);
+                  } else {
+                    future.complete(result);
+                  }
+                });
+            }
+          });
+        }
+      });
+    return future;
+  }
+
+  @Override
   public CompletableFuture<Void> rollWALWriter(ServerName serverName) {
     return this
         .<Void> newAdminCaller()
@@ -3245,14 +3279,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> balance(boolean forcible) {
+  public CompletableFuture<BalanceResponse> balance(BalanceRequest request) {
     return this
-        .<Boolean> newMasterCaller()
+        .<BalanceResponse> newMasterCaller()
         .action(
-          (controller, stub) -> this.<BalanceRequest, BalanceResponse, Boolean> call(controller,
-            stub, RequestConverter.buildBalanceRequest(forcible),
-            (s, c, req, done) -> s.balance(c, req, done), (resp) -> resp.getBalancerRan())).call();
+          (controller, stub) -> this.<MasterProtos.BalanceRequest, MasterProtos.BalanceResponse, BalanceResponse> call(controller,
+            stub, ProtobufUtil.toBalanceRequest(request),
+            (s, c, req, done) -> s.balance(c, req, done), (resp) -> ProtobufUtil.toBalanceResponse(resp))).call();
   }
+
 
   @Override
   public CompletableFuture<Boolean> isBalancerEnabled() {
@@ -3963,13 +3998,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> balanceRSGroup(String groupName) {
-    return this.<Boolean> newMasterCaller()
-        .action((controller, stub) -> this.
-            <BalanceRSGroupRequest, BalanceRSGroupResponse, Boolean> call(controller, stub,
-                BalanceRSGroupRequest.newBuilder().setRSGroupName(groupName).build(),
-              (s, c, req, done) -> s.balanceRSGroup(c, req, done), resp -> resp.getBalanceRan()))
-        .call();
+  public CompletableFuture<BalanceResponse> balanceRSGroup(String groupName,
+    BalanceRequest request) {
+    return this.<BalanceResponse>newMasterCaller().action(
+        (controller, stub) -> this.<BalanceRSGroupRequest, BalanceRSGroupResponse, BalanceResponse>call(
+          controller, stub, ProtobufUtil.createBalanceRSGroupRequest(groupName, request),
+          MasterService.Interface::balanceRSGroup, ProtobufUtil::toBalanceResponse))
+      .call();
   }
 
   @Override
@@ -4202,6 +4237,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .call();
   }
 
+  private CompletableFuture<List<LogEntry>> getBalancerRejections(final int limit) {
+    return this.<List<LogEntry>>newMasterCaller()
+      .action((controller, stub) ->
+        this.call(controller, stub,
+          ProtobufUtil.toBalancerRejectionRequest(limit),
+          MasterService.Interface::getLogEntries, ProtobufUtil::toBalancerRejectionResponse))
+      .call();
+  }
+
   @Override
   public CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames,
       String logType, ServerType serverType, int limit,
@@ -4209,19 +4253,28 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     if (logType == null || serverType == null) {
       throw new IllegalArgumentException("logType and/or serverType cannot be empty");
     }
-    if (logType.equals("SLOW_LOG") || logType.equals("LARGE_LOG")) {
-      if (ServerType.MASTER.equals(serverType)) {
-        throw new IllegalArgumentException("Slow/Large logs are not maintained by HMaster");
-      }
-      return getSlowLogResponses(filterParams, serverNames, limit, logType);
-    } else if (logType.equals("BALANCER_DECISION")) {
-      if (ServerType.REGION_SERVER.equals(serverType)) {
-        throw new IllegalArgumentException(
-          "Balancer Decision logs are not maintained by HRegionServer");
-      }
-      return getBalancerDecisions(limit);
+    switch (logType){
+      case "SLOW_LOG":
+      case "LARGE_LOG":
+        if (ServerType.MASTER.equals(serverType)) {
+          throw new IllegalArgumentException("Slow/Large logs are not maintained by HMaster");
+        }
+        return getSlowLogResponses(filterParams, serverNames, limit, logType);
+      case "BALANCER_DECISION":
+        if (ServerType.REGION_SERVER.equals(serverType)) {
+          throw new IllegalArgumentException(
+            "Balancer Decision logs are not maintained by HRegionServer");
+        }
+        return getBalancerDecisions(limit);
+      case "BALANCER_REJECTION":
+        if (ServerType.REGION_SERVER.equals(serverType)) {
+          throw new IllegalArgumentException(
+            "Balancer Rejection logs are not maintained by HRegionServer");
+        }
+        return getBalancerRejections(limit);
+      default:
+        return CompletableFuture.completedFuture(Collections.emptyList());
     }
-    return CompletableFuture.completedFuture(Collections.emptyList());
   }
 
 }

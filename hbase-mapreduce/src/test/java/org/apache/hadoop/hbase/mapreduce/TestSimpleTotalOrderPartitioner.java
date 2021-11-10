@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
@@ -41,7 +41,7 @@ public class TestSimpleTotalOrderPartitioner {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSimpleTotalOrderPartitioner.class);
 
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   Configuration conf = TEST_UTIL.getConfiguration();
 
   @Test

@@ -38,18 +38,8 @@ public final class ClusterConnectionFactory {
   private ClusterConnectionFactory() {
   }
 
-  /**
-   * Create a new {@link AsyncClusterConnection} instance.
-   * <p/>
-   * Unlike what we have done in {@link ConnectionFactory}, here we just return an
-   * {@link AsyncClusterConnection} instead of a {@link java.util.concurrent.CompletableFuture},
-   * which means this method could block on fetching the cluster id. This is just used to simplify
-   * the implementation, as when starting new region servers, we do not need to be event-driven. Can
-   * change later if we want a {@link java.util.concurrent.CompletableFuture} here.
-   */
-  public static AsyncClusterConnection createAsyncClusterConnection(Configuration conf,
-      SocketAddress localAddress, User user) throws IOException {
-    ConnectionRegistry registry = ConnectionRegistryFactory.getRegistry(conf);
+  private static AsyncClusterConnection createAsyncClusterConnection(Configuration conf,
+    ConnectionRegistry registry, SocketAddress localAddress, User user) throws IOException {
     String clusterId = FutureUtils.get(registry.getClusterId());
     Class<? extends AsyncClusterConnection> clazz =
       conf.getClass(HBASE_SERVER_CLUSTER_CONNECTION_IMPL, AsyncClusterConnectionImpl.class,
@@ -61,5 +51,31 @@ public final class ClusterConnectionFactory {
     } catch (Exception e) {
       throw new IOException(e);
     }
+  }
+
+  /**
+   * Create a new {@link AsyncClusterConnection} instance.
+   * <p/>
+   * Unlike what we have done in {@link ConnectionFactory}, here we just return an
+   * {@link AsyncClusterConnection} instead of a {@link java.util.concurrent.CompletableFuture},
+   * which means this method could block on fetching the cluster id. This is just used to simplify
+   * the implementation, as when starting new region servers, we do not need to be event-driven. Can
+   * change later if we want a {@link java.util.concurrent.CompletableFuture} here.
+   */
+  public static AsyncClusterConnection createAsyncClusterConnection(Configuration conf,
+    SocketAddress localAddress, User user) throws IOException {
+    return createAsyncClusterConnection(conf, ConnectionRegistryFactory.getRegistry(conf),
+      localAddress, user);
+  }
+
+  /**
+   * Create a new {@link AsyncClusterConnection} instance to be used at server side where we have a
+   * {@link ConnectionRegistryEndpoint}.
+   */
+  public static AsyncClusterConnection createAsyncClusterConnection(
+    ConnectionRegistryEndpoint endpoint, Configuration conf, SocketAddress localAddress, User user)
+    throws IOException {
+    ShortCircuitConnectionRegistry registry = new ShortCircuitConnectionRegistry(endpoint);
+    return createAsyncClusterConnection(conf, registry, localAddress, user);
   }
 }

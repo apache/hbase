@@ -24,12 +24,14 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.BindException;
 import java.net.SocketException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Properties;
 import javax.net.ssl.SSLException;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -37,7 +39,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.http.HttpConfig;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.http.log.LogLevel.CLI;
@@ -73,6 +75,8 @@ public class TestLogLevel {
   private static Configuration clientConf;
   private static Configuration sslConf;
   private static final String logName = TestLogLevel.class.getName();
+  private static final String protectedPrefix = "protected";
+  private static final String protectedLogName = protectedPrefix + "." + logName;
   private static final org.apache.logging.log4j.Logger log =
     org.apache.logging.log4j.LogManager.getLogger(logName);
   private final static String PRINCIPAL = "loglevel.principal";
@@ -83,13 +87,14 @@ public class TestLogLevel {
   private static final String LOCALHOST = "localhost";
   private static final String clientPrincipal = "client/" + LOCALHOST;
   private static String HTTP_PRINCIPAL = "HTTP/" + LOCALHOST;
-  private static HBaseCommonTestingUtility HTU;
+  private static HBaseCommonTestingUtil HTU;
   private static File keyTabFile;
 
   @BeforeClass
   public static void setUp() throws Exception {
     serverConf = new Configuration();
-    HTU = new HBaseCommonTestingUtility(serverConf);
+    serverConf.setStrings(LogLevel.READONLY_LOGGERS_CONF_KEY, protectedPrefix);
+    HTU = new HBaseCommonTestingUtil(serverConf);
 
     File keystoreDir = new File(HTU.getDataTestDir("keystore").toString());
     keystoreDir.mkdirs();
@@ -259,7 +264,15 @@ public class TestLogLevel {
   private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
     final boolean isSpnego) throws Exception {
     testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego,
+      logName,
       org.apache.logging.log4j.Level.DEBUG.toString());
+  }
+
+  private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
+    final boolean isSpnego, final String newLevel) throws Exception {
+    testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego,
+      logName,
+      newLevel);
   }
 
   /**
@@ -270,13 +283,14 @@ public class TestLogLevel {
    * @throws Exception if client can't accesss server.
    */
   private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
-    final boolean isSpnego, final String newLevel) throws Exception {
+    final boolean isSpnego, final String loggerName, final String newLevel) throws Exception {
     if (!LogLevel.isValidProtocol(bindProtocol)) {
       throw new Exception("Invalid server protocol " + bindProtocol);
     }
     if (!LogLevel.isValidProtocol(connectProtocol)) {
       throw new Exception("Invalid client protocol " + connectProtocol);
     }
+    org.apache.logging.log4j.Logger log = org.apache.logging.log4j.LogManager.getLogger(loggerName);
     org.apache.logging.log4j.Level oldLevel = log.getLevel();
     assertNotEquals("Get default Log Level which shouldn't be ERROR.",
       org.apache.logging.log4j.Level.ERROR, oldLevel);
@@ -305,8 +319,8 @@ public class TestLogLevel {
     try {
       clientUGI.doAs((PrivilegedExceptionAction<Void>) () -> {
         // client command line
-        getLevel(connectProtocol, authority);
-        setLevel(connectProtocol, authority, newLevel);
+        getLevel(connectProtocol, authority, loggerName);
+        setLevel(connectProtocol, authority, loggerName, newLevel);
         return null;
       });
     } finally {
@@ -324,7 +338,7 @@ public class TestLogLevel {
    * @param authority daemon's web UI address
    * @throws Exception if unable to connect
    */
-  private void getLevel(String protocol, String authority) throws Exception {
+  private void getLevel(String protocol, String authority, String logName) throws Exception {
     String[] getLevelArgs = { "-getlevel", authority, logName, "-protocol", protocol };
     CLI cli = new CLI(protocol.equalsIgnoreCase("https") ? sslConf : clientConf);
     cli.run(getLevelArgs);
@@ -336,13 +350,27 @@ public class TestLogLevel {
    * @param authority daemon's web UI address
    * @throws Exception if unable to run or log level does not change as expected
    */
-  private void setLevel(String protocol, String authority, String newLevel) throws Exception {
+  private void setLevel(String protocol, String authority, String logName, String newLevel) throws Exception {
     String[] setLevelArgs = { "-setlevel", authority, logName, newLevel, "-protocol", protocol };
     CLI cli = new CLI(protocol.equalsIgnoreCase("https") ? sslConf : clientConf);
     cli.run(setLevelArgs);
 
+    org.apache.logging.log4j.Logger logger = org.apache.logging.log4j.LogManager.getLogger(logName);
+
     assertEquals("new level not equal to expected: ", newLevel.toUpperCase(),
-      log.getLevel().toString());
+      logger.getLevel().toString());
+  }
+
+  @Test
+  public void testSettingProtectedLogLevel() throws Exception {
+    try {
+      testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, true, protectedLogName,
+        "DEBUG");
+      fail("Expected IO exception due to protected logger");
+    } catch (IOException e) {
+      assertTrue(e.getMessage().contains("" + HttpServletResponse.SC_PRECONDITION_FAILED));
+      assertTrue(e.getMessage().contains("Modification of logger " + protectedLogName + " is disallowed in configuration."));
+    }
   }
 
   /**

@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -163,12 +164,14 @@ public class HFileOutputFormat2
   static final String MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY =
           "hbase.mapreduce.use.multi.table.hfileoutputformat";
 
+  public static final String REMOTE_CLUSTER_CONF_PREFIX =
+    "hbase.hfileoutputformat.remote.cluster.";
   public static final String REMOTE_CLUSTER_ZOOKEEPER_QUORUM_CONF_KEY =
-    "hbase.hfileoutputformat.remote.cluster.zookeeper.quorum";
+    REMOTE_CLUSTER_CONF_PREFIX + "zookeeper.quorum";
   public static final String REMOTE_CLUSTER_ZOOKEEPER_CLIENT_PORT_CONF_KEY =
-    "hbase.hfileoutputformat.remote.cluster.zookeeper." + HConstants.CLIENT_PORT_STR;
+    REMOTE_CLUSTER_CONF_PREFIX + "zookeeper." + HConstants.CLIENT_PORT_STR;
   public static final String REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY =
-    "hbase.hfileoutputformat.remote.cluster." + HConstants.ZOOKEEPER_ZNODE_PARENT;
+    REMOTE_CLUSTER_CONF_PREFIX + HConstants.ZOOKEEPER_ZNODE_PARENT;
 
   public static final String STORAGE_POLICY_PROPERTY = HStore.BLOCK_STORAGE_POLICY_KEY;
   public static final String STORAGE_POLICY_PROPERTY_CF_PREFIX = STORAGE_POLICY_PROPERTY + ".";
@@ -361,6 +364,23 @@ public class HFileOutputFormat2
           newConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, parent);
         }
 
+        for (Entry<String, String> entry : conf) {
+          String key = entry.getKey();
+          if (REMOTE_CLUSTER_ZOOKEEPER_QUORUM_CONF_KEY.equals(key) ||
+              REMOTE_CLUSTER_ZOOKEEPER_CLIENT_PORT_CONF_KEY.equals(key) ||
+              REMOTE_CLUSTER_ZOOKEEPER_ZNODE_PARENT_CONF_KEY.equals(key)) {
+            // Handled them above
+            continue;
+          }
+
+          if (entry.getKey().startsWith(REMOTE_CLUSTER_CONF_PREFIX)) {
+            String originalKey = entry.getKey().substring(REMOTE_CLUSTER_CONF_PREFIX.length());
+            if (!originalKey.isEmpty()) {
+              newConf.set(originalKey, entry.getValue());
+            }
+          }
+        }
+
         return newConf;
       }
 
@@ -419,8 +439,10 @@ public class HFileOutputFormat2
 
       private void close(final StoreFileWriter w) throws IOException {
         if (w != null) {
-          w.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(System.currentTimeMillis()));
-          w.appendFileInfo(BULKLOAD_TASK_KEY, Bytes.toBytes(context.getTaskAttemptID().toString()));
+          w.appendFileInfo(BULKLOAD_TIME_KEY,
+            Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
+          w.appendFileInfo(BULKLOAD_TASK_KEY,
+            Bytes.toBytes(context.getTaskAttemptID().toString()));
           w.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(true));
           w.appendFileInfo(EXCLUDE_FROM_MINOR_COMPACTION_KEY, Bytes.toBytes(compactionExclude));
           w.appendTrackedTimestampsToMetadata();

@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -62,7 +62,7 @@ public class TestSeekTo {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSeekTo.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final DataBlockEncoding encoding;
   @Parameters
   public static Collection<Object[]> parameters() {
@@ -148,7 +148,7 @@ public class TestSeekTo {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
-    HFileScanner scanner = reader.getScanner(false, true);
+    HFileScanner scanner = reader.getScanner(conf, false, true);
     assertFalse(scanner.seekBefore(toKV("a", tagUsage)));
 
     assertFalse(scanner.seekBefore(toKV("c", tagUsage)));
@@ -206,7 +206,7 @@ public class TestSeekTo {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
-    HFileScanner scanner = reader.getScanner(false, true);
+    HFileScanner scanner = reader.getScanner(conf, false, true);
     assertFalse(scanner.seekBefore(toKV("a", tagUsage)));
     assertFalse(scanner.seekBefore(toKV("b", tagUsage)));
     assertFalse(scanner.seekBefore(toKV("c", tagUsage)));
@@ -300,7 +300,7 @@ public class TestSeekTo {
     Configuration conf = TEST_UTIL.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
     assertEquals(2, reader.getDataBlockIndexReader().getRootBlockCount());
-    HFileScanner scanner = reader.getScanner(false, true);
+    HFileScanner scanner = reader.getScanner(conf, false, true);
     // lies before the start of the file.
     assertEquals(-1, scanner.seekTo(toKV("a", tagUsage)));
 

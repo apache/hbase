@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import java.io.IOException;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
@@ -28,9 +30,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -41,6 +44,7 @@ import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -70,7 +74,7 @@ public class TestWALRecordReader {
       HBaseClassTestRule.forClass(TestWALRecordReader.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALRecordReader.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf;
   private static FileSystem fs;
   private static Path hbaseDir;
@@ -89,6 +93,11 @@ public class TestWALRecordReader {
 
   private static String getName() {
     return "TestWALRecordReader";
+  }
+
+  private static String getServerName() {
+    ServerName serverName = ServerName.valueOf("TestWALRecordReader", 1, 1);
+    return serverName.toString();
   }
 
   @Before
@@ -131,7 +140,7 @@ public class TestWALRecordReader {
     WAL log = walfactory.getWAL(info);
     // This test depends on timestamp being millisecond based and the filename of the WAL also
     // being millisecond based.
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"), ts, value));
     log.appendData(info, getWalKeyImpl(ts, scopes), edit);
@@ -145,7 +154,7 @@ public class TestWALRecordReader {
     LOG.info("Past 1st WAL roll " + log.toString());
 
     Thread.sleep(1);
-    long ts1 = System.currentTimeMillis();
+    long ts1 = EnvironmentEdgeManager.currentTime();
 
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("3"), ts1+1, value));
@@ -195,21 +204,24 @@ public class TestWALRecordReader {
     byte [] value = Bytes.toBytes("value");
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
-        System.currentTimeMillis(), value));
-    long txid = log.appendData(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit);
+      EnvironmentEdgeManager.currentTime(), value));
+    long txid = log.appendData(info,
+      getWalKeyImpl(EnvironmentEdgeManager.currentTime(), scopes), edit);
     log.sync(txid);
 
     Thread.sleep(1); // make sure 2nd log gets a later timestamp
-    long secondTs = System.currentTimeMillis();
+    long secondTs = EnvironmentEdgeManager.currentTime();
     log.rollWriter();
 
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), System.currentTimeMillis(), value));
-    txid = log.appendData(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit);
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"),
+      EnvironmentEdgeManager.currentTime(), value));
+    txid = log.appendData(info,
+      getWalKeyImpl(EnvironmentEdgeManager.currentTime(), scopes), edit);
     log.sync(txid);
     log.shutdown();
     walfactory.shutdown();
-    long thirdTs = System.currentTimeMillis();
+    long thirdTs = EnvironmentEdgeManager.currentTime();
 
     // should have 2 log files now
     WALInputFormat input = new WALInputFormat();
@@ -251,15 +263,19 @@ public class TestWALRecordReader {
     WAL log = walfactory.getWAL(info);
     byte [] value = Bytes.toBytes("value");
     WALEdit edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"), System.currentTimeMillis(), value));
-    long txid = log.appendData(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit);
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
+      EnvironmentEdgeManager.currentTime(), value));
+    long txid = log.appendData(info,
+      getWalKeyImpl(EnvironmentEdgeManager.currentTime(), scopes), edit);
     log.sync(txid);
 
     Thread.sleep(10); // make sure 2nd edit gets a later timestamp
 
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), System.currentTimeMillis(), value));
-    txid = log.appendData(info, getWalKeyImpl(System.currentTimeMillis(), scopes), edit);
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"),
+      EnvironmentEdgeManager.currentTime(), value));
+    txid = log.appendData(info,
+      getWalKeyImpl(EnvironmentEdgeManager.currentTime(), scopes), edit);
     log.sync(txid);
     log.shutdown();
 
@@ -274,7 +290,6 @@ public class TestWALRecordReader {
     LOG.debug("log="+logDir+" file="+ split.getLogFileName());
 
     testSplitWithMovingWAL(splits.get(0), Bytes.toBytes("1"), Bytes.toBytes("2"));
-
   }
 
   protected WALKeyImpl getWalKeyImpl(final long time, NavigableMap<byte[], Integer> scopes) {
@@ -327,13 +342,16 @@ public class TestWALRecordReader {
     // Move log file to archive directory
     // While WAL record reader is open
     WALInputFormat.WALSplit split_ = (WALInputFormat.WALSplit) split;
-
     Path logFile = new Path(split_.getLogFileName());
-    Path archivedLog = AbstractFSWALProvider.getArchivedLogPath(logFile, conf);
-    boolean result = fs.rename(logFile, archivedLog);
-    assertTrue(result);
-    result = fs.exists(archivedLog);
-    assertTrue(result);
+    Path archivedLogDir = getWALArchiveDir(conf);
+    Path archivedLogLocation = new Path(archivedLogDir, logFile.getName());
+    assertNotEquals(split_.getLogFileName(), archivedLogLocation.toString());
+
+    assertTrue(fs.rename(logFile, archivedLogLocation));
+    assertTrue(fs.exists(archivedLogDir));
+    assertFalse(fs.exists(logFile));
+    // TODO: This is not behaving as expected. WALInputFormat#WALKeyRecordReader doesn't open
+    // TODO: the archivedLogLocation to read next key value.
     assertTrue(reader.nextKeyValue());
     cell = reader.getCurrentValue().getCells().get(0);
     if (!Bytes.equals(col2, 0, col2.length, cell.getQualifierArray(), cell.getQualifierOffset(),
@@ -344,5 +362,11 @@ public class TestWALRecordReader {
         false);
     }
     reader.close();
+  }
+
+  private Path getWALArchiveDir(Configuration conf) throws IOException {
+    Path rootDir = CommonFSUtils.getWALRootDir(conf);
+    String archiveDir = AbstractFSWALProvider.getWALArchiveDirectoryName(conf, getServerName());
+    return new Path(rootDir, archiveDir);
   }
 }

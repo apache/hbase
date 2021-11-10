@@ -23,12 +23,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -42,7 +43,7 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractTestLogRollPeriod {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractTestLogRollPeriod.class);
 
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private final static long LOG_ROLL_PERIOD = 4000;
 
@@ -140,7 +141,7 @@ public abstract class AbstractTestLogRollPeriod {
     });
 
     // Sleep until we should get at least min-LogRoll events
-    long wtime = System.currentTimeMillis();
+    long wtime = EnvironmentEdgeManager.currentTime();
     Thread.sleep((minRolls + 1) * LOG_ROLL_PERIOD);
     // Do some extra sleep in case the machine is slow,
     // and the log-roll is not triggered exactly on LOG_ROLL_PERIOD.
@@ -148,7 +149,7 @@ public abstract class AbstractTestLogRollPeriod {
     for (int retry = 0; paths.size() < minRolls && retry < NUM_RETRIES; ++retry) {
       Thread.sleep(LOG_ROLL_PERIOD / 4);
     }
-    wtime = System.currentTimeMillis() - wtime;
+    wtime = EnvironmentEdgeManager.currentTime() - wtime;
     LOG.info(String.format("got %d rolls after %dms (%dms each) - expected at least %d rolls",
                            paths.size(), wtime, wtime / paths.size(), minRolls));
     assertFalse(paths.size() < minRolls);

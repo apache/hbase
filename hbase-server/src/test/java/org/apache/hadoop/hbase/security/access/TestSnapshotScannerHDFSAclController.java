@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -71,7 +71,7 @@ public class TestSnapshotScannerHDFSAclController {
       LoggerFactory.getLogger(TestSnapshotScannerHDFSAclController.class);
 
   private static final String UN_GRANT_USER = "un_grant_user";
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf = TEST_UTIL.getConfiguration();
   private static Admin admin = null;
   private static FileSystem FS = null;
@@ -98,7 +98,11 @@ public class TestSnapshotScannerHDFSAclController {
           + SnapshotScannerHDFSAclController.class.getName());
 
     TEST_UTIL.startMiniCluster();
+    SnapshotScannerHDFSAclController coprocessor = TEST_UTIL.getHBaseCluster().getMaster()
+      .getMasterCoprocessorHost().findCoprocessor(SnapshotScannerHDFSAclController.class);
+    TEST_UTIL.waitFor(30000, () -> coprocessor.checkInitialized("check initialized"));
     TEST_UTIL.waitTableAvailable(PermissionStorage.ACL_TABLE_NAME);
+
     admin = TEST_UTIL.getAdmin();
     rootDir = TEST_UTIL.getDefaultRootDirPath();
     FS = rootDir.getFileSystem(conf);
@@ -128,10 +132,6 @@ public class TestSnapshotScannerHDFSAclController {
       FS.setPermission(path, commonDirectoryPermission);
       path = path.getParent();
     }
-
-    SnapshotScannerHDFSAclController coprocessor = TEST_UTIL.getHBaseCluster().getMaster()
-        .getMasterCoprocessorHost().findCoprocessor(SnapshotScannerHDFSAclController.class);
-    TEST_UTIL.waitFor(1200000, () -> coprocessor.checkInitialized("check initialized"));
     aclTable = admin.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME);
   }
 

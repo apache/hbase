@@ -28,10 +28,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerListener;
@@ -90,7 +90,7 @@ public class TestRSKilledWhenInitializing {
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
     // Start the cluster
-    final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
+    final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil(conf);
     TEST_UTIL.startMiniDFSCluster(3);
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.createRootDir();
@@ -196,9 +196,9 @@ public class TestRSKilledWhenInitializing {
    * the response to a reportForDuty. When it dies, it clears its ephemeral znode which the master
    * notices and so removes the region from its set of online regionservers.
    */
-  static class RegisterAndDieRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
-    public RegisterAndDieRegionServer(Configuration conf)
-    throws IOException, InterruptedException {
+  static class RegisterAndDieRegionServer
+    extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
+    public RegisterAndDieRegionServer(Configuration conf) throws IOException, InterruptedException {
       super(conf);
     }
 

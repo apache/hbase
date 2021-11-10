@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
@@ -47,7 +47,7 @@ public class TestReseekTo {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestReseekTo.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Test
   public void testReseekTo() throws Exception {
@@ -112,7 +112,7 @@ public class TestReseekTo {
 
     HFile.Reader reader = HFile.createReader(TEST_UTIL.getTestFileSystem(), ncTFile, cacheConf,
       true, TEST_UTIL.getConfiguration());
-    HFileScanner scanner = reader.getScanner(false, true);
+    HFileScanner scanner = reader.getScanner(TEST_UTIL.getConfiguration(), false, true);
 
     scanner.seekTo();
     for (int i = 0; i < keyList.size(); i++) {

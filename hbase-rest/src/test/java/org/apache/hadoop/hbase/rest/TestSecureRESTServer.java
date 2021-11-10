@@ -36,9 +36,9 @@ import javax.ws.rs.core.MediaType;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -111,9 +111,9 @@ public class TestSecureRESTServer {
       HBaseClassTestRule.forClass(TestSecureRESTServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSecureRESTServer.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST = new HBaseRESTTestingUtility();
-  private static MiniHBaseCluster CLUSTER;
+  private static SingleProcessHBaseCluster CLUSTER;
 
   private static final String HOSTNAME = "localhost";
   private static final String CLIENT_PRINCIPAL = "client";
@@ -199,7 +199,7 @@ public class TestSecureRESTServer {
         restServerKeytab);
 
     // Start HDFS
-    TEST_UTIL.startMiniCluster(StartMiniClusterOption.builder()
+    TEST_UTIL.startMiniCluster(StartTestingClusterOption.builder()
         .numMasters(1)
         .numRegionServers(1)
         .numZkServers(1)

@@ -27,7 +27,7 @@ import java.util.Optional;
 import java.util.function.BiPredicate;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerInfoP
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.junit.AfterClass;
@@ -56,7 +57,7 @@ public class TestSyncReplicationWALProvider {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSyncReplicationWALProvider.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static String PEER_ID = "1";
 
@@ -108,7 +109,7 @@ public class TestSyncReplicationWALProvider {
     int recordCount = 100;
     int columnCount = 10;
     byte[] row = Bytes.toBytes("testRow");
-    long timestamp = System.currentTimeMillis();
+    long timestamp = EnvironmentEdgeManager.currentTime();
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     ProtobufLogTestHelper.doWrite(wal, REGION, TABLE, columnCount, recordCount, row, timestamp,
       mvcc);

@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 
 /**
@@ -1084,6 +1085,32 @@ public interface AsyncAdmin {
         .thenApply(ClusterMetrics::getServersName);
   }
 
+  default CompletableFuture<Collection<ServerName>> getRegionServers(
+    boolean excludeDecommissionedRS) {
+    CompletableFuture<Collection<ServerName>> future = new CompletableFuture<>();
+    addListener(
+      getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).thenApply(ClusterMetrics::getServersName),
+      (allServers, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else {
+          if (!excludeDecommissionedRS) {
+            future.complete(allServers);
+          } else {
+            addListener(listDecommissionedRegionServers(), (decomServers, decomErr) -> {
+              if (decomErr != null) {
+                future.completeExceptionally(decomErr);
+              } else {
+                future.complete(allServers.stream().filter(s -> !decomServers.contains(s))
+                  .collect(ImmutableList.toImmutableList()));
+              }
+            });
+          }
+        }
+      });
+    return future;
+  }
+
   /**
    * @return a list of master coprocessors wrapped by {@link CompletableFuture}
    */
@@ -1128,6 +1155,13 @@ public interface AsyncAdmin {
    * regionservers.
    */
   CompletableFuture<Void> updateConfiguration();
+
+  /**
+   * Update the configuration and trigger an online config change on all the regionservers in
+   * the RSGroup.
+   * @param groupName the group name
+   */
+  CompletableFuture<Void> updateConfiguration(String groupName);
 
   /**
    * Roll the log writer. I.e. for filesystem based write ahead logs, start writing to a new file.
@@ -1253,7 +1287,8 @@ public interface AsyncAdmin {
    *         {@link CompletableFuture}.
    */
   default CompletableFuture<Boolean> balance() {
-    return balance(false);
+    return balance(BalanceRequest.defaultInstance())
+      .thenApply(BalanceResponse::isBalancerRan);
   }
 
   /**
@@ -1263,8 +1298,25 @@ public interface AsyncAdmin {
    * @param forcible whether we should force balance even if there is region in transition.
    * @return True if balancer ran, false otherwise. The return value will be wrapped by a
    *         {@link CompletableFuture}.
+   * @deprecated Since 2.5.0. Will be removed in 4.0.0.
+   *  Use {@link #balance(BalanceRequest)} instead.
    */
-  CompletableFuture<Boolean> balance(boolean forcible);
+  default CompletableFuture<Boolean> balance(boolean forcible) {
+    return balance(
+      BalanceRequest.newBuilder()
+        .setIgnoreRegionsInTransition(forcible)
+        .build()
+    ).thenApply(BalanceResponse::isBalancerRan);
+  }
+
+  /**
+   * Invoke the balancer with the given balance request.  The BalanceRequest defines how the
+   * balancer will run. See {@link BalanceRequest} for more details.
+   *
+   * @param request defines how the balancer should run
+   * @return {@link BalanceResponse} with details about the results of the invocation.
+   */
+  CompletableFuture<BalanceResponse> balance(BalanceRequest request);
 
   /**
    * Query the current state of the balancer.
@@ -1688,10 +1740,21 @@ public interface AsyncAdmin {
   /**
    * Balance regions in the given RegionServer group
    * @param groupName the group name
-   * @return boolean Whether balance ran or not
+   * @return BalanceResponse details about the balancer run
    * @throws IOException if a remote or network exception occurs
    */
-  CompletableFuture<Boolean> balanceRSGroup(String groupName);
+  default CompletableFuture<BalanceResponse> balanceRSGroup(String groupName) {
+    return balanceRSGroup(groupName, BalanceRequest.defaultInstance());
+  }
+
+  /**
+   * Balance regions in the given RegionServer group
+   * @param groupName the group name
+   * @param request options to define how the balancer should run
+   * @return BalanceResponse details about the balancer run
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<BalanceResponse> balanceRSGroup(String groupName, BalanceRequest request);
 
   /**
    * Rename rsgroup

@@ -244,7 +244,7 @@ public class BlockCacheUtil {
             + "nextBlockOnDiskSize set, Keeping cached block.");
         return false;
       } else {
-        LOG.warn("Caching an already cached block: {}. This is harmless and can happen in rare "
+        LOG.debug("Caching an already cached block: {}. This is harmless and can happen in rare "
             + "cases (see HBASE-8547)",
           cacheKey);
         return false;

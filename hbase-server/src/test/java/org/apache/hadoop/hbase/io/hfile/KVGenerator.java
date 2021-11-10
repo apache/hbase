@@ -18,6 +18,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Random;
 
+import org.apache.hadoop.hbase.util.RandomDistribution;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.WritableComparator;
 

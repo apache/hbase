@@ -25,7 +25,6 @@ import java.util.concurrent.CancellationException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -49,7 +48,6 @@ import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -196,14 +194,8 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       snapshotManifest.addTableDescriptor(this.htd);
       monitor.rethrowException();
 
-      List<Pair<RegionInfo, ServerName>> regionsAndLocations;
-      if (TableName.META_TABLE_NAME.equals(snapshotTable)) {
-        regionsAndLocations = MetaTableLocator.getMetaRegionsAndLocations(
-          server.getZooKeeper());
-      } else {
-        regionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(
-          server.getConnection(), snapshotTable, false);
-      }
+      List<Pair<RegionInfo, ServerName>> regionsAndLocations =
+        master.getAssignmentManager().getTableRegionsAndLocations(snapshotTable, false);
 
       // run the snapshot
       snapshotRegions(regionsAndLocations);

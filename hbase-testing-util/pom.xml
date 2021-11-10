@@ -25,7 +25,7 @@
   <parent>
     <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>3.0.0-SNAPSHOT</version>
+    <version>3.0.0-alpha-2-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-testing-util</artifactId>
@@ -113,6 +113,12 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
+      <groupId>com.github.stephenc.findbugs</groupId>
+      <artifactId>findbugs-annotations</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>jcl-over-slf4j</artifactId>
       <scope>test</scope>
@@ -188,7 +194,36 @@
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minikdc</artifactId>
+          <scope>compile</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>bouncycastle</groupId>
+              <artifactId>bcprov-jdk15</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.kerby</groupId>
+          <artifactId>kerb-client</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.kerby</groupId>
+          <artifactId>kerb-simplekdc</artifactId>
+          <scope>compile</scope>
         </dependency>
       </dependencies>
     </profile>

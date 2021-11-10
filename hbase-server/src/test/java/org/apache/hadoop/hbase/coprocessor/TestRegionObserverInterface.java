@@ -36,10 +36,10 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
@@ -117,8 +117,8 @@ public class TestRegionObserverInterface {
   public final static byte[] C = Bytes.toBytes("c");
   public final static byte[] ROW = Bytes.toBytes("testrow");
 
-  private static HBaseTestingUtility util = new HBaseTestingUtility();
-  private static MiniHBaseCluster cluster = null;
+  private static HBaseTestingUtil util = new HBaseTestingUtil();
+  private static SingleProcessHBaseCluster cluster = null;
 
   @Rule
   public TestName name = new TestName();
@@ -671,7 +671,7 @@ public class TestRegionObserverInterface {
     EvenOnlyCompactor compactor = (EvenOnlyCompactor) cp;
 
     // force a compaction
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     admin.flush(compactTable);
     // wait for flush
     for (int i = 0; i < 10; i++) {
@@ -954,7 +954,7 @@ public class TestRegionObserverInterface {
     HFileContext context = new HFileContextBuilder().build();
     HFile.Writer writer = HFile.getWriterFactory(conf, new CacheConfig(conf)).withPath(fs, path)
         .withFileContext(context).create();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     try {
       for (int i = 1; i <= 9; i++) {
         KeyValue kv =

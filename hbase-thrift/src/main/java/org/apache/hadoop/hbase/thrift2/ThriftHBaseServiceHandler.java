@@ -70,7 +70,10 @@ import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.thrift.HBaseServiceHandler;
+import org.apache.hadoop.hbase.thrift2.generated.TAccessControlEntity;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TCompareOperator;
@@ -84,6 +87,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TLogQueryFilter;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TOnlineLogRecord;
+import org.apache.hadoop.hbase.thrift2.generated.TPermissionScope;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
@@ -186,6 +190,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   private TIOError getTIOError(IOException e) {
     TIOError err = new TIOErrorWithCause(e);
+    err.setCanRetry(!(e instanceof DoNotRetryIOException));
     err.setMessage(e.getMessage());
     return err;
   }
@@ -853,6 +858,50 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     } catch (IOException e) {
       throw getTIOError(e);
     }
+  }
+
+  @Override
+  public boolean grant(TAccessControlEntity info) throws TIOError, TException {
+    Permission.Action[] actions = ThriftUtilities.permissionActionsFromString(info.actions);
+    try {
+      if (info.scope == TPermissionScope.NAMESPACE) {
+        AccessControlClient.grant(connectionCache.getAdmin().getConnection(),
+          info.getNsName(), info.getUsername(), actions);
+      } else if (info.scope == TPermissionScope.TABLE) {
+        TableName tableName = TableName.valueOf(info.getTableName());
+        AccessControlClient.grant(connectionCache.getAdmin().getConnection(),
+          tableName, info.getUsername(), null, null, actions);
+      }
+    } catch (Throwable t) {
+      if (t instanceof IOException) {
+        throw getTIOError((IOException) t);
+      } else {
+        throw getTIOError(new DoNotRetryIOException(t.getMessage()));
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public boolean revoke(TAccessControlEntity info) throws TIOError, TException {
+    Permission.Action[] actions = ThriftUtilities.permissionActionsFromString(info.actions);
+    try {
+      if (info.scope == TPermissionScope.NAMESPACE) {
+        AccessControlClient.revoke(connectionCache.getAdmin().getConnection(),
+          info.getNsName(), info.getUsername(), actions);
+      } else if (info.scope == TPermissionScope.TABLE) {
+        TableName tableName = TableName.valueOf(info.getTableName());
+        AccessControlClient.revoke(connectionCache.getAdmin().getConnection(),
+          tableName, info.getUsername(), null, null, actions);
+      }
+    } catch (Throwable t) {
+      if (t instanceof IOException) {
+        throw getTIOError((IOException) t);
+      } else {
+        throw getTIOError(new DoNotRetryIOException(t.getMessage()));
+      }
+    }
+    return true;
   }
 
   @Override

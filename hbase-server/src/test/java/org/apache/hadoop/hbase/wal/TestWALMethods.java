@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.ServerName;
@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALSplitter.PipelineController;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -58,7 +59,7 @@ public class TestWALMethods {
   private static final TableName TEST_TABLE =
       TableName.valueOf("test_table");
 
-  private final HBaseTestingUtility util = new HBaseTestingUtility();
+  private final HBaseTestingUtil util = new HBaseTestingUtil();
 
   @Test
   public void testServerNameFromWAL() throws Exception {
@@ -100,7 +101,7 @@ public class TestWALMethods {
     String last = WALSplitUtil.formatRecoveredEditsFileName(Long.MAX_VALUE);
     createFile(fs, recoverededits, last);
     createFile(fs, recoverededits,
-      Long.toString(Long.MAX_VALUE) + "." + System.currentTimeMillis());
+      Long.toString(Long.MAX_VALUE) + "." + EnvironmentEdgeManager.currentTime());
 
     final Configuration walConf = new Configuration(util.getConfiguration());
     CommonFSUtils.setRootDir(walConf, regiondir);

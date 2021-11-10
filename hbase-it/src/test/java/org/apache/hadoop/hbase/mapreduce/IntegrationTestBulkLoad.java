@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
@@ -211,7 +211,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     TableDescriptor desc = admin.getDescriptor(t);
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(desc);
     builder.setCoprocessor(SlowMeCoproScanOperations.class.getName());
-    HBaseTestingUtility.modifyTableSync(admin, builder.build());
+    admin.modifyTable(builder.build());
   }
 
   @Test
@@ -252,7 +252,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     if (replicaCount == NUM_REPLICA_COUNT_DEFAULT) return;
 
     TableName t = getTablename();
-    HBaseTestingUtility.setReplicas(util.getAdmin(), t, replicaCount);
+    HBaseTestingUtil.setReplicas(util.getAdmin(), t, replicaCount);
   }
 
   private void runLinkedListMRJob(int iteration) throws Exception {

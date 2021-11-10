@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TestMetaTableAccessor;
@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -85,7 +86,7 @@ public class TestRegionReplicas {
   private static RegionInfo hriPrimary;
   private static RegionInfo hriSecondary;
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   @BeforeClass
@@ -110,7 +111,7 @@ public class TestRegionReplicas {
     hriSecondary = RegionReplicaUtil.getRegionInfoForReplica(hriPrimary, 1);
 
     // No master
-    TestRegionServerNoMaster.stopMasterAndAssignMeta(HTU);
+    TestRegionServerNoMaster.stopMasterAndCacheMetaLocation(HTU);
   }
 
   @AfterClass
@@ -132,7 +133,7 @@ public class TestRegionReplicas {
       HTU.loadNumericRows(table, f, 0, 1000);
 
       // assert that we can read back from primary
-      Assert.assertEquals(1000, HBaseTestingUtility.countRows(table));
+      Assert.assertEquals(1000, HBaseTestingUtil.countRows(table));
     } finally {
       HTU.deleteNumericRows(table, f, 0, 1000);
       closeRegion(HTU, getRS(), hriSecondary);
@@ -162,7 +163,7 @@ public class TestRegionReplicas {
       //load some data to primary
       HTU.loadNumericRows(table, f, 0, 1000);
       // assert that we can read back from primary
-      Assert.assertEquals(1000, HBaseTestingUtility.countRows(table));
+      Assert.assertEquals(1000, HBaseTestingUtil.countRows(table));
       // flush so that region replica can read
       HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
@@ -186,7 +187,7 @@ public class TestRegionReplicas {
       //load some data to primary
       HTU.loadNumericRows(table, f, 0, 1000);
       // assert that we can read back from primary
-      Assert.assertEquals(1000, HBaseTestingUtility.countRows(table));
+      Assert.assertEquals(1000, HBaseTestingUtil.countRows(table));
       // flush so that region replica can read
       HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
@@ -255,7 +256,7 @@ public class TestRegionReplicas {
       LOG.info("Loading data to primary region");
       HTU.loadNumericRows(table, f, 0, 1000);
       // assert that we can read back from primary
-      Assert.assertEquals(1000, HBaseTestingUtility.countRows(table));
+      Assert.assertEquals(1000, HBaseTestingUtil.countRows(table));
       // flush so that region replica can read
       LOG.info("Flushing primary region");
       HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
@@ -295,8 +296,8 @@ public class TestRegionReplicas {
       // force compaction
       HTU.compact(table.getName(), true);
 
-      long wakeUpTime = System.currentTimeMillis() + 4 * refreshPeriod;
-      while (System.currentTimeMillis() < wakeUpTime) {
+      long wakeUpTime = EnvironmentEdgeManager.currentTime() + 4 * refreshPeriod;
+      while (EnvironmentEdgeManager.currentTime() < wakeUpTime) {
         assertGetRpc(hriSecondary, 42, true);
         assertGetRpc(hriSecondary, 1042, true);
         assertGetRpc(hriSecondary, 2042, true);

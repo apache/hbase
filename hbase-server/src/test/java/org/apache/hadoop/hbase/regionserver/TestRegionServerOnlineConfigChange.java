@@ -19,13 +19,14 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -63,7 +65,7 @@ public class TestRegionServerOnlineConfigChange {
   private static final Logger LOG =
           LoggerFactory.getLogger(TestRegionServerOnlineConfigChange.class.getName());
   private static final long WAIT_TIMEOUT = TimeUnit.MINUTES.toMillis(2);
-  private static HBaseTestingUtility hbaseTestingUtility = new HBaseTestingUtility();
+  private static HBaseTestingUtil hbaseTestingUtility = new HBaseTestingUtil();
   private static Configuration conf = null;
 
   private static Table t1 = null;
@@ -75,13 +77,16 @@ public class TestRegionServerOnlineConfigChange {
   private final static String columnFamily1Str = "columnFamily1";
   private final static TableName TABLE1 = TableName.valueOf(table1Str);
   private final static byte[] COLUMN_FAMILY1 = Bytes.toBytes(columnFamily1Str);
+  private final static long MAX_FILE_SIZE = 20 * 1024 * 1024L;
 
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = hbaseTestingUtility.getConfiguration();
     hbaseTestingUtility.startMiniCluster(2);
-    t1 = hbaseTestingUtility.createTable(TABLE1, COLUMN_FAMILY1);
+    t1 = hbaseTestingUtility.createTable(
+      TableDescriptorBuilder.newBuilder(TABLE1).setMaxFileSize(MAX_FILE_SIZE).build(),
+      new byte[][] { COLUMN_FAMILY1 }, conf);
   }
 
   @AfterClass
@@ -102,26 +107,25 @@ public class TestRegionServerOnlineConfigChange {
 
   /**
    * Check if the number of compaction threads changes online
-   * @throws IOException
    */
   @Test
-  public void testNumCompactionThreadsOnlineChange() throws IOException {
-    assertTrue(rs1.compactSplitThread != null);
+  public void testNumCompactionThreadsOnlineChange() {
+    assertNotNull(rs1.getCompactSplitThread());
     int newNumSmallThreads =
-            rs1.compactSplitThread.getSmallCompactionThreadNum() + 1;
+      rs1.getCompactSplitThread().getSmallCompactionThreadNum() + 1;
     int newNumLargeThreads =
-            rs1.compactSplitThread.getLargeCompactionThreadNum() + 1;
+      rs1.getCompactSplitThread().getLargeCompactionThreadNum() + 1;
 
     conf.setInt("hbase.regionserver.thread.compaction.small",
-            newNumSmallThreads);
+      newNumSmallThreads);
     conf.setInt("hbase.regionserver.thread.compaction.large",
-            newNumLargeThreads);
+      newNumLargeThreads);
     rs1.getConfigurationManager().notifyAllObservers(conf);
 
     assertEquals(newNumSmallThreads,
-                  rs1.compactSplitThread.getSmallCompactionThreadNum());
+      rs1.getCompactSplitThread().getSmallCompactionThreadNum());
     assertEquals(newNumLargeThreads,
-                  rs1.compactSplitThread.getLargeCompactionThreadNum());
+      rs1.getCompactSplitThread().getLargeCompactionThreadNum());
   }
 
   /**
@@ -258,5 +262,13 @@ public class TestRegionServerOnlineConfigChange {
         }
       });
     }
+  }
+
+  @Test
+  public void testStoreConfigurationOnlineChange() {
+    rs1.getConfigurationManager().notifyAllObservers(conf);
+    long actualMaxFileSize = r1.getStore(COLUMN_FAMILY1).getReadOnlyConfiguration()
+        .getLong(TableDescriptorBuilder.MAX_FILESIZE, -1);
+    assertEquals(MAX_FILE_SIZE, actualMaxFileSize);
   }
 }

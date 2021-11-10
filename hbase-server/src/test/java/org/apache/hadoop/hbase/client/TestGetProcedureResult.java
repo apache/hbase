@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -56,7 +56,7 @@ public class TestGetProcedureResult {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestGetProcedureResult.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   public static final class DummyProcedure extends Procedure<MasterProcedureEnv>
       implements TableProcedureInterface {

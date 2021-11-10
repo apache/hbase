@@ -147,4 +147,13 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * @return The list of sub blockcaches that make up this one; returns null if no sub caches.
    */
   BlockCache [] getBlockCaches();
+
+  /**
+   * Check if block type is meta or index block
+   * @param blockType block type of a given HFile block
+   * @return true if block type is non-data block
+   */
+  default boolean isMetaBlock(BlockType blockType) {
+    return blockType != null && blockType.getCategory() != BlockType.BlockCategory.DATA;
+  }
 }

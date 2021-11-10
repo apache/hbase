@@ -39,7 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.ServerName;
@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
@@ -85,7 +86,7 @@ public class TestCatalogJanitor {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCatalogJanitor.class);
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
   @Rule
   public final TestName name = new TestName();
@@ -147,7 +148,7 @@ public class TestCatalogJanitor {
     Path storedir = HRegionFileSystem.getStoreHomedir(tabledir, splita,
       td.getColumnFamilies()[0].getName());
     Reference ref = Reference.createTopReference(Bytes.toBytes("ccc"));
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     // Reference name has this format: StoreFile#REF_NAME_PARSER
     Path p = new Path(storedir, Long.toString(now) + "." + parent.getEncodedName());
     FileSystem fs = this.masterServices.getMasterFileSystem().getFileSystem();
@@ -602,7 +603,7 @@ public class TestCatalogJanitor {
     return storeFiles;
   }
 
-  private String setRootDirAndCleanIt(final HBaseTestingUtility htu, final String subdir)
+  private String setRootDirAndCleanIt(final HBaseTestingUtil htu, final String subdir)
     throws IOException {
     Path testdir = htu.getDataTestDir(subdir);
     FileSystem fs = FileSystem.get(htu.getConfiguration());
@@ -620,7 +621,7 @@ public class TestCatalogJanitor {
       td.getColumnFamilies()[0].getName());
     Reference ref =
       top ? Reference.createTopReference(midkey) : Reference.createBottomReference(midkey);
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     // Reference name has this format: StoreFile#REF_NAME_PARSER
     Path p = new Path(storedir, Long.toString(now) + "." + parent.getEncodedName());
     FileSystem fs = services.getMasterFileSystem().getFileSystem();

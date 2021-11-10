@@ -28,17 +28,16 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
 import java.util.Set;
-
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell.Type;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -49,12 +48,17 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.FavoredNodes;
@@ -74,7 +78,6 @@ public class FavoredNodeAssignmentHelper {
   // This map serves as a cache for rack to sn lookups. The num of
   // region server entries might not match with that is in servers.
   private Map<String, String> regionServerToRackMap;
-  private Random random;
   private List<ServerName> servers;
   public static final byte [] FAVOREDNODES_QUALIFIER = Bytes.toBytes("fn");
   public final static short FAVORED_NODES_NUM = 3;
@@ -91,7 +94,6 @@ public class FavoredNodeAssignmentHelper {
     this.rackToRegionServerMap = new HashMap<>();
     this.regionServerToRackMap = new HashMap<>();
     this.uniqueRackList = new ArrayList<>();
-    this.random = new Random();
   }
 
   // Always initialize() when FavoredNodeAssignmentHelper is constructed.
@@ -120,80 +122,58 @@ public class FavoredNodeAssignmentHelper {
    * Update meta table with favored nodes info
    * @param regionToFavoredNodes map of RegionInfo's to their favored nodes
    * @param connection connection to be used
-   * @throws IOException
    */
   public static void updateMetaWithFavoredNodesInfo(
-      Map<RegionInfo, List<ServerName>> regionToFavoredNodes,
-      Connection connection) throws IOException {
+    Map<RegionInfo, List<ServerName>> regionToFavoredNodes, Connection connection)
+    throws IOException {
     List<Put> puts = new ArrayList<>();
     for (Map.Entry<RegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
-      Put put = makePutFromRegionInfo(entry.getKey(), entry.getValue());
+      Put put = makePut(entry.getKey(), entry.getValue());
       if (put != null) {
         puts.add(put);
       }
     }
-    MetaTableAccessor.putsToMetaTable(connection, puts);
-    LOG.info("Added " + puts.size() + " regions in META");
+    try (Table table = connection.getTable(TableName.META_TABLE_NAME)) {
+      table.put(puts);
+    }
+    LOG.info("Added " + puts.size() + " region favored nodes in META");
   }
 
   /**
    * Update meta table with favored nodes info
-   * @param regionToFavoredNodes
-   * @param conf
-   * @throws IOException
    */
   public static void updateMetaWithFavoredNodesInfo(
-      Map<RegionInfo, List<ServerName>> regionToFavoredNodes,
-      Configuration conf) throws IOException {
-    List<Put> puts = new ArrayList<>();
-    for (Map.Entry<RegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
-      Put put = makePutFromRegionInfo(entry.getKey(), entry.getValue());
-      if (put != null) {
-        puts.add(put);
-      }
-    }
+    Map<RegionInfo, List<ServerName>> regionToFavoredNodes, Configuration conf) throws IOException {
     // Write the region assignments to the meta table.
     // TODO: See above overrides take a Connection rather than a Configuration only the
     // Connection is a short circuit connection. That is not going to good in all cases, when
     // master and meta are not colocated. Fix when this favored nodes feature is actually used
     // someday.
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
-        metaTable.put(puts);
-      }
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      updateMetaWithFavoredNodesInfo(regionToFavoredNodes, conn);
     }
-    LOG.info("Added " + puts.size() + " regions in META");
   }
 
-  /**
-   * Generates and returns a Put containing the region info for the catalog table and the servers
-   * @return Put object
-   */
-  private static Put makePutFromRegionInfo(RegionInfo regionInfo, List<ServerName> favoredNodeList)
-      throws IOException {
-    Put put = null;
-    if (favoredNodeList != null) {
-      long time = EnvironmentEdgeManager.currentTime();
-      put = MetaTableAccessor.makePutFromRegionInfo(regionInfo, time);
-      byte[] favoredNodes = getFavoredNodes(favoredNodeList);
-      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-          .setRow(put.getRow())
-          .setFamily(HConstants.CATALOG_FAMILY)
-          .setQualifier(FAVOREDNODES_QUALIFIER)
-          .setTimestamp(time)
-          .setType(Type.Put)
-          .setValue(favoredNodes)
-          .build());
-      LOG.debug("Create the region {} with favored nodes {}", regionInfo.getRegionNameAsString(),
-        favoredNodeList);
+  private static Put makePut(RegionInfo regionInfo, List<ServerName> favoredNodeList)
+    throws IOException {
+    if (CollectionUtils.isEmpty(favoredNodeList)) {
+      return null;
     }
+    long time = EnvironmentEdgeManager.currentTime();
+    Put put = new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), time);
+    byte[] favoredNodes = getFavoredNodes(favoredNodeList);
+    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
+      .setFamily(HConstants.CATALOG_FAMILY).setQualifier(FAVOREDNODES_QUALIFIER).setTimestamp(time)
+      .setType(Cell.Type.Put).setValue(favoredNodes).build());
+    LOG.debug("Create the region {} with favored nodes {}", regionInfo.getRegionNameAsString(),
+      favoredNodeList);
     return put;
   }
 
   /**
+   * Convert PB bytes to ServerName.
    * @param favoredNodes The PB'ed bytes of favored nodes
    * @return the array of {@link ServerName} for the byte array of favored nodes.
-   * @throws IOException
    */
   public static ServerName[] getFavoredNodesList(byte[] favoredNodes) throws IOException {
     FavoredNodes f = FavoredNodes.parseFrom(favoredNodes);
@@ -235,7 +215,7 @@ public class FavoredNodeAssignmentHelper {
       Map<RegionInfo, ServerName> primaryRSMap, List<RegionInfo> regions) {
     List<String> rackList = new ArrayList<>(rackToRegionServerMap.size());
     rackList.addAll(rackToRegionServerMap.keySet());
-    int rackIndex = random.nextInt(rackList.size());
+    int rackIndex = ThreadLocalRandom.current().nextInt(rackList.size());
     int maxRackSize = 0;
     for (Map.Entry<String,List<ServerName>> r : rackToRegionServerMap.entrySet()) {
       if (r.getValue().size() > maxRackSize) {
@@ -244,7 +224,7 @@ public class FavoredNodeAssignmentHelper {
     }
     int numIterations = 0;
     // Initialize the current processing host index.
-    int serverIndex = random.nextInt(maxRackSize);
+    int serverIndex = ThreadLocalRandom.current().nextInt(maxRackSize);
     for (RegionInfo regionInfo : regions) {
       List<ServerName> currentServerList;
       String rackName;
@@ -589,7 +569,7 @@ public class FavoredNodeAssignmentHelper {
     }
 
     ServerName randomServer = null;
-    int randomIndex = random.nextInt(serversToChooseFrom.size());
+    int randomIndex = ThreadLocalRandom.current().nextInt(serversToChooseFrom.size());
     int j = 0;
     for (StartcodeAgnosticServerName sn : serversToChooseFrom) {
       if (j == randomIndex) {
@@ -610,14 +590,14 @@ public class FavoredNodeAssignmentHelper {
     return this.getOneRandomServer(rack, null);
   }
 
-  protected String getOneRandomRack(Set<String> skipRackSet) throws IOException {
+  String getOneRandomRack(Set<String> skipRackSet) throws IOException {
     if (skipRackSet == null || uniqueRackList.size() <= skipRackSet.size()) {
       throw new IOException("Cannot randomly pick another random server");
     }
 
     String randomRack;
     do {
-      int randomIndex = random.nextInt(this.uniqueRackList.size());
+      int randomIndex = ThreadLocalRandom.current().nextInt(this.uniqueRackList.size());
       randomRack = this.uniqueRackList.get(randomIndex);
     } while (skipRackSet.contains(randomRack));
 
@@ -771,7 +751,7 @@ public class FavoredNodeAssignmentHelper {
   public List<ServerName> generateFavoredNodes(RegionInfo hri) throws IOException {
 
     List<ServerName> favoredNodesForRegion = new ArrayList<>(FAVORED_NODES_NUM);
-    ServerName primary = servers.get(random.nextInt(servers.size()));
+    ServerName primary = servers.get(ThreadLocalRandom.current().nextInt(servers.size()));
     favoredNodesForRegion.add(ServerName.valueOf(primary.getAddress(), ServerName.NON_STARTCODE));
 
     Map<RegionInfo, ServerName> primaryRSMap = new HashMap<>(1);
@@ -837,7 +817,7 @@ public class FavoredNodeAssignmentHelper {
     return generatedFavNodes;
   }
 
-  /*
+  /**
    * Get the rack of server from local mapping when present, saves lookup by the RackManager.
    */
   private String getRackOfServer(ServerName sn) {
@@ -848,5 +828,14 @@ public class FavoredNodeAssignmentHelper {
       this.regionServerToRackMap.put(sn.getHostname(), rack);
       return rack;
     }
+  }
+
+  public static int getDataNodePort(Configuration conf) {
+    HdfsConfiguration.init();
+    Configuration dnConf = new HdfsConfiguration(conf);
+    int dnPort = NetUtils.createSocketAddr(dnConf.get(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
+      DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT)).getPort();
+    LOG.debug("Loaded default datanode port for FN: {}", dnPort);
+    return dnPort;
   }
 }

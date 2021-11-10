@@ -28,7 +28,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.TableName;
@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -60,7 +61,7 @@ public class TestHBaseInterClusterReplicationEndpointFilterEdits {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHBaseInterClusterReplicationEndpointFilterEdits.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static HBaseInterClusterReplicationEndpoint endpoint;
 
@@ -97,15 +98,16 @@ public class TestHBaseInterClusterReplicationEndpointFilterEdits {
   public void testFilterNotExistColumnFamilyEdits() {
     List<List<Entry>> entryList = new ArrayList<>();
     // should be filtered
-    Cell c1 = new KeyValue(ROW, NON_EXISTING_FAMILY, QUALIFIER, System.currentTimeMillis(),
-        Type.Put, VALUE);
-    Entry e1 = new Entry(new WALKeyImpl(new byte[32], TABLE1, System.currentTimeMillis()),
-        new WALEdit().add(c1));
+    Cell c1 = new KeyValue(ROW, NON_EXISTING_FAMILY, QUALIFIER,
+      EnvironmentEdgeManager.currentTime(), Type.Put, VALUE);
+    Entry e1 = new Entry(new WALKeyImpl(new byte[32], TABLE1,
+      EnvironmentEdgeManager.currentTime()), new WALEdit().add(c1));
     entryList.add(Lists.newArrayList(e1));
     // should be kept
-    Cell c2 = new KeyValue(ROW, FAMILY, QUALIFIER, System.currentTimeMillis(), Type.Put, VALUE);
-    Entry e2 = new Entry(new WALKeyImpl(new byte[32], TABLE1, System.currentTimeMillis()),
-        new WALEdit().add(c2));
+    Cell c2 = new KeyValue(ROW, FAMILY, QUALIFIER, EnvironmentEdgeManager.currentTime(),
+      Type.Put, VALUE);
+    Entry e2 = new Entry(new WALKeyImpl(new byte[32], TABLE1,
+      EnvironmentEdgeManager.currentTime()), new WALEdit().add(c2));
     entryList.add(Lists.newArrayList(e2, e1));
     List<List<Entry>> filtered = endpoint.filterNotExistColumnFamilyEdits(entryList);
     assertEquals(1, filtered.size());
@@ -118,14 +120,16 @@ public class TestHBaseInterClusterReplicationEndpointFilterEdits {
   public void testFilterNotExistTableEdits() {
     List<List<Entry>> entryList = new ArrayList<>();
     // should be filtered
-    Cell c1 = new KeyValue(ROW, FAMILY, QUALIFIER, System.currentTimeMillis(), Type.Put, VALUE);
-    Entry e1 = new Entry(new WALKeyImpl(new byte[32], TABLE2, System.currentTimeMillis()),
-        new WALEdit().add(c1));
+    Cell c1 = new KeyValue(ROW, FAMILY, QUALIFIER, EnvironmentEdgeManager.currentTime(),
+      Type.Put, VALUE);
+    Entry e1 = new Entry(new WALKeyImpl(new byte[32], TABLE2,
+      EnvironmentEdgeManager.currentTime()), new WALEdit().add(c1));
     entryList.add(Lists.newArrayList(e1));
     // should be kept
-    Cell c2 = new KeyValue(ROW, FAMILY, QUALIFIER, System.currentTimeMillis(), Type.Put, VALUE);
-    Entry e2 = new Entry(new WALKeyImpl(new byte[32], TABLE1, System.currentTimeMillis()),
-        new WALEdit().add(c2));
+    Cell c2 = new KeyValue(ROW, FAMILY, QUALIFIER, EnvironmentEdgeManager.currentTime(),
+      Type.Put, VALUE);
+    Entry e2 = new Entry(new WALKeyImpl(new byte[32], TABLE1,
+      EnvironmentEdgeManager.currentTime()), new WALEdit().add(c2));
     entryList.add(Lists.newArrayList(e2));
     List<List<Entry>> filtered = endpoint.filterNotExistTableEdits(entryList);
     assertEquals(1, filtered.size());

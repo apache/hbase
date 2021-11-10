@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -44,7 +44,7 @@ public class TestGetScanPartialResult {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestGetScanPartialResult.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final TableName TABLE = TableName.valueOf("table");
   private static final byte[] CF = { 'c', 'f' };
   private static final byte[] ROW = { 'r', 'o', 'w' };

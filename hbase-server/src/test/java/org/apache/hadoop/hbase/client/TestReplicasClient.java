@@ -30,11 +30,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -85,7 +85,7 @@ public class TestReplicasClient {
   private static RegionInfo hriPrimary;
   private static RegionInfo hriSecondary;
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   private final static int REFRESH_PERIOD = 1000;
@@ -188,7 +188,7 @@ public class TestReplicasClient {
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, REFRESH_PERIOD);
     HTU.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
     HTU.getConfiguration().setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(1).
+    StartTestingClusterOption option = StartTestingClusterOption.builder().numRegionServers(1).
         numAlwaysStandByMasters(1).numMasters(1).build();
     HTU.startMiniCluster(option);
 
@@ -210,7 +210,7 @@ public class TestReplicasClient {
 
     // No master
     LOG.info("Master is going to be stopped");
-    TestRegionServerNoMaster.stopMasterAndAssignMeta(HTU);
+    TestRegionServerNoMaster.stopMasterAndCacheMetaLocation(HTU);
     Configuration c = new Configuration(HTU.getConfiguration());
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     LOG.info("Master has stopped");

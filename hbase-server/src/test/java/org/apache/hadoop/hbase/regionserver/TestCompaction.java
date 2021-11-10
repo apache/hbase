@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY_BYTES;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.START_KEY;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.START_KEY_BYTES;
+import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
 import static org.apache.hadoop.hbase.regionserver.compactions.CloseChecker.SIZE_LIMIT_KEY;
 import static org.apache.hadoop.hbase.regionserver.compactions.CloseChecker.TIME_LIMIT_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -48,7 +50,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.Waiter;
@@ -72,6 +74,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
@@ -94,10 +97,11 @@ public class TestCompaction {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompaction.class);
+    HBaseClassTestRule.forClass(TestCompaction.class);
 
-  @Rule public TestName name = new TestName();
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  @Rule
+  public TestName name = new TestName();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected Configuration conf = UTIL.getConfiguration();
 
   private HRegion r = null;
@@ -154,7 +158,6 @@ public class TestCompaction {
   /**
    * Verify that you can stop a long-running compaction
    * (used during RS shutdown)
-   * @throws Exception
    */
   @Test
   public void testInterruptCompactionBySize() throws Exception {
@@ -180,7 +183,7 @@ public class TestCompaction {
       }
 
       HRegion spyR = spy(r);
-      doAnswer(new Answer() {
+      doAnswer(new Answer<Object>() {
         @Override
         public Object answer(InvocationOnMock invocation) throws Throwable {
           r.writestate.writesEnabled = false;
@@ -256,7 +259,7 @@ public class TestCompaction {
       }
 
       HRegion spyR = spy(r);
-      doAnswer(new Answer() {
+      doAnswer(new Answer<Object>() {
         @Override
         public Object answer(InvocationOnMock invocation) throws Throwable {
           r.writestate.writesEnabled = false;
@@ -311,15 +314,14 @@ public class TestCompaction {
 
   private int count() throws IOException {
     int count = 0;
-    for (HStoreFile f: this.r.stores.
-        get(COLUMN_FAMILY_TEXT).getStorefiles()) {
+    for (HStoreFile f : this.r.stores.get(COLUMN_FAMILY_TEXT).getStorefiles()) {
       HFileScanner scanner = f.getReader().getScanner(false, false);
       if (!scanner.seekTo()) {
         continue;
       }
       do {
         count++;
-      } while(scanner.next());
+      } while (scanner.next());
     }
     return count;
   }
@@ -343,31 +345,22 @@ public class TestCompaction {
     HStore store = r.getStore(COLUMN_FAMILY);
 
     Collection<HStoreFile> storeFiles = store.getStorefiles();
-    DefaultCompactor tool = (DefaultCompactor)store.storeEngine.getCompactor();
-    tool.compactForTesting(storeFiles, false);
+    DefaultCompactor tool = (DefaultCompactor) store.storeEngine.getCompactor();
+    CompactionRequestImpl request = new CompactionRequestImpl(storeFiles);
+    tool.compact(request, NoLimitThroughputController.INSTANCE, null);
 
     // Now lets corrupt the compacted file.
     FileSystem fs = store.getFileSystem();
     // default compaction policy created one and only one new compacted file
-    Path dstPath = store.getRegionFileSystem().createTempName();
-    FSDataOutputStream stream = fs.create(dstPath, null, true, 512, (short)3, 1024L, null);
-    stream.writeChars("CORRUPT FILE!!!!");
-    stream.close();
-    Path origPath = store.getRegionFileSystem().commitStoreFile(
-      Bytes.toString(COLUMN_FAMILY), dstPath);
-
-    try {
-      ((HStore)store).moveFileIntoPlace(origPath);
-    } catch (Exception e) {
-      // The complete compaction should fail and the corrupt file should remain
-      // in the 'tmp' directory;
-      assertTrue(fs.exists(origPath));
-      assertFalse(fs.exists(dstPath));
-      System.out.println("testCompactionWithCorruptResult Passed");
-      return;
+    Path tmpPath = store.getRegionFileSystem().createTempName();
+    try (FSDataOutputStream stream = fs.create(tmpPath, null, true, 512, (short) 3, 1024L, null)) {
+      stream.writeChars("CORRUPT FILE!!!!");
     }
-    fail("testCompactionWithCorruptResult failed since no exception was" +
-        "thrown while completing a corrupt file");
+    // The complete compaction should fail and the corrupt file should remain
+    // in the 'tmp' directory;
+    assertThrows(IOException.class, () -> store.doCompaction(null, null, null,
+      EnvironmentEdgeManager.currentTime(), Collections.singletonList(tmpPath)));
+    assertTrue(fs.exists(tmpPath));
   }
 
   /**
@@ -418,28 +411,27 @@ public class TestCompaction {
     Mockito.when(mockRegion.checkSplit()).
       thenThrow(new RuntimeException("Thrown intentionally by test!"));
 
-    MetricsRegionWrapper metricsWrapper = new MetricsRegionWrapperImpl(r);
+    try (MetricsRegionWrapperImpl metricsWrapper = new MetricsRegionWrapperImpl(r)) {
 
-    long preCompletedCount = metricsWrapper.getNumCompactionsCompleted();
-    long preFailedCount = metricsWrapper.getNumCompactionsFailed();
+      long preCompletedCount = metricsWrapper.getNumCompactionsCompleted();
+      long preFailedCount = metricsWrapper.getNumCompactionsFailed();
 
-    CountDownLatch latch = new CountDownLatch(1);
-    Tracker tracker = new Tracker(latch);
-    thread.requestCompaction(mockRegion, store, "test custom comapction", PRIORITY_USER,
-      tracker, null);
-    // wait for the latch to complete.
-    latch.await(120, TimeUnit.SECONDS);
+      CountDownLatch latch = new CountDownLatch(1);
+      Tracker tracker = new Tracker(latch);
+      thread.requestCompaction(mockRegion, store, "test custom comapction", PRIORITY_USER, tracker,
+        null);
+      // wait for the latch to complete.
+      latch.await(120, TimeUnit.SECONDS);
 
-    // compaction should have completed and been marked as failed due to error in split request
-    long postCompletedCount = metricsWrapper.getNumCompactionsCompleted();
-    long postFailedCount = metricsWrapper.getNumCompactionsFailed();
+      // compaction should have completed and been marked as failed due to error in split request
+      long postCompletedCount = metricsWrapper.getNumCompactionsCompleted();
+      long postFailedCount = metricsWrapper.getNumCompactionsFailed();
 
-    assertTrue("Completed count should have increased (pre=" + preCompletedCount +
-        ", post="+postCompletedCount+")",
-        postCompletedCount > preCompletedCount);
-    assertTrue("Failed count should have increased (pre=" + preFailedCount +
-        ", post=" + postFailedCount + ")",
-        postFailedCount > preFailedCount);
+      assertTrue("Completed count should have increased (pre=" + preCompletedCount + ", post=" +
+        postCompletedCount + ")", postCompletedCount > preCompletedCount);
+      assertTrue("Failed count should have increased (pre=" + preFailedCount + ", post=" +
+        postFailedCount + ")", postFailedCount > preFailedCount);
+    }
   }
 
   /**

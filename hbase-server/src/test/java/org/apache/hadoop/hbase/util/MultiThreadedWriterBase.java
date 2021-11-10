@@ -90,7 +90,8 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
 
     if (trackWroteKeys) {
       new Thread(new WroteKeysTracker(),
-          "MultiThreadedWriterBase-WroteKeysTracker-" + System.currentTimeMillis()).start();
+          "MultiThreadedWriterBase-WroteKeysTracker-" + EnvironmentEdgeManager.currentTime())
+        .start();
       numThreadsWorking.incrementAndGet();
     }
   }

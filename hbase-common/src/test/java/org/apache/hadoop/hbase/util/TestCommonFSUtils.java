@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -46,12 +46,12 @@ public class TestCommonFSUtils {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCommonFSUtils.class);
 
-  private HBaseCommonTestingUtility htu;
+  private HBaseCommonTestingUtil htu;
   private Configuration conf;
 
   @Before
   public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
+    htu = new HBaseCommonTestingUtil();
     conf = htu.getConfiguration();
   }
 

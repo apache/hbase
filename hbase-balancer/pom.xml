@@ -24,7 +24,7 @@
   <parent>
     <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>3.0.0-SNAPSHOT</version>
+    <version>3.0.0-alpha-2-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
 
@@ -89,8 +89,21 @@
       <artifactId>hbase-client</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.agrona</groupId>
+      <artifactId>agrona</artifactId>
+      <version>1.12.0</version>
     </dependency>
     <dependency>
       <groupId>com.github.stephenc.findbugs</groupId>
@@ -131,6 +144,11 @@
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j-impl</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-1.2-api</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

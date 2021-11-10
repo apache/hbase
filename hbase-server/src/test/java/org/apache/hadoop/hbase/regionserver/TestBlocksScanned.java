@@ -26,7 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -62,13 +62,13 @@ public class TestBlocksScanned {
   private static byte [] END_KEY = Bytes.toBytes("zzz");
   private static int BLOCK_SIZE = 70;
 
-  private static HBaseTestingUtility TEST_UTIL = null;
+  private static HBaseTestingUtil TEST_UTIL = null;
   private Configuration conf;
   private Path testDir;
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     conf = TEST_UTIL.getConfiguration();
     testDir = TEST_UTIL.getDataTestDir("TestBlocksScanned");
   }
@@ -102,7 +102,7 @@ public class TestBlocksScanned {
     RegionInfo regionInfo =
         RegionInfoBuilder.newBuilder(td.getTableName()).setStartKey(START_KEY).setEndKey(END_KEY)
             .build();
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(regionInfo, testDir, conf, td, blockCache);
+    HRegion r = HBaseTestingUtil.createRegionAndWAL(regionInfo, testDir, conf, td, blockCache);
     addContent(r, FAMILY, COL);
     r.flush(true);
 

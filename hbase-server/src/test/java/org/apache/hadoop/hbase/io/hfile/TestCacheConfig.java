@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -278,7 +278,7 @@ public class TestCacheConfig {
 
   @Test
   public void testFileBucketCacheConfig() throws IOException {
-    HBaseTestingUtility htu = new HBaseTestingUtility(this.conf);
+    HBaseTestingUtil htu = new HBaseTestingUtil(this.conf);
     try {
       Path p = new Path(htu.getDataTestDir(), "bc.txt");
       FileSystem fs = FileSystem.get(this.conf);
@@ -373,5 +373,35 @@ public class TestCacheConfig {
       fail("Should throw IllegalArgumentException when passing illegal value for bucket size");
     } catch (IllegalArgumentException e) {
     }
+  }
+
+  @Test
+  public void testIndexOnlyLruBlockCache() {
+    CacheConfig cc = new CacheConfig(this.conf);
+    conf.set(BlockCacheFactory.BLOCKCACHE_POLICY_KEY, "IndexOnlyLRU");
+    BlockCache blockCache = BlockCacheFactory.createBlockCache(this.conf);
+    assertTrue(blockCache instanceof IndexOnlyLruBlockCache);
+    // reject data block
+    long initialBlockCount = blockCache.getBlockCount();
+    BlockCacheKey bck = new BlockCacheKey("bck", 0);
+    Cacheable c = new DataCacheEntry();
+    blockCache.cacheBlock(bck, c, true);
+    // accept index block
+    Cacheable indexCacheEntry = new IndexCacheEntry();
+    blockCache.cacheBlock(bck, indexCacheEntry, true);
+    assertEquals(initialBlockCount + 1, blockCache.getBlockCount());
+  }
+
+  @Test
+  public void testGetOnHeapCacheSize() {
+    Configuration copyConf = new Configuration(conf);
+    long fixedSize = 1024 * 1024L;
+    long onHeapCacheSize = MemorySizeUtil.getOnHeapCacheSize(copyConf);
+    assertEquals(null, copyConf.get(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY));
+    assertTrue(onHeapCacheSize > 0 && onHeapCacheSize != fixedSize);
+    // when HBASE_BLOCK_CACHE_FIXED_SIZE_KEY is set, it will be a fixed size
+    copyConf.setLong(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY, fixedSize);
+    onHeapCacheSize = MemorySizeUtil.getOnHeapCacheSize(copyConf);
+    assertEquals(fixedSize, onHeapCacheSize);
   }
 }

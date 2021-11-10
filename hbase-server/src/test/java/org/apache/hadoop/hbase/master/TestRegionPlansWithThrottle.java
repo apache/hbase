@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.master;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -49,11 +49,11 @@ public class TestRegionPlansWithThrottle {
 
   private static HMaster hMaster;
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL.startMiniCluster(StartMiniClusterOption.builder().numRegionServers(2).build());
+    UTIL.startMiniCluster(StartTestingClusterOption.builder().numRegionServers(2).build());
     hMaster = UTIL.getMiniHBaseCluster().getMaster();
   }
 

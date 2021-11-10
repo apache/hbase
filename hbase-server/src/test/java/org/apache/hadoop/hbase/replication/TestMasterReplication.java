@@ -35,10 +35,10 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -89,7 +89,7 @@ public class TestMasterReplication {
 
   private Configuration baseConfiguration;
 
-  private HBaseTestingUtility[] utilities;
+  private HBaseTestingUtil[] utilities;
   private Configuration[] configurations;
   private MiniZooKeeperCluster miniZK;
 
@@ -583,12 +583,12 @@ public class TestMasterReplication {
   @SuppressWarnings("resource")
   private void startMiniClusters(int numClusters) throws Exception {
     Random random = new Random();
-    utilities = new HBaseTestingUtility[numClusters];
+    utilities = new HBaseTestingUtil[numClusters];
     configurations = new Configuration[numClusters];
     for (int i = 0; i < numClusters; i++) {
       Configuration conf = new Configuration(baseConfiguration);
       conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/" + i + random.nextInt());
-      HBaseTestingUtility utility = new HBaseTestingUtility(conf);
+      HBaseTestingUtil utility = new HBaseTestingUtil(conf);
       if (i == 0) {
         utility.startMiniZKCluster();
         miniZK = utility.getZkCluster();
@@ -613,7 +613,7 @@ public class TestMasterReplication {
   }
 
   private void createTableOnClusters(TableDescriptor table) throws Exception {
-    for (HBaseTestingUtility utility : utilities) {
+    for (HBaseTestingUtil utility : utilities) {
       utility.getAdmin().createTable(table);
     }
   }
@@ -711,7 +711,7 @@ public class TestMasterReplication {
   private void loadAndValidateHFileReplication(String testName, int masterNumber,
       int[] slaveNumbers, byte[] row, byte[] fam, Table[] tables, byte[][][] hfileRanges,
       int numOfRows, int[] expectedCounts, boolean toValidate) throws Exception {
-    HBaseTestingUtility util = utilities[masterNumber];
+    HBaseTestingUtil util = utilities[masterNumber];
 
     Path dir = util.getDataTestDirOnTestFS(testName);
     FileSystem fs = util.getTestFileSystem();
@@ -779,10 +779,10 @@ public class TestMasterReplication {
     }
   }
 
-  private void rollWALAndWait(final HBaseTestingUtility utility, final TableName table,
+  private void rollWALAndWait(final HBaseTestingUtil utility, final TableName table,
       final byte[] row) throws IOException {
     final Admin admin = utility.getAdmin();
-    final MiniHBaseCluster cluster = utility.getMiniHBaseCluster();
+    final SingleProcessHBaseCluster cluster = utility.getMiniHBaseCluster();
 
     // find the region that corresponds to the given row.
     HRegion region = null;

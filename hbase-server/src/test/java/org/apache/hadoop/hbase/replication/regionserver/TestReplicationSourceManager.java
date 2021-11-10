@@ -46,10 +46,11 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
@@ -57,6 +58,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -73,7 +75,6 @@ import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.ZKReplicationPeerStorage;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager.NodeFailoverWorker;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -124,7 +125,7 @@ public abstract class TestReplicationSourceManager {
 
   protected static Configuration conf;
 
-  protected static HBaseTestingUtility utility;
+  protected static HBaseTestingUtil utility;
 
   protected static Replication replication;
 
@@ -300,7 +301,8 @@ public abstract class TestReplicationSourceManager {
       }
       LOG.info(Long.toString(i));
       final long txid = wal.appendData(hri,
-        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
+        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, EnvironmentEdgeManager.currentTime(),
+          mvcc, scopes),
         edit);
       wal.sync(txid);
     }
@@ -314,7 +316,8 @@ public abstract class TestReplicationSourceManager {
 
     for (int i = 0; i < 3; i++) {
       wal.appendData(hri,
-        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
+        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, EnvironmentEdgeManager.currentTime(),
+          mvcc, scopes),
         edit);
     }
     wal.sync();
@@ -336,7 +339,8 @@ public abstract class TestReplicationSourceManager {
       new WALEntryBatch(0, manager.getSources().get(0).getCurrentPath()));
 
     wal.appendData(hri,
-      new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
+      new WALKeyImpl(hri.getEncodedNameAsBytes(), test, EnvironmentEdgeManager.currentTime(),
+        mvcc, scopes),
       edit);
     wal.sync();
 
@@ -401,9 +405,7 @@ public abstract class TestReplicationSourceManager {
     ReplicationPeers rp1 =
         ReplicationFactory.getReplicationPeers(s1.getZooKeeper(), s1.getConfiguration());
     rp1.init();
-    NodeFailoverWorker w1 =
-        manager.new NodeFailoverWorker(server.getServerName());
-    w1.run();
+    manager.claimQueue(server.getServerName(), "1");
     assertEquals(1, manager.getWalsByIdRecoveredQueues().size());
     String id = "1-" + server.getServerName().getServerName();
     assertEquals(files, manager.getWalsByIdRecoveredQueues().get(id).get(group));
@@ -427,8 +429,7 @@ public abstract class TestReplicationSourceManager {
     rq.addWAL(server.getServerName(), "2", group + ".log1");
     rq.addWAL(server.getServerName(), "2", group + ".log2");
 
-    NodeFailoverWorker w1 = manager.new NodeFailoverWorker(server.getServerName());
-    w1.run();
+    manager.claimQueue(server.getServerName(), "2");
 
     // The log of the unknown peer should be removed from zk
     for (String peer : manager.getAllQueues()) {
@@ -840,6 +841,16 @@ public abstract class TestReplicationSourceManager {
     @Override
     public ZKWatcher getZooKeeper() {
       return zkw;
+    }
+
+    @Override
+    public Connection getConnection() {
+      return null;
+    }
+
+    @Override
+    public ChoreService getChoreService() {
+      return null;
     }
 
     @Override

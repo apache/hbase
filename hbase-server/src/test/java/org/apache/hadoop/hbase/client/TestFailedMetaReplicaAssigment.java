@@ -27,15 +27,16 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
@@ -54,7 +55,7 @@ public class TestFailedMetaReplicaAssigment {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestFailedMetaReplicaAssigment.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -62,8 +63,9 @@ public class TestFailedMetaReplicaAssigment {
     // this test can be removed once we remove the HConstants.META_REPLICAS_NUM config.
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HConstants.META_REPLICAS_NUM, 3);
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numAlwaysStandByMasters(1)
-      .numMasters(1).numRegionServers(1).masterClass(BrokenMetaReplicaMaster.class).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numAlwaysStandByMasters(1).numMasters(1)
+        .numRegionServers(1).masterClass(BrokenMetaReplicaMaster.class).build();
     TEST_UTIL.startMiniCluster(option);
   }
 
@@ -128,16 +130,18 @@ public class TestFailedMetaReplicaAssigment {
     }
 
     @Override
-    public AssignmentManager createAssignmentManager(MasterServices master) {
-      return new BrokenMasterMetaAssignmentManager(master);
+    public AssignmentManager createAssignmentManager(MasterServices master,
+      MasterRegion masterRegion) {
+      return new BrokenMasterMetaAssignmentManager(master, masterRegion);
     }
   }
 
   public static class BrokenMasterMetaAssignmentManager extends AssignmentManager {
     MasterServices master;
 
-    public BrokenMasterMetaAssignmentManager(final MasterServices master) {
-      super(master);
+    public BrokenMasterMetaAssignmentManager(final MasterServices master,
+      MasterRegion masterRegion) {
+      super(master, masterRegion);
       this.master = master;
     }
 

@@ -30,11 +30,11 @@ import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -53,15 +53,15 @@ public class TestMasterRegistry {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterRegistry.class);
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    HBaseClassTestRule.forClass(TestMasterRegistry.class);
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setUp() throws Exception {
-    StartMiniClusterOption.Builder builder = StartMiniClusterOption.builder();
+    StartTestingClusterOption.Builder builder = StartTestingClusterOption.builder();
     builder.numMasters(3).numRegionServers(3);
     TEST_UTIL.startMiniCluster(builder.build());
-    HBaseTestingUtility.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
+    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
   }
 
   @AfterClass
@@ -90,7 +90,7 @@ public class TestMasterRegistry {
     int numMasters = 10;
     conf.set(HConstants.MASTER_ADDRS_KEY, generateDummyMastersList(numMasters));
     try (MasterRegistry registry = new MasterRegistry(conf)) {
-      List<ServerName> parsedMasters = new ArrayList<>(registry.getParsedMasterServers());
+      List<ServerName> parsedMasters = new ArrayList<>(registry.getParsedServers());
       // Half of them would be without a port, duplicates are removed.
       assertEquals(numMasters / 2 + 1, parsedMasters.size());
       // Sort in the increasing order of port numbers.
@@ -112,8 +112,7 @@ public class TestMasterRegistry {
   public void testRegistryRPCs() throws Exception {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     HMaster activeMaster = TEST_UTIL.getHBaseCluster().getMaster();
-    final int size =
-      activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get().size();
+    final int size = activeMaster.getMetaLocations().size();
     for (int numHedgedReqs = 1; numHedgedReqs <= size; numHedgedReqs++) {
       conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
       try (MasterRegistry registry = new MasterRegistry(conf)) {
@@ -124,8 +123,7 @@ public class TestMasterRegistry {
         assertEquals(registry.getActiveMaster().get(), activeMaster.getServerName());
         List<HRegionLocation> metaLocations =
           Arrays.asList(registry.getMetaRegionLocations().get().getRegionLocations());
-        List<HRegionLocation> actualMetaLocations =
-          activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get();
+        List<HRegionLocation> actualMetaLocations = activeMaster.getMetaLocations();
         Collections.sort(metaLocations);
         Collections.sort(actualMetaLocations);
         assertEquals(actualMetaLocations, metaLocations);
@@ -149,17 +147,17 @@ public class TestMasterRegistry {
     // Set the hedging fan out so that all masters are queried.
     conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, 4);
     // Do not limit the number of refreshes during the test run.
-    conf.setLong(MasterAddressRefresher.MIN_SECS_BETWEEN_REFRESHES, 0);
+    conf.setLong(MasterRegistry.MASTER_REGISTRY_MIN_SECS_BETWEEN_REFRESHES, 0);
     try (MasterRegistry registry = new MasterRegistry(conf)) {
-      final Set<ServerName> masters = registry.getParsedMasterServers();
+      final Set<ServerName> masters = registry.getParsedServers();
       assertTrue(masters.contains(badServer));
       // Make a registry RPC, this should trigger a refresh since one of the hedged RPC fails.
       assertEquals(registry.getClusterId().get(), clusterId);
       // Wait for new set of masters to be populated.
       TEST_UTIL.waitFor(5000,
-          (Waiter.Predicate<Exception>) () -> !registry.getParsedMasterServers().equals(masters));
+        (Waiter.Predicate<Exception>) () -> !registry.getParsedServers().equals(masters));
       // new set of masters should not include the bad server
-      final Set<ServerName> newMasters = registry.getParsedMasterServers();
+      final Set<ServerName> newMasters = registry.getParsedServers();
       // Bad one should be out.
       assertEquals(3, newMasters.size());
       assertFalse(newMasters.contains(badServer));
@@ -170,8 +168,8 @@ public class TestMasterRegistry {
       TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster(10000);
       // Wait until the killed master de-registered. This should also trigger another refresh.
       TEST_UTIL.waitFor(10000, () -> registry.getMasters().get().size() == 2);
-      TEST_UTIL.waitFor(20000, () -> registry.getParsedMasterServers().size() == 2);
-      final Set<ServerName> newMasters2 = registry.getParsedMasterServers();
+      TEST_UTIL.waitFor(20000, () -> registry.getParsedServers().size() == 2);
+      final Set<ServerName> newMasters2 = registry.getParsedServers();
       assertEquals(2, newMasters2.size());
       assertFalse(newMasters2.contains(activeMaster.getServerName()));
     } finally {

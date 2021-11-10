@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -45,27 +45,27 @@ public class MobSnapshotTestingUtils {
   /**
    * Create the Mob Table.
    */
-  public static void createMobTable(final HBaseTestingUtility util,
+  public static void createMobTable(final HBaseTestingUtil util,
       final TableName tableName, int regionReplication,
       final byte[]... families) throws IOException, InterruptedException {
     createMobTable(util, tableName, SnapshotTestingUtils.getSplitKeys(),
       regionReplication, families);
   }
 
-  public static void createPreSplitMobTable(final HBaseTestingUtility util,
+  public static void createPreSplitMobTable(final HBaseTestingUtil util,
       final TableName tableName, int nRegions, final byte[]... families)
       throws IOException, InterruptedException {
     createMobTable(util, tableName, SnapshotTestingUtils.getSplitKeys(nRegions),
       1, families);
   }
 
-  public static void createMobTable(final HBaseTestingUtility util, final TableName tableName,
+  public static void createMobTable(final HBaseTestingUtil util, final TableName tableName,
       final byte[][] splitKeys, int regionReplication, final byte[]... families)
       throws IOException, InterruptedException {
     createMobTable(util, tableName, splitKeys, regionReplication, null, families);
   }
 
-  public static void createMobTable(HBaseTestingUtility util, TableName tableName,
+  public static void createMobTable(HBaseTestingUtil util, TableName tableName,
       byte[][] splitKeys, int regionReplication, String cpClassName, byte[]... families)
       throws IOException, InterruptedException {
     TableDescriptorBuilder builder =
@@ -92,7 +92,7 @@ public class MobSnapshotTestingUtils {
    * @return An Table instance for the created table.
    * @throws IOException
    */
-  public static Table createMobTable(final HBaseTestingUtility util,
+  public static Table createMobTable(final HBaseTestingUtil util,
       final TableName tableName, final byte[]... families) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
@@ -135,7 +135,7 @@ public class MobSnapshotTestingUtils {
     }
   }
 
-  public static void verifyMobRowCount(final HBaseTestingUtility util,
+  public static void verifyMobRowCount(final HBaseTestingUtil util,
       final TableName tableName, long expectedRows) throws IOException {
 
     Table table = ConnectionFactory.createConnection(util.getConfiguration()).getTable(tableName);

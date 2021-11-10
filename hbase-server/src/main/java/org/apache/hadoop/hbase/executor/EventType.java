@@ -294,7 +294,14 @@ public enum EventType {
    *
    * RS_REPLAY_SYNC_REPLICATION_WAL
    */
-  RS_REPLAY_SYNC_REPLICATION_WAL(85, ExecutorType.RS_REPLAY_SYNC_REPLICATION_WAL);
+  RS_REPLAY_SYNC_REPLICATION_WAL(85, ExecutorType.RS_REPLAY_SYNC_REPLICATION_WAL),
+
+  /**
+   * RS claim replication queue.<br>
+   *
+   * RS_CLAIM_REPLICATION_QUEUE
+   */
+  RS_CLAIM_REPLICATION_QUEUE(86, ExecutorType.RS_CLAIM_REPLICATION_QUEUE);
 
   private final int code;
   private final ExecutorType executor;

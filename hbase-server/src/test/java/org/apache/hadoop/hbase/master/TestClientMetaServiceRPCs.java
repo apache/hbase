@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_TIMEOUT_KEY;
 import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,10 +29,10 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
@@ -45,14 +46,15 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMetaService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetActiveMasterRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetActiveMasterResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ClientMetaService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetActiveMasterRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetActiveMasterResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClusterIdRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClusterIdResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsResponse;
 
 @Category({MediumTests.class, MasterTests.class})
 public class TestClientMetaServiceRPCs {
@@ -63,7 +65,7 @@ public class TestClientMetaServiceRPCs {
 
   // Total number of masters (active + stand by) for the purpose of this test.
   private static final int MASTER_COUNT = 3;
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf;
   private static int rpcTimeout;
   private static RpcClient rpcClient;
@@ -71,7 +73,7 @@ public class TestClientMetaServiceRPCs {
   @BeforeClass
   public static void setUp() throws Exception {
     // Start the mini cluster with stand-by masters.
-    StartMiniClusterOption.Builder builder = StartMiniClusterOption.builder();
+    StartTestingClusterOption.Builder builder = StartTestingClusterOption.builder();
     builder.numMasters(MASTER_COUNT).numRegionServers(3);
     TEST_UTIL.startMiniCluster(builder.build());
     conf = TEST_UTIL.getConfiguration();
@@ -142,8 +144,8 @@ public class TestClientMetaServiceRPCs {
    */
   @Test public void TestMetaLocations() throws Exception {
     HBaseRpcController rpcController = getRpcController();
-    List<HRegionLocation> metaLocations = TEST_UTIL.getMiniHBaseCluster().getMaster()
-        .getMetaRegionLocationCache().getMetaRegionLocations().get();
+    List<HRegionLocation> metaLocations =
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getMetaLocations();
     Collections.sort(metaLocations);
     int rpcCount = 0;
     for (JVMClusterUtil.MasterThread masterThread:

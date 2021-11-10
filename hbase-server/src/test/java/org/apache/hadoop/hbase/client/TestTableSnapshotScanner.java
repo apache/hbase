@@ -29,8 +29,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -64,7 +65,7 @@ public class TestTableSnapshotScanner {
       HBaseClassTestRule.forClass(TestTableSnapshotScanner.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableSnapshotScanner.class);
-  private final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final int NUM_REGION_SERVERS = 2;
   private static final byte[][] FAMILIES = {Bytes.toBytes("f1"), Bytes.toBytes("f2")};
   public static byte[] bbb = Bytes.toBytes("bbb");
@@ -76,7 +77,7 @@ public class TestTableSnapshotScanner {
   @Rule
   public TestName name = new TestName();
 
-  public static void blockUntilSplitFinished(HBaseTestingUtility util, TableName tableName,
+  public static void blockUntilSplitFinished(HBaseTestingUtil util, TableName tableName,
       int expectedRegionSize) throws Exception {
     for (int i = 0; i < 100; i++) {
       List<RegionInfo> hRegionInfoList = util.getAdmin().getRegions(tableName);
@@ -89,7 +90,7 @@ public class TestTableSnapshotScanner {
 
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .numRegionServers(NUM_REGION_SERVERS).numDataNodes(NUM_REGION_SERVERS)
         .createRootDir(true).build();
     UTIL.startMiniCluster(option);
@@ -110,7 +111,7 @@ public class TestTableSnapshotScanner {
   public void tearDown() throws Exception {
   }
 
-  public static void createTableAndSnapshot(HBaseTestingUtility util, TableName tableName,
+  public static void createTableAndSnapshot(HBaseTestingUtil util, TableName tableName,
       String snapshotName, int numRegions)
       throws Exception {
     try {
@@ -188,6 +189,8 @@ public class TestTableSnapshotScanner {
 
       verifyScanner(scanner, bbb, yyy);
       scanner.close();
+    } catch (Exception e) {
+      e.printStackTrace();
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
@@ -288,7 +291,7 @@ public class TestTableSnapshotScanner {
     }
   }
 
-  private void testScanner(HBaseTestingUtility util, String snapshotName, int numRegions,
+  private void testScanner(HBaseTestingUtil util, String snapshotName, int numRegions,
       boolean shutdownCluster) throws Exception {
     setupCluster();
     TableName tableName = TableName.valueOf("testScanner");
@@ -319,8 +322,8 @@ public class TestTableSnapshotScanner {
   private void verifyScanner(ResultScanner scanner, byte[] startRow, byte[] stopRow)
       throws IOException, InterruptedException {
 
-    HBaseTestingUtility.SeenRowTracker rowTracker =
-        new HBaseTestingUtility.SeenRowTracker(startRow, stopRow);
+    HBaseTestingUtil.SeenRowTracker rowTracker =
+        new HBaseTestingUtil.SeenRowTracker(startRow, stopRow);
 
     while (true) {
       Result result = scanner.next();
@@ -448,7 +451,7 @@ public class TestTableSnapshotScanner {
         }
       });
       // set file modify time and then run cleaner
-      long time = System.currentTimeMillis() - TimeToLiveHFileCleaner.DEFAULT_TTL * 1000;
+      long time = EnvironmentEdgeManager.currentTime() - TimeToLiveHFileCleaner.DEFAULT_TTL * 1000;
       traverseAndSetFileTime(HFileArchiveUtil.getArchivePath(conf), time);
       UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().runCleaner();
       // scan snapshot
@@ -459,9 +462,7 @@ public class TestTableSnapshotScanner {
       }
     } catch (Exception e) {
       LOG.error("scan snapshot error", e);
-      Assert.fail("Should not throw FileNotFoundException");
-      Assert.assertTrue(e.getCause() != null);
-      Assert.assertTrue(e.getCause().getCause() instanceof FileNotFoundException);
+      Assert.fail("Should not throw Exception: " + e.getMessage());
     } finally {
       tearDownCluster();
     }

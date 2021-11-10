@@ -55,7 +55,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Specifying timestamps, deleteFamily and deleteColumns will delete all
  * versions with a timestamp less than or equal to that passed.  If no
  * timestamp is specified, an entry is added with a timestamp of 'now'
- * where 'now' is the servers's System.currentTimeMillis().
+ * where 'now' is the servers's EnvironmentEdgeManager.currentTime().
  * Specifying a timestamp to the deleteColumn method will
  * delete versions only with a timestamp equal to that specified.
  * If no timestamp is passed to deleteColumn, internally, it figures the

@@ -37,11 +37,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -76,7 +76,7 @@ public class TestClassLoading {
       HBaseClassTestRule.forClass(TestClassLoading.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClassLoading.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   public static class TestMasterCoprocessor implements MasterCoprocessor, MasterObserver {
     @Override
@@ -199,7 +199,7 @@ public class TestClassLoading {
     boolean foundTableRegion=false;
     boolean found1 = true, found2 = true, found2_k1 = true, found2_k2 = true, found2_k3 = true;
     Map<Region, Set<ClassLoader>> regionsActiveClassLoaders = new HashMap<>();
-    MiniHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
     for (HRegion region:
         hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
       if (region.getRegionInfo().getRegionNameAsString().startsWith(tableName.getNameAsString())) {
@@ -272,7 +272,7 @@ public class TestClassLoading {
 
     // verify that the coprocessor was loaded
     boolean found = false;
-    MiniHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
     for (HRegion region: hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
       if (region.getRegionInfo().getRegionNameAsString().startsWith(cpName3)) {
         found = (region.getCoprocessorHost().findCoprocessor(cpName3) != null);
@@ -299,7 +299,7 @@ public class TestClassLoading {
 
     // verify that the coprocessor was loaded correctly
     boolean found = false;
-    MiniHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
     for (HRegion region: hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
       if (region.getRegionInfo().getRegionNameAsString().startsWith(cpName4)) {
         Coprocessor cp = region.getCoprocessorHost().findCoprocessor(cpName4);
@@ -384,7 +384,7 @@ public class TestClassLoading {
     boolean found6_k1 = false, found6_k2 = false, found6_k3 = false,
         found6_k4 = false;
 
-    MiniHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
     for (HRegion region: hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
       if (region.getRegionInfo().getRegionNameAsString().startsWith(tableName.getNameAsString())) {
         found_1 = found_1 ||
@@ -475,7 +475,7 @@ public class TestClassLoading {
     // verify that the coprocessors were loaded
     boolean found1 = false, found2 = false, found2_k1 = false,
         found2_k2 = false, found2_k3 = false;
-    MiniHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
     for (HRegion region: hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
       if (region.getRegionInfo().getRegionNameAsString().startsWith(tableName.getNameAsString())) {
         CoprocessorEnvironment env;

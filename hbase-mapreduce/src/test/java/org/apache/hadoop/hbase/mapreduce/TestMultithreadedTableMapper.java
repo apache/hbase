@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -65,8 +65,8 @@ public class TestMultithreadedTableMapper {
       HBaseClassTestRule.forClass(TestMultithreadedTableMapper.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMultithreadedTableMapper.class);
-  private static final HBaseTestingUtility UTIL =
-      new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL =
+      new HBaseTestingUtil();
   static final TableName MULTI_REGION_TABLE_NAME = TableName.valueOf("mrtest");
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   static final byte[] OUTPUT_FAMILY = Bytes.toBytes("text");

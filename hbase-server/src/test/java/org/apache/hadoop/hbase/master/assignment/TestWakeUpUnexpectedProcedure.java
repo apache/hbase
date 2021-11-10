@@ -26,11 +26,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster.MiniHBaseClusterRegionServer;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -75,7 +76,7 @@ public class TestWakeUpUnexpectedProcedure {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWakeUpUnexpectedProcedure.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName NAME = TableName.valueOf("Assign");
 
@@ -106,7 +107,7 @@ public class TestWakeUpUnexpectedProcedure {
         ExecuteProceduresRequest request) throws ServiceException {
       if (request.getOpenRegionCount() > 0) {
         if (ARRIVE_EXEC_PROC != null) {
-          SERVER_TO_KILL = regionServer.getServerName();
+          SERVER_TO_KILL = getServer().getServerName();
           ARRIVE_EXEC_PROC.countDown();
           ARRIVE_EXEC_PROC = null;
           try {
@@ -135,8 +136,8 @@ public class TestWakeUpUnexpectedProcedure {
 
   private static final class AMForTest extends AssignmentManager {
 
-    public AMForTest(MasterServices master) {
-      super(master);
+    public AMForTest(MasterServices master, MasterRegion masterRegion) {
+      super(master, masterRegion);
     }
 
     @Override
@@ -202,8 +203,9 @@ public class TestWakeUpUnexpectedProcedure {
     }
 
     @Override
-    protected AssignmentManager createAssignmentManager(MasterServices master) {
-      return new AMForTest(master);
+    protected AssignmentManager createAssignmentManager(MasterServices master,
+      MasterRegion masterRegion) {
+      return new AMForTest(master, masterRegion);
     }
 
     @Override
@@ -215,7 +217,7 @@ public class TestWakeUpUnexpectedProcedure {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL.startMiniCluster(StartMiniClusterOption.builder().numMasters(1)
+    UTIL.startMiniCluster(StartTestingClusterOption.builder().numMasters(1)
       .masterClass(HMasterForTest.class).numRegionServers(3).rsClass(RSForTest.class).build());
     UTIL.createTable(NAME, CF);
     // Here the test region must not be hosted on the same rs with meta region.

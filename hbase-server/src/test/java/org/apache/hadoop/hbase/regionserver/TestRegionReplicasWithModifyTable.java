@@ -24,7 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
@@ -56,7 +56,7 @@ public class TestRegionReplicasWithModifyTable {
 
   private static final int NB_SERVERS = 3;
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   @Parameter
@@ -93,7 +93,7 @@ public class TestRegionReplicasWithModifyTable {
     if (disableBeforeModifying) {
       HTU.getAdmin().disableTable(tableName);
     }
-    HBaseTestingUtility.setReplicas(HTU.getAdmin(), tableName, enableReplicaCount);
+    HBaseTestingUtil.setReplicas(HTU.getAdmin(), tableName, enableReplicaCount);
     if (disableBeforeModifying) {
       HTU.getAdmin().enableTable(tableName);
     }

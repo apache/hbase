@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -47,7 +47,7 @@ public class TestHFileReaderImpl {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHFileReaderImpl.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   static KeyValue toKV(String row) {
     return new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
@@ -92,7 +92,7 @@ public class TestHFileReaderImpl {
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf, bucketcache), true, conf);
 
     // warm cache
-    HFileScanner scanner = reader.getScanner(true, true);
+    HFileScanner scanner = reader.getScanner(conf, true, true);
     scanner.seekTo(toKV("i"));
     assertEquals("i", toRowStr(scanner.getCell()));
     scanner.close();
@@ -102,7 +102,7 @@ public class TestHFileReaderImpl {
     }
 
     // reopen again.
-    scanner = reader.getScanner(true, true);
+    scanner = reader.getScanner(conf, true, true);
     scanner.seekTo(toKV("i"));
     assertEquals("i", toRowStr(scanner.getCell()));
     scanner.seekBefore(toKV("i"));
@@ -117,7 +117,7 @@ public class TestHFileReaderImpl {
     }
 
     // case 2
-    scanner = reader.getScanner(true, true);
+    scanner = reader.getScanner(conf, true, true);
     scanner.seekTo(toKV("i"));
     assertEquals("i", toRowStr(scanner.getCell()));
     scanner.seekBefore(toKV("c"));

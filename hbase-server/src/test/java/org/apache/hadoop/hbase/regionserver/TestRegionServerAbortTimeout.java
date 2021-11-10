@@ -26,8 +26,8 @@ import java.util.TimerTask;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -59,7 +60,7 @@ public class TestRegionServerAbortTimeout {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerAbortTimeout.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName TABLE_NAME = TableName.valueOf("RSAbort");
 
@@ -79,11 +80,12 @@ public class TestRegionServerAbortTimeout {
     // Will schedule a abort timeout task after SLEEP_TIME_WHEN_CLOSE_REGION ms
     conf.setLong(HRegionServer.ABORT_TIMEOUT, SLEEP_TIME_WHEN_CLOSE_REGION);
     conf.set(HRegionServer.ABORT_TIMEOUT_TASK, TestAbortTimeoutTask.class.getName());
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(2).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numRegionServers(2).build();
     UTIL.startMiniCluster(option);
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-        .setCoprocessor(SleepWhenCloseCoprocessor.class.getName())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build();
+      .setCoprocessor(SleepWhenCloseCoprocessor.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build();
     UTIL.getAdmin().createTable(td, Bytes.toBytes("0"), Bytes.toBytes("9"), REGIONS_NUM);
   }
 
@@ -111,9 +113,9 @@ public class TestRegionServerAbortTimeout {
     // Abort one region server
     UTIL.getMiniHBaseCluster().getRegionServer(0).abort("Abort RS for test");
 
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     long timeout = REGIONS_NUM * SLEEP_TIME_WHEN_CLOSE_REGION * 10;
-    while (System.currentTimeMillis() - startTime < timeout) {
+    while (EnvironmentEdgeManager.currentTime() - startTime < timeout) {
       if (UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size() == 1) {
         assertTrue("Abort timer task should be scheduled", abortTimeoutTaskScheduled);
         return;

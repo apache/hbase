@@ -23,7 +23,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -49,7 +49,7 @@ public class TestCallQueue {
       HBaseClassTestRule.forClass(TestCallQueue.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCallQueue.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static final MetricsAssertHelper metricsHelper =
       CompatibilitySingletonFactory.getInstance(MetricsAssertHelper.class);

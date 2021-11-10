@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -87,7 +87,7 @@ public class TestCoprocessorEndpoint {
   private static final int rowSeperator2 = 12;
   private static byte[][] ROWS = makeN(ROW, ROWSIZE);
 
-  private static HBaseTestingUtility util = new HBaseTestingUtility();
+  private static HBaseTestingUtil util = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {

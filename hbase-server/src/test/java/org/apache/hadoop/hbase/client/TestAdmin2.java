@@ -37,8 +37,8 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.Assert;
@@ -274,8 +275,8 @@ public class TestAdmin2 extends TestAdminBase {
     }
     boolean isInList = ProtobufUtil.getOnlineRegions(
       rs.getRSRpcServices()).contains(info);
-    long timeout = System.currentTimeMillis() + 10000;
-    while ((System.currentTimeMillis() < timeout) && (isInList)) {
+    long timeout = EnvironmentEdgeManager.currentTime() + 10000;
+    while ((EnvironmentEdgeManager.currentTime() < timeout) && (isInList)) {
       Thread.sleep(100);
       isInList = ProtobufUtil.getOnlineRegions(
         rs.getRSRpcServices()).contains(info);
@@ -328,8 +329,8 @@ public class TestAdmin2 extends TestAdminBase {
 
     boolean isInList = ProtobufUtil.getOnlineRegions(
       rs.getRSRpcServices()).contains(info);
-    long timeout = System.currentTimeMillis() + 10000;
-    while ((System.currentTimeMillis() < timeout) && (isInList)) {
+    long timeout = EnvironmentEdgeManager.currentTime() + 10000;
+    while ((EnvironmentEdgeManager.currentTime() < timeout) && (isInList)) {
       Thread.sleep(100);
       isInList = ProtobufUtil.getOnlineRegions(
         rs.getRSRpcServices()).contains(info);
@@ -393,7 +394,7 @@ public class TestAdmin2 extends TestAdminBase {
 
   @Test
   public void testMoveToPreviouslyAssignedRS() throws IOException, InterruptedException {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster master = cluster.getMaster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     Admin localAdmin = createTable(tableName);

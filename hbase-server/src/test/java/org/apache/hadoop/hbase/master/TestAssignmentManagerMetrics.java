@@ -23,9 +23,9 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
@@ -61,9 +61,9 @@ public class TestAssignmentManagerMetrics {
   private static final MetricsAssertHelper METRICS_HELPER = CompatibilityFactory
       .getInstance(MetricsAssertHelper.class);
 
-  private static MiniHBaseCluster CLUSTER;
+  private static SingleProcessHBaseCluster CLUSTER;
   private static HMaster MASTER;
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final int MSG_INTERVAL = 1000;
 
   @Rule

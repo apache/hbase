@@ -18,8 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,11 +32,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.R
  * The callable executed at RS side to refresh the peer config/state. <br/>
  */
 @InterfaceAudience.Private
-public class RefreshPeerCallable implements RSProcedureCallable {
+public class RefreshPeerCallable extends BaseRSProcedureCallable {
 
   private static final Logger LOG = LoggerFactory.getLogger(RefreshPeerCallable.class);
-
-  private HRegionServer rs;
 
   private String peerId;
 
@@ -45,14 +42,8 @@ public class RefreshPeerCallable implements RSProcedureCallable {
 
   private int stage;
 
-  private Exception initError;
-
   @Override
-  public Void call() throws Exception {
-    if (initError != null) {
-      throw initError;
-    }
-
+  protected void doCall() throws Exception {
     LOG.info("Received a peer change event, peerId=" + peerId + ", type=" + type);
     PeerProcedureHandler handler = rs.getReplicationSourceService().getPeerProcedureHandler();
     switch (type) {
@@ -77,20 +68,14 @@ public class RefreshPeerCallable implements RSProcedureCallable {
       default:
         throw new IllegalArgumentException("Unknown peer modification type: " + type);
     }
-    return null;
   }
 
   @Override
-  public void init(byte[] parameter, HRegionServer rs) {
-    this.rs = rs;
-    try {
-      RefreshPeerParameter param = RefreshPeerParameter.parseFrom(parameter);
-      this.peerId = param.getPeerId();
-      this.type = param.getType();
-      this.stage = param.getStage();
-    } catch (InvalidProtocolBufferException e) {
-      initError = e;
-    }
+  protected void initParameter(byte[] parameter) throws InvalidProtocolBufferException {
+    RefreshPeerParameter param = RefreshPeerParameter.parseFrom(parameter);
+    this.peerId = param.getPeerId();
+    this.type = param.getType();
+    this.stage = param.getStage();
   }
 
   @Override

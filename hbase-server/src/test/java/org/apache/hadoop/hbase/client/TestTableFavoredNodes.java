@@ -33,7 +33,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -75,7 +75,7 @@ public class TestTableFavoredNodes {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableFavoredNodes.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static int WAIT_TIMEOUT = 60000;
   private final static int SLAVES = 8;
   private FavoredNodesManager fnm;
@@ -290,7 +290,6 @@ public class TestTableFavoredNodes {
    * 3. Is the FN information consistent between Master and the respective RegionServer?
    */
   private void checkIfFavoredNodeInformationIsCorrect(TableName tableName) throws Exception {
-
     /*
      * Since we need HRegionServer to check for consistency of FN between Master and RS,
      * lets construct a map for each serverName lookup. Makes it easy later.
@@ -300,13 +299,8 @@ public class TestTableFavoredNodes {
       TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()) {
       snRSMap.put(rst.getRegionServer().getServerName(), rst.getRegionServer());
     }
-    // Also include master, since it can also host user regions.
-    for (JVMClusterUtil.MasterThread rst :
-      TEST_UTIL.getMiniHBaseCluster().getLiveMasterThreads()) {
-      snRSMap.put(rst.getMaster().getServerName(), rst.getMaster());
-    }
 
-    int dnPort = fnm.getDataNodePort();
+    int dnPort = FavoredNodeAssignmentHelper.getDataNodePort(TEST_UTIL.getConfiguration());
     RegionLocator regionLocator = admin.getConnection().getRegionLocator(tableName);
     for (HRegionLocation regionLocation : regionLocator.getAllRegionLocations()) {
 

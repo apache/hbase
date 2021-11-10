@@ -20,8 +20,10 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
+import org.apache.hadoop.hbase.io.compress.CanReinit;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
@@ -30,6 +32,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.util.BlockIOUtils;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -41,10 +44,12 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingContext {
+  private final Configuration conf;
   private final HFileContext fileContext;
   private TagCompressionContext tagCompressionContext;
 
-  public HFileBlockDefaultDecodingContext(HFileContext fileContext) {
+  public HFileBlockDefaultDecodingContext(Configuration conf, HFileContext fileContext) {
+    this.conf = conf;
     this.fileContext = fileContext;
   }
 
@@ -87,8 +92,24 @@ public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingConte
 
       Compression.Algorithm compression = fileContext.getCompression();
       if (compression != Compression.Algorithm.NONE) {
-        Compression.decompress(blockBufferWithoutHeader, dataInputStream,
-          uncompressedSizeWithoutHeader, compression);
+        Decompressor decompressor = null;
+        try {
+          decompressor = compression.getDecompressor();
+          // Some algorithms don't return decompressors and accept null as a valid parameter for
+          // same when creating decompression streams. We can ignore these cases wrt reinit.
+          if (decompressor instanceof CanReinit) {
+            ((CanReinit)decompressor).reinit(conf);
+          }
+          try (InputStream is =
+              compression.createDecompressionStream(dataInputStream, decompressor, 0)) {
+            BlockIOUtils.readFullyWithHeapBuffer(is, blockBufferWithoutHeader,
+              uncompressedSizeWithoutHeader);
+          }
+        } finally {
+          if (decompressor != null) {
+            compression.returnDecompressor(decompressor);
+          }
+        }
       } else {
         BlockIOUtils.readFullyWithHeapBuffer(dataInputStream, blockBufferWithoutHeader,
           onDiskSizeWithoutHeader);

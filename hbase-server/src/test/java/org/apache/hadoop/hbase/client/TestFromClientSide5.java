@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -98,6 +99,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
 
 /**
  * Run tests that use the HBase clients; {@link Table}.
@@ -236,7 +238,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
 
   private Result getReverseScanResult(Table table, byte[] row) throws IOException {
     Scan scan = new Scan().withStartRow(row);
-    scan.setSmall(true);
+    scan.setReadType(ReadType.PREAD);
     scan.setReversed(true);
     scan.setCaching(1);
     scan.addFamily(HConstants.CATALOG_FAMILY);
@@ -301,9 +303,11 @@ public class TestFromClientSide5 extends FromClientSideBase {
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
               MultiRowMutationService.newBlockingStub(channel);
-      service.mutateRows(null, mrmBuilder.build());
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
 
       // Assert
+      assertTrue(response.getProcessed());
+
       Result r = t.get(new Get(ROW));
       assertEquals(Bytes.toString(VALUE), Bytes.toString(r.getValue(FAMILY, QUALIFIER)));
 
@@ -349,9 +353,11 @@ public class TestFromClientSide5 extends FromClientSideBase {
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
         MultiRowMutationService.newBlockingStub(channel);
-      service.mutateRows(null, mrmBuilder.build());
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
 
       // Assert
+      assertTrue(response.getProcessed());
+
       Result r = t.get(new Get(ROW));
       assertEquals(Bytes.toString(VALUE), Bytes.toString(r.getValue(FAMILY, QUALIFIER)));
 
@@ -393,9 +399,11 @@ public class TestFromClientSide5 extends FromClientSideBase {
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
         MultiRowMutationService.newBlockingStub(channel);
-      service.mutateRows(null, mrmBuilder.build());
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
 
       // Assert
+      assertFalse(response.getProcessed());
+
       Result r = t.get(new Get(ROW));
       assertTrue(r.isEmpty());
 
@@ -439,9 +447,11 @@ public class TestFromClientSide5 extends FromClientSideBase {
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
         MultiRowMutationService.newBlockingStub(channel);
-      service.mutateRows(null, mrmBuilder.build());
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
 
       // Assert
+      assertTrue(response.getProcessed());
+
       Result r = t.get(new Get(ROW));
       assertEquals(Bytes.toString(VALUE), Bytes.toString(r.getValue(FAMILY, QUALIFIER)));
 
@@ -485,9 +495,11 @@ public class TestFromClientSide5 extends FromClientSideBase {
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
         MultiRowMutationService.newBlockingStub(channel);
-      service.mutateRows(null, mrmBuilder.build());
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
 
       // Assert
+      assertFalse(response.getProcessed());
+
       Result r = t.get(new Get(ROW));
       assertTrue(r.isEmpty());
 
@@ -533,9 +545,11 @@ public class TestFromClientSide5 extends FromClientSideBase {
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
         MultiRowMutationService.newBlockingStub(channel);
-      service.mutateRows(null, mrmBuilder.build());
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
 
       // Assert
+      assertTrue(response.getProcessed());
+
       Result r = t.get(new Get(ROW));
       assertEquals(Bytes.toString(VALUE), Bytes.toString(r.getValue(FAMILY, QUALIFIER)));
 
@@ -581,9 +595,11 @@ public class TestFromClientSide5 extends FromClientSideBase {
       CoprocessorRpcChannel channel = t.coprocessorService(ROW);
       MultiRowMutationService.BlockingInterface service =
         MultiRowMutationService.newBlockingStub(channel);
-      service.mutateRows(null, mrmBuilder.build());
+      MutateRowsResponse response = service.mutateRows(null, mrmBuilder.build());
 
       // Assert
+      assertFalse(response.getProcessed());
+
       Result r = t.get(new Get(ROW));
       assertTrue(r.isEmpty());
 
@@ -953,7 +969,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
   @Test
   public void testCheckAndMutateWithTimeRange() throws IOException {
     try (Table table = TEST_UTIL.createTable(name.getTableName(), FAMILY)) {
-      final long ts = System.currentTimeMillis() / 2;
+      final long ts = EnvironmentEdgeManager.currentTime() / 2;
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, ts, VALUE);
 
@@ -1321,7 +1337,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       scan2 = new Scan();
       scan2.setScanMetricsEnabled(true);
       scan2.setCaching(1);
-      scan2.setSmall(true);
+      scan2.setReadType(ReadType.PREAD);
       try (ResultScanner scanner = ht.getScanner(scan2)) {
         int numBytes = 0;
         for (Result result : scanner) {
@@ -1487,12 +1503,13 @@ public class TestFromClientSide5 extends FromClientSideBase {
 
   private void waitForStoreFileCount(HStore store, int count, int timeout)
       throws InterruptedException {
-    long start = System.currentTimeMillis();
-    while (start + timeout > System.currentTimeMillis() && store.getStorefilesCount() != count) {
+    long start = EnvironmentEdgeManager.currentTime();
+    while (start + timeout > EnvironmentEdgeManager.currentTime() &&
+        store.getStorefilesCount() != count) {
       Thread.sleep(100);
     }
-    System.out.println("start=" + start + ", now=" + System.currentTimeMillis() + ", cur=" +
-        store.getStorefilesCount());
+    System.out.println("start=" + start + ", now=" + EnvironmentEdgeManager.currentTime() +
+      ", cur=" + store.getStorefilesCount());
     assertEquals(count, store.getStorefilesCount());
   }
 
@@ -1892,7 +1909,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
       // small scan
       Scan scan = new Scan().withStartRow(HConstants.EMPTY_START_ROW)
         .withStopRow(HConstants.EMPTY_END_ROW, true);
-      scan.setSmall(true);
+      scan.setReadType(ReadType.PREAD);
       scan.setCaching(2);
       try (ResultScanner scanner = table.getScanner(scan)) {
         int count = 0;
@@ -2417,12 +2434,13 @@ public class TestFromClientSide5 extends FromClientSideBase {
         assertEquals(12, count);
       }
 
-      reverseScanTest(table, false);
-      reverseScanTest(table, true);
+      reverseScanTest(table, ReadType.STREAM);
+      reverseScanTest(table, ReadType.PREAD);
+      reverseScanTest(table, ReadType.DEFAULT);
     }
   }
 
-  private void reverseScanTest(Table table, boolean small) throws IOException {
+  private void reverseScanTest(Table table, ReadType readType) throws IOException {
     // scan backward
     Scan scan = new Scan();
     scan.setReversed(true);
@@ -2444,7 +2462,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     }
 
     scan = new Scan();
-    scan.setSmall(small);
+    scan.setReadType(readType);
     scan.setReversed(true);
     scan.withStartRow(Bytes.toBytes("002"));
     try (ResultScanner scanner = table.getScanner(scan)) {
@@ -2465,7 +2483,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     }
 
     scan = new Scan();
-    scan.setSmall(small);
+    scan.setReadType(readType);
     scan.setReversed(true);
     scan.withStartRow(Bytes.toBytes("002"));
     scan.withStopRow(Bytes.toBytes("000"));
@@ -2487,7 +2505,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     }
 
     scan = new Scan();
-    scan.setSmall(small);
+    scan.setReadType(readType);
     scan.setReversed(true);
     scan.withStartRow(Bytes.toBytes("001"));
     try (ResultScanner scanner = table.getScanner(scan)) {
@@ -2508,7 +2526,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     }
 
     scan = new Scan();
-    scan.setSmall(small);
+    scan.setReadType(readType);
     scan.setReversed(true);
     scan.withStartRow(Bytes.toBytes("000"));
     try (ResultScanner scanner = table.getScanner(scan)) {
@@ -2529,7 +2547,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     }
 
     scan = new Scan();
-    scan.setSmall(small);
+    scan.setReadType(readType);
     scan.setReversed(true);
     scan.withStartRow(Bytes.toBytes("006"));
     scan.withStopRow(Bytes.toBytes("002"));

@@ -33,12 +33,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
@@ -77,7 +77,7 @@ public class TestMaster {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMaster.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestMaster.class);
   private static final TableName TABLENAME = TableName.valueOf("TestMaster");
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
@@ -90,6 +90,11 @@ public class TestMaster {
   public static void beforeAllTests() throws Exception {
     // we will retry operations when PleaseHoldException is thrown
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
+    // Set hbase.min.version.move.system.tables as version 0 so that
+    // testMoveRegionWhenNotInitialized never fails even if hbase-default has valid default
+    // value present for production use-case.
+    // See HBASE-22923 for details.
+    TEST_UTIL.getConfiguration().set("hbase.min.version.move.system.tables", "0.0.0");
     // Start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(2);
     admin = TEST_UTIL.getAdmin();
@@ -132,7 +137,7 @@ public class TestMaster {
   @Test
   @SuppressWarnings("deprecation")
   public void testMasterOpsWhileSplitting() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
 
     try (Table ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME)) {
@@ -173,7 +178,7 @@ public class TestMaster {
 
   @Test
   public void testMoveRegionWhenNotInitialized() {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
     try {
       m.setInitialized(false); // fake it, set back later

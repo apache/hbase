@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -64,7 +64,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsWithACL.class);
   private static TableName TEST_TABLE = TableName.valueOf("testtable1");
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf;
 
   private static Connection systemUserConnection;
@@ -327,6 +327,16 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   public void testRenameRSGroup() throws Exception {
     AccessTestAction action = () -> {
       checkPermission("renameRSGroup");
+      return null;
+    };
+
+    validateAdminPermissions(action);
+  }
+
+  @Test
+  public void testUpdateRSGroupConfig() throws Exception {
+    AccessTestAction action = () -> {
+      checkPermission("updateRSGroupConfig");
       return null;
     };
 

@@ -33,6 +33,7 @@ import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_task_deleted;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.atomic.LongAdder;
@@ -41,7 +42,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
@@ -51,9 +52,10 @@ import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
-import org.apache.hadoop.hbase.regionserver.TestMasterAddressTracker.NodeCreationListener;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.zookeeper.TestMasterAddressTracker.NodeCreationListener;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -87,7 +89,7 @@ public class TestSplitLogManager {
   private Configuration conf;
   private int to;
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtil TEST_UTIL;
 
   class DummyMasterServices extends MockNoopMasterServices {
     private ZKWatcher zkw;
@@ -117,7 +119,7 @@ public class TestSplitLogManager {
 
   @Before
   public void setup() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.startMiniZKCluster();
     conf = TEST_UTIL.getConfiguration();
     // Use a different ZK wrapper instance for each tests.
@@ -253,7 +255,7 @@ public class TestSplitLogManager {
     assertTrue(task.isOrphan());
     waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
     assertFalse(task.isUnassigned());
-    long curt = System.currentTimeMillis();
+    long curt = EnvironmentEdgeManager.currentTime();
     assertTrue((task.last_update <= curt) &&
         (task.last_update > (curt - 1000)));
     LOG.info("waiting for manager to resubmit the orphan task");

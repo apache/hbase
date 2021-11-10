@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -192,6 +193,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   /** Listeners that are called on WAL events. */
   protected final List<WALActionsListener> listeners = new CopyOnWriteArrayList<>();
 
+  /** Tracks the logs in the process of being closed. */
+  protected final Map<String, W> inflightWALClosures = new ConcurrentHashMap<>();
+
   /**
    * Class that does accounting of sequenceids in WAL subsystem. Holds oldest outstanding sequence
    * id as yet not flushed as well as the most recent edit sequence id appended to the WAL. Has
@@ -316,11 +320,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     new ConcurrentSkipListMap<>(LOG_NAME_COMPARATOR);
 
   /**
-   * Map of {@link SyncFuture}s owned by Thread objects. Used so we reuse SyncFutures.
-   * Thread local is used so JVM can GC the terminated thread for us. See HBASE-21228
-   * <p>
+   * A cache of sync futures reused by threads.
    */
-  private final ThreadLocal<SyncFuture> cachedSyncFutures;
+  protected final SyncFutureCache syncFutureCache;
 
   /**
    * The class name of the runtime implementation, used as prefix for logging/tracing.
@@ -490,12 +492,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       DEFAULT_SLOW_SYNC_ROLL_INTERVAL_MS);
     this.walSyncTimeoutNs = TimeUnit.MILLISECONDS.toNanos(conf.getLong(WAL_SYNC_TIMEOUT_MS,
       DEFAULT_WAL_SYNC_TIMEOUT_MS));
-    this.cachedSyncFutures = new ThreadLocal<SyncFuture>() {
-      @Override
-      protected SyncFuture initialValue() {
-        return new SyncFuture();
-      }
-    };
+    this.syncFutureCache = new SyncFutureCache(conf);
     this.implClassName = getClass().getSimpleName();
     this.walTooOldNs = TimeUnit.SECONDS.toNanos(conf.getInt(
             SURVIVED_TOO_LONG_SEC_KEY, SURVIVED_TOO_LONG_SEC_DEFAULT));
@@ -625,7 +622,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * retrieve the next path to use for writing. Increments the internal filenum.
    */
   private Path getNewPath() throws IOException {
-    this.filenum.set(System.currentTimeMillis());
+    this.filenum.set(EnvironmentEdgeManager.currentTime());
     Path newPath = getCurrentFileName();
     while (fs.exists(newPath)) {
       this.filenum.incrementAndGet();
@@ -881,10 +878,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         }
       }
     } catch (TimeoutIOException tioe) {
-      // SyncFuture reuse by thread, if TimeoutIOException happens, ringbuffer
-      // still refer to it, so if this thread use it next time may get a wrong
-      // result.
-      this.cachedSyncFutures.remove();
       throw tioe;
     } catch (InterruptedException ie) {
       LOG.warn("Interrupted", ie);
@@ -989,6 +982,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     rollWriterLock.lock();
     try {
       doShutdown();
+      if (syncFutureCache != null) {
+        syncFutureCache.clear();
+      }
       if (logArchiveExecutor != null) {
         logArchiveExecutor.shutdownNow();
       }
@@ -1028,6 +1024,13 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   /**
+   * @return number of WALs currently in the process of closing.
+   */
+  public int getInflightWALCloseCount() {
+    return inflightWALClosures.size();
+  }
+
+  /**
    * updates the sequence number of a specific store. depending on the flag: replaces current seq
    * number if the given seq id is bigger, or even if it is lower than existing one
    */
@@ -1038,7 +1041,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   protected final SyncFuture getSyncFuture(long sequence, boolean forceSync) {
-    return cachedSyncFutures.get().reset(sequence).setForceSync(forceSync);
+    return syncFutureCache.getIfPresentOrNew().reset(sequence, forceSync);
   }
 
   protected boolean isLogRollRequested() {
@@ -1190,9 +1193,18 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     try {
       Path currentPath = getOldPath();
       if (path.equals(currentPath)) {
+        // Currently active path.
         W writer = this.writer;
         return writer != null ? OptionalLong.of(writer.getSyncedLength()) : OptionalLong.empty();
       } else {
+        W temp = inflightWALClosures.get(path.getName());
+        if (temp != null) {
+          // In the process of being closed, trailer bytes may or may not be flushed.
+          // Ensuring that we read all the bytes in a file is critical for correctness of tailing
+          // use cases like replication, see HBASE-25924/HBASE-25932.
+          return OptionalLong.of(temp.getSyncedLength());
+        }
+        // Log rolled successfully.
         return OptionalLong.empty();
       }
     } finally {

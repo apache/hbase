@@ -85,17 +85,18 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.RandomDistribution;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ByteArrayHashKey;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hbase.util.MurmurHash;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RandomDistribution;
 import org.apache.hadoop.hbase.util.YammerHistogramUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -1145,7 +1146,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   static abstract class TestBase {
     // Below is make it so when Tests are all running in the one
     // jvm, that they each have a differently seeded Random.
-    private static final Random randomSeed = new Random(System.currentTimeMillis());
+    private static final Random randomSeed = new Random(EnvironmentEdgeManager.currentTime());
 
     private static long nextRandomSeed() {
       return randomSeed.nextLong();
@@ -2391,7 +2392,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       // write the serverName columns
       MetaTableAccessor.updateRegionLocation(connection,
         regionInfo, ServerName.valueOf("localhost", 60010, rand.nextLong()), i,
-        System.currentTimeMillis());
+        EnvironmentEdgeManager.currentTime());
       return true;
     }
   }

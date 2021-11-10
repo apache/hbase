@@ -116,10 +116,10 @@ public class TestShellExecEndpointCoprocessor {
   }
 
   private static File ensureTestDataDirExists(
-    final HBaseTestingUtility testingUtility
+    final HBaseTestingUtil testingUtility
   ) throws IOException {
     final Path testDataDir = Optional.of(testingUtility)
-      .map(HBaseTestingUtility::getDataTestDir)
+      .map(HBaseTestingUtil::getDataTestDir)
       .map(Object::toString)
       .map(val -> Paths.get(val))
       .orElseThrow(() -> new RuntimeException("Unable to locate temp directory path."));

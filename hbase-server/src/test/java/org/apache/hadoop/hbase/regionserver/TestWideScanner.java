@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -58,7 +59,7 @@ public class TestWideScanner {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestWideScanner.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWideScanner.class);
 
@@ -87,13 +88,13 @@ public class TestWideScanner {
     Path testDir = UTIL.getDataTestDir();
     RegionInfo hri = RegionInfoBuilder.newBuilder(TESTTABLEDESC.getTableName()).build();
     REGION =
-      HBaseTestingUtility.createRegionAndWAL(hri, testDir, UTIL.getConfiguration(), TESTTABLEDESC);
+      HBaseTestingUtil.createRegionAndWAL(hri, testDir, UTIL.getConfiguration(), TESTTABLEDESC);
   }
 
   @AfterClass
   public static void tearDown() throws IOException {
     if (REGION != null) {
-      HBaseTestingUtility.closeRegionAndWAL(REGION);
+      HBaseTestingUtil.closeRegionAndWAL(REGION);
       REGION = null;
     }
     UTIL.cleanupTestDir();
@@ -104,7 +105,7 @@ public class TestWideScanner {
     for (char c = 'a'; c <= 'c'; c++) {
       byte[] row = Bytes.toBytes("ab" + c);
       int i, j;
-      long ts = System.currentTimeMillis();
+      long ts = EnvironmentEdgeManager.currentTime();
       for (i = 0; i < 100; i++) {
         byte[] b = Bytes.toBytes(String.format("%10d", i));
         for (j = 0; j < 100; j++) {

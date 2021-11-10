@@ -108,7 +108,7 @@ public class Random64 {
     final int precision = 100000;
     final long totalTestCnt = defaultTotalTestCnt + precision;
     final int reportPeriod = 100 * precision;
-    final long startTime = System.currentTimeMillis();
+    final long startTime = EnvironmentEdgeManager.currentTime();
 
     System.out.println("Do collision test, totalTestCnt=" + totalTestCnt);
 
@@ -130,7 +130,7 @@ public class Random64 {
         }
 
         if (cnt % reportPeriod == 0) {
-          long cost = System.currentTimeMillis() - startTime;
+          long cost = EnvironmentEdgeManager.currentTime() - startTime;
           long remainingMs = (long) (1.0 * (totalTestCnt - cnt) * cost / cnt);
           System.out.println(
             String.format(

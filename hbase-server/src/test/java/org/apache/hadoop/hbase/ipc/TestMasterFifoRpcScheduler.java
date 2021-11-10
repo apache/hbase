@@ -28,11 +28,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.junit.AfterClass;
@@ -43,8 +42,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
@@ -55,16 +52,14 @@ public class TestMasterFifoRpcScheduler {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMasterFifoRpcScheduler.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestMasterFifoRpcScheduler.class);
-
   private static final String REGION_SERVER_REPORT = "RegionServerReport";
   private static final String OTHER = "Other";
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.set(RSRpcServices.MASTER_RPC_SCHEDULER_FACTORY_CLASS,
+    conf.set(MasterRpcServices.MASTER_RPC_SCHEDULER_FACTORY_CLASS,
       "org.apache.hadoop.hbase.regionserver.MasterFifoRpcSchedulerFactory");
     conf.setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 5);
     conf.setInt(MasterFifoRpcScheduler.MASTER_SERVER_REPORT_HANDLER_COUNT, 2);

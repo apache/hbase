@@ -19,9 +19,9 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -59,7 +59,7 @@ public class TestRegionMover3 {
   @Rule
   public TestName name = new TestName();
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static ServerName rs0;
   private static ServerName rs1;
   private static ServerName rs2;
@@ -67,7 +67,7 @@ public class TestRegionMover3 {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     rs0 = cluster.getRegionServer(0).getServerName();
     rs1 = cluster.getRegionServer(1).getServerName();
     rs2 = cluster.getRegionServer(2).getServerName();
@@ -92,7 +92,7 @@ public class TestRegionMover3 {
   @Test
   public void testRegionUnloadWithRack() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = IntStream.range(10, 50000)

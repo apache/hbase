@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * Don't subclass ScheduledChore if the task relies on being woken up for something to do, such as
  * an entry being added to a queue, etc.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public abstract class ScheduledChore implements Runnable {
   private static final Logger LOG = LoggerFactory.getLogger(ScheduledChore.class);
 
@@ -172,7 +174,7 @@ public abstract class ScheduledChore implements Runnable {
    */
   private synchronized void updateTimeTrackingBeforeRun() {
     timeOfLastRun = timeOfThisRun;
-    timeOfThisRun = System.currentTimeMillis();
+    timeOfThisRun = EnvironmentEdgeManager.currentTime();
   }
 
   /**
@@ -215,7 +217,7 @@ public abstract class ScheduledChore implements Runnable {
    * @return true if time is earlier or equal to current milli time
    */
   private synchronized boolean isValidTime(final long time) {
-    return time > 0 && time <= System.currentTimeMillis();
+    return time > 0 && time <= EnvironmentEdgeManager.currentTime();
   }
 
   /**

@@ -25,9 +25,12 @@ pipeline {
   }
   options {
     // this should roughly match how long we tell the flaky dashboard to look at
-    buildDiscarder(logRotator(numToKeepStr: '30'))
+    buildDiscarder(logRotator(numToKeepStr: '50'))
     timeout (time: 2, unit: 'HOURS')
     timestamps()
+  }
+  environment {
+    ASF_NIGHTLIES = 'https://nightlies.apache.org'
   }
   parameters {
     booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
@@ -72,8 +75,19 @@ pipeline {
   post {
     always {
       junit testResults: "**/surefire-reports/*.xml", allowEmptyResults: true
-      // TODO compress these logs
-      archiveArtifacts artifacts: 'includes.txt,**/surefire-reports/*,**/test-data/*,target/machine/*'
+      sshPublisher(publishers: [
+        sshPublisherDesc(configName: 'Nightlies',
+          transfers: [
+            sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
+              sourceFiles: "**/surefire-reports/*,**/test-data/*"
+            )
+          ]
+        )
+      ])
+      sh '''#!/bin/bash -e
+        ./dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}" > test_logs.html
+      '''
+      archiveArtifacts artifacts: 'includes.txt,test_logs.html,target/machine/*'
     }
   }
 }

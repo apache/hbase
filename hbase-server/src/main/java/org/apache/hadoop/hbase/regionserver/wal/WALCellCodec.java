@@ -222,9 +222,13 @@ public class WALCellCodec implements Codec {
 
   static class CompressedKvEncoder extends BaseEncoder {
     private final CompressionContext compression;
+    private final boolean hasValueCompression;
+    private final boolean hasTagCompression;
     public CompressedKvEncoder(OutputStream out, CompressionContext compression) {
       super(out);
       this.compression = compression;
+      this.hasValueCompression = compression.hasValueCompression();
+      this.hasTagCompression = compression.hasTagCompression();
     }
 
     @Override
@@ -241,12 +245,16 @@ public class WALCellCodec implements Codec {
         compression.getDictionary(CompressionContext.DictionaryIndex.FAMILY));
       PrivateCellUtil.compressQualifier(out, cell,
         compression.getDictionary(CompressionContext.DictionaryIndex.QUALIFIER));
-      // Write timestamp, type and value as uncompressed.
+      // Write timestamp, type and value.
       StreamUtils.writeLong(out, cell.getTimestamp());
       out.write(cell.getTypeByte());
-      PrivateCellUtil.writeValue(out, cell, cell.getValueLength());
+      if (hasValueCompression) {
+        writeCompressedValue(out, cell);
+      } else {
+        PrivateCellUtil.writeValue(out, cell, cell.getValueLength());
+      }
       if (tagsLength > 0) {
-        if (compression.tagCompressionContext != null) {
+        if (hasTagCompression) {
           // Write tags using Dictionary compression
           PrivateCellUtil.compressTags(out, cell, compression.tagCompressionContext);
         } else {
@@ -256,20 +264,31 @@ public class WALCellCodec implements Codec {
         }
       }
     }
+
+    private void writeCompressedValue(OutputStream out, Cell cell) throws IOException {
+      byte[] compressed = compression.getValueCompressor().compress(cell.getValueArray(),
+        cell.getValueOffset(), cell.getValueLength());
+      StreamUtils.writeRawVInt32(out, compressed.length);
+      out.write(compressed);
+    }
+
   }
 
   static class CompressedKvDecoder extends BaseDecoder {
     private final CompressionContext compression;
+    private final boolean hasValueCompression;
+    private final boolean hasTagCompression;
     public CompressedKvDecoder(InputStream in, CompressionContext compression) {
       super(in);
       this.compression = compression;
+      this.hasValueCompression = compression.hasValueCompression();
+      this.hasTagCompression = compression.hasTagCompression();
     }
 
     @Override
     protected Cell parseCell() throws IOException {
       int keylength = StreamUtils.readRawVarint32(in);
       int vlength = StreamUtils.readRawVarint32(in);
-
       int tagsLength = StreamUtils.readRawVarint32(in);
       int length = 0;
       if(tagsLength == 0) {
@@ -302,18 +321,27 @@ public class WALCellCodec implements Codec {
         compression.getDictionary(CompressionContext.DictionaryIndex.QUALIFIER));
       pos += elemLen;
 
-      // timestamp, type and value
-      int tsTypeValLen = length - pos;
+      // timestamp
+      long ts = StreamUtils.readLong(in);
+      pos = Bytes.putLong(backingArray, pos, ts);
+      // type and value
+      int typeValLen = length - pos;
       if (tagsLength > 0) {
-        tsTypeValLen = tsTypeValLen - tagsLength - KeyValue.TAGS_LENGTH_SIZE;
+        typeValLen = typeValLen - tagsLength - KeyValue.TAGS_LENGTH_SIZE;
       }
-      IOUtils.readFully(in, backingArray, pos, tsTypeValLen);
-      pos += tsTypeValLen;
-
+      pos = Bytes.putByte(backingArray, pos, (byte)in.read());
+      int valLen = typeValLen - 1;
+      if (hasValueCompression) {
+        readCompressedValue(in, backingArray, pos, valLen);
+        pos += valLen;
+      } else {
+        IOUtils.readFully(in, backingArray, pos, valLen);
+        pos += valLen;
+      }
       // tags
       if (tagsLength > 0) {
         pos = Bytes.putAsShort(backingArray, pos, tagsLength);
-        if (compression.tagCompressionContext != null) {
+        if (hasTagCompression) {
           compression.tagCompressionContext.uncompressTags(in, backingArray, pos, tagsLength);
         } else {
           IOUtils.readFully(in, backingArray, pos, tagsLength);
@@ -349,6 +377,17 @@ public class WALCellCodec implements Codec {
         throw new IOException("Invalid length for compresesed portion of keyvalue: " + len);
       }
     }
+
+    private void readCompressedValue(InputStream in, byte[] outArray, int outOffset,
+        int expectedLength) throws IOException {
+      int compressedLen = StreamUtils.readRawVarint32(in);
+      int read = compression.getValueCompressor().decompress(in, compressedLen, outArray,
+        outOffset, expectedLength);
+      if (read != expectedLength) {
+        throw new IOException("ValueCompressor state error: short read");
+      }
+    }
+
   }
 
   public static class EnsureKvEncoder extends BaseEncoder {

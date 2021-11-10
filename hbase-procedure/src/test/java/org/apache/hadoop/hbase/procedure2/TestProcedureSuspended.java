@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -52,11 +52,11 @@ public class TestProcedureSuspended {
   private ProcedureExecutor<TestProcEnv> procExecutor;
   private ProcedureStore procStore;
 
-  private HBaseCommonTestingUtility htu;
+  private HBaseCommonTestingUtil htu;
 
   @Before
   public void setUp() throws IOException {
-    htu = new HBaseCommonTestingUtility();
+    htu = new HBaseCommonTestingUtil();
 
     procStore = new NoopProcedureStore();
     procExecutor = new ProcedureExecutor<>(htu.getConfiguration(), new TestProcEnv(), procStore);

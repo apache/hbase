@@ -36,7 +36,7 @@ public class TestCachedClusterId {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCachedClusterId.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static String clusterId;
   private static HMaster activeMaster;

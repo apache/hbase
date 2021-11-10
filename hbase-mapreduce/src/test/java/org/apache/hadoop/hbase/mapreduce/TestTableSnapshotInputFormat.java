@@ -20,6 +20,10 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY;
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT;
+import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION;
+import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION_DEFAULT;
+import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -30,13 +34,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TestTableSnapshotScanner;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -154,8 +159,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   public static class TestTableSnapshotReducer
     extends Reducer<ImmutableBytesWritable, NullWritable, NullWritable, NullWritable> {
-    HBaseTestingUtility.SeenRowTracker rowTracker =
-        new HBaseTestingUtility.SeenRowTracker(bbb, yyy);
+    HBaseTestingUtil.SeenRowTracker rowTracker =
+        new HBaseTestingUtil.SeenRowTracker(bbb, yyy);
     @Override
     protected void reduce(ImmutableBytesWritable key, Iterable<NullWritable> values,
        Context context) throws IOException, InterruptedException {
@@ -198,6 +203,18 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     }
   }
 
+  @Test
+  public void testWithMockedMapReduceSingleRegionByRegionLocation() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    conf.setBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION, true);
+    try {
+      testWithMockedMapReduce(UTIL, name.getMethodName() + "Snapshot", 1, 1, 1,
+        true);
+    } finally {
+      conf.unset(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION);
+    }
+  }
+
   @Override
   public void testRestoreSnapshotDoesNotCreateBackRefLinksInit(TableName tableName,
       String snapshotName, Path tmpTableDir) throws Exception {
@@ -208,7 +225,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   @Override
-  public void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName,
+  public void testWithMockedMapReduce(HBaseTestingUtil util, String snapshotName,
       int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean setLocalityEnabledTo)
       throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -218,6 +235,8 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
       Configuration conf = util.getConfiguration();
       conf.setBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY, setLocalityEnabledTo);
+      conf.setBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION,
+        SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION_DEFAULT);
       Job job = new Job(conf);
       Path tmpTableDir = util.getDataTestDirOnTestFS(snapshotName);
       Scan scan = new Scan().withStartRow(getStartRow()).withStopRow(getEndRow()); // limit the scan
@@ -391,6 +410,36 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     }
   }
 
+  @Test
+  public void testScannerReadTypeConfiguration() throws IOException {
+    Configuration conf = new Configuration(false);
+    // Explicitly set ReadTypes should persist
+    for (ReadType readType : Arrays.asList(ReadType.PREAD, ReadType.STREAM)) {
+      Scan scanWithReadType = new Scan();
+      scanWithReadType.setReadType(readType);
+      assertEquals(scanWithReadType.getReadType(),
+          serializeAndReturn(conf, scanWithReadType).getReadType());
+    }
+    // We should only see the DEFAULT ReadType getting updated to STREAM.
+    Scan scanWithoutReadType = new Scan();
+    assertEquals(ReadType.DEFAULT, scanWithoutReadType.getReadType());
+    assertEquals(ReadType.STREAM, serializeAndReturn(conf, scanWithoutReadType).getReadType());
+
+    // We should still be able to force a certain ReadType when DEFAULT is given.
+    conf.setEnum(SNAPSHOT_INPUTFORMAT_SCANNER_READTYPE, ReadType.PREAD);
+    assertEquals(ReadType.DEFAULT, scanWithoutReadType.getReadType());
+    assertEquals(ReadType.PREAD, serializeAndReturn(conf, scanWithoutReadType).getReadType());
+  }
+
+  /**
+   * Serializes and deserializes the given scan in the same manner that
+   * TableSnapshotInputFormat does.
+   */
+  private Scan serializeAndReturn(Configuration conf, Scan s) throws IOException {
+    conf.set(TableInputFormat.SCAN, TableMapReduceUtil.convertScanToString(s));
+    return TableSnapshotInputFormatImpl.extractScanFromConf(conf);
+  }
+
   private void verifyWithMockedMapReduce(Job job, int numRegions, int expectedNumSplits,
       byte[] startRow, byte[] stopRow)
       throws IOException, InterruptedException {
@@ -399,13 +448,16 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
     Assert.assertEquals(expectedNumSplits, splits.size());
 
-    HBaseTestingUtility.SeenRowTracker rowTracker = new HBaseTestingUtility.SeenRowTracker(startRow,
+    HBaseTestingUtil.SeenRowTracker rowTracker = new HBaseTestingUtil.SeenRowTracker(startRow,
         stopRow.length > 0 ? stopRow : Bytes.toBytes("\uffff"));
 
     boolean localityEnabled =
         job.getConfiguration().getBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY,
                                           SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT);
 
+    boolean byRegionLoc =
+      job.getConfiguration().getBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION,
+                                        SNAPSHOT_INPUTFORMAT_LOCALITY_BY_REGION_LOCATION_DEFAULT);
     for (int i = 0; i < splits.size(); i++) {
       // validate input split
       InputSplit split = splits.get(i);
@@ -413,6 +465,16 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       TableSnapshotRegionSplit snapshotRegionSplit = (TableSnapshotRegionSplit) split;
       if (localityEnabled) {
         Assert.assertTrue(split.getLocations() != null && split.getLocations().length != 0);
+        if (byRegionLoc) {
+          // When it uses region location from meta, the hostname will be "localhost",
+          // the location from hdfs block location is "127.0.0.1".
+          Assert.assertEquals(1, split.getLocations().length);
+          Assert.assertTrue("Not using region location!",
+            split.getLocations()[0].equals("localhost"));
+        } else {
+          Assert.assertTrue("Not using region location!",
+            split.getLocations()[0].equals("127.0.0.1"));
+        }
       } else {
         Assert.assertTrue(split.getLocations() != null && split.getLocations().length == 0);
       }
@@ -454,7 +516,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   @Override
-  protected void testWithMapReduceImpl(HBaseTestingUtility util, TableName tableName,
+  protected void testWithMapReduceImpl(HBaseTestingUtil util, TableName tableName,
       String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion,
       int expectedNumSplits, boolean shutdownCluster) throws Exception {
     doTestWithMapReduce(util, tableName, snapshotName, getStartRow(), getEndRow(), tableDir,
@@ -462,7 +524,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   // this is also called by the IntegrationTestTableSnapshotInputFormat
-  public static void doTestWithMapReduce(HBaseTestingUtility util, TableName tableName,
+  public static void doTestWithMapReduce(HBaseTestingUtil util, TableName tableName,
       String snapshotName, byte[] startRow, byte[] endRow, Path tableDir, int numRegions,
       int numSplitsPerRegion, int expectedNumSplits, boolean shutdownCluster) throws Exception {
 

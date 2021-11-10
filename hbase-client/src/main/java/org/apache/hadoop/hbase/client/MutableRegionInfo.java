@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 import java.util.Arrays;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -206,15 +208,16 @@ class MutableRegionInfo implements RegionInfo {
    */
   @Override
   public boolean containsRange(byte[] rangeStartKey, byte[] rangeEndKey) {
-    if (Bytes.compareTo(rangeStartKey, rangeEndKey) > 0) {
+    CellComparator cellComparator = CellComparatorImpl.getCellComparator(tableName);
+    if (cellComparator.compareRows(rangeStartKey, rangeEndKey) > 0) {
       throw new IllegalArgumentException(
       "Invalid range: " + Bytes.toStringBinary(rangeStartKey) +
       " > " + Bytes.toStringBinary(rangeEndKey));
     }
 
-    boolean firstKeyInRange = Bytes.compareTo(rangeStartKey, startKey) >= 0;
+    boolean firstKeyInRange = cellComparator.compareRows(rangeStartKey, startKey) >= 0;
     boolean lastKeyInRange =
-      Bytes.compareTo(rangeEndKey, endKey) < 0 ||
+      cellComparator.compareRows(rangeEndKey, endKey) < 0 ||
       Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY);
     return firstKeyInRange && lastKeyInRange;
   }
@@ -224,8 +227,9 @@ class MutableRegionInfo implements RegionInfo {
    */
   @Override
   public boolean containsRow(byte[] row) {
-    return Bytes.compareTo(row, startKey) >= 0 &&
-      (Bytes.compareTo(row, endKey) < 0 ||
+    CellComparator cellComparator = CellComparatorImpl.getCellComparator(tableName);
+    return cellComparator.compareRows(row, startKey) >= 0 &&
+      (cellComparator.compareRows(row, endKey) < 0 ||
        Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
   }
 

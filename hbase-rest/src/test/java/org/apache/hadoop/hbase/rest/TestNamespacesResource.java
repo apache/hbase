@@ -26,7 +26,7 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.rest.client.Client;
@@ -52,7 +52,7 @@ public class TestNamespacesResource {
   private static String NAMESPACE1 = "TestNamespacesInstanceResource1";
   private static String NAMESPACE2 = "TestNamespacesInstanceResource2";
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL =
     new HBaseRESTTestingUtility();
   private static Client client;

@@ -28,7 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -82,7 +82,7 @@ public class TestCacheOnWriteInSchema {
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWriteInSchema.class);
   @Rule public TestName name = new TestName();
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String DIR = TEST_UTIL.getDataTestDir("TestCacheOnWriteInSchema").toString();
   private static byte [] table;
   private static byte [] family = Bytes.toBytes("family");
@@ -231,7 +231,7 @@ public class TestCacheOnWriteInSchema {
     HFile.Reader reader = sf.getReader().getHFileReader();
     try {
       // Open a scanner with (on read) caching disabled
-      HFileScanner scanner = reader.getScanner(false, false);
+      HFileScanner scanner = reader.getScanner(conf, false, false);
       assertTrue(testDescription, scanner.seekTo());
       // Cribbed from io.hfile.TestCacheOnWrite
       long offset = 0;

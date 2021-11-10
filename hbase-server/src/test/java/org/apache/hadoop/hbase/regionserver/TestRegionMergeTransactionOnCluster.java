@@ -35,11 +35,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
@@ -113,7 +114,7 @@ public class TestRegionMergeTransactionOnCluster {
 
   private static int waitTime = 60 * 1000;
 
-  static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static HMaster MASTER;
   private static Admin ADMIN;
@@ -121,10 +122,10 @@ public class TestRegionMergeTransactionOnCluster {
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     // Start a cluster
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .masterClass(MyMaster.class).numRegionServers(NB_SERVERS).numDataNodes(NB_SERVERS).build();
     TEST_UTIL.startMiniCluster(option);
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     MASTER = cluster.getMaster();
     MASTER.balanceSwitch(false);
     ADMIN = TEST_UTIL.getConnection().getAdmin();
@@ -157,7 +158,7 @@ public class TestRegionMergeTransactionOnCluster {
 
       // Randomly choose one of the two merged regions
       RegionInfo hri = RandomUtils.nextBoolean() ? mergedRegions.getFirst() : mergedRegions.getSecond();
-      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
       RegionStates regionStates = am.getRegionStates();
 
@@ -249,9 +250,9 @@ public class TestRegionMergeTransactionOnCluster {
       ADMIN.compactRegion(mergedRegionInfo.getRegionName());
       // clean up the merged region store files
       // wait until merged region have reference file
-      long timeout = System.currentTimeMillis() + waitTime;
+      long timeout = EnvironmentEdgeManager.currentTime() + waitTime;
       int newcount = 0;
-      while (System.currentTimeMillis() < timeout) {
+      while (EnvironmentEdgeManager.currentTime() < timeout) {
         for(ColumnFamilyDescriptor colFamily : columnFamilies) {
           newcount += hrfs.getStoreFiles(colFamily.getName()).size();
         }
@@ -269,7 +270,7 @@ public class TestRegionMergeTransactionOnCluster {
         cleaner.chore();
         Thread.sleep(1000);
       }
-      while (System.currentTimeMillis() < timeout) {
+      while (EnvironmentEdgeManager.currentTime() < timeout) {
         int newcount1 = 0;
         for(ColumnFamilyDescriptor colFamily : columnFamilies) {
           newcount1 += hrfs.getStoreFiles(colFamily.getName()).size();
@@ -435,8 +436,8 @@ public class TestRegionMergeTransactionOnCluster {
       int expectedRegionNum) throws Exception {
     List<Pair<RegionInfo, ServerName>> tableRegionsInMeta;
     List<RegionInfo> tableRegionsInMaster;
-    long timeout = System.currentTimeMillis() + waitTime;
-    while (System.currentTimeMillis() < timeout) {
+    long timeout = EnvironmentEdgeManager.currentTime() + waitTime;
+    while (EnvironmentEdgeManager.currentTime() < timeout) {
       tableRegionsInMeta =
           MetaTableAccessor.getTableRegionsAndLocations(TEST_UTIL.getConnection(), tablename);
       tableRegionsInMaster =
@@ -474,7 +475,7 @@ public class TestRegionMergeTransactionOnCluster {
     Table table = TEST_UTIL.createTable(tablename, FAMILYNAME, splitRows);
     LOG.info("Created " + table.getName());
     if (replication > 1) {
-      HBaseTestingUtility.setReplicas(ADMIN, tablename, replication);
+      HBaseTestingUtil.setReplicas(ADMIN, tablename, replication);
       LOG.info("Set replication of " + replication + " on " + table.getName());
     }
     loadData(table);
@@ -528,7 +529,7 @@ public class TestRegionMergeTransactionOnCluster {
     }
 
     @Override
-    protected RSRpcServices createRpcServices() throws IOException {
+    protected MasterRpcServices createRpcServices() throws IOException {
       return new MyMasterRpcServices(this);
     }
   }

@@ -23,7 +23,7 @@
   <parent>
     <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>3.0.0-SNAPSHOT</version>
+    <version>3.0.0-alpha-2-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-server</artifactId>
@@ -36,8 +36,7 @@
     <license.bundles.jquery>true</license.bundles.jquery>
   </properties>
   <build>
-    <!-- Make sure resources get added before they are processed
-      by placing this first
+    <!-- Make sure resources get added before they are processed by placing this first
      -->
     <resources>
       <!-- Add the build webabpps to the classpth -->
@@ -295,6 +294,12 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-balancer</artifactId>
+    </dependency>
+    <dependency>
+      <artifactId>hbase-balancer</artifactId>
+      <groupId>org.apache.hbase</groupId>
+      <type>test-jar</type>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>

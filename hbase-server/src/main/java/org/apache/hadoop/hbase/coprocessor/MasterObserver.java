@@ -28,6 +28,8 @@ import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalanceRequest;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -540,18 +542,20 @@ public interface MasterObserver {
    * Called prior to requesting rebalancing of the cluster regions, though after
    * the initial checks for regions in transition and the balance switch flag.
    * @param ctx the environment to interact with the framework and master
+   * @param request the request used to trigger the balancer
    */
-  default void preBalance(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+  default void preBalance(final ObserverContext<MasterCoprocessorEnvironment> ctx, BalanceRequest request)
       throws IOException {}
 
   /**
    * Called after the balancing plan has been submitted.
    * @param ctx the environment to interact with the framework and master
+   * @param request the request used to trigger the balance
    * @param plans the RegionPlans which master has executed. RegionPlan serves as hint
    * as for the final destination for the underlying region but may not represent the
    * final state of assignment
    */
-  default void postBalance(final ObserverContext<MasterCoprocessorEnvironment> ctx, List<RegionPlan> plans)
+  default void postBalance(final ObserverContext<MasterCoprocessorEnvironment> ctx, BalanceRequest request, List<RegionPlan> plans)
       throws IOException {}
 
   /**
@@ -1249,15 +1253,19 @@ public interface MasterObserver {
    * @param groupName group name
    */
   default void preBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-                         String groupName) throws IOException {}
+      String groupName, BalanceRequest request) throws IOException {
+  }
 
   /**
    * Called after a region server group is removed
    * @param ctx the environment to interact with the framework and master
    * @param groupName group name
+   * @param request the request sent to the balancer
+   * @param response the response returned by the balancer
    */
   default void postBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-                          String groupName, boolean balancerRan) throws IOException {}
+      String groupName, BalanceRequest request, BalanceResponse response) throws IOException {
+  }
 
   /**
    * Called before servers are removed from rsgroup

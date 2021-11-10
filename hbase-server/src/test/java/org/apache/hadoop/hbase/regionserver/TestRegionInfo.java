@@ -29,7 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Assert;
@@ -175,17 +177,17 @@ public class TestRegionInfo {
 
   @Test
   public void testReadAndWriteHRegionInfoFile() throws IOException, InterruptedException {
-    HBaseTestingUtility htu = new HBaseTestingUtility();
+    HBaseTestingUtil htu = new HBaseTestingUtil();
     RegionInfo hri = RegionInfoBuilder.FIRST_META_REGIONINFO;
     Path basedir = htu.getDataTestDir();
     // Create a region.  That'll write the .regioninfo file.
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(htu.getConfiguration());
     FSTableDescriptors.tryUpdateMetaTableDescriptor(htu.getConfiguration());
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, basedir, htu.getConfiguration(),
+    HRegion r = HBaseTestingUtil.createRegionAndWAL(hri, basedir, htu.getConfiguration(),
         fsTableDescriptors.get(TableName.META_TABLE_NAME));
     // Get modtime on the file.
     long modtime = getModTime(r);
-    HBaseTestingUtility.closeRegionAndWAL(r);
+    HBaseTestingUtil.closeRegionAndWAL(r);
     Thread.sleep(1001);
     r = HRegion.openHRegion(basedir, hri, fsTableDescriptors.get(TableName.META_TABLE_NAME),
         null, htu.getConfiguration());
@@ -198,7 +200,7 @@ public class TestRegionInfo {
         r.getRegionFileSystem().getFileSystem(), r.getRegionFileSystem().getRegionDir());
     assertEquals(0,
       org.apache.hadoop.hbase.client.RegionInfo.COMPARATOR.compare(hri, deserializedHri));
-    HBaseTestingUtility.closeRegionAndWAL(r);
+    HBaseTestingUtil.closeRegionAndWAL(r);
   }
 
   long getModTime(final HRegion r) throws IOException {
@@ -256,6 +258,39 @@ public class TestRegionInfo {
     // Degenerate range
     try {
       hri.containsRange(Bytes.toBytes("z"), Bytes.toBytes("a"));
+      fail("Invalid range did not throw IAE");
+    } catch (IllegalArgumentException iae) {
+    }
+  }
+
+  @Test
+  public void testContainsRangeForMetaTable() {
+    TableDescriptor tableDesc =
+        TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableDesc.getTableName()).build();
+    byte[] startRow = HConstants.EMPTY_START_ROW;
+    byte[] row1 = Bytes.toBytes("a,a,0");
+    byte[] row2 = Bytes.toBytes("aaaaa,,1");
+    byte[] row3 = Bytes.toBytes("aaaaa,\u0000\u0000,2");
+    byte[] row4 = Bytes.toBytes("aaaaa,\u0001,3");
+    byte[] row5 = Bytes.toBytes("aaaaa,a,4");
+    byte[] row6 = Bytes.toBytes("aaaaa,\u1000,5");
+
+    // Single row range at start of region
+    assertTrue(hri.containsRange(startRow, startRow));
+    // Fully contained range
+    assertTrue(hri.containsRange(row1, row2));
+    assertTrue(hri.containsRange(row2, row3));
+    assertTrue(hri.containsRange(row3, row4));
+    assertTrue(hri.containsRange(row4, row5));
+    assertTrue(hri.containsRange(row5, row6));
+    // Range overlapping start of region
+    assertTrue(hri.containsRange(startRow, row2));
+    // Fully contained single-row range
+    assertTrue(hri.containsRange(row1, row1));
+    // Degenerate range
+    try {
+      hri.containsRange(row3, row2);
       fail("Invalid range did not throw IAE");
     } catch (IllegalArgumentException iae) {
     }
@@ -349,7 +384,7 @@ public class TestRegionInfo {
   public void testParseName() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[] startKey = Bytes.toBytes("startKey");
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     int replicaId = 42;
 
     // test without replicaId
@@ -379,7 +414,7 @@ public class TestRegionInfo {
     byte[] startKey = Bytes.toBytes("startKey");
     byte[] endKey = Bytes.toBytes("endKey");
     boolean split = false;
-    long regionId = System.currentTimeMillis();
+    long regionId = EnvironmentEdgeManager.currentTime();
     int replicaId = 42;
 
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).setEndKey(endKey)
@@ -417,7 +452,7 @@ public class TestRegionInfo {
     checkEquality(h, conf);
     // check HRIs with non-default replicaId
     h = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).setStartKey(startKey)
-      .setEndKey(endKey).setRegionId(System.currentTimeMillis()).setReplicaId(1).build();
+      .setEndKey(endKey).setRegionId(EnvironmentEdgeManager.currentTime()).setReplicaId(1).build();
     checkEquality(h, conf);
     assertArrayEquals(RegionInfoDisplay.HIDDEN_END_KEY,
       RegionInfoDisplay.getEndKeyForDisplay(h, conf));

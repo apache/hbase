@@ -23,7 +23,7 @@ import java.util.Random;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -50,7 +51,7 @@ public class TestExpiredMobFileCleaner {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestExpiredMobFileCleaner.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static TableName tableName = TableName.valueOf("TestExpiredMobFileCleaner");
   private final static String family = "family";
   private final static byte[] row1 = Bytes.toBytes("row1");
@@ -138,14 +139,14 @@ public class TestExpiredMobFileCleaner {
     Path mobDirPath = MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, family);
 
     byte[] dummyData = makeDummyData(600);
-    long ts = System.currentTimeMillis() - 3 * secondsOfDay() * 1000; // 3 days before
+    long ts = EnvironmentEdgeManager.currentTime() - 3 * secondsOfDay() * 1000; // 3 days before
     putKVAndFlush(table, row1, dummyData, ts);
     FileStatus[] firstFiles = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
     //the first mob file
     assertEquals("Before cleanup without delay 1", 1, firstFiles.length);
     String firstFile = firstFiles[0].getPath().getName();
 
-    ts = System.currentTimeMillis() - 1 * secondsOfDay() * 1000; // 1 day before
+    ts = EnvironmentEdgeManager.currentTime() - 1 * secondsOfDay() * 1000; // 1 day before
     putKVAndFlush(table, row2, dummyData, ts);
     FileStatus[] secondFiles = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
     //now there are 2 mob files

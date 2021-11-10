@@ -22,7 +22,7 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -57,7 +58,7 @@ public class TestRaceBetweenSCPAndDTP {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRaceBetweenSCPAndDTP.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName NAME = TableName.valueOf("Race");
 
@@ -69,8 +70,8 @@ public class TestRaceBetweenSCPAndDTP {
 
   private static final class AssignmentManagerForTest extends AssignmentManager {
 
-    public AssignmentManagerForTest(MasterServices master) {
-      super(master);
+    public AssignmentManagerForTest(MasterServices master, MasterRegion masterRegion) {
+      super(master,masterRegion);
     }
 
     @Override
@@ -95,8 +96,9 @@ public class TestRaceBetweenSCPAndDTP {
     }
 
     @Override
-    protected AssignmentManager createAssignmentManager(MasterServices master) {
-      return new AssignmentManagerForTest(master);
+    protected AssignmentManager createAssignmentManager(MasterServices master,
+      MasterRegion masterRegion) {
+      return new AssignmentManagerForTest(master, masterRegion);
     }
   }
 

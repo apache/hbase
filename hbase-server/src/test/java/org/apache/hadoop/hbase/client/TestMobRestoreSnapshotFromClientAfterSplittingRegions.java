@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
@@ -55,7 +55,7 @@ public class TestMobRestoreSnapshotFromClientAfterSplittingRegions
   }
 
   @Override
-  protected void verifyRowCount(HBaseTestingUtility util, TableName tableName, long expectedRows)
+  protected void verifyRowCount(HBaseTestingUtil util, TableName tableName, long expectedRows)
       throws IOException {
     MobSnapshotTestingUtils.verifyMobRowCount(util, tableName, expectedRows);
   }

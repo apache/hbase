@@ -26,7 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -58,7 +58,7 @@ public class TestRegionReplicasAreDistributed {
   private static final int NB_SERVERS = 3;
   private static Table table;
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
   Map<ServerName, Collection<RegionInfo>> serverVsOnlineRegions;
   Map<ServerName, Collection<RegionInfo>> serverVsOnlineRegions2;
@@ -67,7 +67,7 @@ public class TestRegionReplicasAreDistributed {
 
   @BeforeClass
   public static void before() throws Exception {
-    HTU.getConfiguration().setInt(">hbase.master.wait.on.regionservers.mintostart", 3);
+    HTU.getConfiguration().setInt("hbase.master.wait.on.regionservers.mintostart", 3);
 
     HTU.startMiniCluster(NB_SERVERS);
     Thread.sleep(3000);

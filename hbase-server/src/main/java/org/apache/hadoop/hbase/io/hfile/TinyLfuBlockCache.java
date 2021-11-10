@@ -61,14 +61,14 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
   private static final long DEFAULT_MAX_BLOCK_SIZE = 16L * 1024L * 1024L;
   private static final int STAT_THREAD_PERIOD_SECONDS = 5 * 60;
 
-  private final Eviction<BlockCacheKey, Cacheable> policy;
-  private final ScheduledExecutorService statsThreadPool;
+  private transient final Eviction<BlockCacheKey, Cacheable> policy;
+  private transient final ScheduledExecutorService statsThreadPool;
   private final long maxBlockSize;
   private final CacheStats stats;
 
-  private BlockCache victimCache;
+  private transient BlockCache victimCache;
 
-  final Cache<BlockCacheKey, Cacheable> cache;
+  transient final Cache<BlockCacheKey, Cacheable> cache;
 
   /**
    * Creates a block cache.
@@ -158,7 +158,13 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey,
       boolean caching, boolean repeat, boolean updateCacheMetrics) {
-    Cacheable value = cache.getIfPresent(cacheKey);
+    Cacheable value = cache.asMap().computeIfPresent(cacheKey, (blockCacheKey, cacheable) -> {
+      // It will be referenced by RPC path, so increase here. NOTICE: Must do the retain inside
+      // this block. because if retain outside the map#computeIfPresent, the evictBlock may remove
+      // the block and release, then we're retaining a block with refCnt=0 which is disallowed.
+      cacheable.retain();
+      return cacheable;
+    });
     if (value == null) {
       if (repeat) {
         return null;
@@ -169,9 +175,6 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
       if (victimCache != null) {
         value = victimCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
         if ((value != null) && caching) {
-          if ((value instanceof HFileBlock) && ((HFileBlock) value).isSharedMem()) {
-            value = HFileBlock.deepCloneOnHeap((HFileBlock) value);
-          }
           cacheBlock(cacheKey, value);
         }
       }
@@ -192,17 +195,48 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
       // If there are a lot of blocks that are too big this can make the logs too noisy (2% logged)
       if (stats.failInsert() % 50 == 0) {
         LOG.warn(String.format(
-            "Trying to cache too large a block %s @ %,d is %,d which is larger than %,d",
-            key.getHfileName(), key.getOffset(), value.heapSize(), DEFAULT_MAX_BLOCK_SIZE));
+          "Trying to cache too large a block %s @ %,d is %,d which is larger than %,d",
+          key.getHfileName(), key.getOffset(), value.heapSize(), DEFAULT_MAX_BLOCK_SIZE));
       }
     } else {
+      value = asReferencedHeapBlock(value);
       cache.put(key, value);
     }
+  }
+
+  /**
+   * The block cached in TinyLfuBlockCache will always be an heap block: on the one side, the heap
+   * access will be more faster then off-heap, the small index block or meta block cached in
+   * CombinedBlockCache will benefit a lot. on other side, the TinyLfuBlockCache size is always
+   * calculated based on the total heap size, if caching an off-heap block in TinyLfuBlockCache, the
+   * heap size will be messed up. Here we will clone the block into an heap block if it's an
+   * off-heap block, otherwise just use the original block. The key point is maintain the refCnt of
+   * the block (HBASE-22127): <br>
+   * 1. if cache the cloned heap block, its refCnt is an totally new one, it's easy to handle; <br>
+   * 2. if cache the original heap block, we're sure that it won't be tracked in ByteBuffAllocator's
+   * reservoir, if both RPC and TinyLfuBlockCache release the block, then it can be
+   * garbage collected by JVM, so need a retain here.
+   *
+   * @param buf the original block
+   * @return an block with an heap memory backend.
+   */
+  private Cacheable asReferencedHeapBlock(Cacheable buf) {
+    if (buf instanceof HFileBlock) {
+      HFileBlock blk = ((HFileBlock) buf);
+      if (blk.isSharedMem()) {
+        return HFileBlock.deepCloneOnHeap(blk);
+      }
+    }
+    // The block will be referenced by this TinyLfuBlockCache, so should increase its refCnt here.
+    return buf.retain();
   }
 
   @Override
   public boolean evictBlock(BlockCacheKey cacheKey) {
     Cacheable value = cache.asMap().remove(cacheKey);
+    if (value != null) {
+      value.release();
+    }
     return (value != null);
   }
 

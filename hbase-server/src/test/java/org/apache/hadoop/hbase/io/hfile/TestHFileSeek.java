@@ -28,13 +28,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.RandomDistribution;
 import org.apache.hadoop.io.BytesWritable;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
@@ -189,7 +190,7 @@ public class TestHFileSeek extends TestCase {
     Reader reader = TestHFile.createReaderFromStream(context, new CacheConfig(conf), conf);
     KeySampler kSampler = new KeySampler(rng, ((KeyValue) reader.getFirstKey().get()).getKey(),
         ((KeyValue) reader.getLastKey().get()).getKey(), keyLenGen);
-    HFileScanner scanner = reader.getScanner(false, USE_PREAD);
+    HFileScanner scanner = reader.getScanner(conf, false, USE_PREAD);
     BytesWritable key = new BytesWritable();
     timer.reset();
     timer.start();
@@ -263,7 +264,7 @@ public class TestHFileSeek extends TestCase {
     int minWordLen = 5;
     int maxWordLen = 20;
 
-    private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    private HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     String rootDir =
       TEST_UTIL.getDataTestDir("TestTFileSeek").toString();
     String file = "TestTFileSeek";

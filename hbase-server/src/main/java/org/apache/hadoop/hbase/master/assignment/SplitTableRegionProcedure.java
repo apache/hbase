@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.RegionSplitRestriction;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -372,7 +373,7 @@ public class SplitTableRegionProcedure
           break;
         case SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS:
         case SPLIT_TABLE_REGION_WRITE_MAX_SEQUENCE_ID_FILE:
-          // Doing nothing, as re-open parent region would clean up daughter region directories.
+          deleteDaughterRegions(env);
           break;
         case SPLIT_TABLE_REGIONS_CHECK_CLOSED_REGIONS:
           // Doing nothing, in SPLIT_TABLE_REGION_CLOSE_PARENT_REGION,
@@ -618,13 +619,13 @@ public class SplitTableRegionProcedure
     final FileSystem fs = mfs.getFileSystem();
     HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
       env.getMasterConfiguration(), fs, tabledir, getParentRegion(), false);
+
     regionFs.createSplitsDir(daughterOneRI, daughterTwoRI);
 
     Pair<Integer, Integer> expectedReferences = splitStoreFiles(env, regionFs);
 
     assertReferenceFileCount(fs, expectedReferences.getFirst(),
       regionFs.getSplitsDir(daughterOneRI));
-    //Move the files from the temporary .splits to the final /table/region directory
     regionFs.commitDaughterRegion(daughterOneRI);
     assertReferenceFileCount(fs, expectedReferences.getFirst(),
       new Path(tabledir, daughterOneRI.getEncodedName()));
@@ -634,6 +635,15 @@ public class SplitTableRegionProcedure
     regionFs.commitDaughterRegion(daughterTwoRI);
     assertReferenceFileCount(fs, expectedReferences.getSecond(),
       new Path(tabledir, daughterTwoRI.getEncodedName()));
+  }
+
+  private void deleteDaughterRegions(final MasterProcedureEnv env) throws IOException {
+    final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
+    final Path tabledir = CommonFSUtils.getTableDir(mfs.getRootDir(), getTableName());
+    HRegionFileSystem.deleteRegionFromFileSystem(env.getMasterConfiguration(),
+      mfs.getFileSystem(), tabledir, daughterOneRI);
+    HRegionFileSystem.deleteRegionFromFileSystem(env.getMasterConfiguration(),
+      mfs.getFileSystem(), tabledir, daughterTwoRI);
   }
 
   /**
@@ -648,9 +658,9 @@ public class SplitTableRegionProcedure
     // there's files to split. It then fires up everything, waits for
     // completion and finally checks for any exception
     //
-    // Note: splitStoreFiles creates daughter region dirs under the parent splits dir
-    // Nothing to unroll here if failure -- re-run createSplitsDir will
-    // clean this up.
+    // Note: From HBASE-26187, splitStoreFiles now creates daughter region dirs straight under the
+    // table dir. In case of failure, the proc would go through this again, already existing
+    // region dirs and split files would just be ignored, new split files should get created.
     int nbFiles = 0;
     final Map<String, Collection<StoreFileInfo>> files =
         new HashMap<String, Collection<StoreFileInfo>>(htd.getColumnFamilyCount());
@@ -702,12 +712,17 @@ public class SplitTableRegionProcedure
       final ColumnFamilyDescriptor hcd = htd.getColumnFamily(familyName);
       final Collection<StoreFileInfo> storeFiles = e.getValue();
       if (storeFiles != null && storeFiles.size() > 0) {
+        final Configuration storeConfiguration =
+          StoreUtils.createStoreConfiguration(env.getMasterConfiguration(), htd, hcd);
         for (StoreFileInfo storeFileInfo : storeFiles) {
           // As this procedure is running on master, use CacheConfig.DISABLED means
           // don't cache any block.
-          StoreFileSplitter sfs =
-              new StoreFileSplitter(regionFs, familyName, new HStoreFile(
-                  storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED));
+          // We also need to pass through a suitable CompoundConfiguration as if this
+          // is running in a regionserver's Store context, or we might not be able
+          // to read the hfiles.
+          storeFileInfo.setConf(storeConfiguration);
+          StoreFileSplitter sfs = new StoreFileSplitter(regionFs, familyName,
+            new HStoreFile(storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED));
           futures.add(threadPool.submit(sfs));
         }
       }

@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -36,20 +35,18 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.io.WALLink;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
-import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
-import org.apache.hadoop.hbase.replication.ReplicationTracker;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
@@ -208,8 +205,9 @@ public class DumpReplicationQueues extends Configured implements Tool {
     Connection connection = ConnectionFactory.createConnection(conf);
     Admin admin = connection.getAdmin();
 
-    ZKWatcher zkw = new ZKWatcher(conf, "DumpReplicationQueues" + System.currentTimeMillis(),
-        new WarnOnlyAbortable(), true);
+    ZKWatcher zkw = new ZKWatcher(conf, "DumpReplicationQueues" +
+        EnvironmentEdgeManager.currentTime(),
+      new WarnOnlyAbortable(), true);
 
     try {
       // Our zk watcher
@@ -299,16 +297,13 @@ public class DumpReplicationQueues extends Configured implements Tool {
     return sb.toString();
   }
 
-  public String dumpQueues(ZKWatcher zkw, Set<String> peerIds,
-      boolean hdfs) throws Exception {
+  public String dumpQueues(ZKWatcher zkw, Set<String> peerIds, boolean hdfs) throws Exception {
     ReplicationQueueStorage queueStorage;
-    ReplicationTracker replicationTracker;
     StringBuilder sb = new StringBuilder();
 
     queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, getConf());
-    replicationTracker = ReplicationFactory.getReplicationTracker(zkw, new WarnOnlyAbortable(),
-      new WarnOnlyStoppable());
-    Set<ServerName> liveRegionServers = new HashSet<>(replicationTracker.getListOfRegionServers());
+    Set<ServerName> liveRegionServers = ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode)
+      .stream().map(ServerName::parseServerName).collect(Collectors.toSet());
 
     // Loops each peer on each RS and dumps the queues
     List<ServerName> regionservers = queueStorage.getListOfReplicators();
@@ -408,18 +403,6 @@ public class DumpReplicationQueues extends Configured implements Tool {
 
     @Override
     public boolean isAborted() {
-      return false;
-    }
-  }
-
-  private static class WarnOnlyStoppable implements Stoppable {
-    @Override
-    public void stop(String why) {
-      LOG.warn("DumpReplicationQueue received stop, ignoring.  Reason: " + why);
-    }
-
-    @Override
-    public boolean isStopped() {
       return false;
     }
   }

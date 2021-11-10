@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.RPC_CODEC_CONF_KEY;
+import static org.apache.hadoop.hbase.ipc.RpcClient.DEFAULT_CODEC_CLASS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
@@ -35,10 +37,14 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -70,7 +76,7 @@ public class TestIncrementsFromClientSide {
       HBaseClassTestRule.forClass(TestIncrementsFromClientSide.class);
 
   final Logger LOG = LoggerFactory.getLogger(getClass());
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static byte [] ROW = Bytes.toBytes("testRow");
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
@@ -121,18 +127,18 @@ public class TestIncrementsFromClientSide {
         Table table = connection.getTableBuilder(TableName.valueOf(name.getMethodName()), null)
           .setOperationTimeout(3 * 1000).build()) {
       Increment inc = new Increment(ROW);
-      inc.addColumn(HBaseTestingUtility.fam1, QUALIFIER, 1);
+      inc.addColumn(HBaseTestingUtil.fam1, QUALIFIER, 1);
       Result result = table.increment(inc);
 
       Cell[] cells = result.rawCells();
       assertEquals(1, cells.length);
-      assertIncrementKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, 1);
+      assertIncrementKey(cells[0], ROW, HBaseTestingUtil.fam1, QUALIFIER, 1);
 
       // Verify expected result
       Result readResult = table.get(new Get(ROW));
       cells = readResult.rawCells();
       assertEquals(1, cells.length);
-      assertIncrementKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, 1);
+      assertIncrementKey(cells[0], ROW, HBaseTestingUtil.fam1, QUALIFIER, 1);
     }
   }
 
@@ -161,7 +167,7 @@ public class TestIncrementsFromClientSide {
       Table table = connection.getTableBuilder(TableName.valueOf(name.getMethodName()), null)
         .setOperationTimeout(3 * 1000).build()) {
       Increment inc = new Increment(ROW);
-      inc.addColumn(HBaseTestingUtility.fam1, QUALIFIER, 1);
+      inc.addColumn(HBaseTestingUtil.fam1, QUALIFIER, 1);
 
       // Batch increment
       Object[] results = new Object[1];
@@ -169,13 +175,13 @@ public class TestIncrementsFromClientSide {
 
       Cell[] cells = ((Result) results[0]).rawCells();
       assertEquals(1, cells.length);
-      assertIncrementKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, 1);
+      assertIncrementKey(cells[0], ROW, HBaseTestingUtil.fam1, QUALIFIER, 1);
 
       // Verify expected result
       Result readResult = table.get(new Get(ROW));
       cells = readResult.rawCells();
       assertEquals(1, cells.length);
-      assertIncrementKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, 1);
+      assertIncrementKey(cells[0], ROW, HBaseTestingUtil.fam1, QUALIFIER, 1);
     }
   }
 
@@ -546,5 +552,52 @@ public class TestIncrementsFromClientSide {
 
   public static String filterStringSoTableNameSafe(final String str) {
     return str.replaceAll("\\[fast\\=(.*)\\]", ".FAST.is.$1");
+  }
+
+  /*
+    Test that we have only 1 ttl tag with increment mutation.
+   */
+  @Test
+  public void testIncrementWithTtlTags() throws Exception {
+    LOG.info("Starting " + this.name.getMethodName());
+    final TableName tableName =
+            TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
+    final byte[] COLUMN = Bytes.toBytes("column");
+
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    // Set RPC_CODEC_CONF_KEY to KeyValueCodecWithTags so that scan will return tags.
+    conf.set(RPC_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
+    conf.set(DEFAULT_CODEC_CLASS, "");
+    try (Connection connection = ConnectionFactory.createConnection(conf);
+         Table table = connection.getTable(tableName)) {
+      for (int i = 0; i < 10; i++) {
+        Increment inc = new Increment(ROW);
+        inc.addColumn(FAMILY, COLUMN, 1);
+        long ttl = i + 3600000 ;
+        inc.setTTL(ttl);
+        ht.increment(inc);
+
+        Scan scan = new Scan().withStartRow(ROW);
+        ResultScanner scanner = table.getScanner(scan);
+        int count = 0;
+        Result result;
+        while ((result = scanner.next()) != null) {
+          Cell[] cells =  result.rawCells();
+          for (Cell cell: cells) {
+            List<Tag> tags = PrivateCellUtil.getTags(cell);
+            // Make sure there is only 1 tag.
+            assertEquals(1, tags.size());
+            Tag tag = tags.get(0);
+            assertEquals(TagType.TTL_TAG_TYPE, tag.getType());
+            long ttlTagValue = Bytes.toLong(tag.getValueArray(), tag.getValueOffset());
+            assertEquals(ttl, ttlTagValue);
+          }
+          count++;
+        }
+        // Make sure there is only 1 result.
+        assertEquals(1, count);
+      }
+    }
   }
 }

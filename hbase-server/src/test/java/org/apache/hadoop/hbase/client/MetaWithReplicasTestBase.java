@@ -25,16 +25,15 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.junit.AfterClass;
 import org.junit.Rule;
 import org.slf4j.Logger;
@@ -47,7 +46,7 @@ public class MetaWithReplicasTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(MetaWithReplicasTestBase.class);
 
-  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   protected static final int REGIONSERVERS_COUNT = 3;
 
@@ -58,15 +57,15 @@ public class MetaWithReplicasTestBase {
     TEST_UTIL.getConfiguration().setInt("zookeeper.session.timeout", 30000);
     TEST_UTIL.getConfiguration()
       .setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
-    StartMiniClusterOption option = StartMiniClusterOption.builder().numAlwaysStandByMasters(1)
-      .numMasters(1).numRegionServers(REGIONSERVERS_COUNT).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
+      .numAlwaysStandByMasters(1).numMasters(1).numRegionServers(REGIONSERVERS_COUNT).build();
     TEST_UTIL.startMiniCluster(option);
     Admin admin = TEST_UTIL.getAdmin();
-    HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, 3);
+    HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, 3);
     AssignmentManager am = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     Set<ServerName> sns = new HashSet<ServerName>();
-    ServerName hbaseMetaServerName =
-      MetaTableLocator.getMetaRegionLocation(TEST_UTIL.getZooKeeperWatcher());
+    ServerName hbaseMetaServerName = am.getRegionStates()
+      .getRegionStateNode(RegionInfoBuilder.FIRST_META_REGIONINFO).getRegionLocation();
     LOG.info("HBASE:META DEPLOY: on " + hbaseMetaServerName);
     sns.add(hbaseMetaServerName);
     for (int replicaId = 1; replicaId < 3; replicaId++) {

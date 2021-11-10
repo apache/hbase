@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -612,9 +613,9 @@ public class TestHeapSize  {
       // do estimate in advance to ensure class is loaded
       ClassSize.estimateBase(cl, false);
 
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       ClassSize.estimateBase(cl, false);
-      long endTime = System.currentTimeMillis();
+      long endTime = EnvironmentEdgeManager.currentTime();
       assertTrue(endTime - startTime < 5);
     }
   }

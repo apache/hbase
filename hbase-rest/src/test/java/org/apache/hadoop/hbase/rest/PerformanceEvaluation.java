@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.RemoteAdmin;
 import org.apache.hadoop.hbase.util.ByteArrayHashKey;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hbase.util.MurmurHash;
 import org.apache.hadoop.hbase.util.Pair;
@@ -836,7 +837,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     // Below is make it so when Tests are all running in the one
     // jvm, that they each have a differently seeded Random.
     private static final Random randomSeed =
-      new Random(System.currentTimeMillis());
+      new Random(EnvironmentEdgeManager.currentTime());
     private static long nextRandomSeed() {
       return randomSeed.nextLong();
     }

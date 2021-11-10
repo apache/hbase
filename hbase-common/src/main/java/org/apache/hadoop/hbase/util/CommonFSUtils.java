@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -30,7 +28,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -764,77 +761,6 @@ public final class CommonFSUtils {
     // But short circuit buffer size is normally not set.  Put in place the hbase wanted size.
     int hbaseSize = conf.getInt("hbase." + dfsKey, defaultSize);
     conf.setIfUnset(dfsKey, Integer.toString(hbaseSize));
-  }
-
-  private static final class DfsBuilderUtility {
-    private static final Class<?> BUILDER;
-    private static final Method REPLICATE;
-
-    static {
-      String builderName = "org.apache.hadoop.hdfs.DistributedFileSystem$HdfsDataOutputStreamBuilder";
-      Class<?> builderClass = null;
-      try {
-        builderClass = Class.forName(builderName);
-      } catch (ClassNotFoundException e) {
-        LOG.debug("{} not available, will not set replicate when creating output stream", builderName);
-      }
-      Method replicateMethod = null;
-      if (builderClass != null) {
-        try {
-          replicateMethod = builderClass.getMethod("replicate");
-          LOG.debug("Using builder API via reflection for DFS file creation.");
-        } catch (NoSuchMethodException e) {
-          LOG.debug("Could not find replicate method on builder; will not set replicate when" +
-            " creating output stream", e);
-        }
-      }
-      BUILDER = builderClass;
-      REPLICATE = replicateMethod;
-    }
-
-    /**
-     * Attempt to use builder API via reflection to call the replicate method on the given builder.
-     */
-    static void replicate(FSDataOutputStreamBuilder<?, ?> builder) {
-      if (BUILDER != null && REPLICATE != null && BUILDER.isAssignableFrom(builder.getClass())) {
-        try {
-          REPLICATE.invoke(builder);
-        } catch (IllegalAccessException | InvocationTargetException e) {
-          // Should have caught this failure during initialization, so log full trace here
-          LOG.warn("Couldn't use reflection with builder API", e);
-        }
-      }
-    }
-  }
-
-  /**
-   * Attempt to use builder API via reflection to create a file with the given parameters and
-   * replication enabled.
-   * <p/>
-   * Will not attempt to enable replication when passed an HFileSystem.
-   */
-  public static FSDataOutputStream createForWal(FileSystem fs, Path path, boolean overwrite)
-    throws IOException {
-    FSDataOutputStreamBuilder<?, ?> builder = fs.createFile(path).overwrite(overwrite);
-    DfsBuilderUtility.replicate(builder);
-    return builder.build();
-  }
-
-  /**
-   * Attempt to use builder API via reflection to create a file with the given parameters and
-   * replication enabled.
-   * <p/>
-   * Will not attempt to enable replication when passed an HFileSystem.
-   */
-  public static FSDataOutputStream createForWal(FileSystem fs, Path path, boolean overwrite,
-    int bufferSize, short replication, long blockSize, boolean isRecursive) throws IOException {
-    FSDataOutputStreamBuilder<?, ?> builder = fs.createFile(path).overwrite(overwrite)
-      .bufferSize(bufferSize).replication(replication).blockSize(blockSize);
-    if (isRecursive) {
-      builder.recursive();
-    }
-    DfsBuilderUtility.replicate(builder);
-    return builder.build();
   }
 
   /**

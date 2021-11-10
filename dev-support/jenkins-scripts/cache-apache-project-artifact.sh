@@ -21,6 +21,7 @@ function usage {
   echo "Usage: ${0} [options] /path/to/download/file.tar.gz download/fragment/eg/project/subdir/some-artifact-version.tar.gz"
   echo ""
   echo "    --force                       for a redownload even if /path/to/download/file.tar.gz exists."
+  echo "    --verify-tar-gz               Only use a cached file if it can be parsed as a gzipped tarball."
   echo "    --working-dir /path/to/use    Path for writing tempfiles. must exist."
   echo "                                  defaults to making a directory via mktemp that we clean."
   echo "    --keys url://to/project/KEYS  where to get KEYS. needed to check signature on download."
@@ -35,6 +36,7 @@ fi
 
 # Get arguments
 declare done_if_cached="true"
+declare verify_tar_gz="false"
 declare working_dir
 declare cleanup="true"
 declare keys
@@ -42,6 +44,7 @@ while [ $# -gt 0 ]
 do
   case "$1" in
     --force) shift; done_if_cached="false";;
+    --verify-tar-gz) shift; verify_tar_gz="true";;
     --working-dir) shift; working_dir=$1; cleanup="false"; shift;;
     --keys) shift; keys=$1; shift;;
     --) shift; break;;
@@ -58,9 +61,18 @@ fi
 target="$1"
 artifact="$2"
 
-if [ -f "${target}" ] && [ "true" = "${done_if_cached}" ]; then
-  echo "Reusing existing download of '${artifact}'."
-  exit 0
+if [ -f "${target}" ] && [ -s "${target}" ] && [ -r "${target}" ] && [ "true" = "${done_if_cached}" ]; then
+  if [ "false" = "${verify_tar_gz}" ]; then
+    echo "Reusing existing download of '${artifact}'."
+    exit 0
+  fi
+  if ! tar tzf "${target}" > /dev/null 2>&1; then
+    echo "Cached artifact is not a well formed gzipped tarball; clearing the cached file at '${target}'."
+    rm -rf "${target}"
+  else
+    echo "Reusing existing download of '${artifact}', which is a well formed gzipped tarball."
+    exit 0
+  fi
 fi
 
 if [ -z "${working_dir}" ]; then

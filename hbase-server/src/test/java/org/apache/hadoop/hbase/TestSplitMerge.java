@@ -46,7 +46,7 @@ public class TestSplitMerge {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSplitMerge.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void setUp() throws Exception {

@@ -29,6 +29,8 @@ import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory;
 import java.util.concurrent.ThreadFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ipc.NettyRpcClientConfigHelper;
+import org.apache.hadoop.hbase.wal.NettyAsyncFSWALConfigHelper;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -75,5 +77,13 @@ public class NettyEventLoopGroupConfig {
 
   public Class<? extends Channel> clientChannelClass() {
     return clientChannelClass;
+  }
+
+  public static NettyEventLoopGroupConfig setup(Configuration conf, String threadPoolName) {
+    // Initialize netty event loop group at start as we may use it for rpc server, rpc client & WAL.
+    NettyEventLoopGroupConfig nelgc = new NettyEventLoopGroupConfig(conf, threadPoolName);
+    NettyRpcClientConfigHelper.setEventLoopConfig(conf, nelgc.group(), nelgc.clientChannelClass());
+    NettyAsyncFSWALConfigHelper.setEventLoopConfig(conf, nelgc.group(), nelgc.clientChannelClass());
+    return nelgc;
   }
 }

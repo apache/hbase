@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -71,7 +72,7 @@ public class TestSerialization {
     byte[] row = Bytes.toBytes(name);
     byte[] fam = Bytes.toBytes("fam");
     byte[] qf = Bytes.toBytes("qf");
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     byte[] val = Bytes.toBytes("val");
     KeyValue kv = new KeyValue(row, fam, qf, ts, val);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -202,8 +203,7 @@ public class TestSerialization {
     byte[] row = Bytes.toBytes("row");
     byte[] fam = Bytes.toBytes("fam");
     byte[] qf1 = Bytes.toBytes("qf1");
-
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     int maxVersions = 2;
 
     Get get = new Get(row);
@@ -241,8 +241,7 @@ public class TestSerialization {
     byte[] stopRow = Bytes.toBytes("stopRow");
     byte[] fam = Bytes.toBytes("fam");
     byte[] qf1 = Bytes.toBytes("qf1");
-
-    long ts = System.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     int maxVersions = 2;
 
     Scan scan = new Scan().withStartRow(startRow).withStopRow(stopRow);

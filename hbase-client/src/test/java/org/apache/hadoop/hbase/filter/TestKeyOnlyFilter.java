@@ -25,7 +25,7 @@ import java.util.Collection;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -54,7 +54,7 @@ public class TestKeyOnlyFilter {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
+    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED;
   }
 
   @Test

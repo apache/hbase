@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -247,9 +248,83 @@ public class TestSimpleRpcScheduler {
     testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE);
   }
 
+  @Test
+  public void testPluggableRpcQueue() throws Exception {
+    testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE,
+      "org.apache.hadoop.hbase.ipc.TestPluggableQueueImpl");
+
+    try {
+      testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE,
+        "MissingClass");
+      fail("Expected a PluggableRpcQueueNotFound for unloaded class");
+    } catch (PluggableRpcQueueNotFound e) {
+      // expected
+    } catch (Exception e) {
+      fail("Expected a PluggableRpcQueueNotFound for unloaded class, but instead got " + e);
+    }
+
+    try {
+      testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE,
+        "org.apache.hadoop.hbase.ipc.SimpleRpcServer");
+      fail("Expected a PluggableRpcQueueNotFound for incompatible class");
+    } catch (PluggableRpcQueueNotFound e) {
+      // expected
+    } catch (Exception e) {
+      fail("Expected a PluggableRpcQueueNotFound for incompatible class, but instead got " + e);
+    }
+  }
+
+  @Test
+  public void testPluggableRpcQueueCanListenToConfigurationChanges() throws Exception {
+
+    Configuration schedConf = HBaseConfiguration.create();
+
+    schedConf.setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 2);
+    schedConf.setInt("hbase.ipc.server.max.callqueue.length", 5);
+    schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
+      RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE);
+    schedConf.set(RpcExecutor.PLUGGABLE_CALL_QUEUE_CLASS_NAME,
+      "org.apache.hadoop.hbase.ipc.TestPluggableQueueImpl");
+
+    PriorityFunction priority = mock(PriorityFunction.class);
+    when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
+    SimpleRpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 0, 0, 0, priority,
+      HConstants.QOS_THRESHOLD);
+    try {
+      scheduler.start();
+
+      CallRunner putCallTask = mock(CallRunner.class);
+      ServerCall putCall = mock(ServerCall.class);
+      putCall.param = RequestConverter.buildMutateRequest(
+        Bytes.toBytes("abc"), new Put(Bytes.toBytes("row")));
+      RequestHeader putHead = RequestHeader.newBuilder().setMethodName("mutate").build();
+      when(putCallTask.getRpcCall()).thenReturn(putCall);
+      when(putCall.getHeader()).thenReturn(putHead);
+
+      assertTrue(scheduler.dispatch(putCallTask));
+
+      schedConf.setInt("hbase.ipc.server.max.callqueue.length", 4);
+      scheduler.onConfigurationChange(schedConf);
+      assertTrue(TestPluggableQueueImpl.hasObservedARecentConfigurationChange());
+      waitUntilQueueEmpty(scheduler);
+    } finally {
+      scheduler.stop();
+    }
+  }
+
   private void testRpcScheduler(final String queueType) throws Exception {
+    testRpcScheduler(queueType, null);
+  }
+
+  private void testRpcScheduler(final String queueType, final String pluggableQueueClass)
+    throws Exception {
+
     Configuration schedConf = HBaseConfiguration.create();
     schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, queueType);
+
+    if (RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE.equals(queueType)) {
+      schedConf.set(RpcExecutor.PLUGGABLE_CALL_QUEUE_CLASS_NAME, pluggableQueueClass);
+    }
 
     PriorityFunction priority = mock(PriorityFunction.class);
     when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
@@ -480,7 +555,12 @@ public class TestSimpleRpcScheduler {
       for (String threadNamePrefix : threadNamePrefixs) {
         String threadName = Thread.currentThread().getName();
         if (threadName.startsWith(threadNamePrefix)) {
-          return timeQ.poll().longValue() + offset;
+          if (timeQ != null) {
+            Long qTime = timeQ.poll();
+            if (qTime != null) {
+              return qTime.longValue() + offset;
+            }
+          }
         }
       }
       return System.currentTimeMillis();
@@ -511,17 +591,16 @@ public class TestSimpleRpcScheduler {
     try {
       // Loading mocked call runner can take a good amount of time the first time through
       // (haven't looked why). Load it for first time here outside of the timed loop.
-      getMockedCallRunner(System.currentTimeMillis(), 2);
+      getMockedCallRunner(EnvironmentEdgeManager.currentTime(), 2);
       scheduler.start();
       EnvironmentEdgeManager.injectEdge(envEdge);
       envEdge.offset = 5;
       // Calls faster than min delay
       // LOG.info("Start");
       for (int i = 0; i < 100; i++) {
-        long time = System.currentTimeMillis();
+        long time = EnvironmentEdgeManager.currentTime();
         envEdge.timeQ.put(time);
         CallRunner cr = getMockedCallRunner(time, 2);
-        // LOG.info("" + i + " " + (System.currentTimeMillis() - now) + " cr=" + cr);
         scheduler.dispatch(cr);
       }
       // LOG.info("Loop done");
@@ -534,7 +613,7 @@ public class TestSimpleRpcScheduler {
       envEdge.offset = 151;
       // calls slower than min delay, but not individually slow enough to be dropped
       for (int i = 0; i < 20; i++) {
-        long time = System.currentTimeMillis();
+        long time = EnvironmentEdgeManager.currentTime();
         envEdge.timeQ.put(time);
         CallRunner cr = getMockedCallRunner(time, 2);
         scheduler.dispatch(cr);
@@ -549,7 +628,7 @@ public class TestSimpleRpcScheduler {
       envEdge.offset = 2000;
       // now slow calls and the ones to be dropped
       for (int i = 0; i < 60; i++) {
-        long time = System.currentTimeMillis();
+        long time = EnvironmentEdgeManager.currentTime();
         envEdge.timeQ.put(time);
         CallRunner cr = getMockedCallRunner(time, 100);
         scheduler.dispatch(cr);

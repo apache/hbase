@@ -27,7 +27,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -73,8 +73,8 @@ public class TestMiniClusterLoadSequential {
   protected static final int NUM_THREADS = 8;
   protected static final int NUM_RS = 2;
   protected static final int TIMEOUT_MS = 180000;
-  protected static final HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  protected static final HBaseTestingUtil TEST_UTIL =
+      new HBaseTestingUtil();
 
   protected final Configuration conf = TEST_UTIL.getConfiguration();
   protected final boolean isMultiPut;
@@ -153,7 +153,7 @@ public class TestMiniClusterLoadSequential {
 
   protected void createPreSplitLoadTestTable(TableDescriptor tableDescriptor,
       ColumnFamilyDescriptor familyDescriptor) throws IOException {
-    HBaseTestingUtility.createPreSplitLoadTestTable(conf, tableDescriptor, familyDescriptor);
+    HBaseTestingUtil.createPreSplitLoadTestTable(conf, tableDescriptor, familyDescriptor);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableDescriptor.getTableName());
   }
 

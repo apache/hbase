@@ -45,12 +45,12 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -135,18 +135,18 @@ public class TestSplitTransactionOnCluster {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitTransactionOnCluster.class);
   private Admin admin = null;
-  private MiniHBaseCluster cluster = null;
+  private SingleProcessHBaseCluster cluster = null;
   private static final int NB_SERVERS = 3;
 
-  static final HBaseTestingUtility TESTING_UTIL =
-    new HBaseTestingUtility();
+  static final HBaseTestingUtil TESTING_UTIL =
+    new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
 
   @BeforeClass public static void before() throws Exception {
     TESTING_UTIL.getConfiguration().setInt(HConstants.HBASE_BALANCER_PERIOD, 60000);
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
         .masterClass(MyMaster.class).numRegionServers(NB_SERVERS).
             numDataNodes(NB_SERVERS).build();
     TESTING_UTIL.startMiniCluster(option);
@@ -963,7 +963,7 @@ public class TestSplitTransactionOnCluster {
    * @return A regionserver that is not <code>notThisOne</code> or null if none
    * found
    */
-  private HRegionServer getOtherRegionServer(final MiniHBaseCluster cluster,
+  private HRegionServer getOtherRegionServer(final SingleProcessHBaseCluster cluster,
       final HRegionServer notThisOne) {
     for (RegionServerThread rst: cluster.getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
@@ -1032,7 +1032,7 @@ public class TestSplitTransactionOnCluster {
     }
 
     @Override
-    protected RSRpcServices createRpcServices() throws IOException {
+    protected MasterRpcServices createRpcServices() throws IOException {
       return new MyMasterRpcServices(this);
     }
   }

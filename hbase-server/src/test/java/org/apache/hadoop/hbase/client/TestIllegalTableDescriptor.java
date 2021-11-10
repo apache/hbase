@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -54,7 +54,7 @@ public class TestIllegalTableDescriptor {
   // NOTE: Increment tests were moved to their own class, TestIncrementsFromClientSide.
   private static final Logger LOGGER;
 
-  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
 

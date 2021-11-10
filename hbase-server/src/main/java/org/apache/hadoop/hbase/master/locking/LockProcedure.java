@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -183,14 +184,14 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   }
 
   private boolean hasHeartbeatExpired() {
-    return System.currentTimeMillis() - lastHeartBeat.get() >= getTimeout();
+    return EnvironmentEdgeManager.currentTime() - lastHeartBeat.get() >= getTimeout();
   }
 
   /**
    * Updates timeout deadline for the lock.
    */
   public void updateHeartBeat() {
-    lastHeartBeat.set(System.currentTimeMillis());
+    lastHeartBeat.set(EnvironmentEdgeManager.currentTime());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Heartbeat " + toString());
     }
@@ -312,7 +313,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
       if (LOG.isDebugEnabled()) {
         LOG.debug("LOCKED " + toString());
       }
-      lastHeartBeat.set(System.currentTimeMillis());
+      lastHeartBeat.set(EnvironmentEdgeManager.currentTime());
       return LockState.LOCK_ACQUIRED;
     }
     LOG.warn("Failed acquire LOCK " + toString() + "; YIELDING");

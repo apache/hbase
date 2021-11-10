@@ -37,13 +37,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
@@ -82,7 +83,7 @@ public class TestRegionPlacement {
       HBaseClassTestRule.forClass(TestRegionPlacement.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionPlacement.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static int SLAVES = 10;
   private static Connection CONNECTION;
   private static Admin admin;
@@ -192,7 +193,7 @@ public class TestRegionPlacement {
       throws IOException, InterruptedException, KeeperException {
     ServerName serverToKill = null;
     int killIndex = 0;
-    Random random = new Random(System.currentTimeMillis());
+    Random random = new Random(EnvironmentEdgeManager.currentTime());
     ServerName metaServer = TEST_UTIL.getHBaseCluster().getServerHoldingMeta();
     LOG.debug("Server holding meta " + metaServer);
     boolean isNamespaceServer = false;
@@ -375,7 +376,7 @@ public class TestRegionPlacement {
    */
   private void verifyRegionMovementNum(int expected)
       throws InterruptedException, IOException {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
     int lastRegionOpenedCount = m.getAssignmentManager().getNumRegionsOpened();
     // get the assignments start to execute
@@ -422,7 +423,7 @@ public class TestRegionPlacement {
    */
   private void verifyRegionServerUpdated(FavoredNodesPlan plan) throws IOException {
     // Verify all region servers contain the correct favored nodes information
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     for (int i = 0; i < SLAVES; i++) {
       HRegionServer rs = cluster.getRegionServer(i);
       for (Region region: rs.getRegions(TableName.valueOf("testRegionAssignment"))) {

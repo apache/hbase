@@ -59,24 +59,22 @@ function usage {
   local NAME
   NAME="$(basename "${BASH_SOURCE[0]}")"
   cat <<EOF
-Usage: $NAME [options]
-
-This script runs the release scripts inside a docker image.
-
+Usage: $NAME [OPTIONS]
+Runs release scripts inside a docker image.
 Options:
-
-  -d [path]    required. working directory. output will be written to "output" in here.
+  -d [path]    Required. Working directory. Output will be written to "output" in here.
   -f           "force" -- actually publish this release. Unless you specify '-f', it will
-               default to dry run mode, which checks and does local builds, but does not upload anything.
-  -t [tag]     tag for the hbase-rm docker image to use for building (default: "latest").
-  -j [path]    path to local JDK installation to use building. By default the script will
+               default to dry run mode, which checks and does local builds, but does not
+               upload anything.
+  -t [tag]     Tag for the hbase-rm docker image to use for building (default: "latest").
+  -j [path]    Path to local JDK installation to use building. By default the script will
                use openjdk8 installed in the docker image.
-  -p [project] project to build, such as 'hbase' or 'hbase-thirdparty'; defaults to $PROJECT env var
-  -r [repo]    git repo to use for remote git operations. defaults to ASF gitbox for project.
-  -s [step]    runs a single step of the process; valid steps are: tag|publish-dist|publish-release.
+  -p [project] Project to build: e.g. 'hbase' or 'hbase-thirdparty'; defaults to PROJECT env var
+  -r [repo]    Git repo to use for remote git operations. defaults to ASF gitbox for project.
+  -s [step]    Runs a single step of the process; valid steps: tag|publish-dist|publish-release.
                If none specified, runs tag, then publish-dist, and then publish-release.
                'publish-snapshot' is also an allowed, less used, option.
-  -x           debug. Does less clean up (env file, gpg forwarding on mac)
+  -x           Debug. Does less clean up (env file, gpg forwarding on mac)
 EOF
   exit 1
 }

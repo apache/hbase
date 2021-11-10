@@ -25,7 +25,7 @@ import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
@@ -64,7 +64,7 @@ public class TestWALFiltering {
   private static final byte[] CF2 = Bytes.toBytes("MyCF2");
   private static final byte[][] FAMILIES = { CF1, CF2 };
 
-  private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Before
   public void setUp() throws Exception {

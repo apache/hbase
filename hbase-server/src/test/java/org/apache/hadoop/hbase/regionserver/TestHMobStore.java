@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.Assert;
 import org.junit.Before;
@@ -114,9 +115,9 @@ public class TestHMobStore {
   private Cell seekKey3;
   private NavigableSet<byte[]> qualifiers = new ConcurrentSkipListSet<>(Bytes.BYTES_COMPARATOR);
   private List<Cell> expected = new ArrayList<>();
-  private long id = System.currentTimeMillis();
+  private long id = EnvironmentEdgeManager.currentTime();
   private Get get = new Get(row);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final String DIR = TEST_UTIL.getDataTestDir("TestHMobStore").toString();
 
   /**
@@ -460,11 +461,8 @@ public class TestHMobStore {
 
   /**
    * Flush the memstore
-   * @param storeFilesSize
-   * @throws IOException
    */
   private void flush(int storeFilesSize) throws IOException{
-    this.store.snapshot();
     flushStore(store, id++);
     Assert.assertEquals(storeFilesSize, this.store.getStorefiles().size());
     Assert.assertEquals(0, ((AbstractMemStore)this.store.memstore).getActive().getCellsCount());
@@ -472,9 +470,6 @@ public class TestHMobStore {
 
   /**
    * Flush the memstore
-   * @param store
-   * @param id
-   * @throws IOException
    */
   private static void flushStore(HMobStore store, long id) throws IOException {
     StoreFlushContext storeFlushCtx = store.createFlushContext(id, FlushLifeCycleTracker.DUMMY);

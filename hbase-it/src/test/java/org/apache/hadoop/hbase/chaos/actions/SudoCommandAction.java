@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.DistributedHBaseCluster;
-import org.apache.hadoop.hbase.HBaseCluster;
+import org.apache.hadoop.hbase.HBaseClusterInterface;
 import org.apache.hadoop.hbase.HBaseClusterManager;
 
 /**
@@ -38,7 +38,7 @@ abstract public class SudoCommandAction extends Action {
   @Override
   public void init(ActionContext context) throws IOException {
     super.init(context);
-    HBaseCluster cluster = context.getHBaseCluster();
+    HBaseClusterInterface cluster = context.getHBaseCluster();
     if (cluster instanceof DistributedHBaseCluster){
       Object manager = ((DistributedHBaseCluster)cluster).getClusterManager();
       if (manager instanceof HBaseClusterManager){

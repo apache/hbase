@@ -23,7 +23,7 @@ import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -65,7 +65,7 @@ public class TestRegionReplicasWithRestartScenarios {
   private Table table;
   private TableName tableName;
 
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   @BeforeClass
@@ -102,7 +102,6 @@ public class TestRegionReplicasWithRestartScenarios {
 
   @AfterClass
   public static void afterClass() throws Exception {
-    HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
     HTU.shutdownMiniCluster();
   }
 

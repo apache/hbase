@@ -32,7 +32,7 @@ import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -75,7 +75,7 @@ public class TestConnection {
     HBaseClassTestRule.forClass(TestConnection.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestConnection.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("bbb");
@@ -244,7 +244,7 @@ public class TestConnection {
     table.put(put);
 
     ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
-    mee.setValue(System.currentTimeMillis());
+    mee.setValue(EnvironmentEdgeManager.currentTime());
     EnvironmentEdgeManager.injectEdge(mee);
     LOG.info("first get");
     table.get(new Get(ROW));

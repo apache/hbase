@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -72,7 +72,7 @@ public class TestAsyncTableGetMultiThreaded {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAsyncTableGetMultiThreaded.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final TableName TABLE_NAME = TableName.valueOf("async");
   private static final byte[] FAMILY = Bytes.toBytes("cf");
@@ -196,7 +196,7 @@ public class TestAsyncTableGetMultiThreaded {
       }
       Thread.sleep(5000);
       LOG.info("====== Balancing cluster ======");
-      admin.balance(true);
+      admin.balance(BalanceRequest.newBuilder().setIgnoreRegionsInTransition(true).build());
       LOG.info("====== Balance cluster done ======");
       Thread.sleep(5000);
       ServerName metaServer = TEST_UTIL.getHBaseCluster().getServerHoldingMeta();

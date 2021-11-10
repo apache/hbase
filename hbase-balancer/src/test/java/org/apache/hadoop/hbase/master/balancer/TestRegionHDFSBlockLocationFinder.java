@@ -94,7 +94,7 @@ public class TestRegionHDFSBlockLocationFinder {
   @Before
   public void setUp() {
     finder = new RegionHDFSBlockLocationFinder();
-    finder.setClusterInfoProvider(new ClusterInfoProvider() {
+    finder.setClusterInfoProvider(new DummyClusterInfoProvider(null) {
 
       @Override
       public TableDescriptor getTableDescriptor(TableName tableName) throws IOException {

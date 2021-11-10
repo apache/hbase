@@ -27,19 +27,19 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
-import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
@@ -63,7 +63,7 @@ public class TestRegionServerReportForDuty {
 
   private static final long SLEEP_INTERVAL = 500;
 
-  private HBaseTestingUtility testUtil;
+  private HBaseTestingUtil testUtil;
   private LocalHBaseCluster cluster;
   private RegionServerThread rs;
   private RegionServerThread rs2;
@@ -72,7 +72,7 @@ public class TestRegionServerReportForDuty {
 
   @Before
   public void setUp() throws Exception {
-    testUtil = new HBaseTestingUtility();
+    testUtil = new HBaseTestingUtil();
     testUtil.startMiniDFSCluster(1);
     testUtil.startMiniZKCluster(1);
     testUtil.createRootDir();
@@ -166,7 +166,7 @@ public class TestRegionServerReportForDuty {
 
     // Start a master and wait for it to become the active/primary master.
     // Use a random unique port
-    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
+    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtil.randomFreePort());
     cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
     cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 1);
     master = cluster.addMaster();
@@ -194,7 +194,7 @@ public class TestRegionServerReportForDuty {
     // Start a new master and use another random unique port
     // Also let it wait for exactly 2 region severs to report in.
     // TODO: Add handling bindexception. Random port is not enough!!! Flakie test!
-    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
+    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtil.randomFreePort());
     cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 2);
     cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 2);
     backupMaster = cluster.addMaster();
@@ -221,7 +221,7 @@ public class TestRegionServerReportForDuty {
 
     // Start a master and wait for it to become the active/primary master.
     // Use a random unique port
-    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
+    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtil.randomFreePort());
     // Override the default RS RPC retry interval of 100ms to 300ms
     cluster.getConfiguration().setLong("hbase.regionserver.rpc.retry.interval", 300);
     cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
@@ -242,13 +242,13 @@ public class TestRegionServerReportForDuty {
   }
 
   /**
-   * Tests region sever reportForDuty with manual environment edge
+   * Tests region sever reportForDuty with a non-default environment edge
    */
   @Test
   public void testReportForDutyWithEnvironmentEdge() throws Exception {
     // Start a master and wait for it to become the active/primary master.
     // Use a random unique port
-    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
+    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtil.randomFreePort());
     // Set the dispatch and retry delay to 0 since we want the rpc request to be sent immediately
     cluster.getConfiguration().setInt("hbase.procedure.remote.dispatcher.delay.msec", 0);
     cluster.getConfiguration().setLong("hbase.regionserver.rpc.retry.interval", 0);
@@ -256,15 +256,14 @@ public class TestRegionServerReportForDuty {
     cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
     cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 1);
 
-    // Inject manual environment edge for clock skew computation between RS and master
-    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    // Inject non-default environment edge
+    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(edge);
     master = cluster.addMaster();
     rs = cluster.addRegionServer();
     LOG.debug("Starting master: " + master.getMaster().getServerName());
     master.start();
     rs.start();
-
     waitForClusterOnline(master);
   }
 

@@ -28,7 +28,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.hamcrest.core.IsInstanceOf;
 import org.hamcrest.core.StringStartsWith;
 import org.junit.After;
@@ -81,7 +82,7 @@ public class TestLockProcedure {
   private static final int LOCAL_LOCKS_TIMEOUT = 4000;
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLockProcedure.class);
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static MasterRpcServices masterRpcService;
   private static ProcedureExecutor<MasterProcedureEnv> procExec;
 
@@ -192,8 +193,8 @@ public class TestLockProcedure {
    * @throws TimeoutException if lock couldn't be acquired.
    */
   private boolean awaitForLocked(long procId, long timeoutInMs) throws Exception {
-    long deadline = System.currentTimeMillis() + timeoutInMs;
-    while (System.currentTimeMillis() < deadline) {
+    long deadline = EnvironmentEdgeManager.currentTime() + timeoutInMs;
+    while (EnvironmentEdgeManager.currentTime() < deadline) {
       LockHeartbeatResponse response = masterRpcService.lockHeartbeat(null,
           LockHeartbeatRequest.newBuilder().setProcId(procId).build());
       if (response.getLockStatus() == LockHeartbeatResponse.LockStatus.LOCKED) {
@@ -297,7 +298,7 @@ public class TestLockProcedure {
     // Acquire namespace lock, then queue other locks.
     long nsProcId = queueLock(nsLock);
     assertTrue(awaitForLocked(nsProcId, 2000));
-    long start = System.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     sendHeartbeatAndCheckLocked(nsProcId, true);
     long table1ProcId = queueLock(tableLock1);
     long table2ProcId = queueLock(tableLock2);
@@ -305,7 +306,7 @@ public class TestLockProcedure {
     long regions2ProcId = queueLock(regionsLock2);
 
     // Assert tables & region locks are waiting because of namespace lock.
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     // leave extra 10 msec in case more than half the HEARTBEAT_TIMEOUT has passed
     Thread.sleep(Math.min(HEARTBEAT_TIMEOUT / 2, Math.max(HEARTBEAT_TIMEOUT-(now-start)-10, 0)));
     sendHeartbeatAndCheckLocked(nsProcId, true);

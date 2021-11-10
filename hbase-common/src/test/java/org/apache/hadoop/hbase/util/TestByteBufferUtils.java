@@ -44,7 +44,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -76,13 +76,13 @@ public class TestByteBufferUtils {
 
   @Parameterized.Parameters
   public static Collection<Object[]> parameters() {
-    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
+    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED;
   }
 
   private static void setUnsafe(String fieldName, boolean value) throws Exception {
     Field field = ByteBufferUtils.class.getDeclaredField(fieldName);
     field.setAccessible(true);
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    Field modifiersField = ReflectionUtils.getModifiersField();
     modifiersField.setAccessible(true);
     int oldModifiers = field.getModifiers();
     modifiersField.setInt(field, oldModifiers & ~Modifier.FINAL);

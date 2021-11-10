@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -127,7 +127,7 @@ public class TestTokenAuthentication {
       AuthenticationProtos.AuthenticationService.BlockingInterface, Runnable, Server {
     private static final Logger LOG = LoggerFactory.getLogger(TokenServer.class);
     private Configuration conf;
-    private HBaseTestingUtility TEST_UTIL;
+    private HBaseTestingUtil TEST_UTIL;
     private RpcServerInterface rpcServer;
     private InetSocketAddress isa;
     private ZKWatcher zookeeper;
@@ -137,7 +137,7 @@ public class TestTokenAuthentication {
     private boolean stopped = false;
     private long startcode;
 
-    public TokenServer(Configuration conf, HBaseTestingUtility TEST_UTIL) throws IOException {
+    public TokenServer(Configuration conf, HBaseTestingUtil TEST_UTIL) throws IOException {
       this.conf = conf;
       this.TEST_UTIL = TEST_UTIL;
       this.startcode = EnvironmentEdgeManager.currentTime();
@@ -372,7 +372,7 @@ public class TestTokenAuthentication {
   @Parameter(0)
   public String rpcServerImpl;
 
-  private HBaseTestingUtility TEST_UTIL;
+  private HBaseTestingUtil TEST_UTIL;
   private TokenServer server;
   private Thread serverThread;
   private AuthenticationTokenSecretManager secretManager;
@@ -380,7 +380,7 @@ public class TestTokenAuthentication {
 
   @Before
   public void setUp() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseTestingUtil();
     // Override the connection registry to avoid spinning up a mini cluster for the connection below
     // to go through.
     TEST_UTIL.getConfiguration().set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
@@ -460,7 +460,7 @@ public class TestTokenAuthentication {
 //        final RpcClient rpcClient = RpcClientFactory.createClient(c, clusterId.toString());
 //        ServerName sn =
 //            ServerName.valueOf(server.getAddress().getHostName(), server.getAddress().getPort(),
-//                System.currentTimeMillis());
+//                EnvironmentEdgeManager.currentTime());
 //        try {
 //          // Make a proxy to go between the shaded RpcController that rpc expects and the
 //          // non-shaded controller this CPEP is providing. This is because this test does a neat

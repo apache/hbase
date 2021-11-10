@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,7 +36,6 @@ import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
-import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
@@ -61,7 +59,6 @@ public class Replication implements ReplicationSourceService {
   private ReplicationSourceManager replicationManager;
   private ReplicationQueueStorage queueStorage;
   private ReplicationPeers replicationPeers;
-  private ReplicationTracker replicationTracker;
   private Configuration conf;
   private SyncReplicationPeerInfoProvider syncReplicationPeerInfoProvider;
   // Hosting server
@@ -101,8 +98,6 @@ public class Replication implements ReplicationSourceService {
       this.replicationPeers =
           ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf);
       this.replicationPeers.init();
-      this.replicationTracker =
-          ReplicationFactory.getReplicationTracker(server.getZooKeeper(), this.server, this.server);
     } catch (Exception e) {
       throw new IOException("Failed replication handler create", e);
     }
@@ -115,9 +110,8 @@ public class Replication implements ReplicationSourceService {
     SyncReplicationPeerMappingManager mapping = new SyncReplicationPeerMappingManager();
     this.globalMetricsSource = CompatibilitySingletonFactory
         .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
-    this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers,
-        replicationTracker, conf, this.server, fs, logDir, oldLogDir, clusterId, walFactory,
-        mapping, globalMetricsSource);
+    this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers, conf,
+      this.server, fs, logDir, oldLogDir, clusterId, walFactory, mapping, globalMetricsSource);
     this.syncReplicationPeerInfoProvider =
         new SyncReplicationPeerInfoProviderImpl(replicationPeers, mapping);
     PeerActionListener peerActionListener = PeerActionListener.DUMMY;

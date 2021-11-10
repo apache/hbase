@@ -22,7 +22,7 @@ import static org.junit.Assert.assertNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
@@ -47,7 +47,7 @@ public class TestSnapshotWhileRSCrashes {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSnapshotWhileRSCrashes.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName NAME = TableName.valueOf("Cleanup");
 

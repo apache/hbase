@@ -31,7 +31,8 @@ public class NamedQueuePayload {
 
   public enum NamedQueueEvent {
     SLOW_LOG(0),
-    BALANCE_DECISION(1);
+    BALANCE_DECISION(1),
+    BALANCE_REJECTION(2);
 
     private final int value;
 
@@ -46,6 +47,9 @@ public class NamedQueuePayload {
         }
         case 1: {
           return BALANCE_DECISION;
+        }
+        case 2: {
+          return BALANCE_REJECTION;
         }
         default: {
           throw new IllegalArgumentException(

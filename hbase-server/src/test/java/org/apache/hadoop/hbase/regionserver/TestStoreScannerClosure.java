@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
@@ -85,7 +85,7 @@ public class TestStoreScannerClosure {
   static Configuration CONF = HBaseConfiguration.create();
   private static CacheConfig cacheConf;
   private static FileSystem fs;
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
       KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
   private final static byte[] fam = Bytes.toBytes("cf_1");
@@ -111,7 +111,7 @@ public class TestStoreScannerClosure {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     Path path = TEST_UTIL.getDataTestDir("test");
-    region = HBaseTestingUtility.createRegionAndWAL(info, path,
+    region = HBaseTestingUtil.createRegionAndWAL(info, path,
       TEST_UTIL.getConfiguration(), tableDescriptor);
   }
 

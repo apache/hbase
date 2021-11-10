@@ -26,11 +26,12 @@ import java.util.concurrent.atomic.AtomicLongArray;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -52,9 +53,9 @@ public class TestBackupManager {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestBackupManager.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected static Configuration conf = UTIL.getConfiguration();
-  protected static MiniHBaseCluster cluster;
+  protected static SingleProcessHBaseCluster cluster;
   protected static Connection conn;
   protected BackupManager backupManager;
 
@@ -96,17 +97,17 @@ public class TestBackupManager {
       public void run() {
         try {
           backupManager.startBackupSession();
-          boolean result = startTimes.compareAndSet(0, 0, System.currentTimeMillis());
+          boolean result = startTimes.compareAndSet(0, 0, EnvironmentEdgeManager.currentTime());
           if (!result) {
-            result = startTimes.compareAndSet(1, 0, System.currentTimeMillis());
+            result = startTimes.compareAndSet(1, 0, EnvironmentEdgeManager.currentTime());
             if (!result) {
               throw new IOException("PANIC! Unreachable code");
             }
           }
           Thread.sleep(sleepTime);
-          result = stopTimes.compareAndSet(0, 0, System.currentTimeMillis());
+          result = stopTimes.compareAndSet(0, 0, EnvironmentEdgeManager.currentTime());
           if (!result) {
-            result = stopTimes.compareAndSet(1, 0, System.currentTimeMillis());
+            result = stopTimes.compareAndSet(1, 0, EnvironmentEdgeManager.currentTime());
             if (!result) {
               throw new IOException("PANIC! Unreachable code");
             }

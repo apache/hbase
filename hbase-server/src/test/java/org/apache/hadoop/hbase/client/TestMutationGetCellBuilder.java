@@ -24,11 +24,12 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -44,7 +45,7 @@ public class TestMutationGetCellBuilder {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMutationGetCellBuilder.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -66,7 +67,7 @@ public class TestMutationGetCellBuilder {
     final byte[] uselessRowKey = Bytes.toBytes("123");
     final byte[] family = Bytes.toBytes("cf");
     final byte[] qualifier = Bytes.toBytes("foo");
-    final long now = System.currentTimeMillis();
+    final long now = EnvironmentEdgeManager.currentTime();
     try (Table table = TEST_UTIL.createTable(tableName, family)) {
       TEST_UTIL.waitTableAvailable(tableName.getName(), 5000);
       // put one row

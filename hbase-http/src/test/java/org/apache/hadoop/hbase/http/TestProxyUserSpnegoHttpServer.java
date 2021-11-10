@@ -29,7 +29,7 @@ import javax.security.auth.kerberos.KerberosTicket;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.http.TestHttpServer.EchoServlet;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -98,12 +98,12 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
   @BeforeClass
   public static void setupServer() throws Exception {
     Configuration conf = new Configuration();
-    HBaseCommonTestingUtility htu = new HBaseCommonTestingUtility(conf);
+    HBaseCommonTestingUtil htu = new HBaseCommonTestingUtil(conf);
 
     final String serverPrincipal = "HTTP/" + KDC_SERVER_HOST;
 
     kdc = SimpleKdcServerUtil.getRunningSimpleKdcServer(new File(htu.getDataTestDir().toString()),
-      HBaseCommonTestingUtility::randomFreePort);
+      HBaseCommonTestingUtil::randomFreePort);
     File keytabDir = new File(htu.getDataTestDir("keytabs").toString());
     if (keytabDir.exists()) {
       deleteRecursively(keytabDir);

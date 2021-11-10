@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -50,7 +50,7 @@ public class TestHFilePrettyPrinter {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFilePrettyPrinter.class);
 
-  private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static FileSystem fs;
   private static Configuration conf;
   private static byte [] cf = Bytes.toBytes("cf");

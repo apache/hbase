@@ -38,7 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -112,7 +112,7 @@ public class TestBucketCache {
   final int writerQLen = BucketCache.DEFAULT_WRITER_QUEUE_ITEMS;
   private String ioEngineName = "offheap";
 
-  private static final HBaseTestingUtility HBASE_TESTING_UTILITY = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HBASE_TESTING_UTILITY = new HBaseTestingUtil();
 
   private static class MockedBucketCache extends BucketCache {
 
@@ -263,8 +263,26 @@ public class TestBucketCache {
     assertEquals(1, cache.getBlockCount());
     lock.writeLock().unlock();
     evictThread.join();
-    assertEquals(0, cache.getBlockCount());
-    assertEquals(cache.getCurrentSize(), 0L);
+    /**
+     * <pre>
+     * The asserts here before HBASE-21957 are:
+     * assertEquals(1L, cache.getBlockCount());
+     * assertTrue(cache.getCurrentSize() > 0L);
+     * assertTrue("We should have a block!", cache.iterator().hasNext());
+     *
+     * The asserts here after HBASE-21957 are:
+     * assertEquals(0, cache.getBlockCount());
+     * assertEquals(cache.getCurrentSize(), 0L);
+     *
+     * I think the asserts before HBASE-21957 is more reasonable,because
+     * {@link BucketCache#evictBlock} should only evict the {@link BucketEntry}
+     * it had seen, and newly added Block after the {@link BucketEntry}
+     * it had seen should not be evicted.
+     * </pre>
+     */
+    assertEquals(1L, cache.getBlockCount());
+    assertTrue(cache.getCurrentSize() > 0L);
+    assertTrue("We should have a block!", cache.iterator().hasNext());
   }
 
   @Test
@@ -349,7 +367,7 @@ public class TestBucketCache {
   @Test
   public void testRetrieveFromMultipleFiles() throws Exception {
     final Path testDirInitial = createAndGetTestDir();
-    final Path newTestDir = new HBaseTestingUtility().getDataTestDir();
+    final Path newTestDir = new HBaseTestingUtil().getDataTestDir();
     HBASE_TESTING_UTILITY.getTestFileSystem().mkdirs(newTestDir);
     String ioEngineName = new StringBuilder("files:").append(testDirInitial)
             .append("/bucket1.cache").append(FileIOEngine.FILE_DELIMITER).append(newTestDir)
@@ -536,7 +554,10 @@ public class TestBucketCache {
     // This number is picked because it produces negative output if the values isn't ensured to be
     // positive. See HBASE-18757 for more information.
     long testValue = 549888460800L;
-    BucketEntry bucketEntry = new BucketEntry(testValue, 10, 10L, true);
+    BucketEntry bucketEntry =
+        new BucketEntry(testValue, 10, 10L, true, (entry) -> {
+          return ByteBuffAllocator.NONE;
+        }, ByteBuffAllocator.HEAP);
     assertEquals(testValue, bucketEntry.offset());
   }
 
@@ -613,8 +634,8 @@ public class TestBucketCache {
         HFileBlock.FILL_HEADER, -1, 52, -1, meta, ByteBuffAllocator.HEAP);
     HFileBlock blk2 = new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(buf),
         HFileBlock.FILL_HEADER, -1, -1, -1, meta, ByteBuffAllocator.HEAP);
-    RAMQueueEntry re1 = new RAMQueueEntry(key1, blk1, 1, false, ByteBuffAllocator.NONE);
-    RAMQueueEntry re2 = new RAMQueueEntry(key1, blk2, 1, false, ByteBuffAllocator.NONE);
+    RAMQueueEntry re1 = new RAMQueueEntry(key1, blk1, 1, false);
+    RAMQueueEntry re2 = new RAMQueueEntry(key1, blk2, 1, false);
 
     assertFalse(cache.containsKey(key1));
     assertNull(cache.putIfAbsent(key1, re1));
@@ -661,14 +682,67 @@ public class TestBucketCache {
     BucketAllocator allocator = new BucketAllocator(availableSpace, null);
 
     BlockCacheKey key = new BlockCacheKey("dummy", 1L);
-    RAMQueueEntry re = new RAMQueueEntry(key, block, 1, true, ByteBuffAllocator.NONE);
+    RAMQueueEntry re = new RAMQueueEntry(key, block, 1, true);
 
     Assert.assertEquals(0, allocator.getUsedSize());
     try {
-      re.writeToCache(ioEngine, allocator, null);
+      re.writeToCache(ioEngine, allocator, null, null);
       Assert.fail();
     } catch (Exception e) {
     }
     Assert.assertEquals(0, allocator.getUsedSize());
   }
+
+  /**
+   * This test is for HBASE-26295, {@link BucketEntry} which is restored from a persistence file
+   * could not be freed even if corresponding {@link HFileBlock} is evicted from
+   * {@link BucketCache}.
+   */
+  @Test
+  public void testFreeBucketEntryRestoredFromFile() throws Exception {
+    try {
+      final Path dataTestDir = createAndGetTestDir();
+
+      String ioEngineName = "file:" + dataTestDir + "/bucketNoRecycler.cache";
+      String persistencePath = dataTestDir + "/bucketNoRecycler.persistence";
+
+      BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+          constructedBlockSizes, writeThreads, writerQLen, persistencePath);
+      long usedByteSize = bucketCache.getAllocator().getUsedSize();
+      assertEquals(0, usedByteSize);
+
+      HFileBlockPair[] hfileBlockPairs =
+          CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
+      // Add blocks
+      for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
+        bucketCache.cacheBlock(hfileBlockPair.getBlockName(), hfileBlockPair.getBlock());
+      }
+
+      for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
+        cacheAndWaitUntilFlushedToBucket(bucketCache, hfileBlockPair.getBlockName(),
+          hfileBlockPair.getBlock());
+      }
+      usedByteSize = bucketCache.getAllocator().getUsedSize();
+      assertNotEquals(0, usedByteSize);
+      // persist cache to file
+      bucketCache.shutdown();
+      assertTrue(new File(persistencePath).exists());
+
+      // restore cache from file
+      bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+          constructedBlockSizes, writeThreads, writerQLen, persistencePath);
+      assertFalse(new File(persistencePath).exists());
+      assertEquals(usedByteSize, bucketCache.getAllocator().getUsedSize());
+
+      for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
+        BlockCacheKey blockCacheKey = hfileBlockPair.getBlockName();
+        bucketCache.evictBlock(blockCacheKey);
+      }
+      assertEquals(0, bucketCache.getAllocator().getUsedSize());
+      assertEquals(0, bucketCache.backingMap.size());
+    } finally {
+      HBASE_TESTING_UTILITY.cleanupTestDir();
+    }
+  }
+
 }

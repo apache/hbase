@@ -76,8 +76,6 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class KeyValue implements ExtendedCell, Cloneable {
-  private static final ArrayList<Tag> EMPTY_ARRAY_LIST = new ArrayList<>();
-
   private static final Logger LOG = LoggerFactory.getLogger(KeyValue.class);
 
   public static final int FIXED_OVERHEAD = ClassSize.OBJECT + // the KeyValue object itself
@@ -96,7 +94,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values. Works on Key portion
    * of KeyValue only.
-   * @deprecated Use {@link CellComparator#getInstance()} instead. Deprecated for hbase 2.0, remove for hbase 3.0.
+   * @deprecated Use {@link CellComparator#getInstance()} instead. Deprecated for hbase 2.0,
+   *           remove for hbase 3.0.
    */
   @Deprecated
   public static final KVComparator COMPARATOR = new KVComparator();
@@ -263,7 +262,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
     /**
      * Cannot rely on enum ordinals . They change if item is removed or moved.
      * Do our own codes.
-     * @param b
+     * @param b the kv serialized byte[] to process
      * @return Type associated with passed code.
      */
     public static Type codeToType(final byte b) {
@@ -354,7 +353,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param bytes  byte array
    * @param offset offset to start of the KeyValue
    * @param length length of the KeyValue
-   * @param ts
+   * @param ts timestamp
    */
   public KeyValue(final byte[] bytes, final int offset, final int length, long ts) {
     this(bytes, offset, length, null, 0, 0, null, 0, 0, ts, Type.Maximum, null, 0, 0, null);
@@ -366,7 +365,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * Constructs KeyValue structure filled with null value.
    * Sets type to {@link KeyValue.Type#Maximum}
    * @param row - row key (arbitrary byte array)
-   * @param timestamp
+   * @param timestamp version timestamp
    */
   public KeyValue(final byte [] row, final long timestamp) {
     this(row, null, null, timestamp, Type.Maximum, null);
@@ -375,7 +374,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
   /**
    * Constructs KeyValue structure filled with null value.
    * @param row - row key (arbitrary byte array)
-   * @param timestamp
+   * @param timestamp version timestamp
    */
   public KeyValue(final byte [] row, final long timestamp, Type type) {
     this(row, null, null, timestamp, type, null);
@@ -412,7 +411,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param qualifier column qualifier
    * @param timestamp version timestamp
    * @param type key type
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException an illegal value was passed
    */
   public KeyValue(final byte[] row, final byte[] family,
       final byte[] qualifier, final long timestamp, Type type) {
@@ -426,7 +425,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param qualifier column qualifier
    * @param timestamp version timestamp
    * @param value column value
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException an illegal value was passed
    */
   public KeyValue(final byte[] row, final byte[] family,
       final byte[] qualifier, final long timestamp, final byte[] value) {
@@ -441,7 +440,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param timestamp version timestamp
    * @param value column value
    * @param tags tags
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException an illegal value was passed
    */
   public KeyValue(final byte[] row, final byte[] family,
       final byte[] qualifier, final long timestamp, final byte[] value,
@@ -457,7 +456,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param timestamp version timestamp
    * @param value column value
    * @param tags tags non-empty list of tags or null
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException an illegal value was passed
    */
   public KeyValue(final byte[] row, final byte[] family,
       final byte[] qualifier, final long timestamp, final byte[] value,
@@ -477,7 +476,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param timestamp version timestamp
    * @param type key type
    * @param value column value
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException an illegal value was passed
    */
   public KeyValue(final byte[] row, final byte[] family,
       final byte[] qualifier, final long timestamp, Type type,
@@ -496,7 +495,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param timestamp version timestamp
    * @param type key type
    * @param value column value
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException an illegal value was passed
    */
   public KeyValue(final byte[] row, final byte[] family,
       final byte[] qualifier, final long timestamp, Type type,
@@ -513,7 +512,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param timestamp version timestamp
    * @param type key type
    * @param value column value
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException an illegal value was passed
    */
   public KeyValue(final byte[] row, final byte[] family,
       final byte[] qualifier, final long timestamp, Type type,
@@ -534,7 +533,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param value column value
    * @param voffset value offset
    * @param vlength value length
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException an illegal value was passed
    */
   public KeyValue(byte [] row, byte [] family,
       byte [] qualifier, int qoffset, int qlength, long timestamp, Type type,
@@ -546,17 +545,17 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * @param row
-   * @param family
-   * @param qualifier
-   * @param qoffset
-   * @param qlength
-   * @param timestamp
-   * @param type
-   * @param value
-   * @param voffset
-   * @param vlength
-   * @param tags
+   * @param row row key
+   * @param family family name
+   * @param qualifier qualifier name
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   * @param timestamp version timestamp
+   * @param type key type
+   * @param value column value
+   * @param voffset value offset
+   * @param vlength value length
+   * @param tags tags
    */
   public KeyValue(byte [] row, byte [] family,
       byte [] qualifier, int qoffset, int qlength, long timestamp, Type type,
@@ -572,7 +571,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * <p>
    * Column is split into two fields, family and qualifier.
    * @param row row key
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException an illegal value was passed
    */
   public KeyValue(final byte [] row, final int roffset, final int rlength,
       final byte [] family, final int foffset, final int flength,
@@ -607,22 +606,18 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param vlength value length
    * @param tags non-empty list of tags or null
    * @throws IllegalArgumentException an illegal value was passed or there is insufficient space
-   * remaining in the buffer
+   *           remaining in the buffer
    */
-  public KeyValue(byte [] buffer, final int boffset,
-      final byte [] row, final int roffset, final int rlength,
-      final byte [] family, final int foffset, final int flength,
-      final byte [] qualifier, final int qoffset, final int qlength,
-      final long timestamp, final Type type,
-      final byte [] value, final int voffset, final int vlength,
-      final Tag[] tags) {
-     this.bytes  = buffer;
-     this.length = writeByteArray(buffer, boffset,
-         row, roffset, rlength,
-         family, foffset, flength, qualifier, qoffset, qlength,
-        timestamp, type, value, voffset, vlength, tags);
-     this.offset = boffset;
-   }
+  public KeyValue(byte[] buffer, final int boffset, final byte[] row, final int roffset,
+    final int rlength, final byte[] family, final int foffset, final int flength,
+    final byte[] qualifier, final int qoffset, final int qlength, final long timestamp,
+    final Type type, final byte[] value, final int voffset, final int vlength, final Tag[] tags) {
+    this.bytes = buffer;
+    this.length =
+      writeByteArray(buffer, boffset, row, roffset, rlength, family, foffset, flength, qualifier,
+        qoffset, qlength, timestamp, type, value, voffset, vlength, tags);
+    this.offset = boffset;
+  }
 
   /**
    * Constructs KeyValue structure filled with specified values.
@@ -643,7 +638,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param voffset value offset
    * @param vlength value length
    * @param tags tags
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException  an illegal value was passed
    */
   public KeyValue(final byte [] row, final int roffset, final int rlength,
       final byte [] family, final int foffset, final int flength,
@@ -659,21 +654,21 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * @param row
-   * @param roffset
-   * @param rlength
-   * @param family
-   * @param foffset
-   * @param flength
-   * @param qualifier
-   * @param qoffset
-   * @param qlength
-   * @param timestamp
-   * @param type
-   * @param value
-   * @param voffset
-   * @param vlength
-   * @param tags
+   * @param row row key
+   * @param roffset row offset
+   * @param rlength row length
+   * @param family family name
+   * @param foffset fammily offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   * @param timestamp version timestamp
+   * @param type key type
+   * @param value column value
+   * @param voffset value offset
+   * @param vlength value length
+   * @param tags input tags
    */
   public KeyValue(final byte [] row, final int roffset, final int rlength,
       final byte [] family, final int foffset, final int flength,
@@ -699,7 +694,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param timestamp version timestamp
    * @param type key type
    * @param vlength value length
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException an illegal value was passed
    */
   public KeyValue(final int rlength,
       final int flength,
@@ -720,8 +715,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param timestamp version timestamp
    * @param type key type
    * @param vlength value length
-   * @param tagsLength
-   * @throws IllegalArgumentException
+   * @param tagsLength length of the tags
+   * @throws IllegalArgumentException an illegal value was passed
    */
   public KeyValue(final int rlength,
       final int flength,
@@ -757,12 +752,12 @@ public class KeyValue implements ExtendedCell, Cloneable {
   /**
    * Create an empty byte[] representing a KeyValue
    * All lengths are preset and can be filled in later.
-   * @param rlength
-   * @param flength
-   * @param qlength
-   * @param timestamp
-   * @param type
-   * @param vlength
+   * @param rlength row length
+   * @param flength family length
+   * @param qlength qualifier length
+   * @param timestamp version timestamp
+   * @param type key type
+   * @param vlength value length
    * @return The newly created byte array.
    */
   private static byte[] createEmptyByteArray(final int rlength, int flength,
@@ -877,7 +872,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @return The number of useful bytes in the buffer.
    *
    * @throws IllegalArgumentException an illegal value was passed or there is insufficient space
-   * remaining in the buffer
+   *           remaining in the buffer
    */
   public static int writeByteArray(byte [] buffer, final int boffset,
       final byte [] row, final int roffset, final int rlength,
@@ -1103,7 +1098,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
   /**
    * Clones a KeyValue.  This creates a copy, re-allocating the buffer.
    * @return Fully copied clone of this KeyValue
-   * @throws CloneNotSupportedException
+   * @throws CloneNotSupportedException if cloning of keyValue is not supported
    */
   @Override
   public KeyValue clone() throws CloneNotSupportedException {
@@ -1191,7 +1186,9 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @return Key as a String.
    */
   public static String keyToString(final byte [] b, final int o, final int l) {
-    if (b == null) return "";
+    if (b == null) {
+      return "";
+    }
     int rowlength = Bytes.toShort(b, o);
     String row = Bytes.toStringBinary(b, o + Bytes.SIZEOF_SHORT, rowlength);
     int columnoffset = o + Bytes.SIZEOF_SHORT + 1 + rowlength;
@@ -1583,10 +1580,10 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * @param b
-   * @param delimiter
+   * @param b the kv serialized byte[] to process
+   * @param delimiter input delimeter to fetch index from start
    * @return Index of delimiter having started from start of <code>b</code>
-   * moving rightward.
+   *           moving rightward.
    */
   public static int getDelimiter(final byte [] b, int offset, final int length,
       final int delimiter) {
@@ -1605,8 +1602,10 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
   /**
    * Find index of passed delimiter walking from end of buffer backwards.
-   * @param b
-   * @param delimiter
+   * @param b the kv serialized byte[] to process
+   * @param offset the offset in the byte[]
+   * @param length the length in the byte[]
+   * @param delimiter input delimeter to fetch index from end
    * @return Index of delimiter
    */
   public static int getDelimiterInReverse(final byte [] b, final int offset,
@@ -1767,8 +1766,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
     /**
      * Compares the only the user specified portion of a Key.  This is overridden by MetaComparator.
-     * @param left
-     * @param right
+     * @param left left cell to compare row key
+     * @param right right cell to compare row key
      * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      */
     protected int compareRowKey(final Cell left, final Cell right) {
@@ -1778,12 +1777,12 @@ public class KeyValue implements ExtendedCell, Cloneable {
     /**
      * Compares left to right assuming that left,loffset,llength and right,roffset,rlength are
      * full KVs laid out in a flat byte[]s.
-     * @param left
-     * @param loffset
-     * @param llength
-     * @param right
-     * @param roffset
-     * @param rlength
+     * @param left the left kv serialized byte[] to be compared with
+     * @param loffset the offset in the left byte[]
+     * @param llength the length in the left byte[]
+     * @param right the right kv serialized byte[] to be compared with
+     * @param roffset the offset in the right byte[]
+     * @param rlength the length in the right byte[]
      * @return  0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      */
     public int compareFlatKey(byte[] left, int loffset, int llength,
@@ -1879,8 +1878,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     /**
-     * @param left
-     * @param right
+     * @param left left cell to compare rows for
+     * @param right right cell to compare rows for
      * @return Result comparing rows.
      */
     public int compareRows(final Cell left, final Cell right) {
@@ -1890,12 +1889,12 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
     /**
      * Get the b[],o,l for left and right rowkey portions and compare.
-     * @param left
-     * @param loffset
-     * @param llength
-     * @param right
-     * @param roffset
-     * @param rlength
+     * @param left the left kv serialized byte[] to be compared with
+     * @param loffset the offset in the left byte[]
+     * @param llength the length in the left byte[]
+     * @param right the right kv serialized byte[] to be compared with
+     * @param roffset the offset in the right byte[]
+     * @param rlength the length in the right byte[]
      * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      */
     public int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
@@ -1908,20 +1907,17 @@ public class KeyValue implements ExtendedCell, Cloneable {
       return CellComparatorImpl.COMPARATOR.compareColumns(left, right);
     }
 
-    protected int compareColumns(
-        byte [] left, int loffset, int llength, final int lfamilylength,
-        byte [] right, int roffset, int rlength, final int rfamilylength) {
+    protected int compareColumns(byte[] left, int loffset, int llength, final int lfamilylength,
+      byte[] right, int roffset, int rlength, final int rfamilylength) {
       // Compare family portion first.
-      int diff = Bytes.compareTo(left, loffset, lfamilylength,
-        right, roffset, rfamilylength);
+      int diff = Bytes.compareTo(left, loffset, lfamilylength, right, roffset, rfamilylength);
       if (diff != 0) {
         return diff;
       }
       // Compare qualifier portion
-      return Bytes.compareTo(left, loffset + lfamilylength,
-        llength - lfamilylength,
-        right, roffset + rfamilylength, rlength - rfamilylength);
-      }
+      return Bytes.compareTo(left, loffset + lfamilylength, llength - lfamilylength, right,
+        roffset + rfamilylength, rlength - rfamilylength);
+    }
 
     static int compareTimestamps(final long ltimestamp, final long rtimestamp) {
       // The below older timestamps sorting ahead of newer timestamps looks
@@ -1938,13 +1934,13 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
     /**
      * Overridden
-     * @param commonPrefix
-     * @param left
-     * @param loffset
-     * @param llength
-     * @param right
-     * @param roffset
-     * @param rlength
+     * @param commonPrefix location of expected common prefix
+     * @param left the left kv serialized byte[] to be compared with
+     * @param loffset the offset in the left byte[]
+     * @param llength the length in the left byte[]
+     * @param right the right kv serialized byte[] to be compared with
+     * @param roffset the offset in the byte[]
+     * @param rlength the length in the right byte[]
      * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      */
     @Override // SamePrefixComparator
@@ -2085,8 +2081,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
     /**
      * Compares the row and column of two keyvalues for equality
-     * @param left
-     * @param right
+     * @param left left cell to compare row and column
+     * @param right right cell to compare row and column
      * @return True if same row and column.
      */
     public boolean matchingRowColumn(final Cell left,
@@ -2123,8 +2119,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
     /**
      * Compares the row of two keyvalues for equality
-     * @param left
-     * @param right
+     * @param left left cell to compare row
+     * @param right right cell to compare row
      * @return True if rows match.
      */
     public boolean matchingRows(final Cell left, final Cell right) {
@@ -2134,10 +2130,10 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     /**
-     * @param left
-     * @param lrowlength
-     * @param right
-     * @param rrowlength
+     * @param left left cell to compare row
+     * @param lrowlength left row length
+     * @param right right cell to compare row
+     * @param rrowlength right row length
      * @return True if rows match.
      */
     private boolean matchingRows(final Cell left, final short lrowlength,
@@ -2181,8 +2177,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
     /**
      * This is a HFile block index key optimization.
-     * @param leftKey
-     * @param rightKey
+     * @param leftKey byte array for left Key
+     * @param rightKey byte array for right Key
      * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      * @deprecated Since 0.99.2;
      */
@@ -2261,10 +2257,10 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
   /**
    * @param in Where to read bytes from.  Creates a byte array to hold the KeyValue
-   * backing bytes copied from the steam.
+   *           backing bytes copied from the steam.
    * @return KeyValue created by deserializing from <code>in</code> OR if we find a length
-   * of zero, we will return null which can be useful marking a stream as done.
-   * @throws IOException
+   *           of zero, we will return null which can be useful marking a stream as done.
+   * @throws IOException if any IO error happen
    */
   public static KeyValue create(final DataInput in) throws IOException {
     return create(in.readInt(), in);
@@ -2272,16 +2268,18 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
   /**
    * Create a KeyValue reading <code>length</code> from <code>in</code>
-   * @param length
-   * @param in
+   * @param length length of the Key
+   * @param in Input to read from
    * @return Created KeyValue OR if we find a length of zero, we will return null which
-   * can be useful marking a stream as done.
-   * @throws IOException
+   *           can be useful marking a stream as done.
+   * @throws IOException if any IO error happen
    */
   public static KeyValue create(int length, final DataInput in) throws IOException {
 
     if (length <= 0) {
-      if (length == 0) return null;
+      if (length == 0) {
+        return null;
+      }
       throw new IOException("Failed read " + length + " bytes, stream corrupt?");
     }
 
@@ -2293,10 +2291,10 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
   /**
    * Write out a KeyValue in the manner in which we used to when KeyValue was a Writable.
-   * @param kv
-   * @param out
+   * @param kv the KeyValue on which write is being requested
+   * @param out OutputStream to write keyValue to
    * @return Length written on stream
-   * @throws IOException
+   * @throws IOException if any IO error happen
    * @see #create(DataInput) for the inverse function
    */
   public static long write(final KeyValue kv, final DataOutput out) throws IOException {
@@ -2312,11 +2310,11 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * Write out a KeyValue in the manner in which we used to when KeyValue was a Writable but do
    * not require a {@link DataOutput}, just take plain {@link OutputStream}
    * Named <code>oswrite</code> so does not clash with {@link #write(KeyValue, DataOutput)}
-   * @param kv
-   * @param out
-   * @param withTags
+   * @param kv the KeyValue on which write is being requested
+   * @param out OutputStream to write keyValue to
+   * @param withTags boolean value indicating write is with Tags or not
    * @return Length written on stream
-   * @throws IOException
+   * @throws IOException if any IO error happen
    * @see #create(DataInput) for the inverse function
    * @see #write(KeyValue, DataOutput)
    * @see KeyValueUtil#oswrite(Cell, OutputStream, boolean)
@@ -2433,9 +2431,9 @@ public class KeyValue implements ExtendedCell, Cloneable {
     /**
      * A setter that helps to avoid object creation every time and whenever
      * there is a need to create new KeyOnlyKeyValue.
-     * @param key
-     * @param offset
-     * @param length
+     * @param key Key to set
+     * @param offset Offset of the Key
+     * @param length length of the Key
      */
     public void setKey(byte[] key, int offset, int length) {
       this.bytes = key;

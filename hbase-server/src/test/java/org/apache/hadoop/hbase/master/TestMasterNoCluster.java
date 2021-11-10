@@ -23,7 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -64,7 +64,7 @@ public class TestMasterNoCluster {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterNoCluster.class);
 
-  private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil TESTUTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -149,7 +149,7 @@ public class TestMasterNoCluster {
     conf.set(HConstants.CLIENT_ZOOKEEPER_QUORUM, HConstants.LOCALHOST);
     conf.setInt(HConstants.CLIENT_ZOOKEEPER_CLIENT_PORT,
       TESTUTIL.getZkCluster().getClientPort() + 1);
-    // need to enable maintenance mode so we will start master as a region server
+    // need to enable maintenance mode so we will start master and an in process region server
     conf.setBoolean(HMaster.MAINTENANCE_MODE, true);
     // settings to allow us not to start additional RS
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);

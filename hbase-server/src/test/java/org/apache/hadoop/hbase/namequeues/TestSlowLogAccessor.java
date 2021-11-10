@@ -20,13 +20,12 @@
 package org.apache.hadoop.hbase.namequeues;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
@@ -66,7 +65,7 @@ public class TestSlowLogAccessor {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNamedQueueRecorder.class);
 
-  private static final HBaseTestingUtility HBASE_TESTING_UTILITY = new HBaseTestingUtility();
+  private static final HBaseTestingUtil HBASE_TESTING_UTILITY = new HBaseTestingUtil();
 
   private NamedQueueRecorder namedQueueRecorder;
 
@@ -93,9 +92,7 @@ public class TestSlowLogAccessor {
   @Before
   public void setUp() throws Exception {
     HRegionServer hRegionServer = HBASE_TESTING_UTILITY.getMiniHBaseCluster().getRegionServer(0);
-    Field slowLogRecorder = HRegionServer.class.getDeclaredField("namedQueueRecorder");
-    slowLogRecorder.setAccessible(true);
-    this.namedQueueRecorder = (NamedQueueRecorder) slowLogRecorder.get(hRegionServer);
+    this.namedQueueRecorder = hRegionServer.getNamedQueueRecorder();
   }
 
   private List<TooSlowLog.SlowLogPayload> getSlowLogPayloads(

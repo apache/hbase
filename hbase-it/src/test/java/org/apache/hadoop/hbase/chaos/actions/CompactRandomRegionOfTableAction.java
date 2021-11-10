@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
@@ -56,7 +56,7 @@ public class CompactRandomRegionOfTableAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
+    HBaseTestingUtil util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
     boolean major = RandomUtils.nextInt(0, 100) < majorRatio;
 

@@ -24,7 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -62,7 +62,7 @@ public class TestLockManager {
   private static final int LOCAL_LOCKS_TIMEOUT = 1000;
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLockManager.class);
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static MasterServices masterServices;
 
   private static String namespace = "namespace";
