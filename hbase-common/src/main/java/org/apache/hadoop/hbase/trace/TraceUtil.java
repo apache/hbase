@@ -31,13 +31,12 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Version;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public final class TraceUtil {
-
-  private static final String INSTRUMENTATION_NAME = "io.opentelemetry.contrib.hbase";
 
   public static final AttributeKey<String> NAMESPACE_KEY = SemanticAttributes.DB_HBASE_NAMESPACE;
 
@@ -68,7 +67,7 @@ public final class TraceUtil {
   }
 
   public static Tracer getGlobalTracer() {
-    return GlobalOpenTelemetry.getTracer(INSTRUMENTATION_NAME);
+    return GlobalOpenTelemetry.getTracer("org.apache.hbase", Version.version);
   }
 
   /**
