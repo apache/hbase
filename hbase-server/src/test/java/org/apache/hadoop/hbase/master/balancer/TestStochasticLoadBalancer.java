@@ -310,10 +310,10 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
         final double expectedCost = loadBalancer.computeCost(cluster, Double.MAX_VALUE);
         Cluster.Action action = loadBalancer.nextAction(cluster);
         cluster.doAction(action);
-        loadBalancer.updateCostsWithAction(cluster, action);
+        loadBalancer.updateCostsAndWeightsWithAction(cluster, action);
         Cluster.Action undoAction = action.undoAction();
         cluster.doAction(undoAction);
-        loadBalancer.updateCostsWithAction(cluster, undoAction);
+        loadBalancer.updateCostsAndWeightsWithAction(cluster, undoAction);
         final double actualCost = loadBalancer.computeCost(cluster, Double.MAX_VALUE);
         assertEquals(expectedCost, actualCost, 0);
       }
