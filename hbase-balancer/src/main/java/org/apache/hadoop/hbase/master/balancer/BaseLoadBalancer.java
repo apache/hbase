@@ -608,7 +608,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       });
       return result;
     } else {
-      LOG.info("Start Generate Balance plan for cluster.");
+      LOG.debug("Start Generate Balance plan for cluster.");
       return balanceTable(HConstants.ENSEMBLE_TABLE_NAME, toEnsumbleTableLoad(loadOfAllTable));
     }
   }
