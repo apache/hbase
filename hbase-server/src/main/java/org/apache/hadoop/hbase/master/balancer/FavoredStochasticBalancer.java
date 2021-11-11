@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -88,6 +87,14 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
     fnPickers.add(new FavoredNodeLoadPicker());
     fnPickers.add(new FavoredNodeLocalityPicker());
     setCandidateGenerators(fnPickers);
+  }
+
+  /**
+   * @return any candidate generator in random
+   */
+  @Override
+  protected CandidateGenerator getRandomGenerator() {
+    return candidateGenerators.get(RANDOM.nextInt(candidateGenerators.size()));
   }
 
   @Override
