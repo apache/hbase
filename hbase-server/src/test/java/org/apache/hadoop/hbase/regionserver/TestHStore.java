@@ -2141,29 +2141,6 @@ public class TestHStore {
     }
   }
 
-  @Test 
-  public void testOnConfigurationChange() throws IOException {
-    final int COMMON_MAX_FILES_TO_COMPACT = 10;
-    final int NEW_COMMON_MAX_FILES_TO_COMPACT = 8;
-    final int STORE_MAX_FILES_TO_COMPACT = 6;
-
-    //Build a table that its maxFileToCompact different from common configuration.
-    Configuration conf = HBaseConfiguration.create();
-    conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY,
-      COMMON_MAX_FILES_TO_COMPACT);
-    ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.newBuilder(family)
-      .setConfiguration(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY,
-        String.valueOf(STORE_MAX_FILES_TO_COMPACT)).build();
-    init(this.name.getMethodName(), conf, hcd);
-
-    //After updating common configuration, the conf in HStore itself must not be changed.
-    conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY,
-      NEW_COMMON_MAX_FILES_TO_COMPACT);
-    this.store.onConfigurationChange(conf);
-    assertEquals(STORE_MAX_FILES_TO_COMPACT,
-      store.getStoreEngine().getCompactionPolicy().getConf().getMaxFilesToCompact());
-  }
-
   private HStoreFile mockStoreFileWithLength(long length) {
     HStoreFile sf = mock(HStoreFile.class);
     StoreFileReader sfr = mock(StoreFileReader.class);

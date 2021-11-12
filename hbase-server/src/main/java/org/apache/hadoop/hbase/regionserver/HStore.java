@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.TableName;
@@ -66,6 +67,7 @@ import org.apache.hadoop.hbase.backup.FailedArchiveException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.ReadOnlyConfiguration;
@@ -2520,11 +2522,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
   @Override
   public void onConfigurationChange(Configuration conf) {
-    Configuration storeConf = StoreUtils.createStoreConfiguration(conf, region.getTableDescriptor(),
+    this.conf = StoreUtils.createStoreConfiguration(conf, region.getTableDescriptor(),
       getColumnFamilyDescriptor());
-    this.conf = storeConf;
-    this.storeEngine.compactionPolicy.setConf(storeConf);
-    this.offPeakHours = OffPeakHours.getInstance(storeConf);
+    this.storeEngine.compactionPolicy.setConf(conf);
+    this.offPeakHours = OffPeakHours.getInstance(conf);
   }
 
   /**
