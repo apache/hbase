@@ -2141,7 +2141,8 @@ public class TestHStore {
     }
   }
 
-  @Test public void testOnConfigurationChange() throws IOException {
+  @Test 
+  public void testOnConfigurationChange() throws IOException {
     final int COMMON_MAX_FILES_TO_COMPACT = 10;
     final int NEW_COMMON_MAX_FILES_TO_COMPACT = 8;
     final int STORE_MAX_FILES_TO_COMPACT = 6;
