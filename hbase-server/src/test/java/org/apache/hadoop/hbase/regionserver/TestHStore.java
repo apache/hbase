@@ -54,7 +54,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntBinaryOperator;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -99,7 +98,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.quotas.RegionSizeStoreImpl;
 import org.apache.hadoop.hbase.regionserver.MemStoreCompactionStrategy.Action;
-import org.apache.hadoop.hbase.regionserver.TestHStore.MyDefaultMemStore;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
@@ -2279,6 +2277,29 @@ public class TestHStore {
 
     assertTrue(segmentScanners.size() == 1);
     return segmentScanners.get(0);
+  }
+
+  @Test 
+  public void testOnConfigurationChange() throws IOException {
+    final int COMMON_MAX_FILES_TO_COMPACT = 10;
+    final int NEW_COMMON_MAX_FILES_TO_COMPACT = 8;
+    final int STORE_MAX_FILES_TO_COMPACT = 6;
+
+    //Build a table that its maxFileToCompact different from common configuration.
+    Configuration conf = HBaseConfiguration.create();
+    conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY,
+      COMMON_MAX_FILES_TO_COMPACT);
+    ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.newBuilder(family)
+      .setConfiguration(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY,
+        String.valueOf(STORE_MAX_FILES_TO_COMPACT)).build();
+    init(this.name.getMethodName(), conf, hcd);
+
+    //After updating common configuration, the conf in HStore itself must not be changed.
+    conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY,
+      NEW_COMMON_MAX_FILES_TO_COMPACT);
+    this.store.onConfigurationChange(conf);
+    assertEquals(STORE_MAX_FILES_TO_COMPACT,
+      store.getStoreEngine().getCompactionPolicy().getConf().getMaxFilesToCompact());
   }
 
   private HStoreFile mockStoreFileWithLength(long length) {
