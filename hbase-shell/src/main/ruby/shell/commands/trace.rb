@@ -17,21 +17,16 @@
 # limitations under the License.
 #
 
-# Disable tracing for now as HTrace does not work any more
-#java_import org.apache.hadoop.hbase.trace.SpanReceiverHost
-
 module Shell
   module Commands
     class Trace < Command
-#      @@conf = org.apache.htrace.core.HTraceConfiguration.fromKeyValuePairs(
-#        'sampler.classes', 'org.apache.htrace.core.AlwaysSampler'
-#      )
-#      @@tracer = org.apache.htrace.core.Tracer::Builder.new('HBaseShell').conf(@@conf).build()
-#      @@tracescope = nil
+        @@tracer = org.apache.hadoop.hbase.trace.TraceUtil.getGlobalTracer()
+        @@tracespan = nil
+        @@tracescope = nil
 
       def help
         <<-EOF
-Start or Stop tracing using HTrace.
+Start or Stop tracing using OpenTelemetry.
 Always returns true if tracing is running, otherwise false.
 If the first argument is 'start', new span is started.
 If the first argument is 'stop', current running span is stopped.
@@ -58,23 +53,24 @@ EOF
       end
 
       def trace(startstop, spanname)
-#        @@receiver ||= SpanReceiverHost.getInstance(@shell.hbase.configuration)
-#        if startstop == 'start'
-#          unless tracing?
-#            @@tracescope = @@tracer.newScope(spanname)
-#          end
-#        elsif startstop == 'stop'
-#          if tracing?
-#            @@tracescope.close
-#            @@tracescope = nil
-#          end
-#        end
-#        tracing?
+        if startstop == 'start'
+          unless tracing?
+           @@tracespan = @@tracer.spanBuilder(spanname).startSpan()
+           @@tracescope = @@tracespan.makeCurrent()
+          end
+        elsif startstop == 'stop'
+          if tracing?
+           @@tracescope.close()
+           @@tracespan.end()
+           @@tracescope = nil
+          end
+        end
+        tracing?
       end
 
-#      def tracing?
-#        @@tracescope != nil
-#      end
+      def tracing?
+        @@tracescope != nil
+      end
     end
   end
 end
