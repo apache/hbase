@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.regionreplication;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,10 +60,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescript
 public class RegionReplicationSink {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionReplicationSink.class);
-
-  public static final String MAX_PENDING_SIZE = "hbase.region.read-replica.sink.max-pending-size";
-
-  public static final long MAX_PENDING_SIZE_DEFAULT = 10L * 1024 * 1024;
 
   public static final String RETRIES_NUMBER = "hbase.region.read-replica.sink.retries.number";
 
@@ -85,10 +82,13 @@ public class RegionReplicationSink {
 
     final ServerCall<?> rpcCall;
 
+    final long size;
+
     SinkEntry(WALKeyImpl key, WALEdit edit, ServerCall<?> rpcCall) {
       this.key = key;
       this.edit = edit;
       this.rpcCall = rpcCall;
+      this.size = key.estimatedSerializedSizeOf() + edit.estimatedSerializedSizeOf();
       if (rpcCall != null) {
         // increase the reference count to avoid the rpc framework free the memory before we
         // actually sending them out.
@@ -112,6 +112,11 @@ public class RegionReplicationSink {
 
   private final TableDescriptor tableDesc;
 
+  // store it here to avoid passing it every time when calling TableDescriptor.getRegionReplication.
+  private final int regionReplication;
+
+  private final RegionReplicationBufferManager manager;
+
   private final Runnable flushRequester;
 
   private final AsyncClusterConnection conn;
@@ -128,20 +133,24 @@ public class RegionReplicationSink {
 
   private final long operationTimeoutNs;
 
+  private volatile long pendingSize;
+
   private boolean sending;
 
   private boolean stopping;
 
   private boolean stopped;
 
-  RegionReplicationSink(Configuration conf, RegionInfo primary, TableDescriptor td,
-    Runnable flushRequester, AsyncClusterConnection conn) {
+  public RegionReplicationSink(Configuration conf, RegionInfo primary, TableDescriptor td,
+    RegionReplicationBufferManager manager, Runnable flushRequester, AsyncClusterConnection conn) {
     Preconditions.checkArgument(RegionReplicaUtil.isDefaultReplica(primary), "%s is not primary",
       primary);
-    Preconditions.checkArgument(td.getRegionReplication() > 1,
-      "region replication should be greater than 1 but got %s", td.getRegionReplication());
+    this.regionReplication = td.getRegionReplication();
+    Preconditions.checkArgument(this.regionReplication > 1,
+      "region replication should be greater than 1 but got %s", this.regionReplication);
     this.primary = primary;
     this.tableDesc = td;
+    this.manager = manager;
     this.flushRequester = flushRequester;
     this.conn = conn;
     this.retries = conf.getInt(RETRIES_NUMBER, RETRIES_NUMBER_DEFAULT);
@@ -153,7 +162,12 @@ public class RegionReplicationSink {
 
   private void onComplete(List<SinkEntry> sent,
     Map<Integer, MutableObject<Throwable>> replica2Error) {
-    sent.forEach(SinkEntry::replicated);
+    long toReleaseSize = 0;
+    for (SinkEntry entry : sent) {
+      entry.replicated();
+      toReleaseSize += entry.size;
+    }
+    manager.decrease(toReleaseSize);
     Set<Integer> failed = new HashSet<>();
     for (Map.Entry<Integer, MutableObject<Throwable>> entry : replica2Error.entrySet()) {
       Integer replicaId = entry.getKey();
@@ -165,6 +179,7 @@ public class RegionReplicationSink {
       }
     }
     synchronized (entries) {
+      pendingSize -= toReleaseSize;
       if (!failed.isEmpty()) {
         failedReplicas.addAll(failed);
         flushRequester.run();
@@ -190,7 +205,7 @@ public class RegionReplicationSink {
       }
       toSend.add(entry);
     }
-    int toSendReplicaCount = tableDesc.getRegionReplication() - 1 - failedReplicas.size();
+    int toSendReplicaCount = regionReplication - 1 - failedReplicas.size();
     if (toSendReplicaCount <= 0) {
       return;
     }
@@ -199,7 +214,7 @@ public class RegionReplicationSink {
       toSend.stream().map(e -> new WAL.Entry(e.key, e.edit)).collect(Collectors.toList());
     AtomicInteger remaining = new AtomicInteger(toSendReplicaCount);
     Map<Integer, MutableObject<Throwable>> replica2Error = new HashMap<>();
-    for (int replicaId = 1; replicaId < tableDesc.getRegionReplication(); replicaId++) {
+    for (int replicaId = 1; replicaId < regionReplication; replicaId++) {
       MutableObject<Throwable> error = new MutableObject<>();
       replica2Error.put(replicaId, error);
       RegionInfo replica = RegionReplicaUtil.getRegionInfoForReplica(primary, replicaId);
@@ -221,6 +236,17 @@ public class RegionReplicationSink {
       return false;
     }
     return storesFlushed.containsAll(tableDesc.getColumnFamilyNames());
+  }
+
+  private void clearAllEntries() {
+    long toClearSize = 0;
+    for (SinkEntry entry : entries) {
+      toClearSize += entry.size;
+      entry.replicated();
+    }
+    entries.clear();
+    pendingSize -= toClearSize;
+    manager.decrease(toClearSize);
   }
 
   /**
@@ -251,21 +277,56 @@ public class RegionReplicationSink {
               continue;
             }
             if (flushDesc != null && flushAllStores(flushDesc)) {
-              LOG.debug("Got a flush all request, clear failed replicas {} and {} pending" +
-                " replication entries", failedReplicas, entries.size());
-              entries.clear();
+              int toClearCount = 0;
+              long toClearSize = 0;
+              for (;;) {
+                SinkEntry e = entries.peek();
+                if (e == null) {
+                  break;
+                }
+                if (e.key.getSequenceId() < flushDesc.getFlushSequenceNumber()) {
+                  entries.poll();
+                  toClearCount++;
+                  toClearSize += e.size;
+                } else {
+                  break;
+                }
+              }
               failedReplicas.clear();
+              LOG.debug(
+                "Got a flush all request with sequence id {}, clear failed replicas {}" +
+                  " and {} pending entries with size {}",
+                flushDesc.getFlushSequenceNumber(), failedReplicas, toClearCount,
+                StringUtils.TraditionalBinaryPrefix.long2String(toClearSize, "", 1));
             }
           }
         }
       }
-      // TODO: limit the total cached entries here, and we should have a global limitation, not for
-      // only this region.
-      entries.add(new SinkEntry(key, edit, rpcCall));
-      if (!sending) {
-        send();
+      if (failedReplicas.size() == regionReplication - 1) {
+        // this means we have marked all the replicas as failed, so just give up here
+        return;
+      }
+      SinkEntry entry = new SinkEntry(key, edit, rpcCall);
+      entries.add(entry);
+      pendingSize += entry.size;
+      if (manager.increase(entry.size)) {
+        if (!sending) {
+          send();
+        }
+      } else {
+        // we have run out of the max pending size, drop all the edits, and mark all replicas as
+        // failed
+        clearAllEntries();
+        for (int replicaId = 1; replicaId < regionReplication; replicaId++) {
+          failedReplicas.add(replicaId);
+        }
+        flushRequester.run();
       }
     }
+  }
+
+  long pendingSize() {
+    return pendingSize;
   }
 
   /**
@@ -273,9 +334,10 @@ public class RegionReplicationSink {
    * <p/>
    * Usually this should only be called when you want to close a region.
    */
-  void stop() {
+  public void stop() {
     synchronized (entries) {
       stopping = true;
+      clearAllEntries();
       if (!sending) {
         stopped = true;
         entries.notifyAll();
@@ -291,7 +353,7 @@ public class RegionReplicationSink {
    * <p/>
    * This is used to keep the replicating order the same with the WAL edit order when writing.
    */
-  void waitUntilStopped() throws InterruptedException {
+  public void waitUntilStopped() throws InterruptedException {
     synchronized (entries) {
       while (!stopped) {
         entries.wait();
