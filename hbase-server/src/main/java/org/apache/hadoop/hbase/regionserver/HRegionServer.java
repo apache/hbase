@@ -126,6 +126,7 @@ import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
 import org.apache.hadoop.hbase.regionserver.http.RSDumpServlet;
 import org.apache.hadoop.hbase.regionserver.http.RSStatusServlet;
+import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationBufferManager;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
@@ -461,6 +462,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   // A timer to shutdown the process if abort takes too long
   private Timer abortMonitor;
 
+  private RegionReplicationBufferManager regionReplicationBufferManager;
   /**
    * Starts a HRegionServer at the default location.
    * <p/>
@@ -645,6 +647,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       initializeZooKeeper();
       setupClusterConnection();
       bootstrapNodeManager = new BootstrapNodeManager(asyncClusterConnection, masterAddressTracker);
+      regionReplicationBufferManager = new RegionReplicationBufferManager(this);
       // Setup RPC client for master communication
       this.rpcClient = asyncClusterConnection.getRpcClient();
     } catch (Throwable t) {
@@ -883,7 +886,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       closeUserRegions(abortRequested.get());
       LOG.info("stopping server " + this.serverName);
     }
-
+    regionReplicationBufferManager.stop();
     closeClusterConnection();
     // Closing the compactSplit thread before closing meta regions
     if (!this.killed && containsMetaTableRegions()) {
@@ -3546,5 +3549,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     shutdownChore(fsUtilizationChore);
     shutdownChore(slowLogTableOpsChore);
     shutdownChore(brokenStoreFileCleaner);
+  }
+
+  @Override
+  public RegionReplicationBufferManager getRegionReplicationBufferManager() {
+    return regionReplicationBufferManager;
   }
 }
