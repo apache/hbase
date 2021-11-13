@@ -86,11 +86,6 @@ public class TestMetaRegionReplicaReplication {
   @Before
   public void before() throws Exception {
     Configuration conf = HTU.getConfiguration();
-    conf.setFloat("hbase.regionserver.logroll.multiplier", 0.0003f);
-    conf.setInt("replication.source.size.capacity", 10240);
-    conf.setLong("replication.source.sleepforretries", 100);
-    conf.setInt("hbase.regionserver.maxlogs", 10);
-    conf.setLong("hbase.master.logcleaner.ttl", 10);
     conf.setInt("zookeeper.recovery.retry", 1);
     conf.setInt("zookeeper.recovery.retry.intervalmill", 10);
     conf.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);

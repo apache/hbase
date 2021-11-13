@@ -148,6 +148,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.Write
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.ForbidMajorCompactionChecker;
+import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationSink;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
@@ -1107,11 +1108,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return;
     }
     status.setStatus("Initializaing region replication sink");
-    regionReplicationSink = Optional.of(new RegionReplicationSink(conf, regionInfo, td, () -> {
-      rss.getFlushRequester().requestFlush(this, new ArrayList<>(td.getColumnFamilyNames()),
-        FlushLifeCycleTracker.DUMMY);
-    }, rss.getAsyncClusterConnection()));
-
+    regionReplicationSink = Optional.of(new RegionReplicationSink(conf, regionInfo, td,
+      rss.getRegionReplicationBufferManager(), () -> rss.getFlushRequester().requestFlush(this,
+        new ArrayList<>(td.getColumnFamilyNames()), FlushLifeCycleTracker.DUMMY),
+      rss.getAsyncClusterConnection()));
   }
 
   /**
@@ -2494,7 +2494,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     boolean isCompactionNeeded();
   }
 
-  FlushResultImpl flushcache(boolean flushAllStores, boolean writeFlushRequestWalMarker,
+  public FlushResultImpl flushcache(boolean flushAllStores, boolean writeFlushRequestWalMarker,
     FlushLifeCycleTracker tracker) throws IOException {
     List<byte[]> families = null;
     if (flushAllStores) {
