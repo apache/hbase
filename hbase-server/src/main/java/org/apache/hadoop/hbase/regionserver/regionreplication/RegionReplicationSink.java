@@ -30,6 +30,7 @@ import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import org.agrona.collections.IntHashSet;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -123,7 +124,7 @@ public class RegionReplicationSink {
 
   // used to track the replicas which we failed to replicate edits to them
   // will be cleared after we get a flush edit.
-  private final Set<Integer> failedReplicas = new HashSet<>();
+  private final IntHashSet failedReplicas = new IntHashSet();
 
   private final Queue<SinkEntry> entries = new ArrayDeque<>();
 
@@ -134,6 +135,8 @@ public class RegionReplicationSink {
   private final long operationTimeoutNs;
 
   private volatile long pendingSize;
+
+  private long lastFlushSequenceNumber;
 
   private boolean sending;
 
@@ -162,8 +165,10 @@ public class RegionReplicationSink {
 
   private void onComplete(List<SinkEntry> sent,
     Map<Integer, MutableObject<Throwable>> replica2Error) {
+    long maxSequenceId = Long.MIN_VALUE;
     long toReleaseSize = 0;
     for (SinkEntry entry : sent) {
+      maxSequenceId = Math.max(maxSequenceId, entry.key.getSequenceId());
       entry.replicated();
       toReleaseSize += entry.size;
     }
@@ -173,9 +178,20 @@ public class RegionReplicationSink {
       Integer replicaId = entry.getKey();
       Throwable error = entry.getValue().getValue();
       if (error != null) {
-        LOG.warn("Failed to replicate to secondary replica {} for {}, stop replicating" +
-          " for a while and trigger a flush", replicaId, primary, error);
-        failed.add(replicaId);
+        if (maxSequenceId > lastFlushSequenceNumber) {
+          LOG.warn(
+            "Failed to replicate to secondary replica {} for {}, since the max sequence" +
+              " id of sunk entris is {}, which is greater than the last flush SN {}," +
+              " we will stop replicating for a while and trigger a flush",
+            replicaId, primary, maxSequenceId, lastFlushSequenceNumber, error);
+          failed.add(replicaId);
+        } else {
+          LOG.warn(
+            "Failed to replicate to secondary replica {} for {}, since the max sequence" +
+              " id of sunk entris is {}, which is less than or equal to the last flush SN {}," +
+              " we will not stop replicating",
+            replicaId, primary, maxSequenceId, lastFlushSequenceNumber, error);
+        }
       }
     }
     synchronized (entries) {
@@ -215,6 +231,9 @@ public class RegionReplicationSink {
     AtomicInteger remaining = new AtomicInteger(toSendReplicaCount);
     Map<Integer, MutableObject<Throwable>> replica2Error = new HashMap<>();
     for (int replicaId = 1; replicaId < regionReplication; replicaId++) {
+      if (failedReplicas.contains(replicaId)) {
+        continue;
+      }
       MutableObject<Throwable> error = new MutableObject<>();
       replica2Error.put(replicaId, error);
       RegionInfo replica = RegionReplicaUtil.getRegionInfoForReplica(primary, replicaId);
@@ -292,6 +311,7 @@ public class RegionReplicationSink {
                   break;
                 }
               }
+              lastFlushSequenceNumber = flushDesc.getFlushSequenceNumber();
               failedReplicas.clear();
               LOG.debug(
                 "Got a flush all request with sequence id {}, clear failed replicas {}" +
