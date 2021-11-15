@@ -124,13 +124,7 @@ public final class ReadOnlyZKClient implements Closeable {
   }
 
   public ReadOnlyZKClient(Configuration conf) {
-    // We might use a different ZK for client access
-    String clientZkQuorumServers = ZKConfig.getClientZKQuorumServersString(conf);
-    if (clientZkQuorumServers != null) {
-      this.connectString = clientZkQuorumServers;
-    } else {
-      this.connectString = ZKConfig.getZKQuorumServersString(conf);
-    }
+    this.connectString = resolveZKQuorumServersString(conf);
     this.sessionTimeoutMs = conf.getInt(ZK_SESSION_TIMEOUT, DEFAULT_ZK_SESSION_TIMEOUT);
     this.maxRetries = conf.getInt(RECOVERY_RETRY, DEFAULT_RECOVERY_RETRY);
     this.retryIntervalMs =
@@ -142,6 +136,20 @@ public final class ReadOnlyZKClient implements Closeable {
       getId(), connectString, sessionTimeoutMs, maxRetries, retryIntervalMs, keepAliveTimeMs);
     Threads.setDaemonThreadRunning(new Thread(this::run),
       "ReadOnlyZKClient-" + connectString + "@" + getId());
+  }
+
+  /**
+   * Determine the configured ZooKeeper quorum connection string, which is a "server:clientport"
+   * list, separated by ','.
+   */
+  public static String resolveZKQuorumServersString(final Configuration conf) {
+    // We might use a different ZK for client access
+    String clientZkQuorumServers = ZKConfig.getClientZKQuorumServersString(conf);
+    if (clientZkQuorumServers != null) {
+      return clientZkQuorumServers;
+    } else {
+      return ZKConfig.getZKQuorumServersString(conf);
+    }
   }
 
   private abstract class ZKTask<T> extends Task {

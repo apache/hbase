@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.ipc.ServerCall;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.trace.SemanticAttributes;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -797,7 +798,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   private Span createSpan(String name) {
-    return TraceUtil.createSpan(name).setAttribute(TraceUtil.WAL_IMPL, implClassName);
+    return TraceUtil.createSpan(name).setAttribute(SemanticAttributes.WAL_IMPL, implClassName);
   }
 
   /**

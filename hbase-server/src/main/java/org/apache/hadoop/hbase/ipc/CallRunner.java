@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.trace.SemanticAttributes;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -124,8 +125,8 @@ public class CallRunner {
       String methodName = getMethodName();
       Span span = TraceUtil.getGlobalTracer().spanBuilder("RpcServer.callMethod")
         .setParent(Context.current().with(((ServerCall<?>) call).getSpan())).startSpan()
-        .setAttribute(TraceUtil.RPC_SERVICE_KEY, serviceName)
-        .setAttribute(TraceUtil.RPC_METHOD_KEY, methodName);
+        .setAttribute(SemanticAttributes.RPC_SERVICE_KEY, serviceName)
+        .setAttribute(SemanticAttributes.RPC_METHOD_KEY, methodName);
       try (Scope traceScope = span.makeCurrent()) {
         if (!this.rpcServer.isStarted()) {
           InetSocketAddress address = rpcServer.getListenerAddress();

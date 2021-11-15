@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -78,6 +77,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.trace.SemanticAttributes;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -414,6 +414,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   @Override
+  public User getUser() {
+    return user;
+  }
+
+  @Override
   public Table getTable(TableName tableName) throws IOException {
     return getTable(tableName, getBatchPool());
   }
@@ -504,7 +509,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           return MasterProtos.HbckService.newBlockingStub(channel);
         }), rpcControllerFactory);
     }, () -> TraceUtil.createSpan(this.getClass().getSimpleName() + ".getHbck")
-      .setAttribute(TraceUtil.SERVER_NAME_KEY, masterServer.getServerName()));
+      .setAttribute(SemanticAttributes.SERVER_NAME_KEY, masterServer.getServerName()));
   }
 
   @Override
@@ -1350,6 +1355,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   final MasterServiceState masterServiceState = new MasterServiceState(this);
+
+  @Override
+  public ConnectionRegistry getConnectionRegistry() {
+    return registry;
+  }
 
   @Override
   public MasterKeepAliveConnection getMaster() throws IOException {

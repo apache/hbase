@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
-
 import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.util.Optional;
@@ -50,6 +49,7 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.trace.SemanticAttributes;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ConcurrentMapUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -57,10 +57,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
@@ -70,7 +68,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterServ
  * The implementation of AsyncConnection.
  */
 @InterfaceAudience.Private
-class AsyncConnectionImpl implements AsyncConnection {
+public class AsyncConnectionImpl implements AsyncConnection {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncConnectionImpl.class);
 
@@ -188,6 +186,10 @@ class AsyncConnectionImpl implements AsyncConnection {
       choreService = new ChoreService("AsyncConn Chore Service");
     }
     return choreService;
+  }
+
+  public User getUser() {
+    return user;
   }
 
   @Override
@@ -311,6 +313,10 @@ class AsyncConnectionImpl implements AsyncConnection {
     return backoffPolicy;
   }
 
+  public ConnectionRegistry getConnectionRegistry() {
+    return registry;
+  }
+
   @Override
   public AsyncTableBuilder<AdvancedScanResultConsumer> getTableBuilder(TableName tableName) {
     return new AsyncTableBuilderBase<AdvancedScanResultConsumer>(tableName, connConf) {
@@ -371,7 +377,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   private Hbck getHbckInternal(ServerName masterServer) {
-    Span.current().setAttribute(TraceUtil.SERVER_NAME_KEY, masterServer.getServerName());
+    Span.current().setAttribute(SemanticAttributes.SERVER_NAME_KEY, masterServer.getServerName());
     // we will not create a new connection when creating a new protobuf stub, and for hbck there
     // will be no performance consideration, so for simplification we will create a new stub every
     // time instead of caching the stub here.

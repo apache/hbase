@@ -105,6 +105,13 @@ class ZKConnectionRegistry implements ConnectionRegistry {
       "ZKConnectionRegistry.getClusterId");
   }
 
+  @Override
+  public String getConnectionString() {
+    final String serverList = zk.getConnectString();
+    final String baseZNode = znodePaths.baseZNode;
+    return serverList + ":" + baseZNode;
+  }
+
   ReadOnlyZKClient getZKClient() {
     return zk;
   }

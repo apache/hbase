@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.trace.TraceUtil.trace;
 import static org.apache.hadoop.hbase.trace.TraceUtil.tracedFuture;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
-
 import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
@@ -44,14 +43,13 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ClientMetaService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetActiveMasterRequest;
@@ -77,6 +75,8 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   /** Default value for the fan out of hedged requests. **/
   public static final int HEDGED_REQS_FANOUT_DEFAULT = 2;
 
+  private final Configuration conf;
+
   private final int hedgedReadFanOut;
 
   // Configured list of end points to probe the meta information from.
@@ -93,6 +93,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
     String hedgedReqsFanoutConfigName, String initialRefreshDelaySecsConfigName,
     String refreshIntervalSecsConfigName, String minRefreshIntervalSecsConfigName)
     throws IOException {
+    this.conf = conf;
     this.hedgedReadFanOut =
       Math.max(1, conf.getInt(hedgedReqsFanoutConfigName, HEDGED_REQS_FANOUT_DEFAULT));
     rpcTimeoutMs = (int) Math.min(Integer.MAX_VALUE,
@@ -273,8 +274,29 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   }
 
   @Override
+  public String getConnectionString() {
+    final StringJoiner joiner = new StringJoiner(",");
+    try {
+      getBootstrapNodes(conf)
+        .stream()
+        .map(ServerName::getAddress)
+        .map(address -> {
+          final String hostname = -1 == address.getHostName().indexOf(':')
+            ? address.getHostName()
+            : "[" + address.getHostName() + "]";
+          final int port = address.getPort();
+          return hostname + ":" + port;
+        })
+        .forEach(joiner::add);
+      return joiner.toString();
+    } catch (IOException e) {
+      return "UNKNOWN";
+    }
+  }
+
+  @Override
   public void close() {
-    trace(() -> {
+    TraceUtil.trace(() -> {
       if (registryEndpointRefresher != null) {
         registryEndpointRefresher.stop();
       }

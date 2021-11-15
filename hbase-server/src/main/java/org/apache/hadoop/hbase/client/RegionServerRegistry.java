@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,6 +72,11 @@ public class RegionServerRegistry implements ConnectionRegistry {
       future.completeExceptionally(new IOException("no active master available"));
     }
     return future;
+  }
+
+  @Override
+  public String getConnectionString() {
+    return regionServer.toString();
   }
 
   @Override

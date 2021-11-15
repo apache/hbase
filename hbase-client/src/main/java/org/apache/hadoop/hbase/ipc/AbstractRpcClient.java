@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.codec.KeyValueCodec;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.trace.SemanticAttributes;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PoolMap;
@@ -396,10 +397,10 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     final Message param, Message returnType, final User ticket, final Address addr,
     final RpcCallback<Message> callback) {
     Span span = TraceUtil.createClientSpan("RpcClient.callMethod")
-      .setAttribute(TraceUtil.RPC_SERVICE_KEY, md.getService().getName())
-      .setAttribute(TraceUtil.RPC_METHOD_KEY, md.getName())
-      .setAttribute(TraceUtil.REMOTE_HOST_KEY, addr.getHostName())
-      .setAttribute(TraceUtil.REMOTE_PORT_KEY, addr.getPort());
+      .setAttribute(SemanticAttributes.RPC_SERVICE_KEY, md.getService().getName())
+      .setAttribute(SemanticAttributes.RPC_METHOD_KEY, md.getName())
+      .setAttribute(SemanticAttributes.REMOTE_HOST_KEY, addr.getHostName())
+      .setAttribute(SemanticAttributes.REMOTE_PORT_KEY, addr.getPort());
     try (Scope scope = span.makeCurrent()) {
       final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
       cs.setStartTime(EnvironmentEdgeManager.currentTime());

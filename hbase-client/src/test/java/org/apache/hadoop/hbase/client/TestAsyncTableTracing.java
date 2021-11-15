@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.trace.SemanticAttributes;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -228,8 +228,8 @@ public class TestAsyncTableTracing {
     assertEquals(StatusCode.OK, data.getStatus().getStatusCode());
     TableName tableName = table.getName();
     assertEquals(tableName.getNamespaceAsString(),
-      data.getAttributes().get(TraceUtil.NAMESPACE_KEY));
-    assertEquals(tableName.getNameAsString(), data.getAttributes().get(TraceUtil.TABLE_KEY));
+      data.getAttributes().get(SemanticAttributes.NAMESPACE_KEY));
+    assertEquals(tableName.getNameAsString(), data.getAttributes().get(SemanticAttributes.TABLE_KEY));
   }
 
   @Test

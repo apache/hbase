@@ -1,6 +1,4 @@
-/**
- *
-
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,8 +29,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 
@@ -55,6 +53,11 @@ public interface ClusterConnection extends Connection {
   @Deprecated
   boolean isMasterRunning()
       throws MasterNotRunningException, ZooKeeperConnectionException;
+
+  /**
+   * Return the {@link User} as whom this connection operates.
+   */
+  User getUser();
 
   /**
    * Use this api to check if the table has been created with the specified number of
@@ -175,8 +178,7 @@ public interface ClusterConnection extends Connection {
    *   question
    * @throws IOException if a remote or network exception occurs
    */
-  HRegionLocation locateRegion(final byte[] regionName)
-  throws IOException;
+  HRegionLocation locateRegion(final byte[] regionName) throws IOException;
 
   /**
    * Gets the locations of all regions in the specified table, <i>tableName</i>.
@@ -223,6 +225,11 @@ public interface ClusterConnection extends Connection {
   */
   RegionLocations locateRegion(TableName tableName, byte[] row, boolean useCache, boolean retry,
      int replicaId) throws IOException;
+
+  /**
+   * Returns the {@link ConnectionRegistry} implementation.
+   */
+  ConnectionRegistry getConnectionRegistry();
 
   /**
    * Returns a {@link MasterKeepAliveConnection} to the active master
