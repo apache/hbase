@@ -24,7 +24,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -40,6 +39,7 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -101,6 +101,8 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
   private static String HTTP_PRINCIPAL;
 
   private static String TEST_KEY_NAME = "test_key";
+
+  private static StreamSlowMonitor MONITOR;
 
   @Rule
   public TestName name = new TestName();
@@ -187,6 +189,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     HBaseKerberosUtils.setSecuredConfiguration(UTIL.getConfiguration(),
       PRINCIPAL + "@" + KDC.getRealm(), HTTP_PRINCIPAL + "@" + KDC.getRealm());
     HBaseKerberosUtils.setSSLConfiguration(UTIL, TestSaslFanOutOneBlockAsyncDFSOutput.class);
+    MONITOR = StreamSlowMonitor.create(UTIL.getConfiguration(), "testMonitor");
   }
 
   @AfterClass
@@ -252,7 +255,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
   private void test(Path file) throws IOException, InterruptedException, ExecutionException {
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, file,
-      true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
+      true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR);
     TestFanOutOneBlockAsyncDFSOutput.writeAndVerify(FS, file, out);
   }
 
