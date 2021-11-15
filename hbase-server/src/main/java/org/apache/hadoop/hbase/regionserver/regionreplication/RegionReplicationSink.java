@@ -118,7 +118,7 @@ public class RegionReplicationSink {
 
   private final RegionReplicationBufferManager manager;
 
-  private final Runnable flushRequester;
+  private final RegionReplicationFlushRequester flushRequester;
 
   private final AsyncClusterConnection conn;
 
@@ -136,7 +136,7 @@ public class RegionReplicationSink {
 
   private volatile long pendingSize;
 
-  private long lastFlushSequenceNumber;
+  private long lastFlushedSequenceId;
 
   private boolean sending;
 
@@ -154,7 +154,7 @@ public class RegionReplicationSink {
     this.primary = primary;
     this.tableDesc = td;
     this.manager = manager;
-    this.flushRequester = flushRequester;
+    this.flushRequester = new RegionReplicationFlushRequester(conf, flushRequester);
     this.conn = conn;
     this.retries = conf.getInt(RETRIES_NUMBER, RETRIES_NUMBER_DEFAULT);
     this.rpcTimeoutNs =
@@ -178,19 +178,19 @@ public class RegionReplicationSink {
       Integer replicaId = entry.getKey();
       Throwable error = entry.getValue().getValue();
       if (error != null) {
-        if (maxSequenceId > lastFlushSequenceNumber) {
+        if (maxSequenceId > lastFlushedSequenceId) {
           LOG.warn(
             "Failed to replicate to secondary replica {} for {}, since the max sequence" +
               " id of sunk entris is {}, which is greater than the last flush SN {}," +
               " we will stop replicating for a while and trigger a flush",
-            replicaId, primary, maxSequenceId, lastFlushSequenceNumber, error);
+            replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
           failed.add(replicaId);
         } else {
           LOG.warn(
             "Failed to replicate to secondary replica {} for {}, since the max sequence" +
               " id of sunk entris is {}, which is less than or equal to the last flush SN {}," +
               " we will not stop replicating",
-            replicaId, primary, maxSequenceId, lastFlushSequenceNumber, error);
+            replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
         }
       }
     }
@@ -198,7 +198,7 @@ public class RegionReplicationSink {
       pendingSize -= toReleaseSize;
       if (!failed.isEmpty()) {
         failedReplicas.addAll(failed);
-        flushRequester.run();
+        flushRequester.requestFlush(maxSequenceId);
       }
       sending = false;
       if (stopping) {
@@ -296,6 +296,7 @@ public class RegionReplicationSink {
               continue;
             }
             if (flushDesc != null && flushAllStores(flushDesc)) {
+              long flushedSequenceId = flushDesc.getFlushSequenceNumber();
               int toClearCount = 0;
               long toClearSize = 0;
               for (;;) {
@@ -303,7 +304,7 @@ public class RegionReplicationSink {
                 if (e == null) {
                   break;
                 }
-                if (e.key.getSequenceId() < flushDesc.getFlushSequenceNumber()) {
+                if (e.key.getSequenceId() < flushedSequenceId) {
                   entries.poll();
                   toClearCount++;
                   toClearSize += e.size;
@@ -311,13 +312,14 @@ public class RegionReplicationSink {
                   break;
                 }
               }
-              lastFlushSequenceNumber = flushDesc.getFlushSequenceNumber();
+              lastFlushedSequenceId = flushedSequenceId;
               failedReplicas.clear();
               LOG.debug(
                 "Got a flush all request with sequence id {}, clear failed replicas {}" +
                   " and {} pending entries with size {}",
-                flushDesc.getFlushSequenceNumber(), failedReplicas, toClearCount,
+                flushedSequenceId, failedReplicas, toClearCount,
                 StringUtils.TraditionalBinaryPrefix.long2String(toClearSize, "", 1));
+              flushRequester.recordFlush(flushedSequenceId);
             }
           }
         }
@@ -340,7 +342,7 @@ public class RegionReplicationSink {
         for (int replicaId = 1; replicaId < regionReplication; replicaId++) {
           failedReplicas.add(replicaId);
         }
-        flushRequester.run();
+        flushRequester.requestFlush(entry.key.getSequenceId());
       }
     }
   }
