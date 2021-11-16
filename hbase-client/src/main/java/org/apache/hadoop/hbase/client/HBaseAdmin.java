@@ -3717,7 +3717,7 @@ public class HBaseAdmin implements Admin {
   }
 
   private long getTtlFromSnapshotProps(Map<String, Object> snapshotProps) {
-    return MapUtils.getLongValue(snapshotProps, "TTL", -1);
+    return MapUtils.getLongValue(snapshotProps, "TTL", HConstants.UNSET_SNAPSHOT_PROP);
   }
 
   public void snapshot(final String snapshotName,
