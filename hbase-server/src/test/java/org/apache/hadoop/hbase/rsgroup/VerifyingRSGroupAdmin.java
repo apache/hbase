@@ -546,8 +546,9 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName,
-    boolean restoreAcl) throws IOException, TableExistsException, RestoreSnapshotException {
-    return admin.cloneSnapshotAsync(snapshotName, tableName, restoreAcl);
+    boolean restoreAcl, String cloneSFT)
+    throws IOException, TableExistsException, RestoreSnapshotException {
+    return admin.cloneSnapshotAsync(snapshotName, tableName, restoreAcl, cloneSFT);
   }
 
   public void execProcedure(String signature, String instance, Map<String, String> props)

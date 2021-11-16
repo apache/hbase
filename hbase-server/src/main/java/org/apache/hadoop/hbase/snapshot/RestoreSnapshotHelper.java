@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -59,6 +57,7 @@ import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
@@ -200,8 +199,7 @@ public class RestoreSnapshotHelper {
 
     List<RegionInfo> tableRegions = getTableRegions();
 
-    RegionInfo mobRegion = MobUtils.getMobRegionInfo(snapshotManifest.getTableDescriptor()
-        .getTableName());
+    RegionInfo mobRegion = MobUtils.getMobRegionInfo(tableDesc.getTableName());
     if (tableRegions != null) {
       // restore the mob region in case
       if (regionNames.contains(mobRegion.getEncodedName())) {
@@ -707,7 +705,9 @@ public class RestoreSnapshotHelper {
           HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, newRegionInfo, false) :
           HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, newRegionInfo);
 
-        StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true,
+        Configuration sftConf = StoreUtils.createStoreConfiguration(conf, tableDesc,
+          tableDesc.getColumnFamily(familyFiles.getFamilyName().toByteArray()));
+        StoreFileTracker tracker = StoreFileTrackerFactory.create(sftConf, true,
           StoreContext.getBuilder().withFamilyStoreDirectoryPath(familyDir).
             withRegionFileSystem(regionFS).build());
         tracker.set(clonedFiles);

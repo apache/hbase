@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
@@ -66,6 +67,9 @@ import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
@@ -82,6 +86,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.TablePartiallyOpenException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
@@ -751,8 +756,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @throws IOException
    */
   private long cloneSnapshot(final SnapshotDescription reqSnapshot, final TableName tableName,
-      final SnapshotDescription snapshot, final TableDescriptor snapshotTableDesc,
-      final NonceKey nonceKey, final boolean restoreAcl) throws IOException {
+    final SnapshotDescription snapshot, final TableDescriptor snapshotTableDesc,
+    final NonceKey nonceKey, final boolean restoreAcl, final String cloneSFT) throws IOException {
     MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
     TableDescriptor htd = TableDescriptorBuilder.copy(tableName, snapshotTableDesc);
     org.apache.hadoop.hbase.client.SnapshotDescription snapshotPOJO = null;
@@ -762,7 +767,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     }
     long procId;
     try {
-      procId = cloneSnapshot(snapshot, htd, nonceKey, restoreAcl);
+      procId = cloneSnapshot(snapshot, htd, nonceKey, restoreAcl, cloneSFT);
     } catch (IOException e) {
       LOG.error("Exception occurred while cloning the snapshot " + snapshot.getName()
         + " as table " + tableName.getNameAsString(), e);
@@ -786,7 +791,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @return procId the ID of the clone snapshot procedure
    */
   synchronized long cloneSnapshot(final SnapshotDescription snapshot,
-      final TableDescriptor tableDescriptor, final NonceKey nonceKey, final boolean restoreAcl)
+    final TableDescriptor tableDescriptor, final NonceKey nonceKey, final boolean restoreAcl,
+    final String cloneSFT)
       throws HBaseSnapshotException {
     TableName tableName = tableDescriptor.getTableName();
 
@@ -803,7 +809,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     try {
       long procId = master.getMasterProcedureExecutor().submitProcedure(
         new CloneSnapshotProcedure(master.getMasterProcedureExecutor().getEnvironment(),
-                tableDescriptor, snapshot, restoreAcl),
+                tableDescriptor, snapshot, restoreAcl, cloneSFT),
         nonceKey);
       this.restoreTableToProcIdMap.put(tableName, procId);
       return procId;
@@ -822,7 +828,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @throws IOException
    */
   public long restoreOrCloneSnapshot(final SnapshotDescription reqSnapshot, final NonceKey nonceKey,
-      final boolean restoreAcl) throws IOException {
+      final boolean restoreAcl, String cloneSFT) throws IOException {
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(reqSnapshot, rootDir);
 
@@ -854,13 +860,73 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     // Execute the restore/clone operation
     long procId;
     if (master.getTableDescriptors().exists(tableName)) {
-      procId = restoreSnapshot(reqSnapshot, tableName, snapshot, snapshotTableDesc, nonceKey,
-        restoreAcl);
+      procId =
+        restoreSnapshot(reqSnapshot, tableName, snapshot, snapshotTableDesc, nonceKey, restoreAcl);
     } else {
       procId =
-          cloneSnapshot(reqSnapshot, tableName, snapshot, snapshotTableDesc, nonceKey, restoreAcl);
+        cloneSnapshot(reqSnapshot, tableName, snapshot, snapshotTableDesc, nonceKey, restoreAcl,
+          cloneSFT);
     }
     return procId;
+  }
+
+  // Makes sure restoring a snapshot does not break the current SFT setup
+  // follows StoreUtils.createStoreConfiguration
+  static void checkSFTCompatibility(TableDescriptor currentTableDesc,
+    TableDescriptor snapshotTableDesc, Configuration baseConf) throws RestoreSnapshotException {
+    //have to compare TableDescriptor.values first
+    String tableDefault = checkIncompatibleConfig(currentTableDesc.getValue(StoreFileTrackerFactory.TRACKER_IMPL),
+      snapshotTableDesc.getValue(StoreFileTrackerFactory.TRACKER_IMPL),
+      baseConf.get(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()),
+      " the Table " + currentTableDesc.getTableName().getNameAsString());
+
+    // have to check existing CFs
+    for (ColumnFamilyDescriptor cfDesc : currentTableDesc.getColumnFamilies()) {
+      ColumnFamilyDescriptor snapCFDesc = snapshotTableDesc.getColumnFamily(cfDesc.getName());
+      // if there is no counterpart in the snapshot it will be just deleted so the config does
+      // not matter
+      if (snapCFDesc != null) {
+        // comparing ColumnFamilyDescriptor.conf next
+        String cfDefault = checkIncompatibleConfig(
+          cfDesc.getConfigurationValue(StoreFileTrackerFactory.TRACKER_IMPL),
+          snapCFDesc.getConfigurationValue(StoreFileTrackerFactory.TRACKER_IMPL), tableDefault,
+          " the config for column family " + cfDesc.getNameAsString());
+
+        // then ColumnFamilyDescriptor.values
+        checkIncompatibleConfig(cfDesc.getValue(StoreFileTrackerFactory.TRACKER_IMPL),
+          snapCFDesc.getValue(StoreFileTrackerFactory.TRACKER_IMPL), cfDefault,
+          " the metadata of column family " + cfDesc.getNameAsString());
+      }
+    }
+  }
+
+  // check if a config change would change the behavior
+  static String checkIncompatibleConfig(String currentValue, String newValue, String defaultValue,
+    String errorMessage) throws RestoreSnapshotException {
+    Boolean hasIncompatibility = false;
+    //if there is no current override and the snapshot has an override that does not match the
+    //default
+    if (StringUtils.isEmpty(currentValue) && !StringUtils.isEmpty(newValue) &&
+      !defaultValue.equals(newValue)) {
+      hasIncompatibility = true;
+    }
+    //if there is a current override
+    else if (!StringUtils.isEmpty(currentValue)) {
+      // we can only remove the override if it matches the default
+      if (StringUtils.isEmpty(newValue) && !defaultValue.equals(currentValue)) {
+        hasIncompatibility = true;
+      }
+      // the new value have to match the current one
+      else if (!StringUtils.isEmpty(newValue) && !currentValue.equals(newValue)) {
+        hasIncompatibility = true;
+      }
+    }
+    if (hasIncompatibility){
+      throw new RestoreSnapshotException("Restoring Snapshot is not possible because " +
+        errorMessage + " has incompatible configuration. Current value: " + currentValue
+        + " Value from snapshot: " + newValue + " Default value: " + defaultValue);
+    }
+    return StringUtils.isEmpty(newValue) ? defaultValue : newValue;
   }
 
   /**
@@ -877,8 +943,13 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    */
   private long restoreSnapshot(final SnapshotDescription reqSnapshot, final TableName tableName,
       final SnapshotDescription snapshot, final TableDescriptor snapshotTableDesc,
-      final NonceKey nonceKey, final boolean restoreAcl) throws IOException {
+      final NonceKey nonceKey, final boolean restoreAcl)
+    throws IOException {
     MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
+
+    //have to check first if restoring the snapshot would break current SFT setup
+    checkSFTCompatibility(master.getTableDescriptors().get(tableName), snapshotTableDesc,
+      master.getConfiguration());
 
     if (master.getTableStateManager().isTableState(
       TableName.valueOf(snapshot.getTable()), TableState.State.ENABLED)) {
@@ -921,7 +992,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @return procId the ID of the restore snapshot procedure
    */
   private synchronized long restoreSnapshot(final SnapshotDescription snapshot,
-      final TableDescriptor tableDescriptor, final NonceKey nonceKey, final boolean restoreAcl)
+    final TableDescriptor tableDescriptor, final NonceKey nonceKey, final boolean restoreAcl)
       throws HBaseSnapshotException {
     final TableName tableName = tableDescriptor.getTableName();
 
