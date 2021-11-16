@@ -25,7 +25,7 @@ pipeline {
   }
   options {
     // this should roughly match how long we tell the flaky dashboard to look at
-    buildDiscarder(logRotator(numToKeepStr: '30'))
+    buildDiscarder(logRotator(numToKeepStr: '50'))
     timeout (time: 2, unit: 'HOURS')
     timestamps()
   }
@@ -85,9 +85,9 @@ pipeline {
         )
       ])
       sh '''#!/bin/bash -e
-        echo "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}" > "test_logs.txt"
+        ./dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}" > test_logs.html
       '''
-      archiveArtifacts artifacts: 'includes.txt,test_logs.txt,target/machine/*'
+      archiveArtifacts artifacts: 'includes.txt,test_logs.html,target/machine/*'
     }
   }
 }

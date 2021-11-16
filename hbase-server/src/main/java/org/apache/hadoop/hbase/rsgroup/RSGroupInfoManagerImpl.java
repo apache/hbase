@@ -72,10 +72,12 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -278,7 +280,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         updateDefaultServers();
       }
     });
-    migrate();
   }
 
   static RSGroupInfoManager getInstance(MasterServices masterServices) throws IOException {
@@ -492,11 +493,14 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
   private void migrate(Collection<RSGroupInfo> groupList) {
     TableDescriptors tds = masterServices.getTableDescriptors();
+    ProcedureExecutor<MasterProcedureEnv> procExec =
+      masterServices.getMasterProcedureExecutor();
     for (RSGroupInfo groupInfo : groupList) {
       if (groupInfo.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
         continue;
       }
       SortedSet<TableName> failedTables = new TreeSet<>();
+      List<MigrateRSGroupProcedure> procs = new ArrayList<>();
       for (TableName tableName : groupInfo.getTables()) {
         LOG.debug("Migrating {} in group {}", tableName, groupInfo.getName());
         TableDescriptor oldTd;
@@ -517,20 +521,24 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
             oldTd.getRegionServerGroup().get());
           continue;
         }
-        TableDescriptor newTd = TableDescriptorBuilder.newBuilder(oldTd)
-          .setRegionServerGroup(groupInfo.getName()).build();
         // This is a bit tricky. Since we know that the region server group config in
         // TableDescriptor will only be used at master side, it is fine to just update the table
         // descriptor on file system and also the cache, without reopening all the regions. This
         // will be much faster than the normal modifyTable. And when upgrading, we will update
         // master first and then region server, so after all the region servers has been reopened,
         // the new TableDescriptor will be loaded.
+        MigrateRSGroupProcedure proc =
+          new MigrateRSGroupProcedure(procExec.getEnvironment(), oldTd);
+        procExec.submitProcedure(proc);
+        procs.add(proc);
+      }
+      for (MigrateRSGroupProcedure proc : procs) {
         try {
-          tds.update(newTd);
+          ProcedureSyncWait.waitForProcedureToComplete(procExec, proc, 60000);
         } catch (IOException e) {
-          LOG.warn("Failed to migrate {} in group {}", tableName, groupInfo.getName(), e);
-          failedTables.add(tableName);
-          continue;
+          LOG.warn("Failed to migrate rs group {} for table {}", groupInfo.getName(),
+            proc.getTableName());
+          failedTables.add(proc.getTableName());
         }
       }
       LOG.debug("Done migrating {}, failed tables {}", groupInfo.getName(), failedTables);

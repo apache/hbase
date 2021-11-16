@@ -19,35 +19,47 @@ package org.apache.hadoop.hbase.io.compress.zstd;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.compress.CanReinit;
 import org.apache.hadoop.hbase.io.compress.CompressionUtil;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.github.luben.zstd.Zstd;
+import com.github.luben.zstd.ZstdDictCompress;
 
 /**
  * Hadoop compressor glue for zstd-jni.
  */
 @InterfaceAudience.Private
-public class ZstdCompressor implements Compressor {
+public class ZstdCompressor implements CanReinit, Compressor {
 
   protected static final Logger LOG = LoggerFactory.getLogger(ZstdCompressor.class);
   protected int level, bufferSize;
   protected ByteBuffer inBuf, outBuf;
   protected boolean finish, finished;
   protected long bytesRead, bytesWritten;
+  protected int dictId;
+  protected ZstdDictCompress dict;
 
-  ZstdCompressor(int level, int bufferSize) {
+  ZstdCompressor(final int level, final int bufferSize, final byte[] dictionary) {
     this.level = level;
     this.bufferSize = bufferSize;
     this.inBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf = ByteBuffer.allocateDirect(bufferSize);
     this.outBuf.position(bufferSize);
+    if (dictionary != null) {
+      this.dictId = ZstdCodec.getDictionaryId(dictionary);
+      this.dict = new ZstdDictCompress(dictionary, level);
+    }
+  }
+
+  ZstdCompressor(final int level, final int bufferSize) {
+    this(level, bufferSize, null);
   }
 
   @Override
-  public int compress(byte[] b, int off, int len) throws IOException {
+  public int compress(final byte[] b, final int off, final int len) throws IOException {
     // If we have previously compressed our input and still have some buffered bytes
     // remaining, provide them to the caller.
     if (outBuf.hasRemaining()) {
@@ -71,7 +83,12 @@ public class ZstdCompressor implements Compressor {
         } else {
           outBuf.clear();
         }
-        int written = Zstd.compress(outBuf, inBuf, level, true);
+        int written;
+        if (dict != null) {
+          written = Zstd.compress(outBuf, inBuf, dict);
+        } else {
+          written = Zstd.compress(outBuf, inBuf, level);
+        }
         bytesWritten += written;
         inBuf.clear();
         LOG.trace("compress: compressed {} -> {} (level {})", uncompressed, written, level);
@@ -125,17 +142,37 @@ public class ZstdCompressor implements Compressor {
   }
 
   @Override
-  public void reinit(Configuration conf) {
+  public void reinit(final Configuration conf) {
     LOG.trace("reinit");
     if (conf != null) {
       // Level might have changed
-      level = ZstdCodec.getLevel(conf);
+      boolean levelChanged = false;
+      int newLevel = ZstdCodec.getLevel(conf);
+      if (level != newLevel) {
+        LOG.trace("Level changed, was {} now {}", level, newLevel);
+        level = newLevel;
+        levelChanged = true;
+      }
+      // Dictionary may have changed
+      byte[] b = ZstdCodec.getDictionary(conf);
+      if (b != null) {
+        // Don't casually create dictionary objects; they consume native memory
+        int thisDictId = ZstdCodec.getDictionaryId(b);
+        if (dict == null || dictId != thisDictId || levelChanged) {
+          dictId = thisDictId;
+          dict = new ZstdDictCompress(b, level);
+          LOG.trace("Reloaded dictionary, new id is {}", dictId);
+        }
+      } else {
+        dict = null;
+      }
       // Buffer size might have changed
       int newBufferSize = ZstdCodec.getBufferSize(conf);
       if (bufferSize != newBufferSize) {
         bufferSize = newBufferSize;
         this.inBuf = ByteBuffer.allocateDirect(bufferSize);
         this.outBuf = ByteBuffer.allocateDirect(bufferSize);
+        LOG.trace("Resized buffers, new size is {}", bufferSize);
       }
     }
     reset();
@@ -154,12 +191,12 @@ public class ZstdCompressor implements Compressor {
   }
 
   @Override
-  public void setDictionary(byte[] b, int off, int len) {
+  public void setDictionary(final byte[] b, final int off, final int len) {
     throw new UnsupportedOperationException("setDictionary is not supported");
   }
 
   @Override
-  public void setInput(byte[] b, int off, int len) {
+  public void setInput(final byte[] b, final int off, final int len) {
     LOG.trace("setInput: off={} len={}", off, len);
     if (inBuf.remaining() < len) {
       // Get a new buffer that can accomodate the accumulated input plus the additional
@@ -179,7 +216,7 @@ public class ZstdCompressor implements Compressor {
 
   // Package private
 
-  int maxCompressedLength(int len) {
+  static int maxCompressedLength(final int len) {
     return (int) Zstd.compressBound(len);
   }
 

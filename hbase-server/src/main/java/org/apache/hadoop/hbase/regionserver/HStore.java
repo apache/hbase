@@ -59,7 +59,6 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.TableName;
@@ -67,7 +66,6 @@ import org.apache.hadoop.hbase.backup.FailedArchiveException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.ReadOnlyConfiguration;
@@ -531,6 +529,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
     int totalValidStoreFile = 0;
     for (StoreFileInfo storeFileInfo : files) {
+      // The StoreFileInfo will carry store configuration down to HFile, we need to set it to
+      // our store's CompoundConfiguration here.
+      storeFileInfo.setConf(conf);
       // open each store file in parallel
       completionService.submit(() -> this.createStoreFileAndReader(storeFileInfo));
       totalValidStoreFile++;
@@ -806,7 +807,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         long verificationStartTime = EnvironmentEdgeManager.currentTime();
         LOG.info("Full verification started for bulk load hfile: {}", srcPath);
         Cell prevCell = null;
-        HFileScanner scanner = reader.getScanner(false, false, false);
+        HFileScanner scanner = reader.getScanner(conf, false, false, false);
         scanner.seekTo();
         do {
           Cell cell = scanner.getCell();
@@ -2519,10 +2520,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
   @Override
   public void onConfigurationChange(Configuration conf) {
-    this.conf = StoreUtils.createStoreConfiguration(conf, region.getTableDescriptor(),
+    Configuration storeConf = StoreUtils.createStoreConfiguration(conf, region.getTableDescriptor(),
       getColumnFamilyDescriptor());
-    this.storeEngine.compactionPolicy.setConf(conf);
-    this.offPeakHours = OffPeakHours.getInstance(conf);
+    this.conf = storeConf;
+    this.storeEngine.compactionPolicy.setConf(storeConf);
+    this.offPeakHours = OffPeakHours.getInstance(storeConf);
   }
 
   /**

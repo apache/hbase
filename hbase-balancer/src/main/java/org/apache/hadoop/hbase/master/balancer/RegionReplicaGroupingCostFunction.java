@@ -74,6 +74,11 @@ abstract class RegionReplicaGroupingCostFunction extends CostFunction {
     return scale(0, maxCost, totalCost);
   }
 
+  @Override
+  public final void updateWeight(double[] weights) {
+    weights[StochasticLoadBalancer.GeneratorType.RACK.ordinal()] += cost();
+  }
+
   /**
    * For each primary region, it computes the total number of replicas in the array (numReplicas)
    * and returns a sum of numReplicas-1 squared. For example, if the server hosts regions a, b, c,

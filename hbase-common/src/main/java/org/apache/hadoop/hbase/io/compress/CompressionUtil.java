@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.io.compress;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class CompressionUtil {
+public final class CompressionUtil {
+
+  private CompressionUtil() { }
 
   /**
    * Round up to the next power of two, unless the value would become negative (ints

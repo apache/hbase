@@ -135,6 +135,8 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
       // Ignoring the first few tuner periods
       ignoreInitialPeriods++;
       rollingStatsForTunerSteps.insertDataValue(0);
+      LOG.info("Ignoring initial tuning periods: {} so far, {} to ignore", ignoreInitialPeriods,
+        numPeriodsToIgnore);
       return NO_OP_TUNER_RESULT;
     }
     StepDirection newTuneDirection = getTuneDirection(context);
@@ -252,12 +254,15 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
     if (earlyMemstoreSufficientCheck && earlyBlockCacheSufficientCheck) {
       // Both memstore and block cache memory seems to be sufficient. No operation required.
       newTuneDirection = StepDirection.NEUTRAL;
+      tunerLog.append("Going to do nothing because no changes are needed.");
     } else if (earlyMemstoreSufficientCheck) {
       // Increase the block cache size and corresponding decrease in memstore size.
       newTuneDirection = StepDirection.INCREASE_BLOCK_CACHE_SIZE;
+      tunerLog.append("Going to increase the block cache size.");
     } else if (earlyBlockCacheSufficientCheck) {
       // Increase the memstore size and corresponding decrease in block cache size.
       newTuneDirection = StepDirection.INCREASE_MEMSTORE_SIZE;
+      tunerLog.append("Going to increase the memstore size.");
     } else {
       // Early checks for sufficient memory failed. Tuning memory based on past statistics.
       // Boolean indicator to show if we need to revert previous step or not.
@@ -347,8 +352,17 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
         }
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(tunerLog.toString());
+    // Log NEUTRAL decisions at DEBUG, because they are the most frequent and not that interesting.
+    // Log other decisions at INFO because they are making meaningful operational changes.
+    switch (newTuneDirection) {
+      case NEUTRAL:
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(tunerLog.toString());
+        }
+        break;
+      default:
+        LOG.info(tunerLog.toString());
+        break;
     }
     return newTuneDirection;
   }

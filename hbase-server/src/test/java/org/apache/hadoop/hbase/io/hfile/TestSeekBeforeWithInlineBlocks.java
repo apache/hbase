@@ -150,7 +150,7 @@ public class TestSeekBeforeWithInlineBlocks {
           // Check that we can seekBefore in either direction and with both pread
           // enabled and disabled
           for (boolean pread : new boolean[] { false, true }) {
-            HFileScanner scanner = reader.getScanner(true, pread);
+            HFileScanner scanner = reader.getScanner(conf, true, pread);
             checkNoSeekBefore(cells, scanner, 0);
             for (int i = 1; i < NUM_KV; i++) {
               checkSeekBefore(cells, scanner, i);

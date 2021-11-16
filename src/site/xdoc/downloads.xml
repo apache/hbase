@@ -70,49 +70,49 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
-        2.4.6
+        2.4.8
       </td>
       <td style="test-align: left">
-        2021/09/13
+        2021/11/03
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.4.6/api_compare_2.4.5_to_2.4.6RC0.html">2.4.6 vs 2.4.5</a>
+        <a href="https://downloads.apache.org/hbase/2.4.8/api_compare_2.4.7_to_2.4.8RC0.html">2.4.8 vs 2.4.7</a>
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.4.6/CHANGES.md">Changes</a>
+        <a href="https://downloads.apache.org/hbase/2.4.8/CHANGES.md">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.4.6/RELEASENOTES.md">Release Notes</a>
+        <a href="https://downloads.apache.org/hbase/2.4.8/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.6/hbase-2.4.6-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.4.6/hbase-2.4.6-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.6/hbase-2.4.6-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.6/hbase-2.4.6-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.4.6/hbase-2.4.6-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.6/hbase-2.4.6-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.6/hbase-2.4.6-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.4.6/hbase-2.4.6-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.6/hbase-2.4.6-client-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.8/hbase-2.4.8-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.4.8/hbase-2.4.8-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.8/hbase-2.4.8-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.8/hbase-2.4.8-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.4.8/hbase-2.4.8-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.8/hbase-2.4.8-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.8/hbase-2.4.8-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.4.8/hbase-2.4.8-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.8/hbase-2.4.8-client-bin.tar.gz.asc">asc</a>)
       </td>
-      <td />
+      <td><em>stable release</em></td>
     </tr>
     <tr>
       <td style="test-align: left">
-        2.3.6
+        2.3.7
       </td>
       <td style="test-align: left">
-        2021/03/31
+        2021/10/19
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.3.6/api_compare_2.3.5_to_2.3.6RC3.html">2.3.5 vs 2.3.6</a>
+        <a href="https://downloads.apache.org/hbase/2.3.7/api_compare_2.3.6_to_2.3.7RC0.html">2.3.6 vs 2.3.7</a>
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.3.6/CHANGES.md">Changes</a>
+        <a href="https://downloads.apache.org/hbase/2.3.7/CHANGES.md">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.3.6/RELEASENOTES.md">Release Notes</a>
+        <a href="https://downloads.apache.org/hbase/2.3.7/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.3.6/hbase-2.3.6-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.3.6/hbase-2.3.6-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.3.6/hbase-2.3.6-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.3.6/hbase-2.3.6-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.3.6/hbase-2.3.6-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.3.6/hbase-2.3.6-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.3.6/hbase-2.3.6-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.3.6/hbase-2.3.6-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.3.6/hbase-2.3.6-client-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.3.7/hbase-2.3.7-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.3.7/hbase-2.3.7-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.3.7/hbase-2.3.7-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.3.7/hbase-2.3.7-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.3.7/hbase-2.3.7-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.3.7/hbase-2.3.7-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.3.7/hbase-2.3.7-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.3.7/hbase-2.3.7-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.3.7/hbase-2.3.7-client-bin.tar.gz.asc">asc</a>)
       </td>
-      <td><em>stable release</em></td>
+      <td />
     </tr>
     <tr>
       <td style="test-align: left">
@@ -138,23 +138,23 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
-        1.4.13
+        1.4.14
       </td>
       <td style="test-align: left">
-        2020/02/29
+        2021/10/25
       </td>
       <td style="test-align: left">
-        <a href="https://apache.org/dist/hbase/1.4.13/compat-check-report.html">1.4.12 vs 1.4.13</a>
+        <a href="https://downloads.apache.org/hbase/1.4.14/api_compare_1.4.13_to_1.4.14RC0.html">1.4.13 vs 1.4.14</a>
       </td>
       <td style="test-align: left">
-        <a href="https://github.com/apache/hbase/blob/rel/1.4.13/CHANGES.txt">Changes</a>
+        <a href="https://github.com/apache/hbase/blob/rel/1.4.14/CHANGES.txt">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://s.apache.org/hbase-1.4.13-jira-release-notes">Release Notes</a>
+        <a href="https://s.apache.org/hbase-1.4.14-jira-release-notes">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.13/hbase-1.4.13-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/1.4.13/hbase-1.4.13-src.tar.gz.sha">sha</a> <a href="https://apache.org/dist/hbase/1.4.13/hbase-1.4.13-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.13/hbase-1.4.13-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/1.4.13/hbase-1.4.13-bin.tar.gz.sha">sha</a> <a href="https://apache.org/dist/hbase/1.4.13/hbase-1.4.13-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.14/hbase-1.4.14-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/1.4.14/hbase-1.4.14-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/1.4.14/hbase-1.4.14-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.14/hbase-1.4.14-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/1.4.14/hbase-1.4.14-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/1.4.14/hbase-1.4.14-bin.tar.gz.asc">asc</a>)
       </td>
       <td />
     </tr>

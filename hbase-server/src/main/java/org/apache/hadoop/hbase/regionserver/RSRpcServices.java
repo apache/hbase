@@ -2089,6 +2089,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       final ReplicateWALEntryRequest request) throws ServiceException {
     long before = EnvironmentEdgeManager.currentTime();
     CellScanner cells = ((HBaseRpcController) controller).cellScanner();
+    ((HBaseRpcController) controller).setCellScanner(null);
     try {
       checkOpen();
       List<WALEntry> entries = request.getEntryList();
@@ -2209,6 +2210,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         List<WALEntry> entries = request.getEntryList();
         checkShouldRejectReplicationRequest(entries);
         CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
+        ((HBaseRpcController) controller).setCellScanner(null);
         server.getRegionServerCoprocessorHost().preReplicateLogEntries();
         server.getReplicationSinkService().replicateLogEntries(entries, cellScanner,
           request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),
@@ -3757,7 +3759,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     long masterSystemTime = request.hasMasterSystemTime() ? request.getMasterSystemTime() : -1;
     for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
       RegionInfo regionInfo = ProtobufUtil.toRegionInfo(regionOpenInfo.getRegion());
-      TableDescriptor tableDesc = tdCache.get(regionInfo.getTable());
+      TableName tableName = regionInfo.getTable();
+      TableDescriptor tableDesc = tdCache.get(tableName);
       if (tableDesc == null) {
         try {
           tableDesc = server.getTableDescriptors().get(regionInfo.getTable());
@@ -3768,6 +3771,9 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
           // TableDescriptor.
           LOG.warn("Failed to get TableDescriptor of {}, will try again in the handler",
             regionInfo.getTable(), e);
+        }
+        if(tableDesc != null) {
+          tdCache.put(tableName, tableDesc);
         }
       }
       if (regionOpenInfo.getFavoredNodesCount() > 0) {

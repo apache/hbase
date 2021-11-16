@@ -492,9 +492,19 @@ add_jdk11_deps_to_classpath() {
   done
 }
 
-enable_trace() {
-  agent_jar=$(find lib/trace -type f -name "opentelemetry-javaagent-*")
-  HBASE_OPTS="$HBASE_OPTS -javaagent:$agent_jar $HBASE_TRACE_OPTS"
+add_opentelemetry_agent() {
+  if [ -e "${OPENTELEMETRY_JAVAAGENT_PATH}" ] ; then
+    agent_jar="${OPENTELEMETRY_JAVAAGENT_PATH}"
+  elif ! agent_jar=$(find -L "${HBASE_HOME}/lib/trace" -type f -name "opentelemetry-javaagent-*" 2>/dev/null); then
+    # must be dev environment
+    f="${HBASE_HOME}/hbase-build-configuration/target/cached_classpath.txt"
+    if [ ! -f "${f}" ]; then
+      echo "As this is a development environment, we need ${f} to be generated from maven (command: mvn install -DskipTests)"
+      exit 1
+    fi
+    agent_jar=$(tr ':' '\n' < "${f}" | grep opentelemetry-javaagent)
+  fi
+  HBASE_OPTS="$HBASE_OPTS -javaagent:$agent_jar"
 }
 
 #Add the development env class path stuff
@@ -557,6 +567,7 @@ elif [ "$COMMAND" = 'jshell' ] ; then
   CLASS='jdk.internal.jshell.tool.JShellToolProvider'
   # set default values for HBASE_JSHELL_ARGS
   read -r -a JSHELL_ARGS <<< "${HBASE_JSHELL_ARGS:-"--startup DEFAULT --startup PRINTING --startup ${HBASE_HOME}/bin/hbase_startup.jsh"}"
+  HBASE_OPTS="$HBASE_OPTS $HBASE_JSHELL_OPTS"
 elif [ "$COMMAND" = "hbck" ] ; then
   # Look for the -j /path/to/HBCK2.jar parameter. Else pass through to hbck.
   case "${1}" in
@@ -801,8 +812,10 @@ elif [ "${DEBUG}" = "true" ]; then
 fi
 
 if [[ -n "${HBASE_TRACE_OPTS}" ]]; then
-  echo "Attach opentelemetry agent to enable trace"
-  enable_trace
+  if [ "${DEBUG}" = "true" ]; then
+    echo "Attaching opentelemetry agent"
+  fi
+  add_opentelemetry_agent
 fi
 
 # Have JVM dump heap if we run out of memory.  Files will be 'launch directory'

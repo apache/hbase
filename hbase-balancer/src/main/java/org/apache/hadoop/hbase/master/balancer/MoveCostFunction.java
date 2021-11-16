@@ -34,7 +34,7 @@ class MoveCostFunction extends CostFunction {
   static final float DEFAULT_MOVE_COST = 7;
   static final float DEFAULT_MOVE_COST_OFFPEAK = 3;
   private static final int DEFAULT_MAX_MOVES = 600;
-  private static final float DEFAULT_MAX_MOVE_PERCENT = 0.25f;
+  private static final float DEFAULT_MAX_MOVE_PERCENT = 1.0f;
 
   private final float maxMovesPercent;
   private final ClusterInfoProvider provider;

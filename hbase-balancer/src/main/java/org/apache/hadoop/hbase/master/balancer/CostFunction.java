@@ -84,6 +84,16 @@ abstract class CostFunction {
   protected abstract double cost();
 
   /**
+   * Add the cost of this cost function to the weight of the candidate generator that is optimized
+   * for this cost function. By default it is the RandomCandiateGenerator for a cost function.
+   * Called once per init or after postAction.
+   * @param weights the weights for every generator.
+   */
+  public void updateWeight(double[] weights) {
+    weights[StochasticLoadBalancer.GeneratorType.RANDOM.ordinal()] += cost();
+  }
+
+  /**
    * Scale the value between 0 and 1.
    * @param min Min value
    * @param max The Max value

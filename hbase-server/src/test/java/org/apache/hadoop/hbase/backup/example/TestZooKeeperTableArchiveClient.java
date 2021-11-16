@@ -119,7 +119,7 @@ public class TestZooKeeperTableArchiveClient {
     String archivingZNode = ZKTableArchiveClient.getArchiveZNode(UTIL.getConfiguration(), watcher);
     ZKUtil.createWithParents(watcher, archivingZNode);
     rss = mock(RegionServerServices.class);
-    POOL = new DirScanPool(UTIL.getConfiguration());
+    POOL= DirScanPool.getHFileCleanerScanPool(UTIL.getConfiguration());
   }
 
   private static void setupConf(Configuration conf) {
