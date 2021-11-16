@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.util.List;
 import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -41,6 +42,8 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.junit.ClassRule;
@@ -53,6 +56,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 /**
  * Test our testing utility class
@@ -138,6 +142,42 @@ public class TestHBaseTestingUtil {
       htu2.shutdownMiniCluster();
       htu1.shutdownMiniCluster();
     }
+  }
+
+  @Test
+  public void testMiniClusterWithExternalDFSAndZK() throws Exception {
+    HBaseTestingUtil hbt1 = new HBaseTestingUtil();
+
+    // Let's say this is external Zk and DFS
+    MiniDFSCluster dfsCluster = hbt1.startMiniDFSCluster(3);
+    MiniZooKeeperCluster zkCluster = hbt1.startMiniZKCluster();
+
+    Configuration conf = HBaseConfiguration.create();
+    conf.set("fs.defaultFS", new Path(dfsCluster.getFileSystem().getUri()).toString());
+
+    conf.set(HConstants.ZOOKEEPER_QUORUM, zkCluster.getAddress().getHostName());
+    conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkCluster.getAddress().getPort());
+    conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/hbase_test");
+
+    HBaseTestingUtil hbt2 = new HBaseTestingUtil(conf, true, true);
+    SingleProcessHBaseCluster cluster = hbt2.startMiniCluster();
+    String hbaseRootDir = hbt2.conf.get(HConstants.HBASE_DIR);
+    String znode = hbt2.conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT);
+    try {
+      assertEquals(1, cluster.getLiveRegionServerThreads().size());
+    } finally {
+      hbt2.shutdownMiniCluster();
+    }
+
+    // check if we cleaned the dir or znode created by miniHbaseCluster
+    FileSystem fs = FileSystem.get(conf);
+    assertFalse(fs.exists(new Path(hbaseRootDir).getParent()));
+
+    ZKWatcher watcher = new ZKWatcher(hbt1.conf, "TestHbase", null);
+    assertEquals(ZKUtil.checkExists(watcher, znode), -1);
+
+    hbt1.shutdownMiniDFSCluster();
+    hbt1.shutdownMiniZKCluster();
   }
 
   @Test public void testMiniCluster() throws Exception {
@@ -406,6 +446,7 @@ public class TestHBaseTestingUtil {
     assertTrue(!fs.exists(testdir));
     assertTrue(fs.mkdirs(testdir));
     assertTrue(hbt.cleanupTestDir());
+    hbt.resetUserGroupInformation();
   }
 
   @Test public void testResolvePortConflict() throws Exception {
