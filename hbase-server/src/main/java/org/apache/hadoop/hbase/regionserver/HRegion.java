@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.ROW_LOCK_READ_LOCK_KEY;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -155,6 +157,7 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -6591,8 +6594,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   Span createRegionSpan(String name) {
-    return TraceUtil.createSpan(name).setAttribute(TraceUtil.REGION_NAMES_KEY,
-      Arrays.asList(getRegionInfo().getRegionNameAsString()));
+    return TraceUtil.createSpan(name).setAttribute(REGION_NAMES_KEY,
+      Collections.singletonList(getRegionInfo().getRegionNameAsString()));
   }
 
   // will be override in tests
@@ -6679,7 +6682,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private RowLock getRowLock(byte[] row, boolean readLock, final RowLock prevRowLock)
     throws IOException {
     return TraceUtil.trace(() -> getRowLockInternal(row, readLock, prevRowLock),
-      () -> createRegionSpan("Region.getRowLock").setAttribute(TraceUtil.ROW_LOCK_READ_LOCK_KEY,
+      () -> createRegionSpan("Region.getRowLock").setAttribute(ROW_LOCK_READ_LOCK_KEY,
         readLock));
   }
 

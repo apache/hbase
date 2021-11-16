@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
-import static org.apache.hadoop.hbase.trace.TraceUtil.REGION_NAMES_KEY;
-import static org.apache.hadoop.hbase.trace.TraceUtil.SERVER_NAME_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.SERVER_NAME_KEY;
 import static org.apache.hadoop.hbase.trace.TraceUtil.createSpan;
 import static org.apache.hadoop.hbase.trace.TraceUtil.createTableSpan;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
