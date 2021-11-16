@@ -1882,7 +1882,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
       }
     }
-    LOG.info("Balancer is going into sleep until next period in {}ms", getConfiguration()
+    LOG.debug("Balancer is going into sleep until next period in {}ms", getConfiguration()
       .getInt(HConstants.HBASE_BALANCER_PERIOD, HConstants.DEFAULT_HBASE_BALANCER_PERIOD));
     return successRegionPlans;
   }
