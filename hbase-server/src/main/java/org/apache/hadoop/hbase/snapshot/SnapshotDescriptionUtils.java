@@ -128,9 +128,6 @@ public final class SnapshotDescriptionUtils {
   /** Default value if no start time is specified */
   public static final long NO_SNAPSHOT_START_TIME_SPECIFIED = 0;
 
-  // Default value if no ttl is specified for Snapshot
-  private static final long NO_SNAPSHOT_TTL_SPECIFIED = 0;
-
   public static final String MASTER_SNAPSHOT_TIMEOUT_MILLIS = "hbase.snapshot.master.timeout.millis";
 
   /** By default, wait 300 seconds for a snapshot to complete */
@@ -309,7 +306,7 @@ public final class SnapshotDescriptionUtils {
 
     long ttl = snapshot.getTtl();
     // set default ttl(sec) if it is not set already or the value is out of the range
-    if (ttl == SnapshotDescriptionUtils.NO_SNAPSHOT_TTL_SPECIFIED ||
+    if (ttl == HConstants.UNSET_SNAPSHOT_PROP ||
         ttl > TimeUnit.MILLISECONDS.toSeconds(Long.MAX_VALUE)) {
       final long defaultSnapshotTtl = conf.getLong(HConstants.DEFAULT_SNAPSHOT_TTL_CONFIG_KEY,
           HConstants.DEFAULT_SNAPSHOT_TTL);
