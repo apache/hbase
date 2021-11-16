@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RPC_METHOD_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RPC_SERVICE_KEY;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Context;
@@ -30,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -124,8 +127,8 @@ public class CallRunner {
       String methodName = getMethodName();
       Span span = TraceUtil.getGlobalTracer().spanBuilder("RpcServer.callMethod")
         .setParent(Context.current().with(((ServerCall<?>) call).getSpan())).startSpan()
-        .setAttribute(TraceUtil.RPC_SERVICE_KEY, serviceName)
-        .setAttribute(TraceUtil.RPC_METHOD_KEY, methodName);
+        .setAttribute(RPC_SERVICE_KEY, serviceName)
+        .setAttribute(RPC_METHOD_KEY, methodName);
       try (Scope traceScope = span.makeCurrent()) {
         if (!this.rpcServer.isStarted()) {
           InetSocketAddress address = rpcServer.getListenerAddress();
