@@ -77,6 +77,14 @@ public class MasterRegionTestBase {
     htu.getConfiguration().setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
     // Runs on local filesystem. Test does not need sync. Turn off checks.
     htu.getConfiguration().setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
+
+    createMasterRegion();
+  }
+
+  /**
+   * Creates a new MasterRegion using an existing {@code htu} on this class.
+   */
+  protected void createMasterRegion() throws IOException {
     configure(htu.getConfiguration());
     choreService = new ChoreService(getClass().getSimpleName());
     cleanerPool = new DirScanPool(htu.getConfiguration());

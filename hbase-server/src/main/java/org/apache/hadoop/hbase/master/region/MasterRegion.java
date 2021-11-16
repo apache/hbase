@@ -222,7 +222,31 @@ public final class MasterRegion {
     if (!walFs.exists(replayEditsDir) && !walFs.mkdirs(replayEditsDir)) {
       throw new IOException("Failed to create replay directory: " + replayEditsDir);
     }
+
+    // Replay any WALs for the Master Region before opening it.
     Path walsDir = new Path(walRootDir, HREGION_LOGDIR_NAME);
+    // In open(...), we expect that the WAL directory for the MasterRegion to already exist.
+    // This is in contrast to bootstrap() where we create the MasterRegion data and WAL dir.
+    // However, it's possible that users directly remove the WAL directory. We expect walsDir
+    // to always exist in normal situations, but we should guard against users changing the
+    // filesystem outside of HBase's line of sight.
+    if (walFs.exists(walsDir)) {
+      replayWALs(conf, walFs, walRootDir, walsDir, regionInfo, serverName, replayEditsDir);
+    } else {
+      LOG.error("UNEXPECTED: WAL directory for MasterRegion is missing."
+          + " {} is unexpectedly missing.", walsDir);
+    }
+
+    // Create a new WAL
+    WAL wal = createWAL(walFactory, walRoller, serverName, walFs, walRootDir, regionInfo);
+    conf.set(HRegion.SPECIAL_RECOVERED_EDITS_DIR,
+      replayEditsDir.makeQualified(walFs.getUri(), walFs.getWorkingDirectory()).toString());
+    return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null, null);
+  }
+
+  private static void replayWALs(Configuration conf, FileSystem walFs, Path walRootDir,
+      Path walsDir, RegionInfo regionInfo, String serverName, Path replayEditsDir)
+          throws IOException {
     for (FileStatus walDir : walFs.listStatus(walsDir)) {
       if (!walDir.isDirectory()) {
         continue;
@@ -256,11 +280,6 @@ public final class MasterRegion {
       LOG.info("Delete empty local region wal dir {}", deadWALDir);
       walFs.delete(deadWALDir, true);
     }
-
-    WAL wal = createWAL(walFactory, walRoller, serverName, walFs, walRootDir, regionInfo);
-    conf.set(HRegion.SPECIAL_RECOVERED_EDITS_DIR,
-      replayEditsDir.makeQualified(walFs.getUri(), walFs.getWorkingDirectory()).toString());
-    return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null, null);
   }
 
   public static MasterRegion create(MasterRegionParams params) throws IOException {
