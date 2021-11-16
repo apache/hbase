@@ -1006,22 +1006,37 @@ public class BucketCache implements BlockCache, HeapSize {
 
   /**
    * Prepare and return a warning message for Bucket Allocator Exception
+   * @param fle The exception
    * @param re The RAMQueueEntry for which the exception was thrown.
    * @return A warning message created from the input RAMQueueEntry object.
    */
-  private String getAllocationFailWarningMessage(RAMQueueEntry re) {
-    if (re != null && re.getData() instanceof HFileBlock) {
-      HFileContext fileContext = ((HFileBlock) re.getData()).getHFileContext();
-      String columnFamily = Bytes.toString(fileContext.getColumnFamily());
-      String tableName = Bytes.toString(fileContext.getTableName());
-      if (tableName != null && columnFamily != null) {
-        return ("Most recent failed allocation in " + ALLOCATION_FAIL_LOG_TIME_PERIOD
-            + " milliseconds; Table Name = " + tableName + ", Column Family = " + columnFamily
-            + ", HFile Name : " + fileContext.getHFileName());
+  private static String getAllocationFailWarningMessage(final BucketAllocatorException fle,
+      final RAMQueueEntry re) {
+    final StringBuilder sb = new StringBuilder();
+    sb.append("Most recent failed allocation after ");
+    sb.append(ALLOCATION_FAIL_LOG_TIME_PERIOD);
+    sb.append(" ms;");
+    if (re != null) {
+      if (re.getData() instanceof HFileBlock) {
+        final HFileContext fileContext = ((HFileBlock) re.getData()).getHFileContext();
+        final String columnFamily = Bytes.toString(fileContext.getColumnFamily());
+        final String tableName = Bytes.toString(fileContext.getTableName());
+        if (tableName != null && columnFamily != null) {
+          sb.append(" Table: ");
+          sb.append(tableName);
+          sb.append(" CF: ");
+          sb.append(columnFamily);
+          sb.append(" HFile: ");
+          sb.append(fileContext.getHFileName());
+        }
+      } else {
+        sb.append(" HFile: ");
+        sb.append(re.getKey());
       }
     }
-    return ("Most recent failed allocation in " + ALLOCATION_FAIL_LOG_TIME_PERIOD
-        + " milliseconds; HFile Name : " + (re == null ? "" : re.getKey()));
+    sb.append(" Message: ");
+    sb.append(fle.getMessage());
+    return sb.toString();
   }
 
   /**
@@ -1072,7 +1087,7 @@ public class BucketCache implements BlockCache, HeapSize {
         long currTs = EnvironmentEdgeManager.currentTime();
         cacheStats.allocationFailed(); // Record the warning.
         if (allocFailLogPrevTs == 0 || (currTs - allocFailLogPrevTs) > ALLOCATION_FAIL_LOG_TIME_PERIOD) {
-          LOG.warn (getAllocationFailWarningMessage(re), fle);
+          LOG.warn(getAllocationFailWarningMessage(fle, re));
           allocFailLogPrevTs = currTs;
         }
         // Presume can't add. Too big? Move index on. Entry will be cleared from ramCache below.
