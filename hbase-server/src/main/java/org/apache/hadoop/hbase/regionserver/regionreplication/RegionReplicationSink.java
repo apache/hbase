@@ -345,7 +345,8 @@ public class RegionReplicationSink {
             lastFlushedSequenceId = flushSequenceNumber;
             if (LOG.isDebugEnabled()) {
               LOG.debug(
-                "Got a flush all request with sequence id {}, clear {} pending entries with size {}",
+                "Got a flush all request with sequence id {}, clear {} pending"
+                  + " entries with size {}",
                 flushSequenceNumber, toClearCount,
                 StringUtils.TraditionalBinaryPrefix.long2String(toClearSize, "", 1));
             }
