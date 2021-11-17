@@ -313,4 +313,91 @@ public class TestRegionReplicationSink {
     // should have send out all so no pending entries.
     assertEquals(0, sink.pendingSize());
   }
+
+  @Test
+  public void testNotClearFailedReplica() {
+    // simulate this scenario:
+    // 1. prepare flush
+    // 2. add one edit broken
+    // 3. commit flush with flush sequence number less than the previous edit(this is the normal
+    // case)
+    // we should not clear the failed replica as we do not flush the broken edit out with this
+    // flush, we need an extra flush to flush it out
+    MutableInt next = new MutableInt(0);
+    List<CompletableFuture<Void>> futures =
+      Stream.generate(() -> new CompletableFuture<Void>()).limit(8).collect(Collectors.toList());
+    when(conn.replicate(any(), anyList(), anyInt(), anyLong(), anyLong()))
+      .then(i -> futures.get(next.getAndIncrement()));
+    when(manager.increase(anyLong())).thenReturn(true);
+
+    ServerCall<?> rpcCall1 = mock(ServerCall.class);
+    WALKeyImpl key1 = mock(WALKeyImpl.class);
+    when(key1.estimatedSerializedSizeOf()).thenReturn(100L);
+    when(key1.getSequenceId()).thenReturn(1L);
+    Map<byte[], List<Path>> committedFiles = td.getColumnFamilyNames().stream()
+      .collect(Collectors.toMap(Function.identity(), k -> Collections.emptyList(), (u, v) -> {
+        throw new IllegalStateException();
+      }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
+    FlushDescriptor fd =
+      ProtobufUtil.toFlushDescriptor(FlushAction.START_FLUSH, primary, 1L, committedFiles);
+    WALEdit edit1 = WALEdit.createFlushWALEdit(primary, fd);
+    sink.add(key1, edit1, rpcCall1);
+
+    futures.get(0).complete(null);
+    futures.get(1).complete(null);
+
+    ServerCall<?> rpcCall2 = mock(ServerCall.class);
+    WALKeyImpl key2 = mock(WALKeyImpl.class);
+    when(key2.estimatedSerializedSizeOf()).thenReturn(200L);
+    when(key2.getSequenceId()).thenReturn(2L);
+    WALEdit edit2 = mock(WALEdit.class);
+    when(edit2.estimatedSerializedSizeOf()).thenReturn(2000L);
+    sink.add(key2, edit2, rpcCall2);
+
+    // fail the call to replica 1
+    futures.get(2).completeExceptionally(new IOException("inject error"));
+    futures.get(3).complete(null);
+
+    ServerCall<?> rpcCall3 = mock(ServerCall.class);
+    WALKeyImpl key3 = mock(WALKeyImpl.class);
+    when(key3.estimatedSerializedSizeOf()).thenReturn(300L);
+    when(key3.getSequenceId()).thenReturn(3L);
+    FlushDescriptor fd3 =
+      ProtobufUtil.toFlushDescriptor(FlushAction.COMMIT_FLUSH, primary, 1L, committedFiles);
+    WALEdit edit3 = WALEdit.createFlushWALEdit(primary, fd3);
+    sink.add(key3, edit3, rpcCall3);
+
+    // we should only call replicate once for edit3, since replica 1 is marked as failed, and the
+    // flush request can not clean the failed replica since the flush sequence number is not greater
+    // than sequence id of the last failed edit
+    verify(conn, times(5)).replicate(any(), anyList(), anyInt(), anyLong(), anyLong());
+    futures.get(4).complete(null);
+
+    ServerCall<?> rpcCall4 = mock(ServerCall.class);
+    WALKeyImpl key4 = mock(WALKeyImpl.class);
+    when(key4.estimatedSerializedSizeOf()).thenReturn(400L);
+    when(key4.getSequenceId()).thenReturn(4L);
+    WALEdit edit4 = mock(WALEdit.class);
+    when(edit4.estimatedSerializedSizeOf()).thenReturn(4000L);
+    sink.add(key4, edit4, rpcCall4);
+
+    // still, only send to replica 2
+    verify(conn, times(6)).replicate(any(), anyList(), anyInt(), anyLong(), anyLong());
+    futures.get(5).complete(null);
+
+    ServerCall<?> rpcCall5 = mock(ServerCall.class);
+    WALKeyImpl key5 = mock(WALKeyImpl.class);
+    when(key5.estimatedSerializedSizeOf()).thenReturn(300L);
+    when(key5.getSequenceId()).thenReturn(3L);
+    FlushDescriptor fd5 =
+      ProtobufUtil.toFlushDescriptor(FlushAction.COMMIT_FLUSH, primary, 4L, committedFiles);
+    WALEdit edit5 = WALEdit.createFlushWALEdit(primary, fd5);
+    sink.add(key5, edit5, rpcCall5);
+
+    futures.get(6).complete(null);
+    futures.get(7).complete(null);
+    // should have cleared the failed replica because the flush sequence number is greater than than
+    // the sequence id of the last failed edit
+    verify(conn, times(8)).replicate(any(), anyList(), anyInt(), anyLong(), anyLong());
+  }
 }
