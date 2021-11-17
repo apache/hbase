@@ -22,15 +22,16 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import org.agrona.collections.IntHashSet;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -123,8 +124,11 @@ public class RegionReplicationSink {
   private final AsyncClusterConnection conn;
 
   // used to track the replicas which we failed to replicate edits to them
-  // will be cleared after we get a flush edit.
-  private final IntHashSet failedReplicas = new IntHashSet();
+  // the key is the replica id, the value is the sequence id of the last failed edit
+  // when we get a flush all request, we will try to remove a replica from this map, the key point
+  // here is the flush sequence number must be greater than the failed sequence id, otherwise we
+  // should not remove the replica from this map
+  private final Map<Integer, Long> failedReplicas = new HashMap<>();
 
   private final Queue<SinkEntry> entries = new ArrayDeque<>();
 
@@ -180,16 +184,16 @@ public class RegionReplicationSink {
       if (error != null) {
         if (maxSequenceId > lastFlushedSequenceId) {
           LOG.warn(
-            "Failed to replicate to secondary replica {} for {}, since the max sequence" +
-              " id of sunk entris is {}, which is greater than the last flush SN {}," +
-              " we will stop replicating for a while and trigger a flush",
+            "Failed to replicate to secondary replica {} for {}, since the max sequence"
+              + " id of sunk entris is {}, which is greater than the last flush SN {},"
+              + " we will stop replicating for a while and trigger a flush",
             replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
           failed.add(replicaId);
         } else {
           LOG.warn(
-            "Failed to replicate to secondary replica {} for {}, since the max sequence" +
-              " id of sunk entris is {}, which is less than or equal to the last flush SN {}," +
-              " we will not stop replicating",
+            "Failed to replicate to secondary replica {} for {}, since the max sequence"
+              + " id of sunk entris is {}, which is less than or equal to the last flush SN {},"
+              + " we will not stop replicating",
             replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
         }
       }
@@ -197,7 +201,9 @@ public class RegionReplicationSink {
     synchronized (entries) {
       pendingSize -= toReleaseSize;
       if (!failed.isEmpty()) {
-        failedReplicas.addAll(failed);
+        for (Integer replicaId : failed) {
+          failedReplicas.put(replicaId, maxSequenceId);
+        }
         flushRequester.requestFlush(maxSequenceId);
       }
       sending = false;
@@ -231,7 +237,7 @@ public class RegionReplicationSink {
     AtomicInteger remaining = new AtomicInteger(toSendReplicaCount);
     Map<Integer, MutableObject<Throwable>> replica2Error = new HashMap<>();
     for (int replicaId = 1; replicaId < regionReplication; replicaId++) {
-      if (failedReplicas.contains(replicaId)) {
+      if (failedReplicas.containsKey(replicaId)) {
         continue;
       }
       MutableObject<Throwable> error = new MutableObject<>();
@@ -247,7 +253,7 @@ public class RegionReplicationSink {
     }
   }
 
-  private boolean flushAllStores(FlushDescriptor flushDesc) {
+  private boolean isFlushAllStores(FlushDescriptor flushDesc) {
     Set<byte[]> storesFlushed =
       flushDesc.getStoreFlushesList().stream().map(sfd -> sfd.getFamilyName().toByteArray())
         .collect(Collectors.toCollection(() -> new TreeSet<>(Bytes.BYTES_COMPARATOR)));
@@ -255,6 +261,24 @@ public class RegionReplicationSink {
       return false;
     }
     return storesFlushed.containsAll(tableDesc.getColumnFamilyNames());
+  }
+
+  private Optional<FlushDescriptor> getFlushAllDescriptor(Cell metaCell) {
+    if (!CellUtil.matchingFamily(metaCell, WALEdit.METAFAMILY)) {
+      return Optional.empty();
+    }
+    FlushDescriptor flushDesc;
+    try {
+      flushDesc = WALEdit.getFlushDescriptor(metaCell);
+    } catch (IOException e) {
+      LOG.warn("Failed to parse FlushDescriptor from {}", metaCell);
+      return Optional.empty();
+    }
+    if (flushDesc != null && isFlushAllStores(flushDesc)) {
+      return Optional.of(flushDesc);
+    } else {
+      return Optional.empty();
+    }
   }
 
   private void clearAllEntries() {
@@ -266,6 +290,20 @@ public class RegionReplicationSink {
     entries.clear();
     pendingSize -= toClearSize;
     manager.decrease(toClearSize);
+  }
+
+  private void clearFailedReplica(long flushSequenceNumber) {
+    for (Iterator<Map.Entry<Integer, Long>> iter = failedReplicas.entrySet().iterator(); iter
+      .hasNext();) {
+      Map.Entry<Integer, Long> entry = iter.next();
+      if (entry.getValue().longValue() < flushSequenceNumber) {
+        LOG.debug(
+          "Got a flush all request with sequence id {}, clear failed replica {}" +
+            " with last failed sequence id {}",
+          flushSequenceNumber, entry.getKey(), entry.getValue());
+        iter.remove();
+      }
+    }
   }
 
   /**
@@ -287,41 +325,34 @@ public class RegionReplicationSink {
         // check whether we flushed all stores, which means we could drop all the previous edits,
         // and also, recover from the previous failure of some replicas
         for (Cell metaCell : edit.getCells()) {
-          if (CellUtil.matchingFamily(metaCell, WALEdit.METAFAMILY)) {
-            FlushDescriptor flushDesc;
-            try {
-              flushDesc = WALEdit.getFlushDescriptor(metaCell);
-            } catch (IOException e) {
-              LOG.warn("Failed to parse FlushDescriptor from {}", metaCell);
-              continue;
-            }
-            if (flushDesc != null && flushAllStores(flushDesc)) {
-              long flushedSequenceId = flushDesc.getFlushSequenceNumber();
-              int toClearCount = 0;
-              long toClearSize = 0;
-              for (;;) {
-                SinkEntry e = entries.peek();
-                if (e == null) {
-                  break;
-                }
-                if (e.key.getSequenceId() < flushedSequenceId) {
-                  entries.poll();
-                  toClearCount++;
-                  toClearSize += e.size;
-                } else {
-                  break;
-                }
+          getFlushAllDescriptor(metaCell).ifPresent(flushDesc -> {
+            long flushSequenceNumber = flushDesc.getFlushSequenceNumber();
+            int toClearCount = 0;
+            long toClearSize = 0;
+            for (;;) {
+              SinkEntry e = entries.peek();
+              if (e == null) {
+                break;
               }
-              lastFlushedSequenceId = flushedSequenceId;
-              failedReplicas.clear();
-              LOG.debug(
-                "Got a flush all request with sequence id {}, clear failed replicas {}" +
-                  " and {} pending entries with size {}",
-                flushedSequenceId, failedReplicas, toClearCount,
-                StringUtils.TraditionalBinaryPrefix.long2String(toClearSize, "", 1));
-              flushRequester.recordFlush(flushedSequenceId);
+              if (e.key.getSequenceId() < flushSequenceNumber) {
+                entries.poll();
+                toClearCount++;
+                toClearSize += e.size;
+              } else {
+                break;
+              }
             }
-          }
+            lastFlushedSequenceId = flushSequenceNumber;
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(
+                "Got a flush all request with sequence id {}, clear {} pending"
+                  + " entries with size {}",
+                flushSequenceNumber, toClearCount,
+                StringUtils.TraditionalBinaryPrefix.long2String(toClearSize, "", 1));
+            }
+            clearFailedReplica(flushSequenceNumber);
+            flushRequester.recordFlush(flushSequenceNumber);
+          });
         }
       }
       if (failedReplicas.size() == regionReplication - 1) {
@@ -340,7 +371,7 @@ public class RegionReplicationSink {
         // failed
         clearAllEntries();
         for (int replicaId = 1; replicaId < regionReplication; replicaId++) {
-          failedReplicas.add(replicaId);
+          failedReplicas.put(replicaId, entry.key.getSequenceId());
         }
         flushRequester.requestFlush(entry.key.getSequenceId());
       }
