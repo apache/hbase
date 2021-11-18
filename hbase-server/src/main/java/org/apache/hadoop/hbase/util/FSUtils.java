@@ -1049,28 +1049,65 @@ public final class FSUtils {
    * @return List of paths to valid family directories in region dir.
    * @throws IOException
    */
-  public static List<Path> getFamilyDirs(final FileSystem fs, final Path regionDir) throws IOException {
+  public static List<Path> getFamilyDirs(final FileSystem fs, final Path regionDir)
+      throws IOException {
     // assumes we are in a region dir.
-    FileStatus[] fds = fs.listStatus(regionDir, new FamilyDirFilter(fs));
-    List<Path> familyDirs = new ArrayList<>(fds.length);
-    for (FileStatus fdfs: fds) {
-      Path fdPath = fdfs.getPath();
-      familyDirs.add(fdPath);
-    }
-    return familyDirs;
+    return getFilePaths(fs, regionDir, new FamilyDirFilter(fs));
   }
 
-  public static List<Path> getReferenceFilePaths(final FileSystem fs, final Path familyDir) throws IOException {
-    List<FileStatus> fds = listStatusWithStatusFilter(fs, familyDir, new ReferenceFileFilter(fs));
-    if (fds == null) {
-      return Collections.emptyList();
-    }
-    List<Path> referenceFiles = new ArrayList<>(fds.size());
+  public static List<Path> getReferenceFilePaths(final FileSystem fs, final Path familyDir)
+      throws IOException {
+    return getFilePaths(fs, familyDir, new ReferenceFileFilter(fs));
+  }
+
+  public static List<Path> getReferenceAndLinkFilePaths(final FileSystem fs, final Path familyDir)
+      throws IOException {
+    return getFilePaths(fs, familyDir, new ReferenceAndLinkFileFilter(fs));
+  }
+
+  private static List<Path> getFilePaths(final FileSystem fs, final Path dir,
+      final PathFilter pathFilter) throws IOException {
+    FileStatus[] fds = fs.listStatus(dir, pathFilter);
+    List<Path> files = new ArrayList<>(fds.length);
     for (FileStatus fdfs: fds) {
       Path fdPath = fdfs.getPath();
-      referenceFiles.add(fdPath);
+      files.add(fdPath);
     }
-    return referenceFiles;
+    return files;
+  }
+
+  public static int getRegionReferenceAndLinkFileCount(final FileSystem fs, final Path p) {
+    int result = 0;
+    try {
+      for (Path familyDir : getFamilyDirs(fs, p)) {
+        result += getReferenceAndLinkFilePaths(fs, familyDir).size();
+      }
+    } catch (IOException e) {
+      LOG.warn("Error Counting reference files.", e);
+    }
+    return result;
+  }
+
+  public static class ReferenceAndLinkFileFilter implements PathFilter {
+
+    private final FileSystem fs;
+
+    public ReferenceAndLinkFileFilter(FileSystem fs) {
+      this.fs = fs;
+    }
+
+    @Override
+    public boolean accept(Path rd) {
+      try {
+        // only files can be references.
+        return !fs.getFileStatus(rd).isDirectory() && (StoreFileInfo.isReference(rd) ||
+          HFileLink.isHFileLink(rd));
+      } catch (IOException ioe) {
+        // Maybe the file was moved or the fs was disconnected.
+        LOG.warn("Skipping file " + rd +" due to IOException", ioe);
+        return false;
+      }
+    }
   }
 
   /**
