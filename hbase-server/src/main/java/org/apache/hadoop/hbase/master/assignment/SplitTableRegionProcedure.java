@@ -33,6 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -141,13 +142,14 @@ public class SplitTableRegionProcedure
         .setSplit(false)
         .setRegionId(rid)
         .build();
-    if(tableDescriptor.getRegionSplitPolicyClassName() != null) {
+
+    if (tableDescriptor.getRegionSplitPolicyClassName() != null) {
       // Since we don't have region reference here, creating the split policy instance without it.
       // This can be used to invoke methods which don't require Region reference. This instantiation
       // of a class on Master-side though it only makes sense on the RegionServer-side is
       // for Phoenix Local Indexing. Refer HBASE-12583 for more information.
       Class<? extends RegionSplitPolicy> clazz =
-        RegionSplitPolicy.getSplitPolicyClass(tableDescriptor, conf);
+          RegionSplitPolicy.getSplitPolicyClass(tableDescriptor, conf);
       this.splitPolicy = ReflectionUtils.newInstance(clazz, conf);
     }
   }
@@ -622,17 +624,17 @@ public class SplitTableRegionProcedure
 
     Pair<Integer, Integer> expectedReferences = splitStoreFiles(env, regionFs);
 
-    assertReferenceFileCount(fs, expectedReferences.getFirst(),
+    assertSplitResultFilesCount(fs, expectedReferences.getFirst(),
       regionFs.getSplitsDir(daughterOneRI));
     //Move the files from the temporary .splits to the final /table/region directory
     regionFs.commitDaughterRegion(daughterOneRI);
-    assertReferenceFileCount(fs, expectedReferences.getFirst(),
+    assertSplitResultFilesCount(fs, expectedReferences.getFirst(),
       new Path(tabledir, daughterOneRI.getEncodedName()));
 
-    assertReferenceFileCount(fs, expectedReferences.getSecond(),
+    assertSplitResultFilesCount(fs, expectedReferences.getSecond(),
       regionFs.getSplitsDir(daughterTwoRI));
     regionFs.commitDaughterRegion(daughterTwoRI);
-    assertReferenceFileCount(fs, expectedReferences.getSecond(),
+    assertSplitResultFilesCount(fs, expectedReferences.getSecond(),
       new Path(tabledir, daughterTwoRI.getEncodedName()));
   }
 
@@ -758,11 +760,15 @@ public class SplitTableRegionProcedure
     return new Pair<Integer, Integer>(daughterA, daughterB);
   }
 
-  private void assertReferenceFileCount(final FileSystem fs, final int expectedReferenceFileCount,
-      final Path dir) throws IOException {
-    if (expectedReferenceFileCount != 0 &&
-        expectedReferenceFileCount != FSUtils.getRegionReferenceFileCount(fs, dir)) {
-      throw new IOException("Failing split. Expected reference file count isn't equal.");
+  private void assertSplitResultFilesCount(final FileSystem fs,
+      final int expectedSplitResultFileCount, Path dir)
+    throws IOException {
+    if (expectedSplitResultFileCount != 0) {
+      int resultFileCount = FSUtils.getRegionReferenceAndLinkFileCount(fs, dir);
+      if (expectedSplitResultFileCount != resultFileCount) {
+        throw new IOException("Failing split. Didn't have expected reference and HFileLink files"
+            + ", expected=" + expectedSplitResultFileCount + ", actual=" + resultFileCount);
+      }
     }
   }
 
