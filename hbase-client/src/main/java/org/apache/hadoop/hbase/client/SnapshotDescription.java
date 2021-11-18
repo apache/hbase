@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import java.util.Map;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -99,7 +98,7 @@ public class SnapshotDescription {
   }
 
   private long getLongFromSnapshotProps(Map<String, Object> snapshotProps, String property) {
-    return MapUtils.getLongValue(snapshotProps, property, HConstants.UNSET_SNAPSHOT_PROP);
+    return MapUtils.getLongValue(snapshotProps, property, -1);
   }
 
 

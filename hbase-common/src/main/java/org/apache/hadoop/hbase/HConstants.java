@@ -1541,9 +1541,6 @@ public final class HConstants {
   // Default TTL - FOREVER
   public static final long DEFAULT_SNAPSHOT_TTL = 0;
 
-  // Unset property (not specified in user supplied props)
-  public static final long UNSET_SNAPSHOT_PROP = -1;
-
   // User defined Default TTL config key
   public static final String DEFAULT_SNAPSHOT_TTL_CONFIG_KEY = "hbase.master.snapshot.ttl";
 
