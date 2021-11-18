@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
@@ -170,5 +172,15 @@ public class StoreUtils {
     // add global config first, then table and cf overrides, then cf metadata.
     return new CompoundConfiguration().add(conf).addBytesMap(td.getValues())
         .addStringMap(cfd.getConfiguration()).addBytesMap(cfd.getValues());
+  }
+
+  public static List<HStoreFile> filteredReferenceFiles(final Collection<HStoreFile> files) {
+    List<HStoreFile> referenceFiles = new ArrayList<>();
+    for (HStoreFile sf : files) {
+      if (sf.isReference() || StoreFileInfo.isReference(sf.getPath())) {
+        referenceFiles.add(sf);
+      }
+    }
+    return referenceFiles;
   }
 }

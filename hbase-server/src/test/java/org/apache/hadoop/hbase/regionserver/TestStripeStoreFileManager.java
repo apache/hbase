@@ -612,7 +612,7 @@ public class TestStripeStoreFileManager {
     StripeStoreConfig config = new StripeStoreConfig(
         conf, Mockito.mock(StoreConfigInformation.class));
     StripeStoreFileManager result = new StripeStoreFileManager(CellComparatorImpl.COMPARATOR, conf,
-        config);
+        config, null);
     result.loadFiles(sfs);
     return result;
   }

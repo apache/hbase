@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.apache.hadoop.hbase.regionserver.StripeStoreConfig.MAX_FILES_KEY;
+import static org.apache.hadoop.hbase.regionserver.StripeStoreConfig.MIN_FILES_KEY;
+import static org.apache.hadoop.hbase.regionserver.StripeStoreConfig.PRIORITY_COMPACT_REFERENCE_FILES_ENABLED;
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
 import static org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY;
 import static org.junit.Assert.assertEquals;
@@ -92,6 +94,7 @@ import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentMatcher;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.ListUtils;
 
 @RunWith(Parameterized.class)
 @Category({RegionServerTests.class, MediumTests.class})
@@ -251,8 +254,63 @@ public class TestStripeCompactionPolicy {
     assertEquals(si.getStorefiles(), new ArrayList<>(scr.getRequest().getFiles()));
     scr.execute(sc, NoLimitThroughputController.INSTANCE, null);
     verify(sc, only()).compact(eq(scr.getRequest()), anyInt(), anyLong(), aryEq(OPEN_KEY),
-      aryEq(OPEN_KEY), aryEq(OPEN_KEY), aryEq(OPEN_KEY),
-      any(), any());
+      aryEq(OPEN_KEY), aryEq(OPEN_KEY), aryEq(OPEN_KEY), any(), any());
+  }
+
+  @Test
+  public void testPriorityReferences() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(PRIORITY_COMPACT_REFERENCE_FILES_ENABLED, true);
+    StripeCompactionPolicy policy = createPolicy(conf);
+    StripeCompactor sc = mock(StripeCompactor.class);
+    HStoreFile ref = createFile();
+    when(ref.isReference()).thenReturn(true);
+    StripeInformationProvider si = mock(StripeInformationProvider.class);
+    List<HStoreFile> mixed = al(ref, createFile());
+    when(si.getStorefiles()).thenReturn(mixed);
+    when(si.getLevel0Files()).thenReturn(mixed);
+    Collection<HStoreFile> refs = al(ref);
+
+    assertTrue(policy.needsCompactions(si, al()));
+    StripeCompactionPolicy.StripeCompactionRequest scr = policy.selectCompaction(si, al(), false);
+    assertTrue(ListUtils.isEqualList(refs, scr.getRequest().getFiles()));
+    scr.execute(sc, NoLimitThroughputController.INSTANCE, null);
+    // this compaction request has no major range
+    verify(sc, only()).compact(eq(scr.getRequest()), anyInt(), anyLong(), aryEq(OPEN_KEY),
+      aryEq(OPEN_KEY), any(), any(), any(), any());
+  }
+
+  @Test
+  public void testPrioritySelectReferences() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(PRIORITY_COMPACT_REFERENCE_FILES_ENABLED, true);
+    int compactFileCount = 2;
+    conf.setInt(MIN_FILES_KEY, compactFileCount);
+    conf.setInt(MAX_FILES_KEY,compactFileCount);
+    StripeCompactionPolicy policy = createPolicy(conf);
+    StripeCompactor sc = mock(StripeCompactor.class);
+    StripeInformationProvider si = mock(StripeInformationProvider.class);
+    List<HStoreFile> sfs = mockRefs(10, 10);
+    when(si.getStorefiles()).thenReturn(sfs);
+    when(si.getLevel0Files()).thenReturn(sfs);
+
+    assertTrue(policy.needsCompactions(si, al()));
+    StripeCompactionPolicy.StripeCompactionRequest scr = policy.selectCompaction(si, al(), false);
+    assertEquals(compactFileCount, scr.getRequest().getFiles().size());
+  }
+
+  private List<HStoreFile> mockRefs(int refCount, int otherCount) throws Exception {
+    List<HStoreFile> files = new ArrayList<>(refCount + otherCount);
+    for(int i = 0;i<refCount;i++) {
+      HStoreFile ref = createFile();
+      when(ref.isReference()).thenReturn(true);
+      files.add(ref);
+    }
+    for(int i = 0;i<otherCount;i++) {
+      HStoreFile ref = createFile();
+      files.add(ref);
+    }
+    return files;
   }
 
   @Test

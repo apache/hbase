@@ -18,11 +18,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 
 /**
  * Configuration class for stripe store and compactions.
@@ -65,6 +65,11 @@ public class StripeStoreConfig {
   public static final String MAX_REGION_SPLIT_IMBALANCE_KEY =
       "hbase.store.stripe.region.split.max.imbalance";
 
+  /**
+   * Configure for enable priority select Reference files to compact in StripeCompactPolicy
+   */
+  public static final String PRIORITY_COMPACT_REFERENCE_FILES_ENABLED =
+      "hbase.store.stripe.region.priority.compact.reference.files.enabled";
 
   private final float maxRegionSplitImbalance;
   private final int level0CompactMinFiles;
@@ -76,6 +81,8 @@ public class StripeStoreConfig {
   private final float splitPartCount;
   private final boolean flushIntoL0;
   private final long splitPartSize; // derived from sizeToSplitAt and splitPartCount
+
+  private final boolean priorityCompactRefsEnabled;
 
   private static final double EPSILON = 0.001; // good enough for this, not a real epsilon.
   public StripeStoreConfig(Configuration config, StoreConfigInformation sci) {
@@ -109,6 +116,8 @@ public class StripeStoreConfig {
     }
     this.initialCount = initialCount;
     this.splitPartSize = (long)(this.sizeToSplitAt / this.splitPartCount);
+    this.priorityCompactRefsEnabled =
+      config.getBoolean(PRIORITY_COMPACT_REFERENCE_FILES_ENABLED, false);
   }
 
   private static float getFloat(
@@ -162,5 +171,9 @@ public class StripeStoreConfig {
    */
   public long getSplitPartSize() {
     return splitPartSize;
+  }
+
+  public boolean isPriorityCompactRefsEnabled() {
+    return priorityCompactRefsEnabled;
   }
 }

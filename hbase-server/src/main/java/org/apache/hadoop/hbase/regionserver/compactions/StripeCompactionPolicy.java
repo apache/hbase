@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
@@ -116,6 +118,87 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     // compact-all-things behavior.
     Collection<HStoreFile> allFiles = si.getStorefiles();
     if (StoreUtils.hasReferences(allFiles)) {
+      if (config.isPriorityCompactRefsEnabled()) {
+        // try to only select reference files
+        LOG.info("There are references in the store {}, compact reference files only. ",
+            si.getStoreName());
+        List<HStoreFile> l0References = StoreUtils.filteredReferenceFiles(si.getLevel0Files());
+        if (!l0References.isEmpty()) {
+          boolean needSelect = needSelectFiles(l0References);
+          if (needSelect) {
+            // need select L0 reference file compaction means L0 is very large.
+            // if L0 reference is large, then we should compact large stripes first, to make sure
+            // the stripes will not too large after the large L0 compaction.
+            StripeCompactionRequest result = selectSingleStripeCompaction(
+                si, false, false, false);
+            if (result != null) {
+              LOG.debug("Performing one whole stripe split compaction after split, {}",
+                 si.getStoreName());
+              return result;
+            }
+          }
+          List<HStoreFile> toCompactL0Refs = needSelect ?
+              selectSimpleCompaction(l0References, false, false, true) :
+            l0References;
+          assert !toCompactL0Refs.isEmpty() : "To compact reference files should not be empty";
+          String msg = "";
+          if (LOG.isDebugEnabled()) {
+            msg = String.format("Compact L0 references only after split. %d store files, "
+                + "%d L0 files, %d reference files length %d, to "
+                + "compact %d reference files with length %d, store %s", allFiles.size(),
+              si.getLevel0Files().size(), l0References.size(), getTotalFileSize(l0References),
+              toCompactL0Refs.size(), getTotalFileSize(toCompactL0Refs), si.getStoreName());
+          }
+          StripeCompactionRequest request;
+          if (si.getStripeCount() > 0) {
+            // do L0 reference compaction, will perform boundary compaction
+            LOG.debug(msg + ". Performing boundary compaction.");
+            request = 
+                new BoundaryStripeCompactionRequest(toCompactL0Refs, si.getStripeBoundaries());
+          } else {
+            // do L0 reference compaction, will perform split compaction
+            LOG.debug(msg + ". Performing split stripe compaction.");
+            long targetKvs =
+                estimateTargetKvs(toCompactL0Refs, config.getInitialCount()).getFirst();
+            request = new SplitStripeCompactionRequest(toCompactL0Refs, OPEN_KEY, OPEN_KEY, targetKvs);
+          }
+          request.getRequest().setAfterSplit(true);
+          request.getRequest().setIsMajor(false, false);
+          return request;
+        }
+        // select reference files in a single stripe
+        int priorityStripe = getStripeIndexWithReferences(si);
+        if (priorityStripe != -1) {
+          LOG.debug("The stripe {} has reference files, select all files in this stripe to "
+             + "compact, store {}", priorityStripe, si.getStoreName());
+          Collection<HStoreFile> priorityStripeFiles = si.getStripes().get(priorityStripe);
+          int targetCount = 1;
+          long targetKvs = Long.MAX_VALUE;
+          long toCompactSize = getTotalFileSize(priorityStripeFiles);
+          if (toCompactSize >= config.getSplitSize()) {
+            Pair<Long, Integer> estimate =
+              estimateTargetKvs(priorityStripeFiles, config.getSplitCount());
+            targetCount = estimate.getSecond();
+            targetKvs = estimate.getFirst();
+          }
+          String splitString =
+            "; the stripe will be split into at most " + targetCount + " stripes with "
+              + targetKvs + " target KVs, toCompact files size is " + toCompactSize;
+          StripeCompactionRequest request =
+            new SplitStripeCompactionRequest(priorityStripeFiles,
+              si.getStartRow(priorityStripe),
+              si.getEndRow(priorityStripe), targetCount, targetKvs);
+          LOG.debug(
+            "Priority compact stripe {} all files, selecting {} files, " + " store {}",
+            priorityStripe, request.getRequest().getFiles().size(),
+            si.getStoreName() + splitString);
+          request.getRequest().setAfterSplit(true);
+          request.getRequest().setIsMajor(false, false);
+          return request;
+        }
+      }
+
+      // the priority compact reference files is disabled, so compact all files after split
       LOG.debug("There are references in the store; compacting all files");
       long targetKvs = estimateTargetKvs(allFiles, config.getInitialCount()).getFirst();
       SplitStripeCompactionRequest request = new SplitStripeCompactionRequest(
@@ -162,6 +245,35 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     return selectSingleStripeCompaction(si, false, canDropDeletesNoL0, isOffpeak);
   }
 
+  /**
+   * Check if the size or count of the participants is too large to select all
+   * for one compaction request
+   * @param participants participant store files
+   * @return True if need to select partial of the participants, or else False
+   */
+  private boolean needSelectFiles(final List<HStoreFile> participants) {
+    return participants.size() > this.config.getStripeCompactMaxFiles() ||
+      getTotalFileSize(participants) > comConf.getMaxCompactSize();
+  }
+
+  /**
+   * Get the index of the stripe who has reference files
+   * @param si the stripe information provider
+   * @return the index of a stripe, [0,n-1]
+   */
+  private int getStripeIndexWithReferences(StripeInformationProvider si) {
+    ArrayList<ImmutableList<HStoreFile>> stripeFiles = si.getStripes();
+    for (int i = 0; i < stripeFiles.size(); ++i) {
+      ImmutableList<HStoreFile> oneStripeFiles = stripeFiles.get(i);
+      if (StoreUtils.hasReferences(oneStripeFiles)) {
+        LOG.debug("Stripe {} has references, endRow {}, store {}", i, si.getEndRow(i),
+              si.getStoreName());
+        return i;
+      }
+    }
+    return -1;
+  }
+  
   public boolean needsCompactions(StripeInformationProvider si, List<HStoreFile> filesCompacting) {
     // Approximation on whether we need compaction.
     return filesCompacting.isEmpty()
@@ -559,6 +671,12 @@ public class StripeCompactionPolicy extends CompactionPolicy {
 
   /** The information about stripes that the policy needs to do its stuff */
   public static interface StripeInformationProvider {
+    /**
+     * The store name, can be used in log print
+     * @return
+     */
+    String getStoreName();
+    
     public Collection<HStoreFile> getStorefiles();
 
     /**
