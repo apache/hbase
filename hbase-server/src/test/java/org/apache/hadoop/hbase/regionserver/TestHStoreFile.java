@@ -132,14 +132,17 @@ public class TestHStoreFile {
 
   /**
    * Write a file and then assert that we can read from top and bottom halves using two
-   * HalfMapFiles.
+   * HalfMapFiles, as well as one HalfMapFile and one HFileLink file.
    */
   @Test
-  public void testBasicHalfMapFile() throws Exception {
+  public void testBasicHalfAndHFileLinkMapFile() throws Exception {
     final RegionInfo hri =
-      RegionInfoBuilder.newBuilder(TableName.valueOf("testBasicHalfMapFileTb")).build();
+      RegionInfoBuilder.newBuilder(TableName.valueOf("testBasicHalfAndHFileLinkMapFile")).build();
+    // The locations of HFileLink refers hfiles only should be consistent with the table dir
+    // create by CommonFSUtils directory, so we should make the region directory under
+    // the mode of CommonFSUtils.getTableDir here.
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
-      new Path(testDir, hri.getTable().getNameAsString()), hri);
+      CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), hri.getTable()), hri);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(2 * 1024).build();
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
@@ -395,6 +398,8 @@ public class TestHStoreFile {
     f.initReader();
     Cell midkey = f.getReader().midKey().get();
     KeyValue midKV = (KeyValue) midkey;
+    // 1. test using the midRow as the splitKey, this test will generate two Reference files
+    // in the children
     byte[] midRow = CellUtil.cloneRow(midKV);
     // Create top split.
     RegionInfo topHri =
@@ -455,7 +460,7 @@ public class TestHStoreFile {
       regionFs.cleanupDaughterRegion(topHri);
       regionFs.cleanupDaughterRegion(bottomHri);
 
-      // Next test using a midkey that does not exist in the file.
+      // 2. test using a midkey which will generate one Reference file and one HFileLink file.
       // First, do a key that is < than first key. Ensure splits behave
       // properly.
       byte[] badmidkey = Bytes.toBytes("  .");
