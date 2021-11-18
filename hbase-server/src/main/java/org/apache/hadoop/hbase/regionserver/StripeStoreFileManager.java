@@ -123,17 +123,29 @@ public class StripeStoreFileManager
 
   private final int blockingFileCount;
 
+  private final String storeName;
+
   public StripeStoreFileManager(
-      CellComparator kvComparator, Configuration conf, StripeStoreConfig config) {
+      CellComparator kvComparator, Configuration conf, StripeStoreConfig config, HStore store) {
     this.cellComparator = kvComparator;
     this.config = config;
     this.blockingFileCount = conf.getInt(
         HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
+    if(store != null) {
+      storeName = store.getName();
+    } else {
+      storeName = "";
+    }
   }
 
   @Override
   public void loadFiles(List<HStoreFile> storeFiles) {
     loadUnclassifiedStoreFiles(storeFiles);
+  }
+
+  @Override
+  public String getStoreName() {
+    return storeName;
   }
 
   @Override

@@ -299,4 +299,8 @@ public interface Store {
    *         if you try to set a configuration.
    */
   Configuration getReadOnlyConfiguration();
+
+  default String getName() {
+    return String.format("%s:%s", getRegionInfo().getEncodedName(), getColumnFamilyName());
+  }
 }
