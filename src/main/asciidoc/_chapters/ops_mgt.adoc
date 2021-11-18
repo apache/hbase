@@ -3150,22 +3150,24 @@ TTL some notion of optional TTL (and optional default TTL) for snapshots could b
 hbase> snapshot 'mytable', 'snapshot1234', {TTL => 86400}
 ----
 
-The above command creates snapshot `snapshot1234` with TTL of 86400 sec(24 hours)
+The above command creates snapshot `snapshot1234` with TTL of 86400 sec (24 hours)
 and hence, the snapshot is supposed to be cleaned up after 24 hours
 
 
 
 .Default Snapshot TTL:
+- User specified default TTL with config `hbase.master.snapshot.ttl`
+- FOREVER if `hbase.master.snapshot.ttl` is not set
 
-- FOREVER by default
-- User specified Default TTL with config `hbase.master.snapshot.ttl`
+While creating a snapshot, if TTL in seconds is not explicitly specified, the above logic will be
+followed to determine the TTL. If no configs are changed, the default behavior is that all snapshots
+will be retained forever (until manual deletion). If a different default TTL behavior is desired,
+`hbase.master.snapshot.ttl` can be set to a default TTL in seconds. Any snapshot created without
+an explicit TTL will take this new value.
 
-
-While creating a Snapshot, if TTL in seconds is not specified, by default the snapshot
-would not be deleted automatically. i.e. it would be retained forever until it is
-manually deleted. However, the user can update this default TTL behavior by
-providing default TTL in sec for key: `hbase.master.snapshot.ttl`.
-Value 0 for this config indicates TTL: FOREVER
+NOTE: If `hbase.master.snapshot.ttl` is set, a snapshot with an explicit {TTL => 0} or
+{TTL => -1} will also take this value. In this case, a TTL < -1 (such as {TTL => -2} should be used
+to indicate FOREVER.
 
 
 .Take a snapshot with custom MAX_FILESIZE
