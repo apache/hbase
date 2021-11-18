@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasProperty;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
+import java.util.Arrays;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
@@ -46,6 +47,10 @@ public final class AttributesMatchers {
 
   public static Matcher<Attributes> containsEntry(String key, String value) {
     return containsEntry(AttributeKey.stringKey(key), value);
+  }
+
+  public static Matcher<Attributes> containsEntryWithStringValuesOf(String key, String... values) {
+    return containsEntry(AttributeKey.stringArrayKey(key), Arrays.asList(values));
   }
 
   private static final class IsAttributesContaining<T> extends TypeSafeMatcher<Attributes> {
