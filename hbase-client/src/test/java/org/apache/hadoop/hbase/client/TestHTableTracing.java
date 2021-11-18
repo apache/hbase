@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntryWithStringValuesOf;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasAttributes;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEnded;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasKind;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
@@ -320,7 +322,9 @@ public class TestHTableTracing extends TestTracingBase {
     table.checkAndMutate(CheckAndMutate.newBuilder(Bytes.toBytes(0))
       .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
       .build(new Delete(Bytes.toBytes(0))));
-    assertTrace("CHECK_AND_MUTATE");
+    assertTrace("CHECK_AND_MUTATE", hasAttributes(
+      containsEntryWithStringValuesOf(
+        "db.hbase.container_operations", "CHECK_AND_MUTATE", "DELETE")));
   }
 
   @Test
@@ -328,7 +332,9 @@ public class TestHTableTracing extends TestTracingBase {
     table.checkAndMutate(Arrays.asList(CheckAndMutate.newBuilder(Bytes.toBytes(0))
       .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
       .build(new Delete(Bytes.toBytes(0)))));
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf(
+        "db.hbase.container_operations", "CHECK_AND_MUTATE", "DELETE")));
   }
 
   @Test
@@ -336,51 +342,67 @@ public class TestHTableTracing extends TestTracingBase {
     table.checkAndMutate(Arrays.asList(CheckAndMutate.newBuilder(Bytes.toBytes(0))
       .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
       .build(new Delete(Bytes.toBytes(0)))));
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf(
+        "db.hbase.container_operations", "CHECK_AND_MUTATE", "DELETE")));
   }
 
   @Test
   public void testMutateRow() throws Exception {
     byte[] row = Bytes.toBytes(0);
     table.mutateRow(RowMutations.of(Arrays.asList(new Delete(row))));
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf(
+        "db.hbase.container_operations", "DELETE")));
   }
 
   @Test
   public void testExistsList() throws IOException {
     table.exists(Arrays.asList(new Get(Bytes.toBytes(0))));
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf(
+        "db.hbase.container_operations", "GET")));
   }
 
   @Test
   public void testExistsAll() throws IOException {
     table.existsAll(Arrays.asList(new Get(Bytes.toBytes(0))));
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf(
+        "db.hbase.container_operations", "GET")));
   }
 
   @Test
   public void testGetList() throws IOException {
     table.get(Arrays.asList(new Get(Bytes.toBytes(0))));
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf(
+        "db.hbase.container_operations", "GET")));
   }
 
   @Test
   public void testPutList() throws IOException {
     table.put(Arrays.asList(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"),
       Bytes.toBytes("cq"), Bytes.toBytes("v"))));
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf(
+        "db.hbase.container_operations", "PUT")));
   }
 
   @Test
   public void testDeleteList() throws IOException {
     table.delete(Lists.newArrayList(new Delete(Bytes.toBytes(0))));
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf(
+        "db.hbase.container_operations", "DELETE")));
   }
 
   @Test
   public void testBatchList() throws IOException, InterruptedException {
     table.batch(Arrays.asList(new Delete(Bytes.toBytes(0))), null);
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf(
+        "db.hbase.container_operations", "DELETE")));
   }
 
   @Test
@@ -388,5 +410,4 @@ public class TestHTableTracing extends TestTracingBase {
     table.close();
     assertTrace(HTable.class.getSimpleName(), "close", null, TableName.META_TABLE_NAME);
   }
-
 }
