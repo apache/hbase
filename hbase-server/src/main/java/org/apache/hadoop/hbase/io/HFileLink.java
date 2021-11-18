@@ -79,8 +79,7 @@ public class HFileLink extends FileLink {
         RegionInfoBuilder.ENCODED_REGION_NAME_REGEX, StoreFileInfo.HFILE_NAME_REGEX);
 
   /** Define the HFile Link name parser in the form of: table=region-hfile */
-  //made package private for testing
-  static final Pattern LINK_NAME_PATTERN =
+  public static final Pattern LINK_NAME_PATTERN =
     Pattern.compile(String.format("^(?:(%s)(?:\\=))?(%s)=(%s)-(%s)$",
       TableName.VALID_NAMESPACE_REGEX, TableName.VALID_TABLE_QUALIFIER_REGEX,
       RegionInfoBuilder.ENCODED_REGION_NAME_REGEX, StoreFileInfo.HFILE_NAME_REGEX));
@@ -400,15 +399,40 @@ public class HFileLink extends FileLink {
     String tableName = CommonFSUtils.getTableName(dstFamilyPath.getParent().getParent())
         .getNameAsString();
 
+    return create(conf, fs, dstFamilyPath, familyName, tableName, regionName, linkedTable,
+      linkedRegion, hfileName, createBackRef);
+  }
+
+  /**
+   * Create a new HFileLink
+   *
+   * <p>It also adds a back-reference to the hfile back-reference directory
+   * to simplify the reference-count and the cleaning process.
+   * @param conf {@link Configuration} to read for the archive directory name
+   * @param fs {@link FileSystem} on which to write the HFileLink
+   * @param dstFamilyPath - Destination path (table/region/cf/)
+   * @param dstTableName - Destination table name
+   * @param dstRegionName - Destination region name
+   * @param linkedTable - Linked Table Name
+   * @param linkedRegion - Linked Region Name
+   * @param hfileName - Linked HFile name
+   * @param createBackRef - Whether back reference should be created. Defaults to true.
+   * @return true if the file is created, otherwise the file exists.
+   * @throws IOException on file or parent directory creation failure
+   */
+  public static boolean create(final Configuration conf, final FileSystem fs,
+      final Path dstFamilyPath, final String familyName, final String dstTableName,
+      final String dstRegionName, final TableName linkedTable, final String linkedRegion,
+      final String hfileName, final boolean createBackRef) throws IOException {
     String name = createHFileLinkName(linkedTable, linkedRegion, hfileName);
-    String refName = createBackReferenceName(tableName, regionName);
+    String refName = createBackReferenceName(dstTableName, dstRegionName);
 
     // Make sure the destination directory exists
     fs.mkdirs(dstFamilyPath);
 
     // Make sure the FileLink reference directory exists
     Path archiveStoreDir = HFileArchiveUtil.getStoreArchivePath(conf,
-          linkedTable, linkedRegion, familyName);
+        linkedTable, linkedRegion, familyName);
     Path backRefPath = null;
     if (createBackRef) {
       Path backRefssDir = getBackReferencesDir(archiveStoreDir, hfileName);
