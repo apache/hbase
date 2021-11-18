@@ -30,6 +30,7 @@ import com.google.protobuf.ServiceException;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -406,7 +407,8 @@ public class HTable implements Table {
   public Result[] get(List<Get> gets) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH)
+      .setContainerOperations(gets);
     return TraceUtil.trace(() -> {
       if (gets.size() == 1) {
         return new Result[] { get(gets.get(0)) };
@@ -433,7 +435,8 @@ public class HTable implements Table {
       throws InterruptedException, IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH)
+      .setContainerOperations(actions);
     TraceUtil.traceWithIOException(() -> {
       int rpcTimeout = writeRpcTimeoutMs;
       boolean hasRead = false;
@@ -473,6 +476,7 @@ public class HTable implements Table {
     final Span span = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH)
+      .setContainerOperations(actions)
       .build();
     try (Scope ignored = span.makeCurrent()) {
       AsyncRequestFuture ars = multiAp.submit(task);
@@ -481,6 +485,7 @@ public class HTable implements Table {
         TraceUtil.setError(span, ars.getErrors());
         throw ars.getErrors();
       }
+      span.setStatus(StatusCode.OK);
     } finally {
       span.end();
     }
@@ -512,6 +517,7 @@ public class HTable implements Table {
     final Span span = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH)
+      .setContainerOperations(actions)
       .build();
     try (Scope ignored = span.makeCurrent()) {
       AsyncRequestFuture ars = connection.getAsyncProcess().submit(task);
@@ -551,7 +557,8 @@ public class HTable implements Table {
   public void delete(final List<Delete> deletes) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH)
+      .setContainerOperations(deletes);
     TraceUtil.traceWithIOException(() -> {
       Object[] results = new Object[deletes.size()];
       try {
@@ -600,7 +607,8 @@ public class HTable implements Table {
   public void put(final List<Put> puts) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH)
+      .setContainerOperations(puts);
     TraceUtil.traceWithIOException(() -> {
       for (Put put : puts) {
         validatePut(put);
@@ -618,7 +626,8 @@ public class HTable implements Table {
   public Result mutateRow(final RowMutations rm) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH)
+      .setContainerOperations(rm);
     return TraceUtil.trace(() -> {
       long nonceGroup = getNonceGroup();
       long nonce = getNonce();
@@ -773,7 +782,8 @@ public class HTable implements Table {
       final byte [] value, final Put put) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE, HBaseSemanticAttributes.Operation.PUT);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, CompareOperator.EQUAL, value, null, null, put)
         .isSuccess(),
@@ -786,7 +796,8 @@ public class HTable implements Table {
       final CompareOp compareOp, final byte [] value, final Put put) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE, HBaseSemanticAttributes.Operation.PUT);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, toCompareOperator(compareOp), value, null,
         null, put).isSuccess(),
@@ -799,7 +810,8 @@ public class HTable implements Table {
       final CompareOperator op, final byte [] value, final Put put) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE, HBaseSemanticAttributes.Operation.PUT);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, put).isSuccess(),
       supplier);
@@ -811,7 +823,8 @@ public class HTable implements Table {
     final byte[] value, final Delete delete) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE, HBaseSemanticAttributes.Operation.DELETE);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, CompareOperator.EQUAL, value, null, null,
         delete).isSuccess(),
@@ -824,7 +837,8 @@ public class HTable implements Table {
     final CompareOp compareOp, final byte[] value, final Delete delete) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE, HBaseSemanticAttributes.Operation.DELETE);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, toCompareOperator(compareOp), value, null,
         null, delete).isSuccess(),
@@ -837,7 +851,8 @@ public class HTable implements Table {
     final CompareOperator op, final byte[] value, final Delete delete) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE, HBaseSemanticAttributes.Operation.DELETE);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, delete).isSuccess(),
       supplier);
@@ -914,7 +929,8 @@ public class HTable implements Table {
     final CompareOp compareOp, final byte [] value, final RowMutations rm) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(rm);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, toCompareOperator(compareOp), value, null,
         null, rm).isSuccess(),
@@ -927,7 +943,8 @@ public class HTable implements Table {
       final CompareOperator op, final byte [] value, final RowMutations rm) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+      .setContainerOperations(rm);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, rm).isSuccess(),
       supplier);
@@ -937,7 +954,8 @@ public class HTable implements Table {
   public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(checkAndMutate);
+      .setOperation(checkAndMutate)
+      .setContainerOperations(checkAndMutate);
     return TraceUtil.trace(() -> {
       Row action = checkAndMutate.getAction();
       if (action instanceof Put || action instanceof Delete || action instanceof Increment ||
@@ -986,7 +1004,8 @@ public class HTable implements Table {
     throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH)
+      .setContainerOperations(checkAndMutates);
     return TraceUtil.trace(() -> {
       if (checkAndMutates.isEmpty()) {
         return Collections.emptyList();
@@ -1056,7 +1075,8 @@ public class HTable implements Table {
   public boolean[] exists(List<Get> gets) throws IOException {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH)
+      .setContainerOperations(gets);
     return TraceUtil.trace(() -> {
       if (gets.isEmpty()) {
         return new boolean[] {};
