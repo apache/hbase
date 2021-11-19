@@ -150,8 +150,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   private static final int SPLIT_REGION_COMPACTION_PRIORITY = Integer.MIN_VALUE + 1000;
 
   private static final Logger LOG = LoggerFactory.getLogger(HStore.class);
-
-  protected final MemStore memstore;
+  /**
+   * TODO:After making the {@link DefaultMemStore} extensible,we change it back to final.
+   */
+  protected MemStore memstore;
   // This stores directory in the filesystem.
   private final HRegion region;
   protected Configuration conf;
@@ -1222,6 +1224,14 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     this.lock.writeLock().lock();
     try {
       this.storeEngine.getStoreFileManager().insertNewFiles(sfs);
+      /**
+       * NOTE:we should keep clearSnapshot method inside the write lock because clearSnapshot may
+       * close {@link DefaultMemStore#snapshot}, which may be used by
+       * {@link DefaultMemStore#getScanners}.
+       */
+      if (snapshotId > 0) {
+        this.memstore.clearSnapshot(snapshotId);
+      }
     } finally {
       // We need the lock, as long as we are updating the storeFiles
       // or changing the memstore. Let us release it before calling
@@ -1230,13 +1240,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       // the lock.
       this.lock.writeLock().unlock();
     }
-    // We do not need to call clearSnapshot method inside the write lock.
-    // The clearSnapshot itself is thread safe, which can be called at the same time with other
-    // memstore operations expect snapshot and clearSnapshot. And for these two methods, in HRegion
-    // we can guarantee that there is only one onging flush, so they will be no race.
-    if (snapshotId > 0) {
-      this.memstore.clearSnapshot(snapshotId);
-    }
+
     // notify to be called here - only in case of flushes
     notifyChangedReadersObservers(sfs);
     if (LOG.isTraceEnabled()) {
