@@ -75,7 +75,7 @@ public class CloneSnapshotProcedure
   private TableDescriptor tableDescriptor;
   private SnapshotDescription snapshot;
   private boolean restoreAcl;
-  private String cloneSFT;
+  private String customSFT;
   private List<RegionInfo> newRegions = null;
   private Map<String, Pair<String, String> > parentsToChildrenPairMap = new HashMap<>();
 
@@ -107,12 +107,12 @@ public class CloneSnapshotProcedure
 
   public CloneSnapshotProcedure(final MasterProcedureEnv env,
       final TableDescriptor tableDescriptor, final SnapshotDescription snapshot,
-      final boolean restoreAcl, final String cloneSFT) {
+      final boolean restoreAcl, final String customSFT) {
     super(env);
     this.tableDescriptor = tableDescriptor;
     this.snapshot = snapshot;
     this.restoreAcl = restoreAcl;
-    this.cloneSFT = cloneSFT;
+    this.customSFT = customSFT;
 
     getMonitorStatus();
   }
@@ -220,12 +220,12 @@ public class CloneSnapshotProcedure
    * and set the specified SFT on the table level
    */
   private void updateTableDescriptorWithSFT() {
-    if (StringUtils.isEmpty(cloneSFT)){
+    if (StringUtils.isEmpty(customSFT)){
       return;
     }
 
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
-    builder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, cloneSFT);
+    builder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, customSFT);
     for (ColumnFamilyDescriptor family : tableDescriptor.getColumnFamilies()){
       ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(family);
       cfBuilder.setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL, null);
@@ -322,6 +322,9 @@ public class CloneSnapshotProcedure
         cloneSnapshotMsg.addParentToChildRegionsPairList(parentToChildrenPair);
       }
     }
+    if (!StringUtils.isEmpty(customSFT)){
+      cloneSnapshotMsg.setCustomSFT(customSFT);
+    }
     serializer.serialize(cloneSnapshotMsg.build());
   }
 
@@ -353,6 +356,9 @@ public class CloneSnapshotProcedure
             parentToChildrenPair.getChild1RegionName(),
             parentToChildrenPair.getChild2RegionName()));
       }
+    }
+    if (!StringUtils.isEmpty(cloneSnapshotMsg.getCustomSFT())){
+      customSFT = cloneSnapshotMsg.getCustomSFT();
     }
     // Make sure that the monitor status is set up
     getMonitorStatus();

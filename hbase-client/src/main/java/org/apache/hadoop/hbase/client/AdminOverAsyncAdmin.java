@@ -648,10 +648,11 @@ class AdminOverAsyncAdmin implements Admin {
     get(admin.restoreSnapshot(snapshotName, takeFailSafeSnapshot, restoreAcl));
   }
 
-  @Override public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName,
-    boolean restoreAcl, String cloneSFT)
+  @Override
+  public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName,
+    boolean restoreAcl, String customSFT)
     throws IOException, TableExistsException, RestoreSnapshotException {
-    return admin.cloneSnapshot(snapshotName, tableName, restoreAcl, cloneSFT);
+    return admin.cloneSnapshot(snapshotName, tableName, restoreAcl, customSFT);
   }
 
   @Override

@@ -905,10 +905,10 @@ public interface AsyncAdmin {
    * @param snapshotName name of the snapshot to be cloned
    * @param tableName name of the table where the snapshot will be restored
    * @param restoreAcl <code>true</code> to restore acl of snapshot
-   * @param cloneSFT specify the StroreFileTracker implementation used for the table
+   * @param customSFT specify the StroreFileTracker used for the table
    */
   CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName,
-      boolean restoreAcl, String cloneSFT);
+      boolean restoreAcl, String customSFT);
 
   /**
    * List completed snapshots.

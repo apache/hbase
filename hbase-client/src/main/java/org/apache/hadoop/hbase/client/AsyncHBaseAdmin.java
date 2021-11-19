@@ -489,14 +489,13 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot,
     boolean restoreAcl) {
-    return wrap(
-      rawAdmin.restoreSnapshot(snapshotName, takeFailSafeSnapshot, restoreAcl));
+    return wrap(rawAdmin.restoreSnapshot(snapshotName, takeFailSafeSnapshot, restoreAcl));
   }
 
   @Override
   public CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName,
-      boolean restoreAcl, String cloneSFT) {
-    return wrap(rawAdmin.cloneSnapshot(snapshotName, tableName, restoreAcl, cloneSFT));
+      boolean restoreAcl, String customSFT) {
+    return wrap(rawAdmin.cloneSnapshot(snapshotName, tableName, restoreAcl, customSFT));
   }
 
   @Override

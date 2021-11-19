@@ -2618,7 +2618,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   public long restoreSnapshot(final SnapshotDescription snapshotDesc, final long nonceGroup,
-    final long nonce, final boolean restoreAcl, final String cloneSFT) throws IOException {
+    final long nonce, final boolean restoreAcl, final String customSFT) throws IOException {
     checkInitialized();
     getSnapshotManager().checkSnapshotSupport();
 
@@ -2631,7 +2631,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       @Override protected void run() throws IOException {
         setProcId(
           getSnapshotManager().restoreOrCloneSnapshot(snapshotDesc, getNonceKey(), restoreAcl,
-            cloneSFT));
+            customSFT));
       }
 
       @Override

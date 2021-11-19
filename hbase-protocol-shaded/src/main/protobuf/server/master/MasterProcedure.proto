@@ -207,6 +207,7 @@ message CloneSnapshotStateData {
   required TableSchema table_schema = 3;
   repeated RegionInfo region_info = 4;
   repeated RestoreParentToChildRegionsPair parent_to_child_regions_pair_list = 5;
+  optional string customSFT = 6;
 }
 
 enum RestoreSnapshotState {
