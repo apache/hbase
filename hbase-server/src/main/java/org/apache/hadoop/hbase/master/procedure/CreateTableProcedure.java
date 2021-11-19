@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -336,39 +335,20 @@ public class CreateTableProcedure
       final TableDescriptor tableDescriptor, List<RegionInfo> newRegions,
       final CreateHdfsRegions hdfsRegionHandler) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tempdir = mfs.getTempDir();
 
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
-    final Path tempTableDir = CommonFSUtils.getTableDir(tempdir, tableDescriptor.getTableName());
+    final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(),
+      tableDescriptor.getTableName());
     ((FSTableDescriptors)(env.getMasterServices().getTableDescriptors()))
-        .createTableDescriptorForTableDirectory(tempTableDir, tableDescriptor, false);
+        .createTableDescriptorForTableDirectory(
+          tableDir, tableDescriptor, false);
 
     // 2. Create Regions
-    newRegions = hdfsRegionHandler.createHdfsRegions(env, tempdir,
+    newRegions = hdfsRegionHandler.createHdfsRegions(env, mfs.getRootDir(),
             tableDescriptor.getTableName(), newRegions);
 
-    // 3. Move Table temp directory to the hbase root location
-    moveTempDirectoryToHBaseRoot(env, tableDescriptor, tempTableDir);
-
     return newRegions;
-  }
-
-  protected static void moveTempDirectoryToHBaseRoot(
-    final MasterProcedureEnv env,
-    final TableDescriptor tableDescriptor,
-    final Path tempTableDir) throws IOException {
-    final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tableDir =
-      CommonFSUtils.getTableDir(mfs.getRootDir(), tableDescriptor.getTableName());
-    FileSystem fs = mfs.getFileSystem();
-    if (!fs.delete(tableDir, true) && fs.exists(tableDir)) {
-      throw new IOException("Couldn't delete " + tableDir);
-    }
-    if (!fs.rename(tempTableDir, tableDir)) {
-      throw new IOException("Unable to move table from temp=" + tempTableDir +
-        " to hbase root=" + tableDir);
-    }
   }
 
   protected static List<RegionInfo> addTableToMeta(final MasterProcedureEnv env,
