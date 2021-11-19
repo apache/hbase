@@ -460,6 +460,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   // A timer to shutdown the process if abort takes too long
   private Timer abortMonitor;
+  private RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest unsentBrokenSFCReport;
 
   /**
    * Starts a HRegionServer at the default location.
@@ -3508,6 +3509,80 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   @InterfaceAudience.Private
   public BrokenStoreFileCleaner getBrokenStoreFileCleaner(){
     return brokenStoreFileCleaner;
+  }
+
+  /**
+   * Reports the results of a BrokenStoreFileCleaner chore run. If reporting fails stores
+   * the unsent report and tries to send with the next scheduled report.
+   *
+   * @param runtime chore runtime in milisecs
+   * @param deletedFiles number of cleaned junk files
+   * @param failedDeletes number of files the chore tried and failed to delete
+   * @return if sending the report was successful
+   */
+  public boolean reportBrokenStoreFileCleanerUsage(long runtime, long deletedFiles,
+    long failedDeletes, boolean retry) {
+    RegionServerStatusService.BlockingInterface rss = rssStub;
+    RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest request = null;
+    if (rss == null) {
+      // the current server could be stopping.
+      LOG.trace("Skipping BrokenStoreFileCleaner chore report to HMaster as stub is null");
+      return true;
+    }
+    try {
+      request =
+        buildBrokenSFCReport(runtime, deletedFiles, failedDeletes, unsentBrokenSFCReport);
+      rss.reportBrokenStoreFileCleanerUsage(null, request);
+      if(unsentBrokenSFCReport != null) {
+        unsentBrokenSFCReport = null;
+      }
+    } catch (ServiceException se) {
+      if(!retry){
+        LOG.debug("Storing unsent BrokenStoreFileCleaner chore report");
+        unsentBrokenSFCReport = request;
+      }
+
+      IOException ioe = ProtobufUtil.getRemoteException(se);
+      if (ioe instanceof PleaseHoldException) {
+        LOG.trace("Failed to report BrokenStoreFileCleaner chore results to Master because"
+          + " it is initializing.", ioe);
+        // The Master is coming up.Avoid re-creating the stub.
+        return true;
+      }
+      LOG.debug("Failed to report BrokenStoreFileCleaner chore reult to Master.", ioe);
+      if (retry) {
+        LOG.debug("Re-trying to send BrokenStoreFileCleaner chore report", ioe);
+        if (rssStub == rss) {
+          rssStub = null;
+        }
+        createRegionServerStatusStub(true);
+        return reportBrokenStoreFileCleanerUsage(runtime, deletedFiles, failedDeletes, false);
+      }
+    }
+    return true;
+  }
+
+  private RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest buildBrokenSFCReport(long runtime,
+    long deletedFiles, long failedDeletes,
+    RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest storedRequest) {
+    RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest.Builder builder;
+    if(storedRequest != null) {
+      builder =
+        RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest.newBuilder(storedRequest);
+    }
+    else {
+      builder = RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest.newBuilder();
+    }
+    builder.setServerName(getServerName().getServerName());
+    if (deletedFiles > 0) {
+      builder.setDeletedFiles(builder.getDeletedFiles() + deletedFiles);
+    }
+    if(failedDeletes > 0) {
+      builder.setFailedDeletes(builder.getFailedDeletes() + failedDeletes);
+    }
+    builder.setRuntime(runtime);
+    builder.setRuns(builder.getRuns() +1 );
+    return builder.build();
   }
 
   @Override

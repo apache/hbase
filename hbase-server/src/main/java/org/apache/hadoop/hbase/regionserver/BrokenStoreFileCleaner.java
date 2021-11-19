@@ -109,6 +109,7 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
         + "to delete {}",
         regionServer.getServerName().getServerName(), EnvironmentEdgeManager.currentTime() - start,
         deletedFiles.get(), failedDeletes.get());
+      logCleanupMetrics(EnvironmentEdgeManager.currentTime() - start, deletedFiles.get(), failedDeletes.get());
     } else {
       LOG.trace("Broken storefile Cleaner chore disabled! Not cleaning.");
     }
@@ -197,6 +198,15 @@ public class BrokenStoreFileCleaner extends ScheduledChore {
           ((RemoteException)e).unwrapRemoteException() : e;
       LOG.warn("Error while deleting: " + filePath, e);
     }
+  }
+
+  private void logCleanupMetrics(long runtime, long deletedFiles, long failedDeletes) {
+    regionServer.getMetrics().updateBrokenStoreFileCleanerTimer(runtime);
+    regionServer.getMetrics().incrementBrokenStoreFileCleanerDeletes(deletedFiles);
+    regionServer.getMetrics().incrementBrokenStoreFileCleanerFailedDeletes(failedDeletes);
+    regionServer.getMetrics().incrementBrokenStoreFileCleanerRuns();
+
+    regionServer.reportBrokenStoreFileCleanerUsage(runtime, deletedFiles, failedDeletes, true);
   }
 
 }

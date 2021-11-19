@@ -4032,4 +4032,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   public Collection<ServerName> getLiveRegionServers() {
     return regionServerTracker.getRegionServers();
   }
+
+  public void reportBrokenStoreFileCleanerUsage(String serverName, long runtime,
+    long deletedFiles, long failedDelets, long runs) {
+    getMasterMetrics().incrementBrokenStoreFileCleanerDeletes(deletedFiles);
+    getMasterMetrics().incrementBrokenStoreFileCleanerFailedDeletes(failedDelets);
+    getMasterMetrics().incrementBrokenStoreFileCleanerRuns(runs);
+    getMasterMetrics().updateBrokenStoreFileCleanerTimer(runtime);
+  }
 }

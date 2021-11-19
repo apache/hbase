@@ -44,6 +44,7 @@ public class MetricsMaster {
   private MetricsMasterQuotaSource masterQuotaSource;
 
   private ProcedureMetrics serverCrashProcMetrics;
+  private MetricsMasterBrokenStoreFileCleaner brokenSFC;
 
   public MetricsMaster(MetricsMasterWrapper masterWrapper) {
     masterSource = CompatibilitySingletonFactory.getInstance(MetricsMasterSourceFactory.class).create(masterWrapper);
@@ -53,6 +54,8 @@ public class MetricsMaster {
             CompatibilitySingletonFactory.getInstance(MetricsMasterQuotaSourceFactory.class).create(masterWrapper);
 
     serverCrashProcMetrics = convertToProcedureMetrics(masterSource.getServerCrashMetrics());
+    brokenSFC =
+      CompatibilitySingletonFactory.getInstance(MetricsMasterBrokenStoreFileCleaner.class);
   }
 
   // for unit-test usage
@@ -190,5 +193,21 @@ public class MetricsMaster {
    */
   public void incrementSnapshotFetchTime(long executionTime) {
     masterQuotaSource.incrementSnapshotObserverSnapshotFetchTime(executionTime);
+  }
+
+  public void incrementBrokenStoreFileCleanerDeletes(long deletes) {
+    brokenSFC.incrementBrokenStoreFileCleanerDeletes(deletes);
+  }
+
+  public void incrementBrokenStoreFileCleanerFailedDeletes(long failedDeletes) {
+    brokenSFC.incrementBrokenStoreFileCleanerFailedDeletes(failedDeletes);
+  }
+
+  public void incrementBrokenStoreFileCleanerRuns(long runs) {
+    brokenSFC.incrementBrokenStoreFileCleanerRuns(runs);
+  }
+
+  public void updateBrokenStoreFileCleanerTimer(long milis) {
+    brokenSFC.updateBrokenStoreFileCleanerTimer(milis);
   }
 }

@@ -54,6 +54,7 @@ public class MetricsRegionServer {
   private final MetricsTable metricsTable;
   private MetricsRegionServerQuotaSource quotaSource;
   private final MetricsUserAggregate userAggregate;
+  private final MetricsBrokenStoreFileCleaner brokenSFC;
 
   private MetricRegistry metricRegistry;
   private Timer bulkLoadTimer;
@@ -69,7 +70,8 @@ public class MetricsRegionServer {
     this(regionServerWrapper,
         CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
             .createServer(regionServerWrapper), createTableMetrics(conf), metricsTable,
-        MetricsUserAggregateFactory.getMetricsUserAggregate(conf));
+        MetricsUserAggregateFactory.getMetricsUserAggregate(conf),
+        CompatibilitySingletonFactory.getInstance(MetricsBrokenStoreFileCleaner.class));
 
     // Create hbase-metrics module based metrics. The registry should already be registered by the
     // MetricsRegionServerSource
@@ -88,13 +90,15 @@ public class MetricsRegionServer {
   }
 
   MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
-      MetricsRegionServerSource serverSource, RegionServerTableMetrics tableMetrics,
-      MetricsTable metricsTable, MetricsUserAggregate userAggregate) {
+    MetricsRegionServerSource serverSource, RegionServerTableMetrics tableMetrics,
+    MetricsTable metricsTable, MetricsUserAggregate userAggregate,
+    MetricsBrokenStoreFileCleaner brokenSFC) {
     this.regionServerWrapper = regionServerWrapper;
     this.serverSource = serverSource;
     this.tableMetrics = tableMetrics;
     this.metricsTable = metricsTable;
     this.userAggregate = userAggregate;
+    this.brokenSFC = brokenSFC;
   }
 
   /**
@@ -316,5 +320,21 @@ public class MetricsRegionServer {
     if (serverWriteQueryMeter != null) {
       serverWriteQueryMeter.mark();
     }
+  }
+
+  public void incrementBrokenStoreFileCleanerDeletes(long deletes) {
+    brokenSFC.incrementBrokenStoreFileCleanerDeletes(deletes);
+  }
+
+  public void incrementBrokenStoreFileCleanerFailedDeletes(long failedDeletes) {
+    brokenSFC.incrementBrokenStoreFileCleanerFailedDeletes(failedDeletes);
+  }
+
+  public void incrementBrokenStoreFileCleanerRuns() {
+    brokenSFC.incrementBrokenStoreFileCleanerRuns();
+  }
+
+  public void updateBrokenStoreFileCleanerTimer(long milis) {
+    brokenSFC.updateBrokenStoreFileCleanerTimer(milis);
   }
 }
