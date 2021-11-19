@@ -282,7 +282,8 @@ public class DeleteTableProcedure
       // Archive regions from FS (temp directory)
       if (archive) {
         List<Path> regionDirList = regions.stream().filter(RegionReplicaUtil::isDefaultReplica)
-          .map(region -> FSUtils.getRegionDirFromTableDir(tableDir, region)).collect(Collectors.toList());
+          .map(region ->
+            FSUtils.getRegionDirFromTableDir(tableDir, region)).collect(Collectors.toList());
         HFileArchiver
           .archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(), tableDir,
             regionDirList);
