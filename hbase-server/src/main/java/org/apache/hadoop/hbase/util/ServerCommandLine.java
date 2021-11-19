@@ -147,9 +147,7 @@ public abstract class ServerCommandLine extends Configured implements Tool {
   public void doMain(String args[]) {
     try {
       int ret = ToolRunner.run(HBaseConfiguration.create(), this, args);
-      if (ret != 0) {
-        System.exit(ret);
-      }
+      System.exit(ret);
     } catch (Exception e) {
       LOG.error("Failed to run", e);
       System.exit(-1);
