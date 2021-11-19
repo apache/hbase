@@ -18,8 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertFalse;
 
 import java.util.List;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,7 +32,6 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -85,7 +83,7 @@ public class TestMasterFileSystem {
   }
 
   @Test
-  public void testCheckTempDir() throws Exception {
+  public void testCheckNoTempDir() throws Exception {
     final MasterFileSystem masterFileSystem =
       UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
 
@@ -110,28 +108,13 @@ public class TestMasterFileSystem {
     // disable the table so that we can manipulate the files
     UTIL.getAdmin().disableTable(tableName);
 
-    final Path tableDir = CommonFSUtils.getTableDir(masterFileSystem.getRootDir(), tableName);
     final Path tempDir = masterFileSystem.getTempDir();
-    final Path tempTableDir = CommonFSUtils.getTableDir(tempDir, tableName);
+    final Path tempNsDir = CommonFSUtils.getNamespaceDir(tempDir,
+      tableName.getNamespaceAsString());
     final FileSystem fs = masterFileSystem.getFileSystem();
 
-    // move the table to the temporary directory
-    if (!fs.rename(tableDir, tempTableDir)) {
-      fail();
-    }
-
-    masterFileSystem.checkTempDir(tempDir, UTIL.getConfiguration(), fs);
-
-    // check if the temporary directory exists and is empty
-    assertTrue(fs.exists(tempDir));
-    assertEquals(0, fs.listStatus(tempDir).length);
-
-    // check for the existence of the archive directory
-    for (HRegion region : regions) {
-      Path archiveDir = HFileArchiveTestingUtil.getRegionArchiveDir(UTIL.getConfiguration(),
-        region);
-      assertTrue(fs.exists(archiveDir));
-    }
+    // checks the temporary directory does not exist
+    assertFalse(fs.exists(tempNsDir));
 
     UTIL.deleteTable(tableName);
   }
