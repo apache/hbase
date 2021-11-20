@@ -27,11 +27,9 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.SpanKind;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Supplier;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.AsyncConnectionImpl;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -46,51 +44,61 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Construct {@link io.opentelemetry.api.trace.Span} instances originating from
- * "table operations" -- the verbs in our public API that interact with data in tables.
+ * Construct {@link Span} instances originating from "table operations" -- the verbs in our public
+ * API that interact with data in tables.
  */
 @InterfaceAudience.Private
-public class TableOperationSpanBuilder implements Supplier<Span> {
+public class TableOperationSpanBuilder<B extends TableOperationSpanBuilder<B>>
+  extends TableSpanBuilder<B> {
 
   // n.b. The results of this class are tested implicitly by way of the likes of
   // `TestAsyncTableTracing` and friends.
 
   private static final String unknown = "UNKNOWN";
 
-  private TableName tableName;
-  private final Map<AttributeKey<?>, Object> attributes = new HashMap<>();
-
-  @Override public Span get() {
-    return build();
+  public TableOperationSpanBuilder(final AsyncConnectionImpl conn) {
+    super(conn);
   }
 
-  public TableOperationSpanBuilder setOperation(final Scan scan) {
+  @Override
+  @SuppressWarnings("unchecked")
+  public B self() {
+    return (B) this;
+  }
+
+  @Override
+  public B setName(String name) {
+    throw new UnsupportedOperationException();
+  }
+
+  public B setOperation(final Scan scan) {
     return setOperation(valueFrom(scan));
   }
 
-  public TableOperationSpanBuilder setOperation(final Row row) {
+  public B setOperation(final Row row) {
     return setOperation(valueFrom(row));
   }
 
   @SuppressWarnings("unused")
-  public TableOperationSpanBuilder setOperation(final Collection<? extends Row> operations) {
+  public B setOperation(final Collection<? extends Row> operations) {
     return setOperation(Operation.BATCH);
   }
 
-  public TableOperationSpanBuilder setOperation(final Operation operation) {
+  public B setOperation(final Operation operation) {
     attributes.put(DB_OPERATION, operation.name());
-    return this;
+    return self();
   }
 
-  public TableOperationSpanBuilder setTableName(final TableName tableName) {
+  public B setTableName(final TableName tableName) {
     this.tableName = tableName;
     attributes.put(NAMESPACE_KEY, tableName.getNamespaceAsString());
     attributes.put(DB_NAME, tableName.getNamespaceAsString());
     attributes.put(TABLE_KEY, tableName.getNameAsString());
-    return this;
+    return self();
   }
 
   @SuppressWarnings("unchecked")
+  @Override
   public Span build() {
     final String name = attributes.getOrDefault(DB_OPERATION, unknown)
         + " "
