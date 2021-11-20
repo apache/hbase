@@ -151,7 +151,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
   private static final Logger LOG = LoggerFactory.getLogger(HStore.class);
   /**
-   * TODO:After making the {@link DefaultMemStore} extensible,we change it back to final.
+   * TODO:After making the {@link DefaultMemStore} extensible in {@link HStore} by HBASE-26476,we
+   * change it back to final.
    */
   protected MemStore memstore;
   // This stores directory in the filesystem.
