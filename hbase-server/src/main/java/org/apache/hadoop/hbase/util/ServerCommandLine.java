@@ -141,8 +141,8 @@ public abstract class ServerCommandLine extends Configured implements Tool {
   }
 
   /**
-   * Parse and run the given command line. This may exit the JVM if
-   * a nonzero exit code is returned from <code>run()</code>.
+   * Parse and run the given command line. This will exit the JVM with
+   * the exit code returned from <code>run()</code>.
    */
   public void doMain(String args[]) {
     try {
