@@ -224,7 +224,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<Result> get(Get get) {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
       .setTableName(tableName)
       .setOperation(get);
     return tracedFuture(
@@ -237,7 +237,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   @Override
   public CompletableFuture<Void> put(Put put) {
     validatePut(put, conn.connConf.getMaxKeyValueSize());
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
       .setTableName(tableName)
       .setOperation(put);
     return tracedFuture(() -> this.<Void, Put> newCaller(put, writeRpcTimeoutNs)
@@ -248,7 +248,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<Void> delete(Delete delete) {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
       .setTableName(tableName)
       .setOperation(delete);
     return tracedFuture(
@@ -262,7 +262,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   @Override
   public CompletableFuture<Result> append(Append append) {
     checkHasFamilies(append);
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
       .setTableName(tableName)
       .setOperation(append);
     return tracedFuture(() -> {
@@ -279,7 +279,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   @Override
   public CompletableFuture<Result> increment(Increment increment) {
     checkHasFamilies(increment);
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
       .setTableName(tableName)
       .setOperation(increment);
     return tracedFuture(() -> {
@@ -348,7 +348,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     public CompletableFuture<Boolean> thenPut(Put put) {
       validatePut(put, conn.connConf.getMaxKeyValueSize());
       preCheck();
-      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
         .setTableName(tableName)
         .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
         .setContainerOperations(put);
@@ -365,7 +365,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     @Override
     public CompletableFuture<Boolean> thenDelete(Delete delete) {
       preCheck();
-      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
         .setTableName(tableName)
         .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
         .setContainerOperations(delete);
@@ -383,7 +383,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     public CompletableFuture<Boolean> thenMutate(RowMutations mutations) {
       preCheck();
       validatePutsInRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
-      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
         .setTableName(tableName)
         .setOperation(HBaseSemanticAttributes.Operation.BATCH)
         .setContainerOperations(mutations);
@@ -428,7 +428,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     @Override
     public CompletableFuture<Boolean> thenPut(Put put) {
       validatePut(put, conn.connConf.getMaxKeyValueSize());
-      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
         .setTableName(tableName)
         .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
         .setContainerOperations(put);
@@ -445,7 +445,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
     @Override
     public CompletableFuture<Boolean> thenDelete(Delete delete) {
-      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
         .setTableName(tableName)
         .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
         .setContainerOperations(delete);
@@ -462,7 +462,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     @Override
     public CompletableFuture<Boolean> thenMutate(RowMutations mutations) {
       validatePutsInRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
-      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
         .setTableName(tableName)
         .setOperation(HBaseSemanticAttributes.Operation.BATCH)
         .setContainerOperations(mutations);
@@ -486,7 +486,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<CheckAndMutateResult> checkAndMutate(CheckAndMutate checkAndMutate) {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
       .setTableName(tableName)
       .setOperation(checkAndMutate)
       .setContainerOperations(checkAndMutate.getAction());
@@ -541,7 +541,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   @Override
   public List<CompletableFuture<CheckAndMutateResult>>
     checkAndMutate(List<CheckAndMutate> checkAndMutates) {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH)
       .setContainerOperations(checkAndMutates);
@@ -599,7 +599,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     validatePutsInRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
     long nonceGroup = conn.getNonceGenerator().getNonceGroup();
     long nonce = conn.getNonceGenerator().newNonce();
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH)
       .setContainerOperations(mutations);
@@ -646,7 +646,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<List<Result>> scanAll(Scan scan) {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
       .setTableName(tableName)
       .setOperation(scan);
     return tracedFuture(() -> {
@@ -675,7 +675,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public List<CompletableFuture<Result>> get(List<Get> gets) {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH)
       .setContainerOperations(HBaseSemanticAttributes.Operation.GET);
@@ -684,7 +684,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public List<CompletableFuture<Void>> put(List<Put> puts) {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH)
       .setContainerOperations(HBaseSemanticAttributes.Operation.PUT);
@@ -693,7 +693,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public List<CompletableFuture<Void>> delete(List<Delete> deletes) {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH)
       .setContainerOperations(HBaseSemanticAttributes.Operation.DELETE);
@@ -702,7 +702,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public <T> List<CompletableFuture<T>> batch(List<? extends Row> actions) {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder<>(conn)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH)
       .setContainerOperations(actions);

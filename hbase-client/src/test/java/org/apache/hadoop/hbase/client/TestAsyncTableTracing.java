@@ -17,24 +17,23 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntry;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntryWithStringValuesOf;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasAttributes;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEnded;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasKind;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.TraceTestUtil.buildConnectionAttributesMatcher;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.TraceTestUtil.buildTableAttributesMatcher;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
-import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
@@ -57,6 +56,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -99,7 +99,9 @@ public class TestAsyncTableTracing {
 
   private ClientService.Interface stub;
 
-  private AsyncConnection conn;
+  private User user;
+
+  private AsyncConnectionImpl conn;
 
   private AsyncTable<?> table;
 
@@ -196,8 +198,9 @@ public class TestAsyncTableTracing {
         return null;
       }
     }).when(stub).get(any(HBaseRpcController.class), any(GetRequest.class), any());
+    user = UserProvider.instantiate(CONF).getCurrent();
     conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF), "test", null,
-      UserProvider.instantiate(CONF).getCurrent()) {
+      user) {
 
       @Override
       AsyncRegionLocator getLocator() {
@@ -235,17 +238,6 @@ public class TestAsyncTableTracing {
     Closeables.close(conn, true);
   }
 
-  /**
-   * All {@link Span}s generated from table data access operations over {@code tableName} should
-   * include these attributes.
-   */
-  private static Matcher<SpanData> buildBaseAttributesMatcher(TableName tableName) {
-    return hasAttributes(allOf(
-      containsEntry("db.name", tableName.getNamespaceAsString()),
-      containsEntry("db.hbase.namespace", tableName.getNamespaceAsString()),
-      containsEntry("db.hbase.table", tableName.getNameAsString())));
-  }
-
   private void assertTrace(String tableOperation) {
     assertTrace(tableOperation, new IsAnything<>());
   }
@@ -268,7 +260,8 @@ public class TestAsyncTableTracing {
       hasName(expectedName),
       hasKind(SpanKind.CLIENT),
       hasStatusWithCode(StatusCode.OK),
-      buildBaseAttributesMatcher(tableName),
+      buildConnectionAttributesMatcher(conn),
+      buildTableAttributesMatcher(tableName),
       matcher));
   }
 
@@ -457,17 +450,5 @@ public class TestAsyncTableTracing {
     table.batchAll(Arrays.asList(new Delete(Bytes.toBytes(0)))).join();
     assertTrace("BATCH", hasAttributes(
       containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
-  }
-
-  @Test
-  public void testConnClose() throws IOException {
-    conn.close();
-    Waiter.waitFor(CONF, 1000,
-      () -> traceRule.getSpans().stream()
-        .anyMatch(span -> span.getName().equals("AsyncConnection.close") &&
-          span.getKind() == SpanKind.INTERNAL && span.hasEnded()));
-    SpanData data = traceRule.getSpans().stream()
-      .filter(s -> s.getName().equals("AsyncConnection.close")).findFirst().get();
-    assertEquals(StatusCode.OK, data.getStatus().getStatusCode());
   }
 }

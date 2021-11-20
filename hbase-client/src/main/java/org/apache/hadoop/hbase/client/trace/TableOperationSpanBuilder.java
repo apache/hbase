@@ -19,26 +19,20 @@
 package org.apache.hadoop.hbase.client.trace;
 
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.CONTAINER_DB_OPERATIONS_KEY;
-import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DB_NAME;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DB_OPERATION;
-import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.NAMESPACE_KEY;
-import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.TABLE_KEY;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.SpanKind;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.AsyncConnectionImpl;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -53,41 +47,50 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Construct {@link io.opentelemetry.api.trace.Span} instances originating from
- * "table operations" -- the verbs in our public API that interact with data in tables.
+ * Construct {@link Span} instances originating from "table operations" -- the verbs in our public
+ * API that interact with data in tables.
  */
 @InterfaceAudience.Private
-public class TableOperationSpanBuilder implements Supplier<Span> {
+public class TableOperationSpanBuilder<B extends TableOperationSpanBuilder<B>>
+  extends TableSpanBuilder<B> {
 
   // n.b. The results of this class are tested implicitly by way of the likes of
   // `TestAsyncTableTracing` and friends.
 
   private static final String unknown = "UNKNOWN";
 
-  private TableName tableName;
-  private final Map<AttributeKey<?>, Object> attributes = new HashMap<>();
-
-  @Override public Span get() {
-    return build();
+  public TableOperationSpanBuilder(final AsyncConnectionImpl conn) {
+    super(conn);
   }
 
-  public TableOperationSpanBuilder setOperation(final Scan scan) {
+  @Override
+  @SuppressWarnings("unchecked")
+  public B self() {
+    return (B) this;
+  }
+
+  @Override
+  public B setName(String name) {
+    throw new UnsupportedOperationException();
+  }
+
+  public B setOperation(final Scan scan) {
     return setOperation(valueFrom(scan));
   }
 
-  public TableOperationSpanBuilder setOperation(final Row row) {
+  public B setOperation(final Row row) {
     return setOperation(valueFrom(row));
   }
 
-  public TableOperationSpanBuilder setOperation(final Operation operation) {
+  public B setOperation(final Operation operation) {
     attributes.put(DB_OPERATION, operation.name());
-    return this;
+    return self();
   }
 
   // `setContainerOperations` perform a recursive descent expansion of all the operations
   // contained within the provided "batch" object.
 
-  public TableOperationSpanBuilder setContainerOperations(final RowMutations mutations) {
+  public B setContainerOperations(final RowMutations mutations) {
     final Operation[] ops = mutations.getMutations()
       .stream()
       .flatMap(row -> Stream.concat(Stream.of(valueFrom(row)), unpackRowOperations(row).stream()))
@@ -95,14 +98,14 @@ public class TableOperationSpanBuilder implements Supplier<Span> {
     return setContainerOperations(ops);
   }
 
-  public TableOperationSpanBuilder setContainerOperations(final Row row) {
+  public B setContainerOperations(final Row row) {
     final Operation[] ops =
       Stream.concat(Stream.of(valueFrom(row)), unpackRowOperations(row).stream())
       .toArray(Operation[]::new);
     return setContainerOperations(ops);
   }
 
-  public TableOperationSpanBuilder setContainerOperations(
+  public B setContainerOperations(
     final Collection<? extends Row> operations
   ) {
     final Operation[] ops = operations.stream()
@@ -124,6 +127,18 @@ public class TableOperationSpanBuilder implements Supplier<Span> {
     return ops;
   }
 
+  public B setContainerOperations(
+    final Operation... operations
+  ) {
+    final List<String> ops = Arrays.stream(operations)
+      .map(op -> op == null ? unknown : op.name())
+      .sorted()
+      .distinct()
+      .collect(Collectors.toList());
+    attributes.put(CONTAINER_DB_OPERATIONS_KEY, ops);
+    return self();
+  }
+
   private static Set<Operation> unpackRowOperations(final CheckAndMutate cam) {
     final Set<Operation> ops = new HashSet<>();
     final Operation op = valueFrom(cam.getAction());
@@ -138,27 +153,8 @@ public class TableOperationSpanBuilder implements Supplier<Span> {
     return ops;
   }
 
-  public TableOperationSpanBuilder setContainerOperations(
-    final Operation... operations
-  ) {
-    final List<String> ops = Arrays.stream(operations)
-      .map(op -> op == null ? unknown : op.name())
-      .sorted()
-      .distinct()
-      .collect(Collectors.toList());
-    attributes.put(CONTAINER_DB_OPERATIONS_KEY, ops);
-    return this;
-  }
-
-  public TableOperationSpanBuilder setTableName(final TableName tableName) {
-    this.tableName = tableName;
-    attributes.put(NAMESPACE_KEY, tableName.getNamespaceAsString());
-    attributes.put(DB_NAME, tableName.getNamespaceAsString());
-    attributes.put(TABLE_KEY, tableName.getNameAsString());
-    return this;
-  }
-
   @SuppressWarnings("unchecked")
+  @Override
   public Span build() {
     final String name = attributes.getOrDefault(DB_OPERATION, unknown)
         + " "

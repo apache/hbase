@@ -53,6 +53,13 @@ public final class AttributesMatchers {
     return containsEntry(AttributeKey.stringArrayKey(key), Arrays.asList(values));
   }
 
+  public static Matcher<Attributes> containsEntryWithStringValuesOf(
+    String key,
+    Matcher<Iterable<? extends String>> matcher
+  ) {
+    return new IsAttributesContaining<>(equalTo(AttributeKey.stringArrayKey(key)), matcher);
+  }
+
   private static final class IsAttributesContaining<T> extends TypeSafeMatcher<Attributes> {
     private final Matcher<AttributeKey<? super T>> keyMatcher;
     private final Matcher<? super T> valueMatcher;

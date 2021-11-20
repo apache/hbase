@@ -74,7 +74,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterServ
  * The implementation of AsyncConnection.
  */
 @InterfaceAudience.Private
-class AsyncConnectionImpl implements AsyncConnection {
+public class AsyncConnectionImpl implements AsyncConnection {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncConnectionImpl.class);
 
@@ -196,6 +196,14 @@ class AsyncConnectionImpl implements AsyncConnection {
       choreService = new ChoreService("AsyncConn Chore Service");
     }
     return choreService;
+  }
+
+  public User getUser() {
+    return user;
+  }
+
+  public ConnectionRegistry getConnectionRegistry() {
+    return registry;
   }
 
   @Override
