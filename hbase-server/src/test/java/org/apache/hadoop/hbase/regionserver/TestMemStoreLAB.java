@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
+import static org.apache.hadoop.hbase.regionserver.MemStoreLAB.CHUNK_SIZE_KEY;
+import static org.apache.hadoop.hbase.regionserver.MemStoreLAB.MAX_ALLOC_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -38,6 +40,7 @@ import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -212,7 +215,7 @@ public class TestMemStoreLAB {
       Configuration conf = HBaseConfiguration.create();
       conf.setDouble(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, 0.1);
       // set chunk size to default max alloc size, so we could easily trigger chunk retirement
-      conf.setLong(MemStoreLABImpl.CHUNK_SIZE_KEY, MemStoreLABImpl.MAX_ALLOC_DEFAULT);
+      conf.setLong(CHUNK_SIZE_KEY, MemStoreLABImpl.MAX_ALLOC_DEFAULT);
       // reconstruct mslab
       long globalMemStoreLimit = (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
           .getMax() * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
@@ -264,6 +267,34 @@ public class TestMemStoreLAB {
     } finally {
       ChunkCreator.instance = oldInstance;
     }
+  }
+
+  /**
+   * Test cell with right length, which constructed by testForceCopyOfBigCellInto. (HBASE-26467)
+   */
+  @Test
+  public void testForceCopyOfBigCellInto() {
+    Configuration conf = HBaseConfiguration.create();
+    int chunkSize = ChunkCreator.getInstance().getChunkSize();
+    conf.setInt(CHUNK_SIZE_KEY, chunkSize);
+    conf.setInt(MAX_ALLOC_KEY, chunkSize / 2);
+
+    MemStoreLABImpl mslab = new MemStoreLABImpl(conf);
+    byte[] row = Bytes.toBytes("row");
+    byte[] columnFamily = Bytes.toBytes("columnFamily");
+    byte[] qualify = Bytes.toBytes("qualify");
+    byte[] smallValue = new byte[chunkSize / 2];
+    byte[] bigValue = new byte[chunkSize];
+    KeyValue smallKV = new KeyValue(row, columnFamily, qualify, EnvironmentEdgeManager
+      .currentTime(), smallValue);
+
+    assertEquals(smallKV.getSerializedSize(),
+      mslab.forceCopyOfBigCellInto(smallKV).getSerializedSize());
+
+    KeyValue bigKV = new KeyValue(row, columnFamily, qualify, EnvironmentEdgeManager
+      .currentTime(), bigValue);
+    assertEquals(bigKV.getSerializedSize(),
+      mslab.forceCopyOfBigCellInto(bigKV).getSerializedSize());
   }
 
   private Thread getChunkQueueTestThread(final MemStoreLABImpl mslab, String threadName,

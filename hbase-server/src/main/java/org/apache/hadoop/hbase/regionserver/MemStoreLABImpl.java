@@ -124,9 +124,8 @@ public class MemStoreLABImpl implements MemStoreLAB {
   @Override
   public Cell forceCopyOfBigCellInto(Cell cell) {
     int size = Segment.getCellLength(cell);
-    size += ChunkCreator.SIZEOF_CHUNK_HEADER;
     Preconditions.checkArgument(size >= 0, "negative size");
-    if (size <= dataChunkSize) {
+    if (size + ChunkCreator.SIZEOF_CHUNK_HEADER <= dataChunkSize) {
       // Using copyCellInto for cells which are bigger than the original maxAlloc
       return copyCellInto(cell, dataChunkSize);
     } else {
