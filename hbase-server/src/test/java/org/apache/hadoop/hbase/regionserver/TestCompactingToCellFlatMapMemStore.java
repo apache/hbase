@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -799,7 +800,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     totalHeapSize = MutableSegment.DEEP_OVERHEAD + CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
             + numOfCells * oneCellOnCCMHeapSize;
 
-    assertEquals(totalCellsLen+ChunkCreator.SIZEOF_CHUNK_HEADER, regionServicesForStores
+    assertEquals(totalCellsLen, regionServicesForStores
         .getMemStoreSize());
 
     assertEquals(totalHeapSize, ((CompactingMemStore) memstore).heapSize());
@@ -902,6 +903,31 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
         totalHeapSize = ClassSize.align(totalHeapSize);
       }
       assertEquals("i="+i, totalHeapSize, ((CompactingMemStore) memstore).heapSize());
+    }
+  }
+
+  /**
+   * Test big cell size after in memory compaction. (HBASE-26467)
+   */
+  @Test
+  public void testBigCellSizeAfterInMemoryCompaction() throws IOException {
+    MemoryCompactionPolicy compactionType = MemoryCompactionPolicy.BASIC;
+    memstore.getConfiguration().setInt(MemStoreCompactionStrategy
+      .COMPACTING_MEMSTORE_THRESHOLD_KEY, 1);
+    memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+      String.valueOf(compactionType));
+    ((MyCompactingMemStore) memstore).initiateType(compactionType, memstore.getConfiguration());
+
+    byte[] val = new byte[MemStoreLAB.CHUNK_SIZE_DEFAULT];
+
+    long size = addRowsByKeys(memstore, new String[]{"A"}, val);
+    ((MyCompactingMemStore) memstore).flushInMemory();
+
+    for(KeyValueScanner scanner : memstore.getScanners(Long.MAX_VALUE)) {
+      Cell cell;
+      while ((cell = scanner.next()) != null) {
+        assertEquals(size, cell.getSerializedSize());
+      }
     }
   }
 
