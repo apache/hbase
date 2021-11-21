@@ -2324,6 +2324,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     ////
 
     if (JVM.getJVMSpecVersion() >= 17) {
+      // Yarn container runs in independent JVM. We need to pass the argument manually here if the
+      // JDK version >= 17. Otherwise, the MiniMRCluster will fail.
       String jvmOpts = conf.get("yarn.app.mapreduce.am.command-opts", "");
       conf.set("yarn.app.mapreduce.am.command-opts",
         jvmOpts + " --add-opens java.base/java.lang=ALL-UNNAMED");
