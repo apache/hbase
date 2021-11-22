@@ -3169,6 +3169,13 @@ NOTE: If `hbase.master.snapshot.ttl` is set, a snapshot with an explicit {TTL =>
 {TTL => -1} will also take this value. In this case, a TTL < -1 (such as {TTL => -2} should be used
 to indicate FOREVER.
 
+To summarize concisely,
+
+1. Snapshot with TTL value < -1 will stay forever regardless of any server side config changes (until deleted manually by user).
+2. Snapshot with TTL value > 0 will be deleted automatically soon after TTL expires.
+3. Snapshot created without specifying TTL will always have TTL value represented by config `hbase.master.snapshot.ttl`. Default value of this config is 0, which represents: keep the snapshot forever (until deleted manually by user).
+4. From client side, TTL value 0 or -1 should never be explicitly provided because they will be treated same as snapshot without TTL (same as above point 3) and hence will use TTL as per value represented by config `hbase.master.snapshot.ttl`.
+
 .Take a snapshot with custom MAX_FILESIZE
 
 Optionally, snapshots can be created with a custom max file size configuration that will be
