@@ -150,7 +150,7 @@ public class TestInputStreamBlockDistribution {
   /**
    * Write up to 'size' bytes with value 'v' into a new file called 'path'.
    */
-  private void writeSomeData (FileSystem fs, Path path, long size, byte v) throws IOException {
+  private void writeSomeData(FileSystem fs, Path path, long size, byte v) throws IOException {
     byte[] data = new byte[4096];
     for (int i = 0; i < data.length; i++) {
       data[i] = v;

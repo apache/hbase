@@ -83,7 +83,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -717,8 +716,8 @@ public final class FSUtils {
    * may hit the namenode if the cache is determined to be incomplete. The method also involves
    * making copies of all LocatedBlocks rather than return the underlying blocks themselves.
    */
-  static public HDFSBlocksDistribution computeHDFSBlocksDistribution(HdfsDataInputStream inputStream)
-    throws IOException {
+  static public HDFSBlocksDistribution computeHDFSBlocksDistribution(
+    HdfsDataInputStream inputStream) throws IOException {
     List<LocatedBlock> blocks = inputStream.getAllBlocks();
     HDFSBlocksDistribution blocksDistribution = new HDFSBlocksDistribution();
     for (LocatedBlock block : blocks) {

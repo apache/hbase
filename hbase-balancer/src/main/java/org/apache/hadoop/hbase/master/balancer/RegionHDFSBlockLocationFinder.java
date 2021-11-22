@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
@@ -130,7 +129,8 @@ class RegionHDFSBlockLocationFinder extends Configured {
    */
   private void refreshLocalityChangedRegions(ClusterMetrics oldStatus, ClusterMetrics newStatus) {
     if (oldStatus == null || newStatus == null) {
-      LOG.debug("Skipping locality-based refresh due to oldStatus={}, newStatus={}", oldStatus, newStatus);
+      LOG.debug("Skipping locality-based refresh due to oldStatus={}, newStatus={}",
+        oldStatus, newStatus);
       return;
     }
 
@@ -164,7 +164,8 @@ class RegionHDFSBlockLocationFinder extends Configured {
     }
   }
 
-  private float getOldLocality(ServerName newServer, byte[] regionName, Map<ServerName, ServerMetrics> oldServers) {
+  private float getOldLocality(ServerName newServer, byte[] regionName,
+    Map<ServerName, ServerMetrics> oldServers) {
     ServerMetrics serverMetrics = oldServers.get(newServer);
     if (serverMetrics == null) {
       return -1f;
@@ -218,7 +219,7 @@ class RegionHDFSBlockLocationFinder extends Configured {
         return blocksDistribution;
       }
     } catch (IOException ioe) {
-      LOG.warn("IOException during HDFSBlocksDistribution computation. for " + "region = " +
+      LOG.warn("IOException during HDFSBlocksDistribution computation for region = {}",
         region.getEncodedName(), ioe);
     }
 
@@ -322,7 +323,7 @@ class RegionHDFSBlockLocationFinder extends Configured {
       } catch (InterruptedException ite) {
         Thread.currentThread().interrupt();
       } catch (ExecutionException ee) {
-        LOG.debug("ExecutionException during HDFSBlocksDistribution computation. for region = " +
+        LOG.debug("ExecutionException during HDFSBlocksDistribution computation for region = {}",
           hregionInfo.getEncodedName(), ee);
       }
       index++;

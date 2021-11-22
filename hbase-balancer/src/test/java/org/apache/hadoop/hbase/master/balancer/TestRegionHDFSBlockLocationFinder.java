@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -219,7 +220,8 @@ public class TestRegionHDFSBlockLocationFinder {
       cache.put(region, hbd);
     }
 
-    finder.setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(), 0.123f));
+    finder.setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(),
+      0.123f));
 
     // everything should be cached, because metrics were null before
     for (RegionInfo region : REGIONS) {
@@ -227,7 +229,8 @@ public class TestRegionHDFSBlockLocationFinder {
       assertSame(cache.get(region), hbd);
     }
 
-    finder.setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(), 0.345f));
+    finder.setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(),
+      0.345f));
 
     // locality changed just for our test region, so it should no longer be the same
     for (RegionInfo region : REGIONS) {
@@ -240,11 +243,12 @@ public class TestRegionHDFSBlockLocationFinder {
     }
   }
 
-  private ClusterMetrics getMetricsWithLocality(ServerName serverName, byte[] region, float locality) {
+  private ClusterMetrics getMetricsWithLocality(ServerName serverName, byte[] region,
+    float locality) {
     RegionMetrics regionMetrics = mock(RegionMetrics.class);
     when(regionMetrics.getDataLocality()).thenReturn(locality);
 
-    Map<byte[], RegionMetrics> regionMetricsMap = new HashMap<>();
+    Map<byte[], RegionMetrics> regionMetricsMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     regionMetricsMap.put(region, regionMetrics);
 
     ServerMetrics serverMetrics = mock(ServerMetrics.class);

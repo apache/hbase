@@ -28,8 +28,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -131,7 +129,8 @@ public class TestFSUtils {
     HDFSBlocksDistribution getForPath(FileSystem fs, Path path) throws IOException;
   }
 
-  private void testComputeHDFSBlocksDistribution(HDFSBlockDistributionFunction fileToBlockDistribution) throws Exception {
+  private void testComputeHDFSBlocksDistribution(
+    HDFSBlockDistributionFunction fileToBlockDistribution) throws Exception {
     final int DEFAULT_BLOCK_SIZE = 1024;
     conf.setLong("dfs.blocksize", DEFAULT_BLOCK_SIZE);
     MiniDFSCluster cluster = null;
@@ -156,7 +155,8 @@ public class TestFSUtils {
       do {
         ok = true;
 
-        HDFSBlocksDistribution blocksDistribution = fileToBlockDistribution.getForPath(fs, testFile);
+        HDFSBlocksDistribution blocksDistribution =
+          fileToBlockDistribution.getForPath(fs, testFile);
 
         long uniqueBlocksTotalWeight =
           blocksDistribution.getUniqueBlocksTotalWeight();
@@ -189,7 +189,8 @@ public class TestFSUtils {
       long weight;
       long uniqueBlocksTotalWeight;
       do {
-        HDFSBlocksDistribution blocksDistribution = fileToBlockDistribution.getForPath(fs, testFile);
+        HDFSBlocksDistribution blocksDistribution =
+          fileToBlockDistribution.getForPath(fs, testFile);
         uniqueBlocksTotalWeight = blocksDistribution.getUniqueBlocksTotalWeight();
 
         String tophost = blocksDistribution.getTopHosts().get(0);
