@@ -755,4 +755,10 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   public RegionReplicationBufferManager getRegionReplicationBufferManager() {
     return null;
   }
+
+  @Override
+  public ReplicateWALEntryResponse replicateToReplica(RpcController controller,
+    ReplicateWALEntryRequest request) throws ServiceException {
+    return null;
+  }
 }

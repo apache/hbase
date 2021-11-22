@@ -120,6 +120,7 @@ class RegionReplicationFlushRequester {
     }
     // schedule a timer task
     HashedWheelTimer timer = getTimer();
+    pendingFlushRequestSequenceId = sequenceId;
     pendingFlushRequest =
       timer.newTimeout(this::flush, minIntervalSecs - elapsedSecs, TimeUnit.SECONDS);
   }
