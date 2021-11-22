@@ -466,7 +466,9 @@ public final class WALSplitUtil {
    * @param logEntry pair of WALKey and WALEdit instance stores WALKey and WALEdit instances
    *          extracted from the passed in WALEntry.
    * @return list of Pair&lt;MutationType, Mutation&gt; to be replayed
+   * @deprecated Since 3.0.0, will be removed in 4.0.0.
    */
+  @Deprecated
   public static List<MutationReplay> getMutationsFromWALEntry(AdminProtos.WALEntry entry,
       CellScanner cells, Pair<WALKey, WALEdit> logEntry, Durability durability) throws IOException {
     if (entry == null) {

@@ -3492,4 +3492,10 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       .forEach(builder::addServer);
     return builder.build();
   }
+
+  @Override
+  public ReplicateWALEntryResponse replicateToReplica(RpcController controller,
+    ReplicateWALEntryRequest request) throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
 }
