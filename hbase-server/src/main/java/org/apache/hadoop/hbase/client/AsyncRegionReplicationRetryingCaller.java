@@ -67,7 +67,7 @@ public class AsyncRegionReplicationRetryingCaller extends AsyncRpcRetryingCaller
       .buildReplicateWALEntryRequest(entries, replica.getEncodedNameAsBytes(), null, null, null);
     resetCallTimeout();
     controller.setCellScanner(pair.getSecond());
-    stub.replay(controller, pair.getFirst(), r -> {
+    stub.replicateToReplica(controller, pair.getFirst(), r -> {
       if (controller.failed()) {
         onError(controller.getFailed(),
           () -> "Call to " + loc.getServerName() + " for " + replica + " failed",

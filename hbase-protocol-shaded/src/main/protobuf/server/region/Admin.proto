@@ -360,6 +360,11 @@ service AdminService {
     returns(ReplicateWALEntryResponse);
 
   rpc Replay(ReplicateWALEntryRequest)
+    returns(ReplicateWALEntryResponse) {
+    option deprecated = true;
+  };
+
+  rpc ReplicateToReplica(ReplicateWALEntryRequest)
     returns(ReplicateWALEntryResponse);
 
   rpc RollWALWriter(RollWALWriterRequest)
