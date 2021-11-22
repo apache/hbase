@@ -689,7 +689,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     public void run() {
       try {
         Preconditions.checkNotNull(server);
-        if (server.isStopped() || (region.getTableDescriptor() != null && !region.getTableDescriptor().isCompactionEnabled())) {
+        if (server.isStopped() || (region.getTableDescriptor() != null &&
+            !region.getTableDescriptor().isCompactionEnabled())) {
           region.decrementCompactionsQueuedCount();
           return;
         }
