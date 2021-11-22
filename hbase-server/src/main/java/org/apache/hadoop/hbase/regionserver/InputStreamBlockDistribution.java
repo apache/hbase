@@ -30,9 +30,20 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Computes the HDFSBlockDistribution for a file based on the underlying located blocks
- * for an HdfsDataInputStream reading that file. This computation may involve a call to
- * the namenode, so the value is cached based on
- * {@link #HBASE_LOCALITY_INPUTSTREAM_DERIVE_CACHE_PERIOD}.
+ * for an HdfsDataInputStream reading that file. The backing DFSInputStream.getAllBlocks involves
+ * allocating an array of numBlocks size per call. It may also involve calling the namenode, if
+ * the DFSInputStream has not fetched all the blocks yet. In order to avoid allocation pressure,
+ * we cache the computed distribution for a configurable period of time.
+ * <p>
+ * This class only gets instantiated for the <b>first</b> FSDataInputStream of each StoreFile (i.e.
+ * the one backing {@link HStoreFile#initialReader}). It's then used to dynamically update the
+ * value returned by {@link HStoreFile#getHDFSBlockDistribution()}.
+ * <p>
+ * Once the backing FSDataInputStream is closed, we should not expect the distribution result
+ * to change anymore. This is ok becuase the initialReader's InputStream is only closed when the
+ * StoreFile itself is closed, at which point nothing will be querying getHDFSBlockDistribution
+ * anymore. If/When the StoreFile is reopened, a new {@link InputStreamBlockDistribution} will
+ * be created for the new initialReader.
  */
 @InterfaceAudience.Private
 public class InputStreamBlockDistribution {
@@ -54,6 +65,14 @@ public class InputStreamBlockDistribution {
   private long lastCachedAt;
   private boolean streamUnsupported;
 
+  /**
+   * This should only be called for the first FSDataInputStream of a StoreFile,
+   * in {@link HStoreFile#open()}.
+   *
+   * @see InputStreamBlockDistribution
+   * @param stream
+   * @param fileInfo
+   */
   public InputStreamBlockDistribution(FSDataInputStream stream, StoreFileInfo fileInfo) {
     this.stream = stream;
     this.fileInfo = fileInfo;
