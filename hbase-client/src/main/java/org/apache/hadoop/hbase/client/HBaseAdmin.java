@@ -3712,12 +3712,15 @@ public class HBaseAdmin implements Admin {
     builder.setTable(tableName.getNameAsString());
     builder.setName(snapshotName);
     builder.setType(type);
-    builder.setTtl(getTtlFromSnapshotProps(snapshotProps));
+    long ttl = getTtlFromSnapshotProps(snapshotProps);
+    if (ttl != 1L && ttl < TimeUnit.MILLISECONDS.toSeconds(Long.MAX_VALUE)) {
+      builder.setTtl(ttl);
+    }
     snapshot(builder.build());
   }
 
   private long getTtlFromSnapshotProps(Map<String, Object> snapshotProps) {
-    return MapUtils.getLongValue(snapshotProps, "TTL", HConstants.UNSET_SNAPSHOT_PROP);
+    return MapUtils.getLongValue(snapshotProps, "TTL", -1);
   }
 
   public void snapshot(final String snapshotName,
