@@ -89,7 +89,6 @@ public class TestMetaRegionReplicaReplication {
     conf.setInt("zookeeper.recovery.retry", 1);
     conf.setInt("zookeeper.recovery.retry.intervalmill", 10);
     conf.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
-    conf.setInt("replication.stats.thread.period.seconds", 5);
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 1);
     // Enable hbase:meta replication.
