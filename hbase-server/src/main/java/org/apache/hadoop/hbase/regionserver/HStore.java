@@ -370,10 +370,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
                 this.getHRegion().getRegionServicesForStores()});
         break;
       default:
-        Class<? extends CompactingMemStore> compactingMemStoreClass = conf.getClass(MEMSTORE_CLASS_NAME,
-            CompactingMemStore.class, CompactingMemStore.class);
-        ms = ReflectionUtils.newInstance(compactingMemStoreClass, new Object[]{conf, getComparator(), this,
-            this.getHRegion().getRegionServicesForStores(), inMemoryCompaction});
+        Class<? extends CompactingMemStore> compactingMemStoreClass =
+            conf.getClass(MEMSTORE_CLASS_NAME, CompactingMemStore.class, CompactingMemStore.class);
+        ms = ReflectionUtils.newInstance(compactingMemStoreClass,
+          new Object[] { conf, getComparator(), this,
+              this.getHRegion().getRegionServicesForStores(), inMemoryCompaction });
     }
     return ms;
   }

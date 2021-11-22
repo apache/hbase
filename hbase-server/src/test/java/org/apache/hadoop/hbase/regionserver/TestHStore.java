@@ -2171,7 +2171,6 @@ public class TestHStore {
 
   /**
    * This test is for HBASE-26476
-   * @throws Exception
    */
   @Test
   public void testExtendsDefaultMemStore() throws Exception {
