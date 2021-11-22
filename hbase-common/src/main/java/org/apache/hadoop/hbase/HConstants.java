@@ -1192,7 +1192,13 @@ public final class HConstants {
   public static final int PRIORITY_UNSET = -1;
   public static final int NORMAL_QOS = 0;
   public static final int REPLICATION_QOS = 5;
+  /**
+   * @deprecated since 3.0.0, will be removed in 4.0.0. DLR has been purged for a long time and
+   *             region replication has its own 'replay' method.
+   */
+  @Deprecated
   public static final int REPLAY_QOS = 6;
+  public static final int REGION_REPLICATION_QOS = REPLAY_QOS;
   public static final int QOS_THRESHOLD = 10;
   public static final int ADMIN_QOS = 100;
   public static final int HIGH_QOS = 200;
