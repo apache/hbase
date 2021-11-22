@@ -1089,15 +1089,15 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   /**
    * Execute a list of Put/Delete mutations. The function returns OperationStatus instead of
    * constructing MultiResponse to save a possible loop if caller doesn't need MultiResponse.
-   * @param region
-   * @param mutations
-   * @param replaySeqId
    * @return an array of OperationStatus which internally contains the OperationStatusCode and the
    *         exceptionMessage if any
-   * @throws IOException
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. We do not use this method for replaying
+   *             edits for secondary replicas any more, see
+   *             {@link #replicateToReplica(RpcController, ReplicateWALEntryRequest)}.
    */
-  private OperationStatus [] doReplayBatchOp(final HRegion region,
-      final List<MutationReplay> mutations, long replaySeqId) throws IOException {
+  @Deprecated
+  private OperationStatus[] doReplayBatchOp(final HRegion region,
+    final List<MutationReplay> mutations, long replaySeqId) throws IOException {
     long before = EnvironmentEdgeManager.currentTime();
     boolean batchContainsPuts = false, batchContainsDelete = false;
     try {
@@ -2083,21 +2083,30 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     return response;
   }
 
+  private CellScanner getAndReset(RpcController controller) {
+    HBaseRpcController hrc = (HBaseRpcController) controller;
+    CellScanner cells = hrc.cellScanner();
+    hrc.setCellScanner(null);
+    return cells;
+  }
+
   /**
    * Replay the given changes when distributedLogReplay WAL edits from a failed RS. The guarantee is
    * that the given mutations will be durable on the receiving RS if this method returns without any
    * exception.
    * @param controller the RPC controller
    * @param request the request
-   * @throws ServiceException
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. Not used any more, put here only for
+   *             compatibility with old region replica implementation. Now we will use
+   *             {@code replicateToReplica} method instead.
    */
+  @Deprecated
   @Override
   @QosPriority(priority = HConstants.REPLAY_QOS)
   public ReplicateWALEntryResponse replay(final RpcController controller,
-      final ReplicateWALEntryRequest request) throws ServiceException {
+    final ReplicateWALEntryRequest request) throws ServiceException {
     long before = EnvironmentEdgeManager.currentTime();
-    CellScanner cells = ((HBaseRpcController) controller).cellScanner();
-    ((HBaseRpcController) controller).setCellScanner(null);
+    CellScanner cells = getAndReset(controller);
     try {
       checkOpen();
       List<WALEntry> entries = request.getEntryList();
@@ -2184,6 +2193,41 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     }
   }
 
+  /**
+   * Replay the given changes on a secondary replica
+   */
+  @Override
+  public ReplicateWALEntryResponse replicateToReplica(RpcController controller,
+    ReplicateWALEntryRequest request) throws ServiceException {
+    CellScanner cells = getAndReset(controller);
+    try {
+      checkOpen();
+      List<WALEntry> entries = request.getEntryList();
+      if (entries == null || entries.isEmpty()) {
+        // empty input
+        return ReplicateWALEntryResponse.newBuilder().build();
+      }
+      ByteString regionName = entries.get(0).getKey().getEncodedRegionName();
+      HRegion region = server.getRegionByEncodedName(regionName.toStringUtf8());
+      if (RegionReplicaUtil.isDefaultReplica(region.getRegionInfo())) {
+        throw new DoNotRetryIOException(
+          "Should not replicate to primary replica " + region.getRegionInfo() + ", CODE BUG?");
+      }
+      for (WALEntry entry : entries) {
+        if (!regionName.equals(entry.getKey().getEncodedRegionName())) {
+          throw new NotServingRegionException(
+            "ReplicateToReplica request contains entries from multiple " +
+              "regions. First region:" + regionName.toStringUtf8() + " , other region:" +
+              entry.getKey().getEncodedRegionName());
+        }
+        region.replayWALEntry(entry, cells);
+      }
+      return ReplicateWALEntryResponse.newBuilder().build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
   private void checkShouldRejectReplicationRequest(List<WALEntry> entries) throws IOException {
     ReplicationSourceService replicationSource = server.getReplicationSourceService();
     if (replicationSource == null || entries.isEmpty()) {
@@ -2217,8 +2261,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         requestCount.increment();
         List<WALEntry> entries = request.getEntryList();
         checkShouldRejectReplicationRequest(entries);
-        CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
-        ((HBaseRpcController) controller).setCellScanner(null);
+        CellScanner cellScanner = getAndReset(controller);
         server.getRegionServerCoprocessorHost().preReplicateLogEntries();
         server.getReplicationSinkService().replicateLogEntries(entries, cellScanner,
           request.getReplicationClusterId(), request.getSourceBaseNamespaceDirPath(),
