@@ -1471,7 +1471,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Flushes all caches in the mini hbase cluster
-   * @throws IOException
    */
   public void flush() throws IOException {
     getMiniHBaseCluster().flushcache();
@@ -1479,7 +1478,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Flushes all caches in the mini hbase cluster
-   * @throws IOException
    */
   public void flush(TableName tableName) throws IOException {
     getMiniHBaseCluster().flushcache(tableName);
@@ -1487,7 +1485,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Compact all regions in the mini hbase cluster
-   * @throws IOException
    */
   public void compact(boolean major) throws IOException {
     getMiniHBaseCluster().compact(major);
@@ -1495,7 +1492,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Compact all of a table's reagion in the mini hbase cluster
-   * @throws IOException
    */
   public void compact(TableName tableName, boolean major) throws IOException {
     getMiniHBaseCluster().compact(tableName, major);
