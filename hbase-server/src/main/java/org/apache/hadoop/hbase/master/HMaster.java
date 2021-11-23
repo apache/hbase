@@ -42,6 +42,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -393,6 +394,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   // Cached clusterId on stand by masters to serve clusterID requests from clients.
   private final CachedClusterId cachedClusterId;
 
+  // Waiting time of non-meta region's moving for meta regions assignment.
+  private final long timeoutWaitMetaRegionAssignment;
+
   public static class RedirectServlet extends HttpServlet {
     private static final long serialVersionUID = 2894774810058302473L;
     private final int regionServerInfoPort;
@@ -498,6 +502,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.maxBalancingTime = getMaxBalancingTime();
     this.maxRitPercent = conf.getDouble(HConstants.HBASE_MASTER_BALANCER_MAX_RIT_PERCENT,
       HConstants.DEFAULT_HBASE_MASTER_BALANCER_MAX_RIT_PERCENT);
+    this.timeoutWaitMetaRegionAssignment =
+      conf.getLong(HConstants.HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT,
+        HConstants.HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT_DEFAULT);
 
     // Do we publish the status?
 
@@ -1845,12 +1852,23 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       // closed
       serverManager.sendRegionWarmup(rp.getDestination(), hri);
 
+      // Here wait until all the meta regions are not in transition.
+      if (!hri.isMetaRegion() && assignmentManager.getRegionStates().isMetaRegionInTransition()) {
+        Thread.sleep(timeoutWaitMetaRegionAssignment);
+        if (assignmentManager.getRegionStates().isMetaRegionInTransition()) {
+          LOG.info("Moving " + rp + " failed. " +
+            "While there is still meta regions in transition after " +
+            timeoutWaitMetaRegionAssignment + "ms waiting.");
+          return;
+        }
+      }
+
       LOG.info(getClientIdAuditPrefix() + " move " + rp + ", running balancer");
       this.assignmentManager.balance(rp);
       if (this.cpHost != null) {
         this.cpHost.postMove(hri, rp.getSource(), rp.getDestination());
       }
-    } catch (IOException ioe) {
+    } catch (IOException | InterruptedException ioe) {
       if (ioe instanceof HBaseIOException) {
         throw (HBaseIOException)ioe;
       }
