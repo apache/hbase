@@ -363,9 +363,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
     switch (inMemoryCompaction) {
       case NONE:
-        Class<? extends DefaultMemStore> defaultMemStoreClass =
-            conf.getClass(MEMSTORE_CLASS_NAME, DefaultMemStore.class, DefaultMemStore.class);
-        ms = ReflectionUtils.newInstance(defaultMemStoreClass,
+        Class<? extends MemStore> memStoreClass =
+            conf.getClass(MEMSTORE_CLASS_NAME, DefaultMemStore.class, MemStore.class);
+        ms = ReflectionUtils.newInstance(memStoreClass,
             new Object[] { conf, getComparator(),
                 this.getHRegion().getRegionServicesForStores()});
         break;
