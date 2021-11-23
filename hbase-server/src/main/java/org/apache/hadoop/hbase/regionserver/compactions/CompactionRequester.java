@@ -45,6 +45,12 @@ public interface CompactionRequester {
       CompactionLifeCycleTracker tracker, @Nullable User user) throws IOException;
 
   /**
+   * Request system compaction on the given store.
+   */
+  void requestSystemCompaction(HRegion region, HStore store, String why,
+      boolean giveUpIfRequestedOrCompacting) throws IOException;
+
+  /**
    * on/off compaction
    */
   void switchCompaction(boolean onOrOff);
