@@ -77,6 +77,14 @@ public class RegionReplicationSink {
 
   public static final long OPERATION_TIMEOUT_MS_DEFAULT = 1000;
 
+  public static final String BATCH_SIZE_CAPACITY = "hbase.region.read-replica.sink.size.capacity";
+
+  public static final long BATCH_SIZE_CAPACITY_DEFAULT = 1024L * 1024;
+
+  public static final String BATCH_COUNT_CAPACITY = "hbase.region.read-replica.sink.nb.capacity";
+
+  public static final int BATCH_COUNT_CAPACITY_DEFAULT = 100;
+
   private static final class SinkEntry {
 
     final WALKeyImpl key;
@@ -139,6 +147,10 @@ public class RegionReplicationSink {
 
   private final long operationTimeoutNs;
 
+  private final long batchSizeCapacity;
+
+  private final long batchCountCapacity;
+
   private volatile long pendingSize;
 
   private long lastFlushedSequenceId;
@@ -166,6 +178,8 @@ public class RegionReplicationSink {
       TimeUnit.MILLISECONDS.toNanos(conf.getLong(RPC_TIMEOUT_MS, RPC_TIMEOUT_MS_DEFAULT));
     this.operationTimeoutNs = TimeUnit.MILLISECONDS
       .toNanos(conf.getLong(OPERATION_TIMEOUT_MS, OPERATION_TIMEOUT_MS_DEFAULT));
+    this.batchSizeCapacity = conf.getLong(BATCH_SIZE_CAPACITY, BATCH_SIZE_CAPACITY_DEFAULT);
+    this.batchCountCapacity = conf.getInt(BATCH_COUNT_CAPACITY, BATCH_COUNT_CAPACITY_DEFAULT);
     this.failedReplicas = new IntHashSet(regionReplication - 1);
   }
 
@@ -186,16 +200,16 @@ public class RegionReplicationSink {
       if (error != null) {
         if (maxSequenceId > lastFlushedSequenceId) {
           LOG.warn(
-            "Failed to replicate to secondary replica {} for {}, since the max sequence" +
-              " id of sunk entris is {}, which is greater than the last flush SN {}," +
-              " we will stop replicating for a while and trigger a flush",
+            "Failed to replicate to secondary replica {} for {}, since the max sequence"
+              + " id of sunk entris is {}, which is greater than the last flush SN {},"
+              + " we will stop replicating for a while and trigger a flush",
             replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
           failed.add(replicaId);
         } else {
           LOG.warn(
-            "Failed to replicate to secondary replica {} for {}, since the max sequence" +
-              " id of sunk entris is {}, which is less than or equal to the last flush SN {}," +
-              " we will not stop replicating",
+            "Failed to replicate to secondary replica {} for {}, since the max sequence"
+              + " id of sunk entris is {}, which is less than or equal to the last flush SN {},"
+              + " we will not stop replicating",
             replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
         }
       }
@@ -220,12 +234,17 @@ public class RegionReplicationSink {
 
   private void send() {
     List<SinkEntry> toSend = new ArrayList<>();
+    long totalSize = 0L;
     for (SinkEntry entry;;) {
       entry = entries.poll();
       if (entry == null) {
         break;
       }
       toSend.add(entry);
+      totalSize += entry.size;
+      if (toSend.size() >= batchCountCapacity || totalSize >= batchSizeCapacity) {
+        break;
+      }
     }
     int toSendReplicaCount = regionReplication - 1 - failedReplicas.size();
     if (toSendReplicaCount <= 0) {
@@ -327,8 +346,8 @@ public class RegionReplicationSink {
             long clearedSize = clearAllEntries();
             if (LOG.isDebugEnabled()) {
               LOG.debug(
-                "Got a flush all request with sequence id {}, clear {} pending" +
-                  " entries with size {}, clear failed replicas {}",
+                "Got a flush all request with sequence id {}, clear {} pending"
+                  + " entries with size {}, clear failed replicas {}",
                 flushSequenceNumber, clearedCount,
                 StringUtils.TraditionalBinaryPrefix.long2String(clearedSize, "", 1),
                 failedReplicas);
