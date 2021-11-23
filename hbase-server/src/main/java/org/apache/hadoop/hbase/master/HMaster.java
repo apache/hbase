@@ -1862,7 +1862,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           return;
         }
       }
-
       LOG.info(getClientIdAuditPrefix() + " move " + rp + ", running balancer");
       this.assignmentManager.balance(rp);
       if (this.cpHost != null) {
