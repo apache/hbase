@@ -75,7 +75,7 @@ public interface RegionScanner extends InternalScanner {
 
   /**
    * @return The Scanner's {@link org.apache.hadoop.hbase.client.Scan#ID_ATRIBUTE} value,
-   * or null if not set.
+   *         or null if not set.
    */
   default String getOperationId() {
     return null;
