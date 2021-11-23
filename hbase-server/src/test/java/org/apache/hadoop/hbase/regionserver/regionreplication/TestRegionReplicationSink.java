@@ -94,6 +94,8 @@ public class TestRegionReplicationSink {
   @Before
   public void setUp() {
     conf = HBaseConfiguration.create();
+    conf.setLong(RegionReplicationSink.BATCH_COUNT_CAPACITY, 5);
+    conf.setLong(RegionReplicationSink.BATCH_SIZE_CAPACITY, 1024 * 1024);
     td = TableDescriptorBuilder.newBuilder(name.getTableName())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("cf")).setRegionReplication(3).build();
     primary = RegionInfoBuilder.newBuilder(name.getTableName()).build();
@@ -309,6 +311,91 @@ public class TestRegionReplicationSink {
     verify(conn, times(5)).replicate(any(), anyList(), anyInt(), anyLong(), anyLong());
     futures.get(3).complete(null);
     futures.get(4).complete(null);
+
+    // should have send out all so no pending entries.
+    assertEquals(0, sink.pendingSize());
+  }
+
+  @Test
+  public void testSizeCapacity() {
+    MutableInt next = new MutableInt(0);
+    List<CompletableFuture<Void>> futures =
+      Stream.generate(() -> new CompletableFuture<Void>()).limit(6).collect(Collectors.toList());
+    when(conn.replicate(any(), anyList(), anyInt(), anyLong(), anyLong()))
+      .then(i -> futures.get(next.getAndIncrement()));
+    for (int i = 0; i < 3; i++) {
+      ServerCall<?> rpcCall = mock(ServerCall.class);
+      WALKeyImpl key = mock(WALKeyImpl.class);
+      when(key.estimatedSerializedSizeOf()).thenReturn(100L);
+      when(key.getSequenceId()).thenReturn(i + 1L);
+      WALEdit edit = mock(WALEdit.class);
+      when(edit.estimatedSerializedSizeOf()).thenReturn((i + 1) * 600L * 1024);
+      when(manager.increase(anyLong())).thenReturn(true);
+      sink.add(key, edit, rpcCall);
+    }
+    // the first entry will be send out immediately
+    verify(conn, times(2)).replicate(any(), anyList(), anyInt(), anyLong(), anyLong());
+
+    // complete the first send
+    futures.get(0).complete(null);
+    futures.get(1).complete(null);
+
+    // we should have another batch
+    verify(conn, times(4)).replicate(any(), anyList(), anyInt(), anyLong(), anyLong());
+
+    // complete the second send
+    futures.get(2).complete(null);
+    futures.get(3).complete(null);
+
+    // the size of the second entry is greater than 1024 * 1024, so we will have another batch
+    verify(conn, times(6)).replicate(any(), anyList(), anyInt(), anyLong(), anyLong());
+
+    // complete the third send
+    futures.get(4).complete(null);
+    futures.get(5).complete(null);
+
+    // should have send out all so no pending entries.
+    assertEquals(0, sink.pendingSize());
+  }
+
+  @Test
+  public void testCountCapacity() {
+    MutableInt next = new MutableInt(0);
+    List<CompletableFuture<Void>> futures =
+      Stream.generate(() -> new CompletableFuture<Void>()).limit(6).collect(Collectors.toList());
+    when(conn.replicate(any(), anyList(), anyInt(), anyLong(), anyLong()))
+      .then(i -> futures.get(next.getAndIncrement()));
+    for (int i = 0; i < 7; i++) {
+      ServerCall<?> rpcCall = mock(ServerCall.class);
+      WALKeyImpl key = mock(WALKeyImpl.class);
+      when(key.estimatedSerializedSizeOf()).thenReturn(100L);
+      when(key.getSequenceId()).thenReturn(i + 1L);
+      WALEdit edit = mock(WALEdit.class);
+      when(edit.estimatedSerializedSizeOf()).thenReturn(1000L);
+      when(manager.increase(anyLong())).thenReturn(true);
+      sink.add(key, edit, rpcCall);
+    }
+    // the first entry will be send out immediately
+    verify(conn, times(2)).replicate(any(), anyList(), anyInt(), anyLong(), anyLong());
+
+    // complete the first send
+    futures.get(0).complete(null);
+    futures.get(1).complete(null);
+
+    // we should have another batch
+    verify(conn, times(4)).replicate(any(), anyList(), anyInt(), anyLong(), anyLong());
+
+    // complete the second send
+    futures.get(2).complete(null);
+    futures.get(3).complete(null);
+
+    // because of the count limit is 5, the above send can not send all the edits, so we will do
+    // another send
+    verify(conn, times(6)).replicate(any(), anyList(), anyInt(), anyLong(), anyLong());
+
+    // complete the third send
+    futures.get(4).complete(null);
+    futures.get(5).complete(null);
 
     // should have send out all so no pending entries.
     assertEquals(0, sink.pendingSize());
