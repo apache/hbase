@@ -27,6 +27,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
@@ -710,6 +711,9 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   private void executeFlush(HRegion region) throws IOException {
+    if (!RegionReplicaUtil.isDefaultReplica(region.getRegionInfo())) {
+      return;
+    }
     // retry 5 times if we can not flush
     for (int i = 0; i < 5; i++) {
       FlushResult result = region.flush(true);
@@ -749,10 +753,11 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @throws IOException
    */
   public void compact(boolean major) throws IOException {
-    for (JVMClusterUtil.RegionServerThread t:
-        this.hbaseCluster.getRegionServers()) {
-      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
-        r.compact(major);
+    for (JVMClusterUtil.RegionServerThread t : this.hbaseCluster.getRegionServers()) {
+      for (HRegion r : t.getRegionServer().getOnlineRegionsLocalContext()) {
+        if (RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())) {
+          r.compact(major);
+        }
       }
     }
   }
@@ -762,11 +767,12 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @throws IOException
    */
   public void compact(TableName tableName, boolean major) throws IOException {
-    for (JVMClusterUtil.RegionServerThread t:
-        this.hbaseCluster.getRegionServers()) {
-      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
-        if(r.getTableDescriptor().getTableName().equals(tableName)) {
-          r.compact(major);
+    for (JVMClusterUtil.RegionServerThread t : this.hbaseCluster.getRegionServers()) {
+      for (HRegion r : t.getRegionServer().getOnlineRegionsLocalContext()) {
+        if (r.getTableDescriptor().getTableName().equals(tableName)) {
+          if (RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())) {
+            r.compact(major);
+          }
         }
       }
     }
