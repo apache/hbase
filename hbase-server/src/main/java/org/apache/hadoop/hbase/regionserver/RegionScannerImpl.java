@@ -89,6 +89,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   private final long maxResultSize;
   private final ScannerContext defaultScannerContext;
   private final FilterWrapper filter;
+  private final String operationId;
 
   private RegionServerServices rsServices;
 
@@ -121,6 +122,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     defaultScannerContext = ScannerContext.newBuilder().setBatchLimit(scan.getBatch()).build();
     this.stopRow = scan.getStopRow();
     this.includeStopRow = scan.includeStopRow();
+    this.operationId = scan.getId();
 
     // synchronize on scannerReadPoints so that nobody calculates
     // getSmallestReadPoint, before scannerReadPoints is updated.
@@ -213,6 +215,11 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   @Override
   public int getBatch() {
     return this.defaultScannerContext.getBatchLimit();
+  }
+
+  @Override
+  public String getOperationId() {
+    return operationId;
   }
 
   /**

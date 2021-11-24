@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.OperationWithAttributes;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -1278,6 +1279,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     StringBuilder builder = new StringBuilder();
     builder.append("table: ").append(scanner.getRegionInfo().getTable().getNameAsString());
     builder.append(" region: ").append(scanner.getRegionInfo().getRegionNameAsString());
+    builder.append(" operation_id: ").append(scanner.getOperationId());
     return builder.toString();
   }
 
@@ -1290,6 +1292,12 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       StringBuilder builder = new StringBuilder();
       builder.append("table: ").append(region.getRegionInfo().getTable().getNameAsString());
       builder.append(" region: ").append(region.getRegionInfo().getRegionNameAsString());
+      for (NameBytesPair pair : request.getScan().getAttributeList()) {
+        if (OperationWithAttributes.ID_ATRIBUTE.equals(pair.getName())) {
+          builder.append(" operation_id: ").append(Bytes.toString(pair.getValue().toByteArray()));
+          break;
+        }
+      }
       return builder.toString();
     } catch (IOException ignored) {
       return null;
