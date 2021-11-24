@@ -4439,6 +4439,23 @@ public class TestHRegion {
     }
   }
 
+  @Test
+  public void testScannerOperationId() throws IOException {
+    region = initHRegion(tableName, method, CONF, COLUMN_FAMILY_BYTES);
+    Scan scan = new Scan();
+    RegionScanner scanner = region.getScanner(scan);
+    assertNull(scanner.getOperationId());
+    scanner.close();
+
+    String operationId = "test_operation_id_0101";
+    scan = new Scan().setId(operationId);
+    scanner = region.getScanner(scan);
+    assertEquals(operationId, scanner.getOperationId());
+    scanner.close();
+
+    HBaseTestingUtility.closeRegionAndWAL(this.region);
+  }
+
   /**
    * Write an HFile block full with Cells whose qualifier that are identical between
    * 0 and Short.MAX_VALUE. See HBASE-13329.
