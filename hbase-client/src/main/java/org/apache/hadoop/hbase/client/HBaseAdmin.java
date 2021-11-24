@@ -3712,7 +3712,10 @@ public class HBaseAdmin implements Admin {
     builder.setTable(tableName.getNameAsString());
     builder.setName(snapshotName);
     builder.setType(type);
-    builder.setTtl(getTtlFromSnapshotProps(snapshotProps));
+    long ttl = getTtlFromSnapshotProps(snapshotProps);
+    if (ttl != -1L && ttl < TimeUnit.MILLISECONDS.toSeconds(Long.MAX_VALUE)) {
+      builder.setTtl(ttl);
+    }
     snapshot(builder.build());
   }
 

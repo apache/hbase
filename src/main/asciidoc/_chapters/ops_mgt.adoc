@@ -2224,7 +2224,6 @@ Value 0 for this config indicates TTL: FOREVER
 
 
 
-
 .Enable/Disable Snapshot Auto Cleanup on running cluster:
 
 By default, snapshot auto cleanup based on TTL would be enabled
