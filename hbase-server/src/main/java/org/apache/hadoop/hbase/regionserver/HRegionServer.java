@@ -1231,6 +1231,14 @@ public class HRegionServer extends HasThread implements
       stopServiceThreads();
     }
 
+    try {
+      if (this.namedQueueRecorder != null) {
+        namedQueueRecorder.close();
+      }
+    } catch (IOException ioe) {
+      LOG.warn("Attempt to close NamedQueueRecorder failed", ioe);
+    }
+
     if (this.rpcServices != null) {
       this.rpcServices.stop();
     }
