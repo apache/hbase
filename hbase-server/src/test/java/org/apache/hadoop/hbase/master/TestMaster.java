@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -66,6 +68,8 @@ public class TestMaster {
   public static void beforeAllTests() throws Exception {
     // we will retry operations when PleaseHoldException is thrown
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
+    // Here just set 1 ms for testing.
+    TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT, 1);
     // Set hbase.min.version.move.system.tables as version 0 so that
     // testMoveRegionWhenNotInitialized never fails even if hbase-default has valid default
     // value present for production use-case.
@@ -187,6 +191,40 @@ public class TestMaster {
       master.setInitialized(true);
       TEST_UTIL.deleteTable(tableName);
     }
+  }
+
+  @Test (timeout = 300000)
+  public void testMoveRegionWhenMetaRegionInTransition()
+    throws IOException, InterruptedException, KeeperException {
+    TableName tableName = TableName.valueOf("testMoveRegionWhenMetaRegionInTransition");
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HColumnDescriptor hcd = new HColumnDescriptor("value");
+    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+    htd.addFamily(hcd);
+
+    admin.createTable(htd, null);
+    HRegionInfo hri = admin.getTableRegions(tableName).get(0);
+
+    HRegionInfo metaRegion = admin.getTableRegions(TableName.META_TABLE_NAME).get(0);
+
+    ServerName rs0 =
+      TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
+    ServerName rs1 =
+      TEST_UTIL.getHBaseCluster().getRegionServer(1).getServerName();
+
+    master.move(hri.getEncodedNameAsBytes(), rs0.getServerName().getBytes());
+    while (regionStates.isRegionInTransition(hri)) {
+      // Make sure the region is not in transition
+      Thread.sleep(1000);
+    }
+    // Meta region should be in transition
+    master.assignmentManager.regionOffline(metaRegion);
+    // Then move the region to a new region server.
+    admin.move(hri.getEncodedNameAsBytes(), rs1.getServerName().getBytes());
+
+    // The region should be still on rs0.
+    TEST_UTIL.assertRegionOnServer(hri, rs0, 5000);
   }
 }
 
