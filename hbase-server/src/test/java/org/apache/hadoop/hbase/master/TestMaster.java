@@ -204,32 +204,35 @@ public class TestMaster {
     htd.addFamily(hcd);
 
     admin.createTable(htd, null);
-    HRegionInfo hri = admin.getTableRegions(tableName).get(0);
+    try {
+      HRegionInfo hri = admin.getTableRegions(tableName).get(0);
 
-    HRegionInfo metaRegion = admin.getTableRegions(TableName.META_TABLE_NAME).get(0);
+      HRegionInfo metaRegion = admin.getTableRegions(TableName.META_TABLE_NAME).get(0);
 
-    ServerName rs0 =
-      TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
-    ServerName rs1 =
-      TEST_UTIL.getHBaseCluster().getRegionServer(1).getServerName();
+      ServerName rs0 = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
+      ServerName rs1 = TEST_UTIL.getHBaseCluster().getRegionServer(1).getServerName();
 
-    master.move(hri.getEncodedNameAsBytes(), rs0.getServerName().getBytes());
-    while (regionStates.isRegionInTransition(hri)) {
-      // Make sure the region is not in transition
-      Thread.sleep(1000);
-    }
-    // Meta region should be in transition
-    master.assignmentManager.regionOffline(metaRegion);
-    // Then move the region to a new region server.
-    admin.move(hri.getEncodedNameAsBytes(), rs1.getServerName().getBytes());
+      admin.move(hri.getEncodedNameAsBytes(), rs0.getServerName().getBytes());
+      while (regionStates.isRegionInTransition(hri)) {
+        // Make sure the region is not in transition
+        Thread.sleep(1000);
+      }
+      // Meta region should be in transition
+      master.assignmentManager.unassign(metaRegion);
+      //    master.assignmentManager.regionOffline(metaRegion);
+      // Then move the region to a new region server.
+      admin.move(hri.getEncodedNameAsBytes(), rs1.getServerName().getBytes());
 
-    // The region should be still on rs0.
-    TEST_UTIL.assertRegionOnServer(hri, rs0, 5000);
+      // The region should be still on rs0.
+      TEST_UTIL.assertRegionOnServer(hri, rs0, 5000);
 
-    // Wait until the meta region is reassigned.
-    admin.assign(metaRegion.getEncodedNameAsBytes());
-    while (regionStates.isMetaRegionInTransition()) {
-      Thread.sleep(1000);
+      // Wait until the meta region is reassigned.
+      admin.assign(metaRegion.getEncodedNameAsBytes());
+      while (regionStates.isMetaRegionInTransition()) {
+        Thread.sleep(1000);
+      }
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 }
