@@ -70,8 +70,8 @@ public class InputStreamBlockDistribution {
    * in {@link HStoreFile#open()}.
    *
    * @see InputStreamBlockDistribution
-   * @param stream
-   * @param fileInfo
+   * @param stream the input stream to derive locality from
+   * @param fileInfo the StoreFileInfo for the related store file
    */
   public InputStreamBlockDistribution(FSDataInputStream stream, StoreFileInfo fileInfo) {
     this.stream = stream;
