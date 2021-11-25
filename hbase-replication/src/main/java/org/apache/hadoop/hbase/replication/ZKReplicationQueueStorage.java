@@ -379,6 +379,11 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
     return 0;
   }
 
+  /**
+   * This implement must update the cversion of root {@link #queuesZNode}. The optimistic lock of
+   * the {@link #getAllWALs()} method is based on the cversion of root {@link #queuesZNode}.
+   * @see #getAllWALs() to show the usage of the cversion of root {@link #queuesZNode} .
+   */
   @Override
   public Pair<String, SortedSet<String>> claimQueue(ServerName sourceServerName, String queueId,
       ServerName destServerName) throws ReplicationException {
@@ -417,6 +422,12 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
       }
       // add delete op for peer
       listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldQueueNode));
+      // Append new queue id for prevent lock competition in zookeeper server.
+      String claimLockZNode = ZNodePaths.joinZNode(queuesZNode, "cversion_" + newQueueId);
+      // A trick for update the cversion of root queuesZNode .
+      // The optimistic lock of the getAllWALs() method is based on the cversion of root queuesZNode
+      listOfOps.add(ZKUtilOp.createAndFailSilent(claimLockZNode, HConstants.EMPTY_BYTE_ARRAY));
+      listOfOps.add(ZKUtilOp.deleteNodeFailSilent(claimLockZNode));
 
       LOG.trace("The multi list size is {}", listOfOps.size());
       ZKUtil.multiOrSequential(zookeeper, listOfOps, false);
@@ -505,6 +516,13 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
     return stat.getCversion();
   }
 
+  /**
+   * The optimistic lock of this implement is based on the cversion of root {@link #queuesZNode}.
+   * Therefore, we must update the cversion of root {@link #queuesZNode} when migrate wal nodes to
+   * other queues.
+   * @see #claimQueue(ServerName, String, ServerName) as an example of updating root
+   * {@link #queuesZNode} cversion.
+   */
   @Override
   public Set<String> getAllWALs() throws ReplicationException {
     try {

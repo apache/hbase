@@ -74,6 +74,14 @@ public interface RegionScanner extends InternalScanner {
   int getBatch();
 
   /**
+   * @return The Scanner's {@link org.apache.hadoop.hbase.client.Scan#ID_ATRIBUTE} value,
+   *         or null if not set.
+   */
+  default String getOperationId() {
+    return null;
+  }
+
+  /**
    * Grab the next row's worth of values. This is a special internal method to be called from
    * coprocessor hooks to avoid expensive setup. Caller must set the thread's readpoint, start and
    * close a region operation, an synchronize on the scanner object. Caller should maintain and

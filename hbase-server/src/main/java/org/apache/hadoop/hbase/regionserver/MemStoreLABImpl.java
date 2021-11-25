@@ -81,10 +81,10 @@ public class MemStoreLABImpl implements MemStoreLAB {
 
   // This flag is for closing this instance, its set when clearing snapshot of
   // memstore
-  private volatile boolean closed = false;
+  private final AtomicBoolean closed = new AtomicBoolean(false);;
   // This flag is for reclaiming chunks. Its set when putting chunks back to
   // pool
-  private AtomicBoolean reclaimed = new AtomicBoolean(false);
+  private final AtomicBoolean reclaimed = new AtomicBoolean(false);
   // Current count of open scanners which reading data from this MemStoreLAB
   private final AtomicInteger openScannerCount = new AtomicInteger();
 
@@ -259,7 +259,9 @@ public class MemStoreLABImpl implements MemStoreLAB {
    */
   @Override
   public void close() {
-    this.closed = true;
+    if (!this.closed.compareAndSet(false, true)) {
+      return;
+    }
     // We could put back the chunks to pool for reusing only when there is no
     // opening scanner which will read their data
     int count  = openScannerCount.get();
@@ -286,7 +288,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
   @Override
   public void decScannerCount() {
     int count = this.openScannerCount.decrementAndGet();
-    if (this.closed && count == 0) {
+    if (this.closed.get() && count == 0) {
       recycleChunks();
     }
   }
@@ -294,6 +296,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
   private void recycleChunks() {
     if (reclaimed.compareAndSet(false, true)) {
       chunkCreator.putbackChunks(chunks);
+      chunks.clear();
     }
   }
 
@@ -409,13 +412,21 @@ public class MemStoreLABImpl implements MemStoreLAB {
     return pooledChunks;
   }
 
-  Integer getNumOfChunksReturnedToPool() {
+  Integer getNumOfChunksReturnedToPool(Set<Integer> chunksId) {
     int i = 0;
-    for (Integer id : this.chunks) {
+    for (Integer id : chunksId) {
       if (chunkCreator.isChunkInPool(id)) {
         i++;
       }
     }
     return i;
+  }
+
+  boolean isReclaimed() {
+    return reclaimed.get();
+  }
+
+  boolean isClosed() {
+    return closed.get();
   }
 }
