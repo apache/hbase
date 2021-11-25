@@ -225,6 +225,12 @@ public class TestMaster {
 
     // The region should be still on rs0.
     TEST_UTIL.assertRegionOnServer(hri, rs0, 5000);
+
+    // Wait until the meta region is reassigned.
+    admin.assign(metaRegion.getEncodedNameAsBytes());
+    while (regionStates.isMetaRegionInTransition()) {
+      Thread.sleep(1000);
+    }
   }
 }
 
