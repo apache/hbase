@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -69,7 +68,8 @@ public class TestMaster {
     // we will retry operations when PleaseHoldException is thrown
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
     // Here just set 1 ms for testing.
-    TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT, 1);
+    TEST_UTIL.getConfiguration().
+      setLong(HConstants.HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT, 1);
     // Set hbase.min.version.move.system.tables as version 0 so that
     // testMoveRegionWhenNotInitialized never fails even if hbase-default has valid default
     // value present for production use-case.
