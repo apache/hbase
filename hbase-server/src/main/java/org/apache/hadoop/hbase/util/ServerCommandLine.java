@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.conf.Configuration;
@@ -143,14 +144,49 @@ public abstract class ServerCommandLine extends Configured implements Tool {
   /**
    * Parse and run the given command line. This will exit the JVM with
    * the exit code returned from <code>run()</code>.
+   * If return code is 0, wait for atmost 30 seconds for all non-daemon threads to quit,
+   * otherwise exit the jvm
    */
   public void doMain(String args[]) {
     try {
       int ret = ToolRunner.run(HBaseConfiguration.create(), this, args);
-      System.exit(ret);
+      if (ret != 0) {
+        System.exit(ret);
+      }
+      // Return code is 0 here.
+      boolean forceStop = false;
+      long now = EnvironmentEdgeManager.currentTime();
+      while (isNonDaemonThreadRunning()) {
+        if (EnvironmentEdgeManager.currentTime() - now > 30 * 1000) {
+          forceStop = true;
+          break;
+        }
+        Thread.sleep(1000);
+      }
+      if (forceStop) {
+        LOG.error("Failed to stop all non-daemon threads, so force quitting");
+        System.exit(-1);
+      }
     } catch (Exception e) {
       LOG.error("Failed to run", e);
       System.exit(-1);
     }
+  }
+
+  /**
+   * Checks whether any non-daemon thread is running.
+   * @return true if there are non daemon threads running, otherwise false
+   */
+  public boolean isNonDaemonThreadRunning() {
+    AtomicInteger nonDaemonThreadCount = new AtomicInteger();
+    Set<Thread> threads =  Thread.getAllStackTraces().keySet();
+    threads.forEach(t -> {
+      // Exclude current thread
+      if (t.getId() != Thread.currentThread().getId() && !t.isDaemon()) {
+        nonDaemonThreadCount.getAndIncrement();
+        LOG.info("Non daemon thread name: " + t.getName() + "  still alive");
+      }
+    });
+    return nonDaemonThreadCount.get() > 0;
   }
 }
