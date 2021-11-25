@@ -132,14 +132,19 @@ public class DefaultMemStore extends AbstractMemStore {
   }
 
   @Override
-  /*
+  /**
+   * This method is protected under {@link HStore#lock} read lock. <br/>
    * Scanners are ordered from 0 (oldest) to newest in increasing order.
    */
   public List<KeyValueScanner> getScanners(long readPt) throws IOException {
     List<KeyValueScanner> list = new ArrayList<>();
     addToScanners(getActive(), readPt, list);
-    addToScanners(snapshot.getAllSegments(), readPt, list);
+    addToScanners(getSnapshotSegments(), readPt, list);
     return list;
+  }
+
+  protected List<Segment> getSnapshotSegments() {
+    return snapshot.getAllSegments();
   }
 
   @Override
