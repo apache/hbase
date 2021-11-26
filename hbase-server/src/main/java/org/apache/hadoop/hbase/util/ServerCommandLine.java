@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.apache.hadoop.hbase.util.Threads.isNonDaemonThreadRunning;
 
 /**
  * Base class for command lines that start up various HBase daemons.
@@ -155,9 +155,9 @@ public abstract class ServerCommandLine extends Configured implements Tool {
       }
       // Return code is 0 here.
       boolean forceStop = false;
-      long now = EnvironmentEdgeManager.currentTime();
+      long startTime = EnvironmentEdgeManager.currentTime();
       while (isNonDaemonThreadRunning()) {
-        if (EnvironmentEdgeManager.currentTime() - now > 30 * 1000) {
+        if (EnvironmentEdgeManager.currentTime() - startTime > 30 * 1000) {
           forceStop = true;
           break;
         }
@@ -171,22 +171,5 @@ public abstract class ServerCommandLine extends Configured implements Tool {
       LOG.error("Failed to run", e);
       System.exit(-1);
     }
-  }
-
-  /**
-   * Checks whether any non-daemon thread is running.
-   * @return true if there are non daemon threads running, otherwise false
-   */
-  public boolean isNonDaemonThreadRunning() {
-    AtomicInteger nonDaemonThreadCount = new AtomicInteger();
-    Set<Thread> threads =  Thread.getAllStackTraces().keySet();
-    threads.forEach(t -> {
-      // Exclude current thread
-      if (t.getId() != Thread.currentThread().getId() && !t.isDaemon()) {
-        nonDaemonThreadCount.getAndIncrement();
-        LOG.info("Non daemon thread name: " + t.getName() + "  still alive");
-      }
-    });
-    return nonDaemonThreadCount.get() > 0;
   }
 }
