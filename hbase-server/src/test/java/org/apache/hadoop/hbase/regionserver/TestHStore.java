@@ -2190,9 +2190,7 @@ public class TestHStore {
     conf.setBoolean(WALFactory.WAL_ENABLED, false);
 
     init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
-    MyDefaultMemStore myDefaultMemStore = new MyDefaultMemStore(store.conf, store.getComparator(),
-        store.getHRegion().getRegionServicesForStores());
-    store.memstore = myDefaultMemStore;
+    MyDefaultMemStore myDefaultMemStore = (MyDefaultMemStore) (store.memstore);
     myDefaultMemStore.store = store;
 
     MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();

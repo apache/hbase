@@ -150,11 +150,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   private static final int SPLIT_REGION_COMPACTION_PRIORITY = Integer.MIN_VALUE + 1000;
 
   private static final Logger LOG = LoggerFactory.getLogger(HStore.class);
-  /**
-   * TODO:After making the {@link DefaultMemStore} extensible in {@link HStore} by HBASE-26476,we
-   * change it back to final.
-   */
-  protected MemStore memstore;
+
+  protected final MemStore memstore;
   // This stores directory in the filesystem.
   private final HRegion region;
   protected Configuration conf;
