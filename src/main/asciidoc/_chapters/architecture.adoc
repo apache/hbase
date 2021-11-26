@@ -2884,29 +2884,45 @@ secondaries. When they observe the flush/compaction or bulk load event, the
 secondary regions replay the event to pick up the new files and drop the old
 ones.
 
-Committing writes in the same order as in primary ensures that the secondaries won’t diverge from the primary regions data, but since the log replication is asynchronous, the data might still be stale in secondary regions. Since this feature works as a replication endpoint, the performance and latency characteristics is expected to be similar to inter-cluster replication.
+Committing writes in the same order as in primary ensures that the secondaries
+won’t diverge from the primary regions data, but since the log replication is
+asynchronous, the data might still be stale in secondary regions.
 
 Async WAL Replication is *disabled* by default. You can enable this feature by
-setting `hbase.region.replica.replication.enabled` to `true`.  The Async WAL
-Replication feature will add a new replication peer named
+setting `hbase.region.replica.replication.enabled` to `true`.
+
+Before 3.0.0, this feature works as a replication endpoint, the performance and
+latency characteristics is expected to be similar to inter-cluster replication.
+And once enabled, it will create a replication peer named
 `region_replica_replication` as a replication peer when you create a table with
-region replication > 1 for the first time. Once enabled, if you want to disable
-this feature, you need to do two actions in the following order:
-* Set configuration property `hbase.region.replica.replication.enabled` to false in `hbase-site.xml` (see Configuration section below)
-* Disable the replication peer named `region_replica_replication` in the cluster using hbase shell or `Admin` class:
+region replication > 1 for the first time.
+
+if you want to disable this feature, you need to do two actions in the
+following order:
+* Set configuration property `hbase.region.replica.replication.enabled` to
+false in `hbase-site.xml` (see Configuration section below)
+* Disable the replication peer named `region_replica_replication` in the cluster
+using hbase shell or `Admin` class:
 [source,bourne]
 ----
 	hbase> disable_peer 'region_replica_replication'
 ----
 
-Async WAL Replication and the `hbase:meta` table is a little more involved and gets its own section below; see <<async.wal.replication.meta>>
+In 3.0.0, this feature is re-implemented to decouple with the general replication
+framework. Now we do not need to create a special replication peer. And during
+rolling upgrading, we will remove this replication peer automatically if it is
+present. See https://issues.apache.org/jira/browse/HBASE-26233[HBASE-26233] and
+the design doc in our git repo for more details.
+
+Async WAL Replication and the `hbase:meta` table is a little more involved and
+gets its own section below; see <<async.wal.replication.meta>>
 
 === Store File TTL
 In both of the write propagation approaches mentioned above, store files of the primary will be opened in secondaries independent of the primary region. So for files that the primary compacted away, the secondaries might still be referring to these files for reading. Both features are using HFileLinks to refer to files, but there is no protection (yet) for guaranteeing that the file will not be deleted prematurely. Thus, as a guard, you should set the configuration property `hbase.master.hfilecleaner.ttl` to a larger value, such as 1 hour to guarantee that you will not receive IOExceptions for requests going to replicas.
 
 [[async.wal.replication.meta]]
 === Region replication for META table’s region
-Async WAL Replication does not work for the META table’s WAL.
+The general Async WAL Replication does not work for the META table’s WAL.
 The meta table’s secondary replicas refresh themselves from the persistent store
 files every `hbase.regionserver.meta.storefile.refresh.period`, (a non-zero value).
 Note how the META replication period is distinct from the user-space
@@ -2924,7 +2940,16 @@ would a user-space table (if `hbase.meta.replica.count` is set, it will take
 precedent over what is set for replica count in the META table updating META
 replica count to match).
 
-===== Load Balancing META table load =====
+==== Async WAL Replication for META table as of hbase-3.0.0+ ====
+In https://issues.apache.org/jira/browse/HBASE-26233[HBASE-26233] we
+re-implemented the region replication framework to not rely on the general
+replication framework, so it can work together with META table as well. The
+code described in the above section have been removed mostly, but the config
+`hbase.region.replica.replication.catalog.enabled` is still kept, you
+could still use it to control whether to enable async wal replication for META
+table. And the ability to alter META table is also kept.
+
+==== Load Balancing META table load ====
 
 hbase-2.4.0 also adds a *new* client-side `LoadBalance` mode. When enabled
 client-side, clients will try to read META replicas first before falling back on
