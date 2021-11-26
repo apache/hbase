@@ -140,7 +140,7 @@ public final class HConstants {
   public static final String HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT =
     "hbase.master.waiting.meta.assignment.timeout";
 
-  public static final long HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT_DEFAULT = 5000;
+  public static final long HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT_DEFAULT = 10000;
 
   /** Config for the max balancing time */
   public static final String HBASE_BALANCER_MAX_BALANCING = "hbase.balancer.max.balancing";

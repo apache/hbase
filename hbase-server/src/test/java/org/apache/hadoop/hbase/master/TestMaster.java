@@ -223,6 +223,8 @@ public class TestMaster {
       // Then move the region to a new region server.
       admin.move(hri.getEncodedNameAsBytes(), rs1.getServerName().getBytes());
 
+      // Wait for the movement.
+      Thread.sleep(HConstants.HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT_DEFAULT);
       // The region should be still on rs0.
       TEST_UTIL.assertRegionOnServer(hri, rs0, 5000);
 
@@ -231,6 +233,13 @@ public class TestMaster {
       while (regionStates.isMetaRegionInTransition()) {
         Thread.sleep(1000);
       }
+
+      // Try to move region to rs1 once again.
+      admin.move(hri.getEncodedNameAsBytes(), rs1.getServerName().getBytes());
+
+      Thread.sleep(HConstants.HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT_DEFAULT);
+      // It should be moved to rs1 this time.
+      TEST_UTIL.assertRegionOnServer(hri, rs1, 5000);
     } finally {
       TEST_UTIL.deleteTable(tableName);
     }
