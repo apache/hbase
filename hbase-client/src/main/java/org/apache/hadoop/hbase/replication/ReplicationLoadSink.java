@@ -23,7 +23,7 @@ public class ReplicationLoadSink {
   private final long totalOpsProcessed;
 
   @InterfaceAudience.Private
-  public ReplicationLoadSink(long age, long timestamp, long timestampStarted,
+  private ReplicationLoadSink(long age, long timestamp, long timestampStarted,
       long totalOpsProcessed) {
     this.ageOfLastAppliedOp = age;
     this.timestampsOfLastAppliedOp = timestamp;
