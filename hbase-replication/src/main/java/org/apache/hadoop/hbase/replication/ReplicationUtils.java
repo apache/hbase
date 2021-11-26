@@ -56,6 +56,9 @@ public final class ReplicationUtils {
   // since some FileSystem implementation may not support atomic rename.
   public static final String RENAME_WAL_SUFFIX = ".ren";
 
+  public static final String LEGACY_REGION_REPLICATION_ENDPOINT_NAME =
+    "org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint";
+
   private ReplicationUtils() {
   }
 
