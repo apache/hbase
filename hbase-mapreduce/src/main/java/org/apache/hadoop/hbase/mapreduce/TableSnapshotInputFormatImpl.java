@@ -636,6 +636,7 @@ public class TableSnapshotInputFormatImpl {
     FileSystem fs = restoreDir.getFileSystem(conf);
     if (!fs.exists(restoreDir)) {
       LOG.warn("{} doesn't exist on file system, maybe it's already been cleaned", restoreDir);
+      return;
     }
     if (!fs.delete(restoreDir, true)) {
       LOG.warn("Failed clean restore dir {} for snapshot {}", restoreDir, snapshotName);
