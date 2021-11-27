@@ -153,11 +153,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   private static final int SPLIT_REGION_COMPACTION_PRIORITY = Integer.MIN_VALUE + 1000;
 
   private static final Logger LOG = LoggerFactory.getLogger(HStore.class);
-  /**
-   * TODO:After making the {@link DefaultMemStore} extensible in {@link HStore} by HBASE-26476,we
-   * change it back to final.
-   */
-  protected MemStore memstore;
+
+  protected final MemStore memstore;
   // This stores directory in the filesystem.
   protected final HRegion region;
   protected Configuration conf;
@@ -373,17 +370,21 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
           MemoryCompactionPolicy.valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
               CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT).toUpperCase());
     }
+
     switch (inMemoryCompaction) {
       case NONE:
-        ms = ReflectionUtils.newInstance(DefaultMemStore.class,
+        Class<? extends MemStore> memStoreClass =
+            conf.getClass(MEMSTORE_CLASS_NAME, DefaultMemStore.class, MemStore.class);
+        ms = ReflectionUtils.newInstance(memStoreClass,
             new Object[] { conf, getComparator(),
                 this.getHRegion().getRegionServicesForStores()});
         break;
       default:
-        Class<? extends CompactingMemStore> clz = conf.getClass(MEMSTORE_CLASS_NAME,
-            CompactingMemStore.class, CompactingMemStore.class);
-        ms = ReflectionUtils.newInstance(clz, new Object[]{conf, getComparator(), this,
-            this.getHRegion().getRegionServicesForStores(), inMemoryCompaction});
+        Class<? extends CompactingMemStore> compactingMemStoreClass =
+            conf.getClass(MEMSTORE_CLASS_NAME, CompactingMemStore.class, CompactingMemStore.class);
+        ms = ReflectionUtils.newInstance(compactingMemStoreClass,
+          new Object[] { conf, getComparator(), this,
+              this.getHRegion().getRegionServicesForStores(), inMemoryCompaction });
     }
     return ms;
   }
