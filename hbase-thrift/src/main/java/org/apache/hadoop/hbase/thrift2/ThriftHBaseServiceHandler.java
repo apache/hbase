@@ -91,9 +91,12 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
       new ConcurrentHashMap<Integer, ResultScanner>();
 
   private final ConnectionCache connectionCache;
+  
+  private final int maxScannerResultsInitLength;
 
   static final String CLEANUP_INTERVAL = "hbase.thrift.connection.cleanup-interval";
   static final String MAX_IDLETIME = "hbase.thrift.connection.max-idletime";
+  static final String MAX_SCANNER_RESULTS_INIT_LENGTH = "hbase.thrift.max.scanner.results.init.length";
 
   private static final IOException ioe
       = new DoNotRetryIOException("Thrift Server is in Read-only mode.");
@@ -182,6 +185,7 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     connectionCache = new ConnectionCache(
       conf, userProvider, cleanInterval, maxIdleTime);
     isReadOnly = conf.getBoolean("hbase.thrift.readonly", false);
+    maxScannerResultsInitLength = conf.getInt(MAX_SCANNER_RESULTS_INIT_LENGTH, 1000);
   }
 
   private Table getTable(ByteBuffer tableName) {
@@ -456,7 +460,7 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     }
     try {
       connectionCache.updateConnectionAccessTime();
-      return resultsFromHBase(scanner.next(numRows));
+      return resultsFromHBase(scanner.next(numRows, maxScannerResultsInitLength));
     } catch (IOException e) {
       throw getTIOError(e);
     }
@@ -470,7 +474,7 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     ResultScanner scanner = null;
     try {
       scanner = htable.getScanner(scanFromThrift(scan));
-      results = resultsFromHBase(scanner.next(numRows));
+      results = resultsFromHBase(scanner.next(numRows, maxScannerResultsInitLength));
     } catch (IOException e) {
       throw getTIOError(e);
     } finally {

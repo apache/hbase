@@ -49,6 +49,14 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
   Result[] next(int nbRows) throws IOException;
 
   /**
+   * @param nbRows nbRows number of rows to return
+   * @param maxResultInitLength maxResultInitLength number of resultSets init length
+   * @return Between zero and nbRows results
+   * @throws IOException e
+   */
+  Result[] next(int nbRows, int maxResultInitLength) throws IOException;
+
+  /**
    * Closes the scanner and releases any resources it has allocated
    */
   @Override

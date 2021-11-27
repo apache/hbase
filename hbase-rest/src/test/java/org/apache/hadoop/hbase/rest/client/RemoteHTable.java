@@ -584,6 +584,11 @@ public class RemoteHTable implements Table {
     }
 
     @Override
+    public Result[] next(int nbRows, int maxResultInitLength) throws IOException {
+      return next(nbRows);
+    }
+
+    @Override
     public Result next() throws IOException {
       Result[] results = next(1);
       if (results == null || results.length < 1) {

@@ -76,6 +76,21 @@ public abstract class AbstractClientScanner implements ResultScanner {
   }
 
   @Override
+  public Result[] next(int nbRows, int maxResultInitLength) throws IOException {
+    // Collect values to be returned here
+    ArrayList<Result> resultSets = new ArrayList<Result>(Math.min(nbRows, maxResultInitLength));
+    for (int i = 0; i < nbRows; i++) {
+      Result next = next();
+      if (next != null) {
+        resultSets.add(next);
+      } else {
+        break;
+      }
+    }
+    return resultSets.toArray(new Result[resultSets.size()]);
+  }
+
+  @Override
   public Iterator<Result> iterator() {
     return new Iterator<Result>() {
       // The next RowResult, possibly pre-read
