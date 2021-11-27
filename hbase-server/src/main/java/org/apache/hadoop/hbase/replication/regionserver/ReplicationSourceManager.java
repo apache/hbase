@@ -342,8 +342,14 @@ public class ReplicationSourceManager {
    * @param peerId the id of the replication peer
    * @return the source that was created
    */
-  ReplicationSourceInterface addSource(String peerId) throws IOException {
+  void addSource(String peerId) throws IOException {
     ReplicationPeer peer = replicationPeers.getPeer(peerId);
+    if (ReplicationUtils.LEGACY_REGION_REPLICATION_ENDPOINT_NAME
+      .equals(peer.getPeerConfig().getReplicationEndpointImpl())) {
+      // we do not use this endpoint for region replication any more, see HBASE-26233
+      LOG.warn("Legacy region replication peer found, skip adding: {}", peer.getPeerConfig());
+      return;
+    }
     ReplicationSourceInterface src = createSource(peerId, peer);
     // synchronized on latestPaths to avoid missing the new log
     synchronized (this.latestPaths) {
@@ -370,7 +376,6 @@ public class ReplicationSourceManager {
       syncReplicationPeerMappingManager.add(peer.getId(), peerConfig);
     }
     src.startup();
-    return src;
   }
 
   /**
