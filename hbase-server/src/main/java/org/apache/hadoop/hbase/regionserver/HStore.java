@@ -155,8 +155,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   private static final int SPLIT_REGION_COMPACTION_PRIORITY = Integer.MIN_VALUE + 1000;
 
   private static final Logger LOG = LoggerFactory.getLogger(HStore.class);
-
-  protected final MemStore memstore;
+  /**
+   * TODO:After making the {@link DefaultMemStore} extensible in {@link HStore} by HBASE-26476,we
+   * change it back to final.
+   */
+  protected MemStore memstore;
   // This stores directory in the filesystem.
   private final HRegion region;
   protected Configuration conf;
@@ -1235,6 +1238,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     this.lock.writeLock().lock();
     try {
       this.storeEngine.getStoreFileManager().insertNewFiles(sfs);
+      /**
+       * NOTE:we should keep clearSnapshot method inside the write lock because clearSnapshot may
+       * close {@link DefaultMemStore#snapshot}, which may be used by
+       * {@link DefaultMemStore#getScanners}.
+       */
       if (snapshotId > 0) {
         this.memstore.clearSnapshot(snapshotId);
       }
@@ -1246,6 +1254,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       // the lock.
       this.lock.writeLock().unlock();
     }
+
     // notify to be called here - only in case of flushes
     notifyChangedReadersObservers(sfs);
     if (LOG.isTraceEnabled()) {
