@@ -19,18 +19,32 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
-
+import static org.mockito.Mockito.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -166,5 +180,114 @@ public class TestRegionLocationFinder {
         assertNotNull(finder.getCache().getIfPresent(regionInfo));
       }
     }
+  }
+
+  @Test
+  public void testRefreshRegionsWithChangedLocality() throws InterruptedException {
+    TableDescriptor table =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("RegionLocationFinder")).build();
+
+    int numRegions = 100;
+    List<RegionInfo> regions = new ArrayList<>(numRegions);
+
+    for (int i = 1; i <= numRegions; i++) {
+      byte[] startKey = i == 0 ? HConstants.EMPTY_START_ROW : Bytes.toBytes(i);
+      byte[] endKey = i == numRegions ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes(i + 1);
+      RegionInfo region =
+        RegionInfoBuilder.newBuilder(table.getTableName()).setStartKey(startKey).setEndKey(endKey)
+          .build();
+      regions.add(region);
+    }
+
+    ServerName testServer = ServerName.valueOf("host-0", 12345, 12345);
+    RegionInfo testRegion = regions.get(0);
+
+    // refresh happens in a thread. we use this boolean to ensure that we only
+    // test for changes once refresh happens
+    AtomicBoolean refreshed = new AtomicBoolean(false);
+
+    RegionLocationFinder finder = new RegionLocationFinder() {
+      @Override
+      protected HDFSBlocksDistribution internalGetTopBlockLocation(RegionInfo region) {
+        try {
+          return generate(region);
+        } finally {
+          if (region.equals(testRegion)) {
+            refreshed.set(true);
+            synchronized (refreshed) {
+              refreshed.notify();
+            }
+          }
+        }
+      }
+    };
+
+    // cache for comparison later
+    Map<RegionInfo, HDFSBlocksDistribution> cache = new HashMap<>();
+    for (RegionInfo region : regions) {
+      HDFSBlocksDistribution hbd = finder.getBlockDistribution(region);
+      cache.put(region, hbd);
+    }
+
+    finder.setClusterMetrics(
+      getMetricsWithLocality(testServer, testRegion.getRegionName(), 0.123f));
+
+    // everything should be same as cached, because metrics were null before
+    for (RegionInfo region : regions) {
+      HDFSBlocksDistribution hbd = finder.getBlockDistribution(region);
+      assertSame(cache.get(region), hbd);
+    }
+
+    refreshed.set(false);
+
+    finder.setClusterMetrics(
+      getMetricsWithLocality(testServer, testRegion.getRegionName(), 0.345f));
+
+    synchronized (refreshed) {
+      while (!refreshed.get()) {
+        refreshed.wait(10_000);
+      }
+    }
+
+    // locality changed just for our test region, so it should no longer be the same
+    for (RegionInfo region : regions) {
+      HDFSBlocksDistribution hbd = finder.getBlockDistribution(region);
+      if (region.equals(testRegion)) {
+        assertNotSame(cache.get(region), hbd);
+      } else {
+        assertSame(cache.get(region), hbd);
+      }
+    }
+  }
+
+  private static HDFSBlocksDistribution generate(RegionInfo region) {
+    HDFSBlocksDistribution distribution = new HDFSBlocksDistribution();
+    int seed = region.hashCode();
+    Random rand = new Random(seed);
+    int size = 1 + rand.nextInt(10);
+    for (int i = 0; i < size; i++) {
+      distribution.addHostsAndBlockWeight(new String[] { "host-" + i }, 1 + rand.nextInt(100));
+    }
+    return distribution;
+  }
+
+  private ClusterMetrics getMetricsWithLocality(ServerName serverName, byte[] region,
+    float locality) {
+    RegionMetrics regionMetrics = mock(RegionMetrics.class);
+    when(regionMetrics.getDataLocality()).thenReturn(locality);
+
+    Map<byte[], RegionMetrics> regionMetricsMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    regionMetricsMap.put(region, regionMetrics);
+
+    ServerMetrics serverMetrics = mock(ServerMetrics.class);
+    when(serverMetrics.getRegionMetrics()).thenReturn(regionMetricsMap);
+
+    Map<ServerName, ServerMetrics> serverMetricsMap = new HashMap<>();
+    serverMetricsMap.put(serverName, serverMetrics);
+
+    ClusterMetrics metrics = mock(ClusterMetrics.class);
+    when(metrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
+
+    return metrics;
   }
 }
