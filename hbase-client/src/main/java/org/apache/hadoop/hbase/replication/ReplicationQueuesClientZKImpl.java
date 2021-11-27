@@ -18,7 +18,9 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -90,6 +92,18 @@ public class ReplicationQueuesClientZKImpl extends ReplicationStateZKBase implem
       this.abortable.abort("Failed to get stat of replication rs node", e);
       throw e;
     }
+  }
+
+  @Override public Map<String, Integer> getReplicatorsZNodeCversion()
+    throws KeeperException {
+    List<String> rss = super.getListOfReplicatorsZK();
+    Map<String, Integer> rsToCversion = new HashMap<>();
+    for (String rs : rss) {
+      Stat stat = new Stat();
+      ZKUtil.getDataNoWatch(this.zookeeper, ZKUtil.joinZNode(this.queuesZNode, rs), stat);
+      rsToCversion.put(rs, stat.getCversion());
+    }
+    return rsToCversion;
   }
 
   @Override
