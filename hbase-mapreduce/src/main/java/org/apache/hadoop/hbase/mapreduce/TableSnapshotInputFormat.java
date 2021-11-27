@@ -235,4 +235,14 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
      TableSnapshotInputFormatImpl.setInput(job.getConfiguration(), snapshotName, restoreDir,
              splitAlgo, numSplitsPerRegion);
    }
+
+  /**
+   *  clean restore directory after snapshot scan job
+   * @param job the snapshot scan job
+   * @param snapshotName the name of the snapshot to read from
+   * @throws IOException if an error occurs
+   */
+  public static void cleanRestoreDir(Job job, String snapshotName) throws IOException {
+    TableSnapshotInputFormatImpl.cleanRestoreDir(job, snapshotName);
+  }
 }
