@@ -24,9 +24,11 @@ import static org.junit.Assert.assertTrue;
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
@@ -256,11 +258,12 @@ public class TestMemStoreLAB {
       // none of the chunkIds would have been returned back
       assertTrue("All the chunks must have been cleared",
           ChunkCreator.instance.numberOfMappedChunks() != 0);
+      Set<Integer> chunkIds = new HashSet<Integer>(mslab.chunks);
       int pooledChunksNum = mslab.getPooledChunks().size();
       // close the mslab
       mslab.close();
       // make sure all chunks where reclaimed back to pool
-      int queueLength = mslab.getNumOfChunksReturnedToPool();
+      int queueLength = mslab.getNumOfChunksReturnedToPool(chunkIds);
       assertTrue("All chunks in chunk queue should be reclaimed or removed"
           + " after mslab closed but actually: " + (pooledChunksNum-queueLength),
           pooledChunksNum-queueLength == 0);
