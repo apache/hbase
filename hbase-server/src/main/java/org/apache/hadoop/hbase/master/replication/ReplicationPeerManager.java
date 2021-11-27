@@ -57,6 +57,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
@@ -68,6 +70,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
  */
 @InterfaceAudience.Private
 public class ReplicationPeerManager {
+
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationPeerManager.class);
 
   private final ReplicationPeerStorage peerStorage;
 
@@ -546,7 +550,13 @@ public class ReplicationPeerManager {
     ConcurrentMap<String, ReplicationPeerDescription> peers = new ConcurrentHashMap<>();
     for (String peerId : peerStorage.listPeerIds()) {
       ReplicationPeerConfig peerConfig = peerStorage.getPeerConfig(peerId);
-
+      if (ReplicationUtils.LEGACY_REGION_REPLICATION_ENDPOINT_NAME
+        .equals(peerConfig.getReplicationEndpointImpl())) {
+        // we do not use this endpoint for region replication any more, see HBASE-26233
+        LOG.warn("Legacy region replication peer found, removing: {}", peerConfig);
+        peerStorage.removePeer(peerId);
+        continue;
+      }
       peerConfig = ReplicationPeerConfigUtil.updateReplicationBasePeerConfigs(conf, peerConfig);
       peerStorage.updatePeerConfig(peerId, peerConfig);
       boolean enabled = peerStorage.isPeerEnabled(peerId);

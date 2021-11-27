@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -43,6 +44,11 @@ public class AsyncRegionReplicationRetryingCaller extends AsyncRpcRetryingCaller
 
   private final Entry[] entries;
 
+  // whether to use replay instead of replicateToReplica, during rolling upgrading if the target
+  // region server has not been upgraded then it will not have the replicateToReplica method, so we
+  // could use replay method first, though it is not perfect.
+  private boolean useReplay;
+
   public AsyncRegionReplicationRetryingCaller(HashedWheelTimer retryTimer,
     AsyncClusterConnectionImpl conn, int maxAttempts, long rpcTimeoutNs, long operationTimeoutNs,
     RegionInfo replica, List<Entry> entries) {
@@ -51,6 +57,27 @@ public class AsyncRegionReplicationRetryingCaller extends AsyncRpcRetryingCaller
       operationTimeoutNs, rpcTimeoutNs, conn.connConf.getStartLogErrorsCnt());
     this.replica = replica;
     this.entries = entries.toArray(new Entry[0]);
+  }
+
+  @Override
+  protected Throwable preProcessError(Throwable error) {
+    if (error instanceof DoNotRetryIOException &&
+      error.getCause() instanceof UnsupportedOperationException) {
+      // fallback to use replay, and also return the cause to let the upper retry
+      useReplay = true;
+      return error.getCause();
+    }
+    return error;
+  }
+
+  private void onComplete(HRegionLocation loc) {
+    if (controller.failed()) {
+      onError(controller.getFailed(),
+        () -> "Call to " + loc.getServerName() + " for " + replica + " failed",
+        err -> conn.getLocator().updateCachedLocationOnError(loc, err));
+    } else {
+      future.complete(null);
+    }
   }
 
   private void call(HRegionLocation loc) {
@@ -67,15 +94,11 @@ public class AsyncRegionReplicationRetryingCaller extends AsyncRpcRetryingCaller
       .buildReplicateWALEntryRequest(entries, replica.getEncodedNameAsBytes(), null, null, null);
     resetCallTimeout();
     controller.setCellScanner(pair.getSecond());
-    stub.replicateToReplica(controller, pair.getFirst(), r -> {
-      if (controller.failed()) {
-        onError(controller.getFailed(),
-          () -> "Call to " + loc.getServerName() + " for " + replica + " failed",
-          err -> conn.getLocator().updateCachedLocationOnError(loc, err));
-      } else {
-        future.complete(null);
-      }
-    });
+    if (useReplay) {
+      stub.replay(controller, pair.getFirst(), r -> onComplete(loc));
+    } else {
+      stub.replicateToReplica(controller, pair.getFirst(), r -> onComplete(loc));
+    }
   }
 
   @Override
