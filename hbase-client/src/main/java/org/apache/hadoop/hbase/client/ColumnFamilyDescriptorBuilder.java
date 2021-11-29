@@ -92,6 +92,9 @@ public class ColumnFamilyDescriptorBuilder {
   public static final String BLOCKCACHE = "BLOCKCACHE";
   private static final Bytes BLOCKCACHE_BYTES = new Bytes(Bytes.toBytes(BLOCKCACHE));
   @InterfaceAudience.Private
+  public static final String CACHE_DATA_ON_READ = "CACHE_DATA_ON_READ";
+  private static final Bytes CACHE_DATA_ON_READ_BYTES = new Bytes(Bytes.toBytes(CACHE_DATA_ON_READ));
+  @InterfaceAudience.Private
   public static final String CACHE_DATA_ON_WRITE = "CACHE_DATA_ON_WRITE";
   private static final Bytes CACHE_DATA_ON_WRITE_BYTES = new Bytes(Bytes.toBytes(CACHE_DATA_ON_WRITE));
   @InterfaceAudience.Private
@@ -219,6 +222,12 @@ public class ColumnFamilyDescriptorBuilder {
   public static final boolean DEFAULT_BLOCKCACHE = true;
 
   /**
+   * Default setting for whether to cache data blocks on read if block caching
+   * is enabled.
+   */
+  public static final boolean DEFAULT_CACHE_DATA_ON_READ = true;
+
+  /**
    * Default setting for whether to cache data blocks on write if block caching
    * is enabled.
    */
@@ -296,6 +305,7 @@ public class ColumnFamilyDescriptorBuilder {
     DEFAULT_VALUES.put(BLOCKSIZE, String.valueOf(DEFAULT_BLOCKSIZE));
     DEFAULT_VALUES.put(IN_MEMORY, String.valueOf(DEFAULT_IN_MEMORY));
     DEFAULT_VALUES.put(BLOCKCACHE, String.valueOf(DEFAULT_BLOCKCACHE));
+    DEFAULT_VALUES.put(CACHE_DATA_ON_READ, String.valueOf(DEFAULT_CACHE_DATA_ON_READ));
     DEFAULT_VALUES.put(KEEP_DELETED_CELLS, String.valueOf(DEFAULT_KEEP_DELETED));
     DEFAULT_VALUES.put(DATA_BLOCK_ENCODING, String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
     // Do NOT add this key/value by default. NEW_VERSION_BEHAVIOR is NOT defined in hbase1 so
@@ -430,6 +440,11 @@ public class ColumnFamilyDescriptorBuilder {
 
   public ColumnFamilyDescriptorBuilder setBloomFilterType(final BloomType value) {
     desc.setBloomFilterType(value);
+    return this;
+  }
+
+  public ColumnFamilyDescriptorBuilder setCacheDataOnRead(boolean value) {
+    desc.setCacheDataOnRead(value);
     return this;
   }
 
@@ -1036,6 +1051,20 @@ public class ColumnFamilyDescriptorBuilder {
      */
     public ModifyableColumnFamilyDescriptor setScope(int scope) {
       return setValue(REPLICATION_SCOPE_BYTES, Integer.toString(scope));
+    }
+
+    @Override
+    public boolean isCacheDataOnRead() {
+      return getStringOrDefault(CACHE_DATA_ON_READ_BYTES, Boolean::valueOf,
+        DEFAULT_CACHE_DATA_ON_READ);
+    }
+
+    /**
+     * @param value true if we should cache data blocks on read
+     * @return this (for chained invocation)
+     */
+    public ModifyableColumnFamilyDescriptor setCacheDataOnRead(boolean value) {
+      return setValue(CACHE_DATA_ON_READ, Boolean.toString(value));
     }
 
     @Override
