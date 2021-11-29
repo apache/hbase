@@ -164,7 +164,7 @@ public abstract class ServerCommandLine extends Configured implements Tool {
         Thread.sleep(1000);
       }
       if (forceStop) {
-        LOG.error("Failed to stop all non-daemon threads, so terminating JVM ");
+        LOG.error("Failed to stop all non-daemon threads, so terminating JVM");
         System.exit(-1);
       }
     } catch (Exception e) {
