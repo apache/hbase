@@ -220,14 +220,13 @@ public class TestMaster {
       }
       // Meta region should be in transition
       master.assignmentManager.unassign(metaRegion);
-
+      
       // Then move the region to a new region server.
       try{
         master.move(hri.getEncodedNameAsBytes(), rs1.getServerName().getBytes());
       } catch (HBaseIOException e) {
         assertTrue(e.getMessage().contains("Fail-fast"));
       }
-      
       // Wait for the movement.
       Thread.sleep(HConstants.HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT_DEFAULT);
       // The region should be still on rs0.
