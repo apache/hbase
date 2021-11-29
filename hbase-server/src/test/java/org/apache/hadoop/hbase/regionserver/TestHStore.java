@@ -2190,9 +2190,7 @@ public class TestHStore {
     conf.setBoolean(WALFactory.WAL_ENABLED, false);
 
     init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
-    MyDefaultMemStore myDefaultMemStore = new MyDefaultMemStore(store.conf, store.getComparator(),
-        store.getHRegion().getRegionServicesForStores());
-    store.memstore = myDefaultMemStore;
+    MyDefaultMemStore myDefaultMemStore = (MyDefaultMemStore) (store.memstore);
     myDefaultMemStore.store = store;
 
     MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
@@ -2284,6 +2282,32 @@ public class TestHStore {
     this.store.onConfigurationChange(conf);
     assertEquals(STORE_MAX_FILES_TO_COMPACT,
       store.getStoreEngine().getCompactionPolicy().getConf().getMaxFilesToCompact());
+  }
+
+  /**
+   * This test is for HBASE-26476
+   */
+  @Test
+  public void testExtendsDefaultMemStore() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(WALFactory.WAL_ENABLED, false);
+
+    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
+    assertTrue(this.store.memstore.getClass() == DefaultMemStore.class);
+    tearDown();
+
+    conf.set(HStore.MEMSTORE_CLASS_NAME, CustomDefaultMemStore.class.getName());
+    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
+    assertTrue(this.store.memstore.getClass() == CustomDefaultMemStore.class);
+  }
+
+  static class CustomDefaultMemStore extends DefaultMemStore {
+
+    public CustomDefaultMemStore(Configuration conf, CellComparator c,
+        RegionServicesForStores regionServices) {
+      super(conf, c, regionServices);
+    }
+
   }
 
   private HStoreFile mockStoreFileWithLength(long length) {

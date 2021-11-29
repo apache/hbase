@@ -2042,4 +2042,23 @@ possible configurations would overwhelm and obscure the important.
       the ring buffer is indicated by config: hbase.master.balancer.rejection.queue.size
     </description>
   </property>
+  <property>
+    <name>hbase.locality.inputstream.derive.enabled</name>
+    <value>false</value>
+    <description>
+      If true, derive StoreFile locality metrics from the underlying DFSInputStream
+      backing reads for that StoreFile. This value will update as the DFSInputStream's
+      block locations are updated over time. Otherwise, locality is computed on StoreFile
+      open, and cached until the StoreFile is closed.
+    </description>
+  </property>
+  <property>
+    <name>hbase.locality.inputstream.derive.cache.period</name>
+    <value>60000</value>
+    <description>
+      If deriving StoreFile locality metrics from the underlying DFSInputStream, how
+      long should the derived values be cached for. The derivation process may involve
+      hitting the namenode, if the DFSInputStream's block list is incomplete.
+    </description>
+  </property>
 </configuration>

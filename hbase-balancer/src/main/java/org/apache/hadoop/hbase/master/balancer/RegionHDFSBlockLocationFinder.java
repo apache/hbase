@@ -32,6 +32,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -40,7 +42,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
@@ -58,6 +59,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 class RegionHDFSBlockLocationFinder extends Configured {
   private static final Logger LOG = LoggerFactory.getLogger(RegionHDFSBlockLocationFinder.class);
   private static final long CACHE_TIME = 240 * 60 * 1000;
+  private static final float EPSILON = 0.0001f;
   private static final HDFSBlocksDistribution EMPTY_BLOCK_DISTRIBUTION =
     new HDFSBlocksDistribution();
   private volatile ClusterMetrics status;
@@ -110,12 +112,70 @@ class RegionHDFSBlockLocationFinder extends Configured {
 
   void setClusterMetrics(ClusterMetrics status) {
     long currentTime = EnvironmentEdgeManager.currentTime();
-    this.status = status;
+
     if (currentTime > lastFullRefresh + (CACHE_TIME / 2)) {
+      this.status = status;
       // Only count the refresh if it includes user tables ( eg more than meta and namespace ).
       lastFullRefresh = scheduleFullRefresh() ? currentTime : lastFullRefresh;
+    } else {
+      refreshLocalityChangedRegions(this.status, status);
+      this.status = status;
+    }
+  }
+
+  /**
+   * If locality for a region has changed, that pretty certainly means our cache is out of date.
+   * Compare oldStatus and newStatus, refreshing any regions which have moved or changed locality.
+   */
+  private void refreshLocalityChangedRegions(ClusterMetrics oldStatus, ClusterMetrics newStatus) {
+    if (oldStatus == null || newStatus == null) {
+      LOG.debug("Skipping locality-based refresh due to oldStatus={}, newStatus={}",
+        oldStatus, newStatus);
+      return;
     }
 
+    Map<ServerName, ServerMetrics> oldServers = oldStatus.getLiveServerMetrics();
+    Map<ServerName, ServerMetrics> newServers = newStatus.getLiveServerMetrics();
+
+    Map<String, RegionInfo> regionsByName = new HashMap<>(cache.asMap().size());
+    for (RegionInfo regionInfo : cache.asMap().keySet()) {
+      regionsByName.put(regionInfo.getEncodedName(), regionInfo);
+    }
+
+    for (Map.Entry<ServerName, ServerMetrics> serverEntry : newServers.entrySet()) {
+      Map<byte[], RegionMetrics> newRegions = serverEntry.getValue().getRegionMetrics();
+      for (Map.Entry<byte[], RegionMetrics> regionEntry : newRegions.entrySet()) {
+        String encodedName = RegionInfo.encodeRegionName(regionEntry.getKey());
+        RegionInfo region = regionsByName.get(encodedName);
+        if (region == null) {
+          continue;
+        }
+
+        float newLocality = regionEntry.getValue().getDataLocality();
+        float oldLocality = getOldLocality(serverEntry.getKey(), regionEntry.getKey(), oldServers);
+
+        if (Math.abs(newLocality - oldLocality) > EPSILON) {
+          LOG.debug("Locality for region {} changed from {} to {}, refreshing cache",
+            region.getEncodedName(), oldLocality, newLocality);
+          cache.refresh(region);
+        }
+      }
+
+    }
+  }
+
+  private float getOldLocality(ServerName newServer, byte[] regionName,
+    Map<ServerName, ServerMetrics> oldServers) {
+    ServerMetrics serverMetrics = oldServers.get(newServer);
+    if (serverMetrics == null) {
+      return -1f;
+    }
+    RegionMetrics regionMetrics = serverMetrics.getRegionMetrics().get(regionName);
+    if (regionMetrics == null) {
+      return -1f;
+    }
+
+    return regionMetrics.getDataLocality();
   }
 
   /**
@@ -159,7 +219,7 @@ class RegionHDFSBlockLocationFinder extends Configured {
         return blocksDistribution;
       }
     } catch (IOException ioe) {
-      LOG.warn("IOException during HDFSBlocksDistribution computation. for " + "region = " +
+      LOG.warn("IOException during HDFSBlocksDistribution computation for region = {}",
         region.getEncodedName(), ioe);
     }
 
@@ -263,7 +323,7 @@ class RegionHDFSBlockLocationFinder extends Configured {
       } catch (InterruptedException ite) {
         Thread.currentThread().interrupt();
       } catch (ExecutionException ee) {
-        LOG.debug("ExecutionException during HDFSBlocksDistribution computation. for region = " +
+        LOG.debug("ExecutionException during HDFSBlocksDistribution computation for region = {}",
           hregionInfo.getEncodedName(), ee);
       }
       index++;

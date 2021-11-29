@@ -29,6 +29,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -127,6 +128,7 @@ public class HStoreFile implements StoreFile {
 
   // StoreFile.Reader
   private volatile StoreFileReader initialReader;
+  private volatile InputStreamBlockDistribution initialReaderBlockDistribution = null;
 
   // Block cache configuration and reference.
   private final CacheConfig cacheConf;
@@ -344,7 +346,11 @@ public class HStoreFile implements StoreFile {
    *         file is opened.
    */
   public HDFSBlocksDistribution getHDFSBlockDistribution() {
-    return this.fileInfo.getHDFSBlockDistribution();
+    if (initialReaderBlockDistribution != null) {
+      return initialReaderBlockDistribution.getHDFSBlockDistribution();
+    } else {
+      return this.fileInfo.getHDFSBlockDistribution();
+    }
   }
 
   /**
@@ -362,6 +368,13 @@ public class HStoreFile implements StoreFile {
       fileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
     }
     this.initialReader = fileInfo.postStoreFileReaderOpen(context, cacheConf, reader);
+
+    if (InputStreamBlockDistribution.isEnabled(fileInfo.getConf())) {
+      boolean useHBaseChecksum = context.getInputStreamWrapper().shouldUseHBaseChecksum();
+      FSDataInputStream stream = context.getInputStreamWrapper().getStream(useHBaseChecksum);
+      this.initialReaderBlockDistribution = new InputStreamBlockDistribution(stream, fileInfo);
+    }
+
     // Load up indices and fileinfo. This also loads Bloom filter type.
     metadataMap = Collections.unmodifiableMap(initialReader.loadFileInfo());
 

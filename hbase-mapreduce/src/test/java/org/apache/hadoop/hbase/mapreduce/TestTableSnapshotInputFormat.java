@@ -575,4 +575,22 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   public void testWithMapReduceMultipleMappersPerRegion() throws Exception {
     testWithMapReduce(UTIL, "testWithMapReduceMultiRegion", 10, 5, 50, false);
   }
+
+  @Test
+  public void testCleanRestoreDir() throws Exception {
+    TableName tableName = TableName.valueOf("test_table");
+    String snapshotName = "test_snapshot";
+    createTableAndSnapshot(UTIL, tableName, snapshotName, getStartRow(), getEndRow(), 1);
+    Job job = Job.getInstance(UTIL.getConfiguration());
+    Path workingDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+    TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName,
+      new Scan(), TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
+      NullWritable.class, job, false, workingDir);
+    FileSystem fs = workingDir.getFileSystem(job.getConfiguration());
+    Path restorePath = new Path(job.getConfiguration()
+      .get("hbase.TableSnapshotInputFormat.restore.dir"));
+    Assert.assertTrue(fs.exists(restorePath));
+    TableSnapshotInputFormat.cleanRestoreDir(job, snapshotName);
+    Assert.assertFalse(fs.exists(restorePath));
+  }
 }
