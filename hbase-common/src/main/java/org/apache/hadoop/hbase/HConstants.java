@@ -1668,6 +1668,11 @@ public final class HConstants {
     "hbase.regionserver.slowlog.systable.enabled";
   public static final boolean DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY = false;
 
+  public static final String SHELL_TIMESTAMP_FORMAT_EPOCH_KEY =
+      "hbase.shell.timestamp.format.epoch";
+
+  public static final boolean DEFAULT_SHELL_TIMESTAMP_FORMAT_EPOCH = false;
+
   /**
    * Number of rows in a batch operation above which a warning will be logged.
    */
