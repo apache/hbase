@@ -40,8 +40,12 @@ public class CacheConfig {
   public static final CacheConfig DISABLED = new CacheConfig();
 
   /**
-   * Configuration key to cache data blocks on read. Bloom blocks and index blocks are always be
-   * cached if the block cache is enabled.
+   * Configuration key to turn on block cache. There are separate switches for read and write.
+   */
+  public static final String BLOCKCACHE_ENABLED = "hbase.block.enabled";
+
+  /**
+   * Configuration key to cache data blocks on read.
    */
   public static final String CACHE_DATA_ON_READ_KEY = "hbase.block.data.cacheonread";
 
@@ -96,6 +100,7 @@ public class CacheConfig {
       "hbase.hfile.drop.behind.compaction";
 
   // Defaults
+  public static final boolean DEFAULT_BLOCKCACHE_ENABLED = true;
   public static final boolean DEFAULT_CACHE_DATA_ON_READ = true;
   public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = false;
   public static final boolean DEFAULT_IN_MEMORY = false;
@@ -114,10 +119,13 @@ public class CacheConfig {
    * If off we will STILL cache meta blocks; i.e. INDEX and BLOOM types.
    * This cannot be disabled.
    */
-  private final boolean cacheDataOnRead;
+  private final boolean blockCacheEnabled;
 
   /** Whether blocks should be flagged as in-memory when being cached */
   private final boolean inMemory;
+
+  /** Whether data blocks should be cached when new files are read */
+  private boolean cacheDataOnRead;
 
   /** Whether data blocks should be cached when new files are written */
   private boolean cacheDataOnWrite;
@@ -175,8 +183,8 @@ public class CacheConfig {
    */
   public CacheConfig(Configuration conf, ColumnFamilyDescriptor family, BlockCache blockCache,
       ByteBuffAllocator byteBuffAllocator) {
-    this.cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ) &&
-        (family == null ? true : family.isBlockCacheEnabled());
+    this.blockCacheEnabled = conf.getBoolean(BLOCKCACHE_ENABLED, DEFAULT_BLOCKCACHE_ENABLED) &&
+      (family == null || family.isBlockCacheEnabled());
     this.inMemory = family == null ? DEFAULT_IN_MEMORY : family.isInMemory();
     this.cacheDataCompressed =
         conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED);
@@ -184,6 +192,8 @@ public class CacheConfig {
         conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT);
     // For the following flags we enable them regardless of per-schema settings
     // if they are enabled in the global configuration.
+    this.cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ) ||
+      (family != null && family.isCacheDataOnRead());
     this.cacheDataOnWrite =
         conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE) ||
             (family == null ? false : family.isCacheDataOnWrite());
@@ -209,8 +219,9 @@ public class CacheConfig {
    * @param cacheConf
    */
   public CacheConfig(CacheConfig cacheConf) {
-    this.cacheDataOnRead = cacheConf.cacheDataOnRead;
+    this.blockCacheEnabled = cacheConf.blockCacheEnabled;
     this.inMemory = cacheConf.inMemory;
+    this.cacheDataOnRead = cacheConf.cacheDataOnRead;
     this.cacheDataOnWrite = cacheConf.cacheDataOnWrite;
     this.cacheIndexesOnWrite = cacheConf.cacheIndexesOnWrite;
     this.cacheBloomsOnWrite = cacheConf.cacheBloomsOnWrite;
@@ -225,8 +236,9 @@ public class CacheConfig {
   }
 
   private CacheConfig() {
-    this.cacheDataOnRead = false;
+    this.blockCacheEnabled = false;
     this.inMemory = false;
+    this.cacheDataOnRead = false;
     this.cacheDataOnWrite = false;
     this.cacheIndexesOnWrite = false;
     this.cacheBloomsOnWrite = false;
@@ -245,7 +257,7 @@ public class CacheConfig {
    * @return true if blocks should be cached on read, false if not
    */
   public boolean shouldCacheDataOnRead() {
-    return cacheDataOnRead;
+    return blockCacheEnabled && cacheDataOnRead;
   }
 
   public boolean shouldDropBehindCompaction() {
@@ -258,8 +270,10 @@ public class CacheConfig {
    * available.
    */
   public boolean shouldCacheBlockOnRead(BlockCategory category) {
-    return cacheDataOnRead || category == BlockCategory.INDEX || category == BlockCategory.BLOOM ||
-        (prefetchOnOpen && (category != BlockCategory.META && category != BlockCategory.UNKNOWN));
+    return blockCacheEnabled &&
+      (cacheDataOnRead || category == BlockCategory.INDEX || category == BlockCategory.BLOOM ||
+        category == BlockCategory.META) ||
+      (prefetchOnOpen && (category != BlockCategory.META && category != BlockCategory.UNKNOWN));
   }
 
   /**
@@ -283,6 +297,14 @@ public class CacheConfig {
    */
   public void setCacheDataOnWrite(boolean cacheDataOnWrite) {
     this.cacheDataOnWrite = cacheDataOnWrite;
+  }
+
+  /**
+   * @param cacheDataOnRead whether data blocks should be written to the cache
+   *                        when an HFile is read.
+   */
+  public void setCacheDataOnRead(boolean cacheDataOnRead) {
+    this.cacheDataOnRead = cacheDataOnRead;
   }
 
   /**
@@ -334,7 +356,7 @@ public class CacheConfig {
    * @return true if data blocks should be compressed in the cache, false if not
    */
   public boolean shouldCacheDataCompressed() {
-    return this.cacheDataOnRead && this.cacheDataCompressed;
+    return this.blockCacheEnabled && this.cacheDataCompressed;
   }
 
   /**
@@ -343,7 +365,7 @@ public class CacheConfig {
   public boolean shouldCacheCompressed(BlockCategory category) {
     switch (category) {
       case DATA:
-        return this.cacheDataOnRead && this.cacheDataCompressed;
+        return this.blockCacheEnabled && this.cacheDataCompressed;
       default:
         return false;
     }
@@ -371,30 +393,9 @@ public class CacheConfig {
   }
   /**
    * Return true if we may find this type of block in block cache.
-   * <p>
-   * TODO: today {@code family.isBlockCacheEnabled()} only means {@code cacheDataOnRead}, so here we
-   * consider lots of other configurations such as {@code cacheDataOnWrite}. We should fix this in
-   * the future, {@code cacheDataOnWrite} should honor the CF level {@code isBlockCacheEnabled}
-   * configuration.
    */
   public boolean shouldReadBlockFromCache(BlockType blockType) {
-    if (cacheDataOnRead) {
-      return true;
-    }
-    if (prefetchOnOpen) {
-      return true;
-    }
-    if (cacheDataOnWrite) {
-      return true;
-    }
-    if (blockType == null) {
-      return true;
-    }
-    if (blockType.getCategory() == BlockCategory.BLOOM ||
-        blockType.getCategory() == BlockCategory.INDEX) {
-      return true;
-    }
-    return false;
+    return blockCacheEnabled;
   }
 
   /**

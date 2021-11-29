@@ -204,6 +204,20 @@ public class TestCacheConfig {
     assertFalse(cacheConfig.shouldCacheBloomsOnWrite());
     assertFalse(cacheConfig.shouldCacheIndexesOnWrite());
 
+    conf.setBoolean(CacheConfig.CACHE_DATA_ON_READ_KEY, false);
+    cacheConfig = new CacheConfig(conf);
+    assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
+    assertFalse(cacheConfig.shouldCacheCompressed(BlockCategory.DATA));
+    assertFalse(cacheConfig.shouldCacheDataCompressed());
+    assertFalse(cacheConfig.shouldCacheDataOnWrite());
+    assertFalse(cacheConfig.shouldCacheDataOnRead());
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.INDEX));
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.META));
+    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.BLOOM));
+    assertFalse(cacheConfig.shouldCacheBloomsOnWrite());
+    assertFalse(cacheConfig.shouldCacheIndexesOnWrite());
+
+    conf.setBoolean(CacheConfig.CACHE_DATA_ON_READ_KEY, true);
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
     conf.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, true);
     conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, true);
@@ -221,7 +235,7 @@ public class TestCacheConfig {
     assertTrue(cacheConfig.shouldCacheBloomsOnWrite());
     assertTrue(cacheConfig.shouldCacheIndexesOnWrite());
 
-    conf.setBoolean(CacheConfig.CACHE_DATA_ON_READ_KEY, false);
+    conf.setBoolean(CacheConfig.BLOCKCACHE_ENABLED, false);
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, false);
 
     cacheConfig = new CacheConfig(conf);
@@ -230,13 +244,13 @@ public class TestCacheConfig {
     assertFalse(cacheConfig.shouldCacheDataCompressed());
     assertFalse(cacheConfig.shouldCacheDataOnWrite());
     assertFalse(cacheConfig.shouldCacheDataOnRead());
-    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.INDEX));
+    assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.INDEX));
     assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.META));
-    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.BLOOM));
+    assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.BLOOM));
     assertTrue(cacheConfig.shouldCacheBloomsOnWrite());
     assertTrue(cacheConfig.shouldCacheIndexesOnWrite());
 
-    conf.setBoolean(CacheConfig.CACHE_DATA_ON_READ_KEY, true);
+    conf.setBoolean(CacheConfig.BLOCKCACHE_ENABLED, true);
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, false);
 
     ColumnFamilyDescriptor columnFamilyDescriptor =
@@ -251,9 +265,9 @@ public class TestCacheConfig {
     assertFalse(cacheConfig.shouldCacheDataCompressed());
     assertFalse(cacheConfig.shouldCacheDataOnWrite());
     assertFalse(cacheConfig.shouldCacheDataOnRead());
-    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.INDEX));
+    assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.INDEX));
     assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.META));
-    assertTrue(cacheConfig.shouldCacheBlockOnRead(BlockCategory.BLOOM));
+    assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.BLOOM));
     assertTrue(cacheConfig.shouldCacheBloomsOnWrite());
     assertTrue(cacheConfig.shouldCacheIndexesOnWrite());
   }

@@ -210,6 +210,12 @@ public interface ColumnFamilyDescriptor {
    * and BLOOM type blocks).
    */
   boolean isBlockCacheEnabled();
+
+  /**
+   * @return true if we should cache data blocks on read
+   */
+  boolean isCacheDataOnRead();
+
   /**
    * @return true if we should cache bloomfilter blocks on write
    */
