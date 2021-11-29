@@ -28,6 +28,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -219,10 +220,14 @@ public class TestMaster {
       }
       // Meta region should be in transition
       master.assignmentManager.unassign(metaRegion);
-      //    master.assignmentManager.regionOffline(metaRegion);
-      // Then move the region to a new region server.
-      admin.move(hri.getEncodedNameAsBytes(), rs1.getServerName().getBytes());
 
+      // Then move the region to a new region server.
+      try{
+        master.move(hri.getEncodedNameAsBytes(), rs1.getServerName().getBytes());
+      } catch (HBaseIOException e) {
+        assertTrue(e.getMessage().contains("Fail-fast"));
+      }
+      
       // Wait for the movement.
       Thread.sleep(HConstants.HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT_DEFAULT);
       // The region should be still on rs0.
