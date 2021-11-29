@@ -1855,8 +1855,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       if (!hri.isMetaRegion() && assignmentManager.getRegionStates().isMetaRegionInTransition()) {
         Thread.sleep(timeoutWaitMetaRegionAssignment);
         if (assignmentManager.getRegionStates().isMetaRegionInTransition()) {
-          throw new HBaseIOException("Fail-fast of the region " + rp + " move,"
-            + " because hbase:meta region is still in transition. Failed region move info:");
+          throw new HBaseIOException("Fail-fast of the region move, " +
+            " because hbase:meta region is still in transition. Failed region move info:" + rp);
         }
       }
       LOG.info(getClientIdAuditPrefix() + " move " + rp + ", running balancer");
