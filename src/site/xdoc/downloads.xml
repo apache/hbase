@@ -136,28 +136,6 @@ under the License.
       </td>
       <td />
     </tr>
-    <tr>
-      <td style="test-align: left">
-        1.4.14
-      </td>
-      <td style="test-align: left">
-        2021/10/25
-      </td>
-      <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/1.4.14/api_compare_1.4.13_to_1.4.14RC0.html">1.4.13 vs 1.4.14</a>
-      </td>
-      <td style="test-align: left">
-        <a href="https://github.com/apache/hbase/blob/rel/1.4.14/CHANGES.txt">Changes</a>
-      </td>
-      <td style="test-align: left">
-        <a href="https://s.apache.org/hbase-1.4.14-jira-release-notes">Release Notes</a>
-      </td>
-      <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.14/hbase-1.4.14-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/1.4.14/hbase-1.4.14-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/1.4.14/hbase-1.4.14-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.14/hbase-1.4.14-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/1.4.14/hbase-1.4.14-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/1.4.14/hbase-1.4.14-bin.tar.gz.asc">asc</a>)
-      </td>
-      <td />
-    </tr>
   </table>
   </section>
   <section name="Connectors">

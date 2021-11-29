@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -621,5 +622,25 @@ public class TableSnapshotInputFormatImpl {
 
     RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
     conf.set(RESTORE_DIR_KEY, restoreDir.toString());
+  }
+
+  /**
+   *  clean restore directory after snapshot scan job
+   * @param job the snapshot scan job
+   * @param snapshotName the name of the snapshot to read from
+   * @throws IOException if an error occurs
+   */
+  public static void cleanRestoreDir(Job job, String snapshotName) throws IOException {
+    Configuration conf = job.getConfiguration();
+    Path restoreDir = new Path(conf.get(RESTORE_DIR_KEY));
+    FileSystem fs = restoreDir.getFileSystem(conf);
+    if (!fs.exists(restoreDir)) {
+      LOG.warn("{} doesn't exist on file system, maybe it's already been cleaned", restoreDir);
+      return;
+    }
+    if (!fs.delete(restoreDir, true)) {
+      LOG.warn("Failed clean restore dir {} for snapshot {}", restoreDir, snapshotName);
+    }
+    LOG.debug("Clean restore directory {} for {}", restoreDir,  snapshotName);
   }
 }

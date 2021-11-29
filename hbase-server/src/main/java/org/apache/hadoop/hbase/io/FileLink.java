@@ -126,6 +126,10 @@ public class FileLink {
       this.in = tryOpen();
     }
 
+    private FSDataInputStream getUnderlyingInputStream() {
+      return in;
+    }
+
     @Override
     public int read() throws IOException {
       int res;
@@ -473,6 +477,17 @@ public class FileLink {
    */
   public FSDataInputStream open(final FileSystem fs, int bufferSize) throws IOException {
     return new FSDataInputStream(new FileLinkInputStream(fs, this, bufferSize));
+  }
+
+  /**
+   * If the passed FSDataInputStream is backed by a FileLink, returns the underlying
+   * InputStream for the resolved link target. Otherwise, returns null.
+   */
+  public static FSDataInputStream getUnderlyingFileLinkInputStream(FSDataInputStream stream) {
+    if (stream.getWrappedStream() instanceof FileLinkInputStream) {
+      return ((FileLinkInputStream) stream.getWrappedStream()).getUnderlyingInputStream();
+    }
+    return null;
   }
 
   /**
