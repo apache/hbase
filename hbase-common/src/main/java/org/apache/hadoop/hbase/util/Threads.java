@@ -224,8 +224,7 @@ public class Threads {
   public static String printStackTrace(Thread t) {
     StringBuilder sb = new StringBuilder();
     for (StackTraceElement frame: t.getStackTrace()) {
-      sb.append("\n");
-      sb.append("    " + frame.toString());
+      sb.append("\n").append("    " + frame.toString());
     }
     return sb.toString();
   }
