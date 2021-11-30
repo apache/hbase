@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -123,12 +124,14 @@ public class TestForceCacheImportantBlocks {
     // Do a single get, take count of caches.  If we are NOT caching DATA blocks, the miss
     // count should go up.  Otherwise, all should be cached and the miss count should not rise.
     region.get(new Get(Bytes.toBytes("row" + 0)));
-    assertTrue(stats.getHitCount() > 0);
+    // If we do not cache any blocks, the hit count should be 0.
+    assertFalse(stats.getHitCount() > 0 ^ this.cfCacheEnabled);
     assertTrue(HFile.DATABLOCK_READ_COUNT.sum() > 0);
     long missCount = stats.getMissCount();
     region.get(new Get(Bytes.toBytes("row" + 0)));
     if (this.cfCacheEnabled) assertEquals(missCount, stats.getMissCount());
-    else assertTrue(stats.getMissCount() > missCount);
+    // If we disable the cache, the scanner will not search cache, so that the missCount is still.
+    else assertEquals(stats.getMissCount(), missCount);
   }
 
   private void writeTestData(HRegion region) throws IOException {
