@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -203,23 +202,10 @@ public class TestRegionLocationFinder {
     ServerName testServer = ServerName.valueOf("host-0", 12345, 12345);
     RegionInfo testRegion = regions.get(0);
 
-    // refresh happens in a thread. we use this boolean to ensure that we only
-    // test for changes once refresh happens
-    AtomicBoolean refreshed = new AtomicBoolean(false);
-
     RegionLocationFinder finder = new RegionLocationFinder() {
       @Override
       protected HDFSBlocksDistribution internalGetTopBlockLocation(RegionInfo region) {
-        try {
-          return generate(region);
-        } finally {
-          if (region.equals(testRegion)) {
-            refreshed.set(true);
-            synchronized (refreshed) {
-              refreshed.notify();
-            }
-          }
-        }
+        return generate(region);
       }
     };
 
@@ -239,16 +225,18 @@ public class TestRegionLocationFinder {
       assertSame(cache.get(region), hbd);
     }
 
-    refreshed.set(false);
-
     finder.setClusterMetrics(
       getMetricsWithLocality(testServer, testRegion.getRegionName(), 0.345f));
 
-    synchronized (refreshed) {
-      while (!refreshed.get()) {
-        refreshed.wait(10_000);
-      }
-    }
+    // cache refresh happens in a background thread, so we need to wait for the value to
+    // update before running assertions.
+    long now = System.currentTimeMillis();
+    HDFSBlocksDistribution cached = cache.get(testRegion);
+    HDFSBlocksDistribution newValue;
+    do {
+      Thread.sleep(1_000);
+      newValue = finder.getBlockDistribution(testRegion);
+    } while (cached == newValue && System.currentTimeMillis() - now < 30_000);
 
     // locality changed just for our test region, so it should no longer be the same
     for (RegionInfo region : regions) {
