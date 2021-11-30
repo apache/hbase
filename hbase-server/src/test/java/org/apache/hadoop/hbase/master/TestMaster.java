@@ -220,7 +220,6 @@ public class TestMaster {
       }
       // Meta region should be in transition
       master.assignmentManager.unassign(metaRegion);
-      
       // Then move the region to a new region server.
       try{
         master.move(hri.getEncodedNameAsBytes(), rs1.getServerName().getBytes());
