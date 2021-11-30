@@ -32,16 +32,16 @@ public class MemStoreSnapshot implements Closeable {
   private final int cellsCount;
   private final MemStoreSize memStoreSize;
   private final TimeRangeTracker timeRangeTracker;
-  private final List<KeyValueScanner> scanners;
   private final boolean tagsPresent;
+  private final ImmutableSegment snapshotImmutableSegment;
 
   public MemStoreSnapshot(long id, ImmutableSegment snapshot) {
     this.id = id;
     this.cellsCount = snapshot.getCellsCount();
     this.memStoreSize = snapshot.getMemStoreSize();
     this.timeRangeTracker = snapshot.getTimeRangeTracker();
-    this.scanners = snapshot.getSnapshotScanners();
     this.tagsPresent = snapshot.isTagsPresent();
+    this.snapshotImmutableSegment = snapshot;
   }
 
   /**
@@ -74,10 +74,16 @@ public class MemStoreSnapshot implements Closeable {
   }
 
   /**
-   * @return {@link KeyValueScanner} for iterating over the snapshot
+   * Create new {@link SnapshotSegmentScanner}s. <br/>
+   * NOTE:here when create new {@link SnapshotSegmentScanner}s, {@link Segment#incScannerCount} is
+   * invoked in the {@link SnapshotSegmentScanner} ctor,so after we use these
+   * {@link SnapshotSegmentScanner}s, we must call {@link SnapshotSegmentScanner#close} to invoke
+   * {@link Segment#decScannerCount}.
+   * @return {@link KeyValueScanner}s(Which type is {@link SnapshotSegmentScanner}) for iterating
+   *         over the snapshot.
    */
   public List<KeyValueScanner> getScanners() {
-    return scanners;
+    return snapshotImmutableSegment.getSnapshotScanners();
   }
 
   /**
@@ -89,10 +95,5 @@ public class MemStoreSnapshot implements Closeable {
 
   @Override
   public void close() {
-    if (this.scanners != null) {
-      for (KeyValueScanner scanner : scanners) {
-        scanner.close();
-      }
-    }
   }
 }
