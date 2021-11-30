@@ -824,6 +824,11 @@ public class RegionStates {
     }
 
     for (HRegionInfo hri : regionsToOffline) {
+      if (isRegionInState(hri, State.PENDING_OPEN)) {
+        LOG.info("Skip transit region " + hri.getEncodedName() + " by ServerCrashProcedure, "
+          + "it is pending open ");
+        continue;
+      }
       regionOffline(hri);
     }
 
