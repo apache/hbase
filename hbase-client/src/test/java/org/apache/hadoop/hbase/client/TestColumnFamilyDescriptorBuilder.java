@@ -219,7 +219,7 @@ public class TestColumnFamilyDescriptorBuilder {
   @Test
   public void testDefaultBuilder() {
     final Map<String, String> defaultValueMap = ColumnFamilyDescriptorBuilder.getDefaultValues();
-    assertEquals(defaultValueMap.size(), 11);
+    assertEquals(defaultValueMap.size(), 12);
     assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.BLOOMFILTER),
       BloomType.ROW.toString());
     assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.REPLICATION_SCOPE), "0");
