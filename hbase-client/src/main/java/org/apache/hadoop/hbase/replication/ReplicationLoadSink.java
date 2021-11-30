@@ -22,7 +22,6 @@ public class ReplicationLoadSink {
   private final long timestampStarted;
   private final long totalOpsProcessed;
 
-  @InterfaceAudience.Private
   private ReplicationLoadSink(long age, long timestamp, long timestampStarted,
       long totalOpsProcessed) {
     this.ageOfLastAppliedOp = age;
@@ -47,10 +46,12 @@ public class ReplicationLoadSink {
     return totalOpsProcessed;
   }
 
+  @InterfaceAudience.Private
   public static ReplicationLoadSinkBuilder newBuilder() {
     return new ReplicationLoadSinkBuilder();
   }
 
+  @InterfaceAudience.Private
   public static final class ReplicationLoadSinkBuilder {
     private long ageOfLastAppliedOp;
     private long timestampsOfLastAppliedOp;
