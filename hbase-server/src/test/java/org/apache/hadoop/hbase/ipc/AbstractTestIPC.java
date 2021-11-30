@@ -462,8 +462,12 @@ public abstract class AbstractTestIPC {
       data.getAttributes().get(HBaseSemanticAttributes.RPC_SERVICE_KEY));
     assertEquals(methodName, data.getAttributes().get(HBaseSemanticAttributes.RPC_METHOD_KEY));
     if (addr != null) {
-      assertEquals(addr.getHostName(), data.getAttributes().get(HBaseSemanticAttributes.REMOTE_HOST_KEY));
-      assertEquals(addr.getPort(), data.getAttributes().get(HBaseSemanticAttributes.REMOTE_PORT_KEY).intValue());
+      assertEquals(
+        addr.getHostName(),
+        data.getAttributes().get(HBaseSemanticAttributes.REMOTE_HOST_KEY));
+      assertEquals(
+        addr.getPort(),
+        data.getAttributes().get(HBaseSemanticAttributes.REMOTE_PORT_KEY).intValue());
     }
     assertEquals(kind, data.getKind());
   }
