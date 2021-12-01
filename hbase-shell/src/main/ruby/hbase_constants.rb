@@ -39,6 +39,7 @@ module HBaseConstants
   BATCH = 'BATCH'.freeze
   CACHE = 'CACHE'.freeze
   CACHE_BLOCKS = 'CACHE_BLOCKS'.freeze
+  CLASSNAME = 'CLASSNAME'.freeze
   CLUSTER_KEY = 'CLUSTER_KEY'.freeze
   COLUMN = 'COLUMN'.freeze
   COLUMNS = 'COLUMNS'.freeze
