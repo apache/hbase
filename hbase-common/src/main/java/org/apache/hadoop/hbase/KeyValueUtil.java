@@ -128,7 +128,8 @@ public class KeyValueUtil {
   }
 
   public static byte[] copyToNewByteArray(final Cell cell) {
-    int v1Length = cell.getSerializedSize();
+    int v1Length = length(cell.getRowLength(), cell.getFamilyLength(),
+      cell.getQualifierLength(), cell.getValueLength(), cell.getTagsLength(), true);
     byte[] backingBytes = new byte[v1Length];
     appendToByteArray(cell, backingBytes, 0, true);
     return backingBytes;
