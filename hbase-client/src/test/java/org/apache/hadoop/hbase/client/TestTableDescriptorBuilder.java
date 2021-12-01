@@ -149,6 +149,20 @@ public class TestTableDescriptorBuilder {
   }
 
   /**
+   * Test removing cps in the table description that does not exist
+   * @throws Exception if removing a coprocessor fails other than IOException
+   */
+  @Test(expected = IOException.class)
+  public void testRemoveNonExistingCoprocessor() throws Exception {
+    String className = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver";
+    TableDescriptor desc = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(name.getMethodName()))
+      .build();
+    assertFalse(desc.hasCoprocessor(className));
+    TableDescriptorBuilder.newBuilder(desc).removeCoprocessor(className).build();
+  }
+
+  /**
    * Test that we add and remove strings from settings properly.
    */
   @Test

@@ -82,6 +82,12 @@ You can also remove a table-scope attribute:
 
   hbase> alter 't1', METHOD => 'table_att_unset', NAME => 'coprocessor$1'
 
+To remove coprocessor from the table-scope attribute via 'table_att_unset', you can also use
+'table_remove_coprocessor':
+
+  hbase> alter 't1', METHOD => 'table_remove_coprocessor', CLASSNAME =>
+           'org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver'
+
 You can also set REGION_REPLICATION:
 
   hbase> alter 't1', {REGION_REPLICATION => 2}
