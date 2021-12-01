@@ -1010,6 +1010,25 @@ module Hbase
       assert_no_match(eval("/" + key + "/"), admin.describe(@test_name))
     end
 
+    define_test "alter should be able to remove a coprocessor by class name" do
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
+
+      cp_key = "coprocessor"
+      class_name = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver"
+      cp_value = "|" + class_name + "|12|arg1=1,arg2=2"
+
+      command(:alter, @test_name, 'METHOD' => 'table_att', cp_key => cp_value)
+      describe_text = admin.describe(@test_name)
+      assert_match(eval("/" + class_name + "/"), describe_text)
+      assert_match(eval("/" + cp_key + "\\$(\\d+)/"), describe_text)
+      assert_match(/arg1=1,arg2=2/, describe_text)
+
+      command(:alter, @test_name, 'METHOD' => 'table_remove_coprocessor', 'CLASSNAME' => class_name)
+      describe_text = admin.describe(@test_name)
+      assert_no_match(eval("/" + class_name + "/"), describe_text)
+    end
+
     define_test "alter should be able to remove a list of table attributes" do
       drop_test_table(@test_name)
 
