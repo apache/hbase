@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.SERVER_NAME_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import io.opentelemetry.api.trace.Span;
@@ -371,7 +372,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   private Hbck getHbckInternal(ServerName masterServer) {
-    Span.current().setAttribute(TraceUtil.SERVER_NAME_KEY, masterServer.getServerName());
+    Span.current().setAttribute(SERVER_NAME_KEY, masterServer.getServerName());
     // we will not create a new connection when creating a new protobuf stub, and for hbck there
     // will be no performance consideration, so for simplification we will create a new stub every
     // time instead of caching the stub here.

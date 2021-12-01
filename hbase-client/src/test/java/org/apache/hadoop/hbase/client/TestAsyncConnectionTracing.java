@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -87,7 +87,9 @@ public class TestAsyncConnectionTracing {
       .filter(s -> s.getName().equals("AsyncConnection." + methodName)).findFirst().get();
     assertEquals(StatusCode.OK, data.getStatus().getStatusCode());
     if (serverName != null) {
-      assertEquals(serverName.getServerName(), data.getAttributes().get(TraceUtil.SERVER_NAME_KEY));
+      assertEquals(
+        serverName.getServerName(),
+        data.getAttributes().get(HBaseSemanticAttributes.SERVER_NAME_KEY));
     }
   }
 

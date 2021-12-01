@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
-import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.StringUtils;
@@ -459,11 +459,15 @@ public abstract class AbstractTestIPC {
   private void assertRpcAttribute(SpanData data, String methodName, InetSocketAddress addr,
     SpanKind kind) {
     assertEquals(SERVICE.getDescriptorForType().getName(),
-      data.getAttributes().get(TraceUtil.RPC_SERVICE_KEY));
-    assertEquals(methodName, data.getAttributes().get(TraceUtil.RPC_METHOD_KEY));
+      data.getAttributes().get(HBaseSemanticAttributes.RPC_SERVICE_KEY));
+    assertEquals(methodName, data.getAttributes().get(HBaseSemanticAttributes.RPC_METHOD_KEY));
     if (addr != null) {
-      assertEquals(addr.getHostName(), data.getAttributes().get(TraceUtil.REMOTE_HOST_KEY));
-      assertEquals(addr.getPort(), data.getAttributes().get(TraceUtil.REMOTE_PORT_KEY).intValue());
+      assertEquals(
+        addr.getHostName(),
+        data.getAttributes().get(HBaseSemanticAttributes.REMOTE_HOST_KEY));
+      assertEquals(
+        addr.getPort(),
+        data.getAttributes().get(HBaseSemanticAttributes.REMOTE_PORT_KEY).intValue());
     }
     assertEquals(kind, data.getKind());
   }
