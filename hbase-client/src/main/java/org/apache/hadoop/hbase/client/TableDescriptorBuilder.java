@@ -436,7 +436,7 @@ public class TableDescriptorBuilder {
     return this;
   }
 
-  public TableDescriptorBuilder removeCoprocessor(String className) throws IOException {
+  public TableDescriptorBuilder removeCoprocessor(String className) {
     desc.removeCoprocessor(className);
     return this;
   }
@@ -1534,7 +1534,7 @@ public class TableDescriptorBuilder {
      *
      * @param className Class name of the co-processor
      */
-    public void removeCoprocessor(String className) throws IOException {
+    public void removeCoprocessor(String className) {
       Bytes match = null;
       Matcher keyMatcher;
       Matcher valueMatcher;
@@ -1562,7 +1562,7 @@ public class TableDescriptorBuilder {
       if (match != null) {
         ModifyableTableDescriptor.this.removeValue(match);
       } else {
-        throw new IOException(String
+        throw new IllegalArgumentException(String
           .format("coprocessor with class name %s was not found in the table attribute",
             className));
       }
