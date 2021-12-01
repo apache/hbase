@@ -88,6 +88,11 @@ use 'table_remove_coprocessor':
   hbase> alter 't1', METHOD => 'table_remove_coprocessor', CLASSNAME =>
            'org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver'
 
+You can also remove multiple coprocessors at once
+  hbase> alter 't1', METHOD => 'table_remove_coprocessor', CLASSNAME =>
+           ['org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver',
+            'org.apache.hadoop.hbase.coprocessor.Export']
+
 You can also set REGION_REPLICATION:
 
   hbase> alter 't1', {REGION_REPLICATION => 2}
