@@ -36,6 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.apache.hadoop.hbase.util.Threads.isNonDaemonThreadRunning;
 
 /**
  * Base class for command lines that start up various HBase daemons.
@@ -141,14 +142,30 @@ public abstract class ServerCommandLine extends Configured implements Tool {
   }
 
   /**
-   * Parse and run the given command line. This may exit the JVM if
-   * a nonzero exit code is returned from <code>run()</code>.
+   * Parse and run the given command line. This will exit the JVM with
+   * the exit code returned from <code>run()</code>.
+   * If return code is 0, wait for atmost 30 seconds for all non-daemon threads to quit,
+   * otherwise exit the jvm
    */
   public void doMain(String args[]) {
     try {
       int ret = ToolRunner.run(HBaseConfiguration.create(), this, args);
       if (ret != 0) {
         System.exit(ret);
+      }
+      // Return code is 0 here.
+      boolean forceStop = false;
+      long startTime = EnvironmentEdgeManager.currentTime();
+      while (isNonDaemonThreadRunning()) {
+        if (EnvironmentEdgeManager.currentTime() - startTime > 30 * 1000) {
+          forceStop = true;
+          break;
+        }
+        Thread.sleep(1000);
+      }
+      if (forceStop) {
+        LOG.error("Failed to stop all non-daemon threads, so terminating JVM");
+        System.exit(-1);
       }
     } catch (Exception e) {
       LOG.error("Failed to run", e);
