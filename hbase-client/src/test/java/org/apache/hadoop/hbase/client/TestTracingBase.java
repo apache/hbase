@@ -23,6 +23,7 @@ import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
 import io.opentelemetry.sdk.trace.data.SpanData;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
@@ -33,7 +34,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.junit.Before;
 import org.junit.ClassRule;
 
@@ -68,16 +69,20 @@ public class TestTracingBase {
 
     if (serverName != null) {
       Optional<SpanData> foundServerName =
-        TRACE_RULE.getSpans().stream().filter(s -> s.getName().equals(expectedSpanName)).filter(
-          s -> serverName.getServerName().equals(s.getAttributes().get(TraceUtil.SERVER_NAME_KEY)))
+        TRACE_RULE.getSpans().stream()
+          .filter(s -> s.getName().equals(expectedSpanName))
+          .filter(s -> Objects.equals(
+            serverName.getServerName(),
+            s.getAttributes().get(HBaseSemanticAttributes.SERVER_NAME_KEY)))
           .findAny();
       assertTrue(foundServerName.isPresent());
     }
 
     if (tableName != null) {
       assertEquals(tableName.getNamespaceAsString(),
-        data.getAttributes().get(TraceUtil.NAMESPACE_KEY));
-      assertEquals(tableName.getNameAsString(), data.getAttributes().get(TraceUtil.TABLE_KEY));
+        data.getAttributes().get(HBaseSemanticAttributes.NAMESPACE_KEY));
+      assertEquals(tableName.getNameAsString(),
+        data.getAttributes().get(HBaseSemanticAttributes.TABLE_KEY));
     }
   }
 

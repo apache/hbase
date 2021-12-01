@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -504,7 +505,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           return MasterProtos.HbckService.newBlockingStub(channel);
         }), rpcControllerFactory);
     }, () -> TraceUtil.createSpan(this.getClass().getSimpleName() + ".getHbck")
-      .setAttribute(TraceUtil.SERVER_NAME_KEY, masterServer.getServerName()));
+      .setAttribute(HBaseSemanticAttributes.SERVER_NAME_KEY, masterServer.getServerName()));
   }
 
   @Override

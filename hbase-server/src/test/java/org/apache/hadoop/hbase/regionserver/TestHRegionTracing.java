@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
@@ -115,7 +115,7 @@ public class TestHRegionTracing {
       if (!span.getName().equals(spanName)) {
         return false;
       }
-      List<String> regionNames = span.getAttributes().get(TraceUtil.REGION_NAMES_KEY);
+      List<String> regionNames = span.getAttributes().get(HBaseSemanticAttributes.REGION_NAMES_KEY);
       return regionNames != null && regionNames.size() == 1 &&
         regionNames.get(0).equals(region.getRegionInfo().getRegionNameAsString());
     }));
