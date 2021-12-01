@@ -184,7 +184,7 @@ public class CacheConfig {
   public CacheConfig(Configuration conf, ColumnFamilyDescriptor family, BlockCache blockCache,
       ByteBuffAllocator byteBuffAllocator) {
     this.blockCacheEnabled = conf.getBoolean(BLOCKCACHE_ENABLED, DEFAULT_BLOCKCACHE_ENABLED) &&
-      (family == null || family.isBlockCacheEnabled());
+        (family == null || family.isBlockCacheEnabled());
     this.inMemory = family == null ? DEFAULT_IN_MEMORY : family.isInMemory();
     this.cacheDataCompressed =
         conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED);
