@@ -464,7 +464,6 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     return committedFiles;
   }
 
-<<<<<<< HEAD
   @FunctionalInterface
   public interface IOExceptionRunnable {
     void run() throws IOException;
