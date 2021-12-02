@@ -52,7 +52,7 @@ public interface MetricsBrokenStoreFileCleaner {
   String FAILED_DELETES_DESC =
     "Number of files BrokenStoreFileCleaner tried but failed to delete";
   String RUNS = "BrokenStoreFileCleanerRuns";
-  String RUNS_DESC = "Number of time the BrokenStoreFileCleaner chore run";
+  String RUNS_DESC = "Number of times the BrokenStoreFileCleaner chore run";
   String RUNTIME = "BrokenStoreFileCleanerRuntime";
   String RUNTIME_DESC = "Time required to run BrokenStoreFileCleaner chore in milliseconds";
 

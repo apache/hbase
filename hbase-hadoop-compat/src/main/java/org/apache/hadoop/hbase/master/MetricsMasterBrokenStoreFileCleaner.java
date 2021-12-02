@@ -58,7 +58,7 @@ public interface MetricsMasterBrokenStoreFileCleaner {
 
   /**
    * Increment the deleted files counter
-   * @param deletes
+   * @param deletes number of new files deleted
    */
   public void incrementBrokenStoreFileCleanerDeletes(long deletes);
 

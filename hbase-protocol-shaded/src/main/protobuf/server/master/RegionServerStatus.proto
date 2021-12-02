@@ -190,7 +190,7 @@ message BrokenStoreFileCleanerUsageRequest {
   required uint64 runtime = 2;
   optional uint64 deleted_files = 3;
   optional uint64 failed_deletes = 4;
-  required uint32 runs = 5;
+  required uint64 runs = 5;
 }
 
 message BrokenStoreFileCleanerUsageResponse {
