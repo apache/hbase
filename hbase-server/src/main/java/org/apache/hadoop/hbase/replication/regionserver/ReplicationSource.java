@@ -163,6 +163,12 @@ public class ReplicationSource implements ReplicationSourceInterface {
    */
   private final List<WALEntryFilter> baseFilterOutWALEntries;
 
+  private ServerName serverName;
+
+  public ServerName getServerName() {
+    return serverName;
+  }
+
   ReplicationSource() {
     // Default, filters *in* all WALs but meta WALs & filters *out* all WALEntries of System Tables.
     this(p -> !AbstractFSWALProvider.isMetaFile(p),
@@ -284,6 +290,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     RegionServerCoprocessorHost rsServerHost = null;
     if (server instanceof HRegionServer) {
       rsServerHost = ((HRegionServer) server).getRegionServerCoprocessorHost();
+      this.serverName = server.getServerName();
     }
     String replicationEndpointImpl = replicationPeer.getPeerConfig().getReplicationEndpointImpl();
 

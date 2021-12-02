@@ -192,6 +192,12 @@ public class ReplicationSourceManager {
    */
   AtomicReference<ReplicationSourceInterface> catalogReplicationSource = new AtomicReference<>();
 
+  private ServerName serverName;
+
+  public ServerName getServerName() {
+    return serverName;
+  }
+
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
    * @param queueStorage the interface for manipulating replication queues

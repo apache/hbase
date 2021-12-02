@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.ReplicationSourceService;
@@ -69,6 +70,8 @@ public class Replication implements ReplicationSourceService {
   private MetricsReplicationGlobalSourceSource globalMetricsSource;
 
   private PeerProcedureHandler peerProcedureHandler;
+
+  private ServerName serverName;
 
   /**
    * Empty constructor
@@ -164,6 +167,7 @@ public class Replication implements ReplicationSourceService {
   @Override
   public void startReplicationService() throws IOException {
     this.replicationManager.init();
+    this.serverName = this.replicationManager.getServerName();
     this.server.getChoreService().scheduleChore(
       new ReplicationStatisticsChore("ReplicationSourceStatistics", server,
           (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));

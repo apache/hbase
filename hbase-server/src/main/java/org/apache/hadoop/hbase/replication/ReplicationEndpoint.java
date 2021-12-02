@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -124,6 +125,12 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
 
     public Abortable getAbortable() {
       return abortable;
+    }
+
+    public ServerName getHostServerName() {
+      if (server != null)
+        return server.getServerName();
+      return null;
     }
   }
 

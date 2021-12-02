@@ -32,6 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface ReplicationService {
+
   /**
    * Initializes the replication service object.
    */
