@@ -2628,7 +2628,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     return MasterProcedureUtil.submitProcedure(
         new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
-      @Override protected void run() throws IOException {
+      @Override
+      protected void run() throws IOException {
         setProcId(
           getSnapshotManager().restoreOrCloneSnapshot(snapshotDesc, getNonceKey(), restoreAcl,
             customSFT));

@@ -92,7 +92,7 @@ public final class StoreFileTrackerFactory {
     return name != null ? name.name() : clazz.getName();
   }
 
-  private static Class<? extends StoreFileTracker> getTrackerClass(Configuration conf) {
+  public static Class<? extends StoreFileTracker> getTrackerClass(Configuration conf) {
     try {
       Trackers tracker = Trackers.valueOf(getStoreFileTrackerName(conf).toUpperCase());
       return tracker.clazz;

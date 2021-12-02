@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
@@ -874,59 +875,31 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   // follows StoreUtils.createStoreConfiguration
   static void checkSFTCompatibility(TableDescriptor currentTableDesc,
     TableDescriptor snapshotTableDesc, Configuration baseConf) throws RestoreSnapshotException {
-    //have to compare TableDescriptor.values first
-    String tableDefault = checkIncompatibleConfig(currentTableDesc.getValue(StoreFileTrackerFactory.TRACKER_IMPL),
-      snapshotTableDesc.getValue(StoreFileTrackerFactory.TRACKER_IMPL),
-      baseConf.get(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()),
-      " the Table " + currentTableDesc.getTableName().getNameAsString());
 
-    // have to check existing CFs
-    for (ColumnFamilyDescriptor cfDesc : currentTableDesc.getColumnFamilies()) {
-      ColumnFamilyDescriptor snapCFDesc = snapshotTableDesc.getColumnFamily(cfDesc.getName());
-      // if there is no counterpart in the snapshot it will be just deleted so the config does
-      // not matter
-      if (snapCFDesc != null) {
-        // comparing ColumnFamilyDescriptor.conf next
-        String cfDefault = checkIncompatibleConfig(
-          cfDesc.getConfigurationValue(StoreFileTrackerFactory.TRACKER_IMPL),
-          snapCFDesc.getConfigurationValue(StoreFileTrackerFactory.TRACKER_IMPL), tableDefault,
-          " the config for column family " + cfDesc.getNameAsString());
+     for (ColumnFamilyDescriptor cfDesc : currentTableDesc.getColumnFamilies()) {
+       ColumnFamilyDescriptor snapCFDesc = snapshotTableDesc.getColumnFamily(cfDesc.getName());
+       // if there is no counterpart in the snapshot it will be just deleted so the config does
+       // not matter
+       if (snapCFDesc != null) {
+         Configuration currentCompositeConf =
+           StoreUtils.createStoreConfiguration(baseConf, currentTableDesc, cfDesc);
+         Configuration snapCompositeConf =
+           StoreUtils.createStoreConfiguration(baseConf, snapshotTableDesc, snapCFDesc);
+         Class<? extends StoreFileTracker> currentSFT =
+           StoreFileTrackerFactory.getTrackerClass(currentCompositeConf);
+         Class<? extends StoreFileTracker> snapSFT =
+           StoreFileTrackerFactory.getTrackerClass(snapCompositeConf);
 
-        // then ColumnFamilyDescriptor.values
-        checkIncompatibleConfig(cfDesc.getValue(StoreFileTrackerFactory.TRACKER_IMPL),
-          snapCFDesc.getValue(StoreFileTrackerFactory.TRACKER_IMPL), cfDefault,
-          " the metadata of column family " + cfDesc.getNameAsString());
-      }
-    }
-  }
+         //restoration is not possible if there is an SFT mismatch
+         if (currentSFT != snapSFT) {
+           throw new RestoreSnapshotException(
+             "Restoring Snapshot is not possible because " + " the config for column family "
+               + cfDesc.getNameAsString() + " has incompatible configuration. Current SFT: "
+               + currentSFT + " SFT from snapshot: " + snapSFT);
+         }
+       }
+     }
 
-  // check if a config change would change the behavior
-  static String checkIncompatibleConfig(String currentValue, String newValue, String defaultValue,
-    String errorMessage) throws RestoreSnapshotException {
-    Boolean hasIncompatibility = false;
-    //if there is no current override and the snapshot has an override that does not match the
-    //default
-    if (StringUtils.isEmpty(currentValue) && !StringUtils.isEmpty(newValue) &&
-      !defaultValue.equals(newValue)) {
-      hasIncompatibility = true;
-    }
-    //if there is a current override
-    else if (!StringUtils.isEmpty(currentValue)) {
-      // we can only remove the override if it matches the default
-      if (StringUtils.isEmpty(newValue) && !defaultValue.equals(currentValue)) {
-        hasIncompatibility = true;
-      }
-      // the new value have to match the current one
-      else if (!StringUtils.isEmpty(newValue) && !currentValue.equals(newValue)) {
-        hasIncompatibility = true;
-      }
-    }
-    if (hasIncompatibility){
-      throw new RestoreSnapshotException("Restoring Snapshot is not possible because " +
-        errorMessage + " has incompatible configuration. Current value: " + currentValue
-        + " Value from snapshot: " + newValue + " Default value: " + defaultValue);
-    }
-    return StringUtils.isEmpty(newValue) ? defaultValue : newValue;
   }
 
   /**

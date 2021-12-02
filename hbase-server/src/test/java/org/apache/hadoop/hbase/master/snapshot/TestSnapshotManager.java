@@ -206,32 +206,14 @@ public class TestSnapshotManager {
     }
   }
 
-  @Test public void testCheckIncompatibleConfig() throws Exception {
-    assertThrows(RestoreSnapshotException.class, () -> {
-      SnapshotManager.checkIncompatibleConfig("", "a", "b", "not matching default");
-    });
-
-    assertThrows(RestoreSnapshotException.class, () -> {
-      SnapshotManager.checkIncompatibleConfig("a", "", "b", "reverting overwritten default");
-    });
-
-    assertThrows(RestoreSnapshotException.class, () -> {
-      SnapshotManager.checkIncompatibleConfig("a", "b", "", "missmatch");
-    });
-
-    SnapshotManager.checkIncompatibleConfig("a", "a", "", "match");
-    SnapshotManager.checkIncompatibleConfig("a", "", "a", "reverting to matching default");
-    SnapshotManager.checkIncompatibleConfig("", "", "a", "using default");
-  }
-
   @Test public void testCheckSFTCompatibility() throws Exception {
     //checking default value change on different configuration levels
     Configuration conf = new Configuration();
-    conf.set(StoreFileTrackerFactory.TRACKER_IMPL, "B");
+    conf.set(StoreFileTrackerFactory.TRACKER_IMPL, "DEFAULT");
 
     //creating a TD with only TableDescriptor level config
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf("TableX"));
-    builder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "A");
+    builder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "FILE");
     ColumnFamilyDescriptor cf = ColumnFamilyDescriptorBuilder.of("cf");
     builder.setColumnFamily(cf);
     TableDescriptor td = builder.build();
@@ -239,10 +221,10 @@ public class TestSnapshotManager {
     //creating a TD with matching ColumnFamilyDescriptor level setting
     TableDescriptorBuilder snapBuilder =
       TableDescriptorBuilder.newBuilder(TableName.valueOf("TableY"));
-    snapBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "A");
+    snapBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "FILE");
     ColumnFamilyDescriptorBuilder snapCFBuilder =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf"));
-    snapCFBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "A");
+    snapCFBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "FILE");
     snapBuilder.setColumnFamily(snapCFBuilder.build());
     TableDescriptor snapTd = snapBuilder.build();
 
@@ -250,5 +232,21 @@ public class TestSnapshotManager {
     SnapshotManager.checkSFTCompatibility(td, snapTd, conf);
     // removing cf level config is fine when it matches the td config
     SnapshotManager.checkSFTCompatibility(snapTd, td, conf);
+
+    TableDescriptorBuilder defaultBuilder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("TableY"));
+    defaultBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "FILE");
+    ColumnFamilyDescriptorBuilder defaultCFBuilder =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf"));
+    defaultCFBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "DEFAULT");
+    defaultBuilder.setColumnFamily(defaultCFBuilder.build());
+    TableDescriptor defaultTd = defaultBuilder.build();
+
+    assertThrows(RestoreSnapshotException.class, () -> {
+      SnapshotManager.checkSFTCompatibility(td, defaultTd, conf);
+    });
+    assertThrows(RestoreSnapshotException.class, () -> {
+      SnapshotManager.checkSFTCompatibility(snapTd, defaultTd, conf);
+    });
   }
 }
