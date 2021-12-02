@@ -88,7 +88,12 @@ public final class Constraints {
    * added.
    */
   public static TableDescriptorBuilder disable(TableDescriptorBuilder builder) throws IOException {
-    return builder.removeCoprocessor(ConstraintProcessor.class.getName());
+    try {
+      return builder.removeCoprocessor(ConstraintProcessor.class.getName());
+    } catch (IllegalArgumentException e) {
+      LOG.warn("ConstraintProcessor was unset.", e);
+      return builder;
+    }
   }
 
   /**
