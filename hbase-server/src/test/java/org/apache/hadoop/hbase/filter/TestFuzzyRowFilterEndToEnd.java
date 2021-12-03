@@ -143,7 +143,15 @@ public class TestFuzzyRowFilterEndToEnd {
 
     TEST_UTIL.flush();
 
-    List<Pair<byte[], byte[]>> data = new ArrayList<>();
+    // v1 should match all rows, because v2 has the actual fix for this bug
+    testAllFixedBitsRunScanWithMask(ht, rows.length, FuzzyRowFilter.V1_PROCESSED_WILDCARD_MASK);
+    testAllFixedBitsRunScanWithMask(ht, 2, FuzzyRowFilter.V2_PROCESSED_WILDCARD_MASK);
+
+    TEST_UTIL.deleteTable(TableName.valueOf(table));
+  }
+
+  private void testAllFixedBitsRunScanWithMask(Table ht, int expectedRows, byte processedRowMask) throws IOException {
+    List<Pair<byte[], byte[]>> data = new ArrayList<Pair<byte[], byte[]>>();
     byte[] fuzzyKey = Bytes.toBytesBinary("\\x9B\\x00\\x044e");
     byte[] mask = new byte[] { 0, 0, 0, 0, 0 };
 
@@ -152,7 +160,7 @@ public class TestFuzzyRowFilterEndToEnd {
     byte[] copyMask = Arrays.copyOf(mask, mask.length);
 
     data.add(new Pair<>(fuzzyKey, mask));
-    FuzzyRowFilter filter = new FuzzyRowFilter(data);
+    FuzzyRowFilter filter = new FuzzyRowFilter(data, processedRowMask);
 
     Scan scan = new Scan();
     scan.setFilter(filter);
@@ -162,12 +170,10 @@ public class TestFuzzyRowFilterEndToEnd {
     while (scanner.next() != null) {
       total++;
     }
-    assertEquals(2, total);
+    assertEquals(expectedRows, total);
 
     assertEquals(true, Arrays.equals(copyFuzzyKey, fuzzyKey));
     assertEquals(true, Arrays.equals(copyMask, mask));
-
-    TEST_UTIL.deleteTable(TableName.valueOf(name.getMethodName()));
   }
 
   @Test
@@ -202,11 +208,19 @@ public class TestFuzzyRowFilterEndToEnd {
 
     TEST_UTIL.flush();
 
-    List<Pair<byte[], byte[]>> data =  new ArrayList<>();
+    testHBASE14782RunScanWithMask(ht, rows.length, FuzzyRowFilter.V1_PROCESSED_WILDCARD_MASK);
+    testHBASE14782RunScanWithMask(ht, rows.length, FuzzyRowFilter.V2_PROCESSED_WILDCARD_MASK);
+
+    TEST_UTIL.deleteTable(TableName.valueOf(name.getMethodName()));
+  }
+
+  private void testHBASE14782RunScanWithMask(Table ht, int expectedRows, byte processedRowMask) throws IOException {
+    List<Pair<byte[], byte[]>> data =  new ArrayList<Pair<byte[], byte[]>>();
+
     byte[] fuzzyKey = Bytes.toBytesBinary("\\x00\\x00\\x044");
     byte[] mask = new byte[] { 1,0,0,0};
     data.add(new Pair<>(fuzzyKey, mask));
-    FuzzyRowFilter filter = new FuzzyRowFilter(data);
+    FuzzyRowFilter filter = new FuzzyRowFilter(data, processedRowMask);
 
     Scan scan = new Scan();
     scan.setFilter(filter);
@@ -216,8 +230,7 @@ public class TestFuzzyRowFilterEndToEnd {
     while(scanner.next() != null){
       total++;
     }
-    assertEquals(rows.length, total);
-    TEST_UTIL.deleteTable(TableName.valueOf(name.getMethodName()));
+    assertEquals(expectedRows, total);
   }
 
   @Test
@@ -259,12 +272,14 @@ public class TestFuzzyRowFilterEndToEnd {
     TEST_UTIL.flush();
 
     // test passes
-    runTest1(ht);
-    runTest2(ht);
+    runTest1(ht, FuzzyRowFilter.V1_PROCESSED_WILDCARD_MASK);
+    runTest1(ht, FuzzyRowFilter.V2_PROCESSED_WILDCARD_MASK);
+    runTest2(ht, FuzzyRowFilter.V1_PROCESSED_WILDCARD_MASK);
+    runTest2(ht, FuzzyRowFilter.V2_PROCESSED_WILDCARD_MASK);
 
   }
 
-  private void runTest1(Table hTable) throws IOException {
+  private void runTest1(Table hTable, byte processedWildcardMask) throws IOException {
     // [0, 2, ?, ?, ?, ?, 0, 0, 0, 1]
 
     byte[] mask = new byte[] { 0, 0, 1, 1, 1, 1, 0, 0, 0, 0 };
@@ -285,9 +300,9 @@ public class TestFuzzyRowFilterEndToEnd {
     }
 
     int expectedSize = secondPartCardinality * totalFuzzyKeys * colQualifiersTotal;
-    FuzzyRowFilter fuzzyRowFilter0 = new FuzzyRowFilter(list);
+    FuzzyRowFilter fuzzyRowFilter0 = new FuzzyRowFilter(list, processedWildcardMask);
     // Filters are not stateless - we can't reuse them
-    FuzzyRowFilter fuzzyRowFilter1 = new FuzzyRowFilter(list);
+    FuzzyRowFilter fuzzyRowFilter1 = new FuzzyRowFilter(list, processedWildcardMask);
 
     // regular test
     runScanner(hTable, expectedSize, fuzzyRowFilter0);
@@ -296,7 +311,7 @@ public class TestFuzzyRowFilterEndToEnd {
 
   }
 
-  private void runTest2(Table hTable) throws IOException {
+  private void runTest2(Table hTable, byte processedWildcardMask) throws IOException {
     // [0, 0, ?, ?, ?, ?, 0, 0, 0, 0] , [0, 1, ?, ?, ?, ?, 0, 0, 0, 1]...
 
     byte[] mask = new byte[] { 0, 0, 1, 1, 1, 1, 0, 0, 0, 0 };
@@ -319,9 +334,9 @@ public class TestFuzzyRowFilterEndToEnd {
 
     int expectedSize = totalFuzzyKeys * secondPartCardinality * colQualifiersTotal;
 
-    FuzzyRowFilter fuzzyRowFilter0 = new FuzzyRowFilter(list);
+    FuzzyRowFilter fuzzyRowFilter0 = new FuzzyRowFilter(list, processedWildcardMask);
     // Filters are not stateless - we can't reuse them
-    FuzzyRowFilter fuzzyRowFilter1 = new FuzzyRowFilter(list);
+    FuzzyRowFilter fuzzyRowFilter1 = new FuzzyRowFilter(list, processedWildcardMask);
 
     // regular test
     runScanner(hTable, expectedSize, fuzzyRowFilter0);
