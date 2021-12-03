@@ -28,6 +28,7 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -144,11 +146,17 @@ public class TestAsyncTableTracing {
 
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        ClientProtos.MultiResponse resp =
-          ClientProtos.MultiResponse.newBuilder()
-            .addRegionActionResult(RegionActionResult.newBuilder().addResultOrException(
-              ResultOrException.newBuilder().setResult(ProtobufUtil.toResult(new Result()))))
-            .build();
+        ClientProtos.MultiRequest req = invocation.getArgument(1);
+        ClientProtos.MultiResponse.Builder builder = ClientProtos.MultiResponse.newBuilder();
+        for (ClientProtos.RegionAction regionAction : req.getRegionActionList()) {
+          RegionActionResult.Builder raBuilder = RegionActionResult.newBuilder();
+          for (ClientProtos.Action ignored : regionAction.getActionList()) {
+            raBuilder.addResultOrException(
+              ResultOrException.newBuilder().setResult(ProtobufUtil.toResult(new Result())));
+          }
+          builder.addRegionActionResult(raBuilder);
+        }
+        ClientProtos.MultiResponse resp = builder.build();
         RpcCallback<ClientProtos.MultiResponse> done = invocation.getArgument(2);
         ForkJoinPool.commonPool().execute(() -> done.run(resp));
         return null;
@@ -344,6 +352,87 @@ public class TestAsyncTableTracing {
       .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
       .build(new Delete(Bytes.toBytes(0))))).join();
     assertTrace("BATCH");
+  }
+
+  private void testCheckAndMutateBuilder(Row op) {
+    AsyncTable.CheckAndMutateBuilder builder =
+      table.checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf"))
+        .qualifier(Bytes.toBytes("cq"))
+        .ifEquals(Bytes.toBytes("v"));
+    if (op instanceof Put) {
+      Put put = (Put) op;
+      builder.thenPut(put).join();
+    } else if (op instanceof Delete) {
+      Delete delete = (Delete) op;
+      builder.thenDelete(delete).join();
+    } else if (op instanceof RowMutations) {
+      RowMutations mutations = (RowMutations) op;
+      builder.thenMutate(mutations).join();
+    } else {
+      fail("unsupported CheckAndPut operation " + op);
+    }
+    assertTrace("CHECK_AND_MUTATE");
+  }
+
+  @Test
+  public void testCheckAndMutateBuilderThenPut() {
+    Put put = new Put(Bytes.toBytes(0))
+      .addColumn(Bytes.toBytes("f"), Bytes.toBytes("cq"), Bytes.toBytes("v"));
+    testCheckAndMutateBuilder(put);
+  }
+
+  @Test
+  public void testCheckAndMutateBuilderThenDelete() {
+    testCheckAndMutateBuilder(new Delete(Bytes.toBytes(0)));
+  }
+
+  @Test
+  public void testCheckAndMutateBuilderThenMutations() throws IOException {
+    RowMutations mutations = new RowMutations(Bytes.toBytes(0))
+      .add(new Put(Bytes.toBytes(0))
+        .addColumn(Bytes.toBytes("f"), Bytes.toBytes("cq"), Bytes.toBytes("v")))
+      .add(new Delete(Bytes.toBytes(0)));
+    testCheckAndMutateBuilder(mutations);
+  }
+
+  private void testCheckAndMutateWithFilterBuilder(Row op) {
+    // use of `PrefixFilter` is completely arbitrary here.
+    AsyncTable.CheckAndMutateWithFilterBuilder builder =
+      table.checkAndMutate(Bytes.toBytes(0), new PrefixFilter(Bytes.toBytes(0)));
+    if (op instanceof Put) {
+      Put put = (Put) op;
+      builder.thenPut(put).join();
+    } else if (op instanceof Delete) {
+      Delete delete = (Delete) op;
+      builder.thenDelete(delete).join();
+    } else if (op instanceof RowMutations) {
+      RowMutations mutations = (RowMutations) op;
+      builder.thenMutate(mutations).join();
+    } else {
+      fail("unsupported CheckAndPut operation " + op);
+    }
+    assertTrace("CHECK_AND_MUTATE");
+  }
+
+  @Test
+  public void testCheckAndMutateWithFilterBuilderThenPut() {
+    Put put = new Put(Bytes.toBytes(0))
+      .addColumn(Bytes.toBytes("f"), Bytes.toBytes("cq"), Bytes.toBytes("v"));
+    testCheckAndMutateWithFilterBuilder(put);
+  }
+
+  @Test
+  public void testCheckAndMutateWithFilterBuilderThenDelete() {
+    testCheckAndMutateWithFilterBuilder(new Delete(Bytes.toBytes(0)));
+  }
+
+  @Test
+  public void testCheckAndMutateWithFilterBuilderThenMutations() throws IOException {
+    RowMutations mutations = new RowMutations(Bytes.toBytes(0))
+      .add(new Put(Bytes.toBytes(0))
+        .addColumn(Bytes.toBytes("f"), Bytes.toBytes("cq"), Bytes.toBytes("v")))
+      .add(new Delete(Bytes.toBytes(0)));
+    testCheckAndMutateWithFilterBuilder(mutations);
   }
 
   @Test

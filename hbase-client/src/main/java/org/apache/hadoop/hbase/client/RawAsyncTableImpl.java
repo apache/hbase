@@ -383,7 +383,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       validatePutsInRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
       final Supplier<Span> supplier = new TableOperationSpanBuilder()
         .setTableName(tableName)
-        .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return tracedFuture(
         () -> RawAsyncTableImpl.this
           .<Boolean> newCaller(row, mutations.getMaxPriority(), rpcTimeoutNs)
@@ -459,7 +459,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       validatePutsInRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
       final Supplier<Span> supplier = new TableOperationSpanBuilder()
         .setTableName(tableName)
-        .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return tracedFuture(
         () -> RawAsyncTableImpl.this
           .<Boolean> newCaller(row, mutations.getMaxPriority(), rpcTimeoutNs)
@@ -536,7 +536,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     checkAndMutate(List<CheckAndMutate> checkAndMutates) {
     final Supplier<Span> supplier = new TableOperationSpanBuilder()
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+      .setOperation(checkAndMutates);
     return tracedFutures(
       () -> batch(checkAndMutates, rpcTimeoutNs).stream()
         .map(f -> f.thenApply(r -> (CheckAndMutateResult) r)).collect(toList()),
@@ -593,7 +593,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     long nonce = conn.getNonceGenerator().newNonce();
     final Supplier<Span> supplier = new TableOperationSpanBuilder()
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+      .setOperation(mutations);
     return tracedFuture(
       () -> this
         .<Result> newCaller(mutations.getRow(), mutations.getMaxPriority(), writeRpcTimeoutNs)
@@ -668,7 +668,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   public List<CompletableFuture<Result>> get(List<Get> gets) {
     final Supplier<Span> supplier = new TableOperationSpanBuilder()
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+      .setOperation(gets);
     return tracedFutures(() -> batch(gets, readRpcTimeoutNs), supplier);
   }
 
@@ -676,7 +676,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   public List<CompletableFuture<Void>> put(List<Put> puts) {
     final Supplier<Span> supplier = new TableOperationSpanBuilder()
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+      .setOperation(puts);
     return tracedFutures(() -> voidMutate(puts), supplier);
   }
 
@@ -684,7 +684,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   public List<CompletableFuture<Void>> delete(List<Delete> deletes) {
     final Supplier<Span> supplier = new TableOperationSpanBuilder()
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+      .setOperation(deletes);
     return tracedFutures(() -> voidMutate(deletes), supplier);
   }
 
@@ -692,7 +692,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   public <T> List<CompletableFuture<T>> batch(List<? extends Row> actions) {
     final Supplier<Span> supplier = new TableOperationSpanBuilder()
       .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
+      .setOperation(actions);
     return tracedFutures(() -> batch(actions, rpcTimeoutNs), supplier);
   }
 
