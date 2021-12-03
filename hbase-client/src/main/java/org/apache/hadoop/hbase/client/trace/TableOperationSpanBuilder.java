@@ -98,22 +98,40 @@ public class TableOperationSpanBuilder implements Supplier<Span> {
   }
 
   private static Operation valueFrom(final Scan scan) {
-    if (scan == null) { return null; }
+    if (scan == null) {
+      return null;
+    }
     return Operation.SCAN;
   }
 
   private static Operation valueFrom(final Row row) {
-    if (row == null) { return null; }
-    if (row instanceof Append) { return Operation.APPEND; }
-    if (row instanceof CheckAndMutate) { return Operation.CHECK_AND_MUTATE; }
-    if (row instanceof Delete) { return Operation.DELETE; }
-    if (row instanceof Get) { return Operation.GET; }
-    if (row instanceof Increment) { return Operation.INCREMENT; }
-    if (row instanceof Put) { return Operation.PUT; }
+    if (row == null) {
+      return null;
+    }
+    if (row instanceof Append) {
+      return Operation.APPEND;
+    }
+    if (row instanceof CheckAndMutate) {
+      return Operation.CHECK_AND_MUTATE;
+    }
+    if (row instanceof Delete) {
+      return Operation.DELETE;
+    }
+    if (row instanceof Get) {
+      return Operation.GET;
+    }
+    if (row instanceof Increment) {
+      return Operation.INCREMENT;
+    }
+    if (row instanceof Put) {
+      return Operation.PUT;
+    }
     if (row instanceof RegionCoprocessorServiceExec) {
       return Operation.COPROC_EXEC;
     }
-    if (row instanceof RowMutations) { return Operation.BATCH; }
+    if (row instanceof RowMutations) {
+      return Operation.BATCH;
+    }
     return null;
   }
 }
