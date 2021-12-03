@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import java.util.Arrays;
+
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -24,9 +26,40 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.internal.ArrayComparisonFailure;
 
 @Category(SmallTests.class)
 public class TestFuzzyRowFilter {
+
+  @Test
+  public void testIdempotentMaskShift() {
+    byte[] test = new byte[] {-1, FuzzyRowFilter.V1_PROCESSED_WILDCARD_MASK, FuzzyRowFilter.V2_PROCESSED_WILDCARD_MASK};
+    byte[] original = Arrays.copyOf(test, test.length);
+    byte[] expected = new byte[] { -1, 0, 0};
+
+    Assert.assertArrayEquals(test, original);
+    assertArrayNotEquals(expected, test);
+
+    // shifting once should equal expected
+    FuzzyRowFilter.idempotentMaskShift(test);
+    Assert.assertArrayEquals(expected, test);
+    assertArrayNotEquals(original, test);
+
+    // shifting again should still equal expected, because it's idempotent
+    FuzzyRowFilter.idempotentMaskShift(test);
+    Assert.assertArrayEquals(expected, test);
+    assertArrayNotEquals(original, test);
+  }
+
+  private void assertArrayNotEquals(byte[] expected, byte[] testcase) {
+    try {
+      Assert.assertArrayEquals(expected, testcase);
+      Assert.fail("expected arrays to fail equality test");
+    } catch (ArrayComparisonFailure e) {
+      // success
+    }
+  }
+
   @Test
   public void testSatisfiesNoUnsafeForward() {
 
