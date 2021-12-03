@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -223,6 +224,7 @@ public class TestMaster {
       // Then move the region to a new region server.
       try{
         master.move(hri.getEncodedNameAsBytes(), rs1.getServerName().getBytes());
+        Assert.fail("Admin move should not be successful here.");
       } catch (HBaseIOException e) {
         assertTrue(e.getMessage().contains("Fail-fast"));
       }
