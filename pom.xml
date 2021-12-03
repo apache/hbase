@@ -1527,6 +1527,7 @@
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.javadoc.version>3.2.0</maven.javadoc.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
+    <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
     <spotbugs.version>4.2.2</spotbugs.version>
@@ -4148,6 +4149,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>${maven.project.info.report.version}</version>
         <reportSets>
           <reportSet>
             <reports>
