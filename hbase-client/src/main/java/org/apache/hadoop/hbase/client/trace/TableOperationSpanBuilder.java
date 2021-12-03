@@ -26,6 +26,7 @@ import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.SpanKind;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -69,6 +70,11 @@ public class TableOperationSpanBuilder implements Supplier<Span> {
 
   public TableOperationSpanBuilder setOperation(final Row row) {
     return setOperation(valueFrom(row));
+  }
+
+  @SuppressWarnings("unused")
+  public TableOperationSpanBuilder setOperation(final Collection<? extends Row> operations) {
+    return setOperation(Operation.BATCH);
   }
 
   public TableOperationSpanBuilder setOperation(final Operation operation) {
