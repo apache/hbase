@@ -136,6 +136,12 @@ public final class HConstants {
   /** Default value for the max percent of regions in transition */
   public static final double DEFAULT_HBASE_MASTER_BALANCER_MAX_RIT_PERCENT = 1.0;
 
+  /** Time in milliseconds to wait meta region assignment, when moving non-meta regions. */
+  public static final String HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT =
+    "hbase.master.waiting.meta.assignment.timeout";
+
+  public static final long HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT_DEFAULT = 10000;
+
   /** Config for the max balancing time */
   public static final String HBASE_BALANCER_MAX_BALANCING = "hbase.balancer.max.balancing";
 

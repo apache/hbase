@@ -28,6 +28,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -46,7 +47,9 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -66,6 +69,9 @@ public class TestMaster {
   public static void beforeAllTests() throws Exception {
     // we will retry operations when PleaseHoldException is thrown
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
+    // Here just set 1 ms for testing.
+    TEST_UTIL.getConfiguration().
+      setLong(HConstants.HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT, 1);
     // Set hbase.min.version.move.system.tables as version 0 so that
     // testMoveRegionWhenNotInitialized never fails even if hbase-default has valid default
     // value present for production use-case.
@@ -185,6 +191,61 @@ public class TestMaster {
       assertTrue(StringUtils.stringifyException(ioe).contains("PleaseHoldException"));
     } finally {
       master.setInitialized(true);
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test (timeout = 300000)
+  public void testMoveRegionWhenMetaRegionInTransition()
+    throws IOException, InterruptedException, KeeperException {
+    TableName tableName = TableName.valueOf("testMoveRegionWhenMetaRegionInTransition");
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HColumnDescriptor hcd = new HColumnDescriptor("value");
+    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+    htd.addFamily(hcd);
+
+    admin.createTable(htd, null);
+    try {
+      HRegionInfo hri = admin.getTableRegions(tableName).get(0);
+
+      HRegionInfo metaRegion = admin.getTableRegions(TableName.META_TABLE_NAME).get(0);
+
+      ServerName rs0 = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
+      ServerName rs1 = TEST_UTIL.getHBaseCluster().getRegionServer(1).getServerName();
+
+      admin.move(hri.getEncodedNameAsBytes(), rs0.getServerName().getBytes());
+      while (regionStates.isRegionInTransition(hri)) {
+        // Make sure the region is not in transition
+        Thread.sleep(1000);
+      }
+      // Meta region should be in transition
+      master.assignmentManager.unassign(metaRegion);
+      // Then move the region to a new region server.
+      try{
+        master.move(hri.getEncodedNameAsBytes(), rs1.getServerName().getBytes());
+        Assert.fail("Admin move should not be successful here.");
+      } catch (HBaseIOException e) {
+        assertTrue(e.getMessage().contains("Fail-fast"));
+      }
+      // Wait for the movement.
+      Thread.sleep(HConstants.HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT_DEFAULT);
+      // The region should be still on rs0.
+      TEST_UTIL.assertRegionOnServer(hri, rs0, 5000);
+
+      // Wait until the meta region is reassigned.
+      admin.assign(metaRegion.getEncodedNameAsBytes());
+      while (regionStates.isMetaRegionInTransition()) {
+        Thread.sleep(1000);
+      }
+
+      // Try to move region to rs1 once again.
+      admin.move(hri.getEncodedNameAsBytes(), rs1.getServerName().getBytes());
+
+      Thread.sleep(HConstants.HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT_DEFAULT);
+      // It should be moved to rs1 this time.
+      TEST_UTIL.assertRegionOnServer(hri, rs1, 5000);
+    } finally {
       TEST_UTIL.deleteTable(tableName);
     }
   }

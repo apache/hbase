@@ -393,6 +393,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   // Cached clusterId on stand by masters to serve clusterID requests from clients.
   private final CachedClusterId cachedClusterId;
 
+  // Waiting time of non-meta region's moving for meta regions assignment.
+  private final long timeoutWaitMetaRegionAssignment;
+
   public static class RedirectServlet extends HttpServlet {
     private static final long serialVersionUID = 2894774810058302473L;
     private final int regionServerInfoPort;
@@ -498,6 +501,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.maxBalancingTime = getMaxBalancingTime();
     this.maxRitPercent = conf.getDouble(HConstants.HBASE_MASTER_BALANCER_MAX_RIT_PERCENT,
       HConstants.DEFAULT_HBASE_MASTER_BALANCER_MAX_RIT_PERCENT);
+    this.timeoutWaitMetaRegionAssignment =
+      conf.getLong(HConstants.HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT,
+        HConstants.HBASE_MASTER_WAITING_META_ASSIGNMENT_TIMEOUT_DEFAULT);
 
     // Do we publish the status?
 
@@ -1845,12 +1851,20 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       // closed
       serverManager.sendRegionWarmup(rp.getDestination(), hri);
 
+      // Here wait until all the meta regions are not in transition.
+      if (!hri.isMetaRegion() && assignmentManager.getRegionStates().isMetaRegionInTransition()) {
+        Thread.sleep(timeoutWaitMetaRegionAssignment);
+        if (assignmentManager.getRegionStates().isMetaRegionInTransition()) {
+          throw new HBaseIOException("Fail-fast of the region move, " +
+            " because hbase:meta region is still in transition. Failed region move info:" + rp);
+        }
+      }
       LOG.info(getClientIdAuditPrefix() + " move " + rp + ", running balancer");
       this.assignmentManager.balance(rp);
       if (this.cpHost != null) {
         this.cpHost.postMove(hri, rp.getSource(), rp.getDestination());
       }
-    } catch (IOException ioe) {
+    } catch (IOException | InterruptedException ioe) {
       if (ioe instanceof HBaseIOException) {
         throw (HBaseIOException)ioe;
       }
