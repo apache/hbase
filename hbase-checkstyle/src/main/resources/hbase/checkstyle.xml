@@ -45,7 +45,9 @@
     <!-- Block Checks
     http://checkstyle.sourceforge.net/config_blocks.html -->
     <module name="EmptyBlock"/>
-    <module name="LeftCurly"/>
+    <module name="LeftCurly">
+      <property name="option" value="nlow"/>
+    </module>
     <module name="NeedBraces"/>
 
     <!-- Class Design Checks
