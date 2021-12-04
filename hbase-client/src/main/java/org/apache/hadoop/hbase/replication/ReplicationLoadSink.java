@@ -22,9 +22,7 @@ public class ReplicationLoadSink {
   private final long timestampStarted;
   private final long totalOpsProcessed;
 
-  // TODO: add the builder for this class
-  @InterfaceAudience.Private
-  public ReplicationLoadSink(long age, long timestamp, long timestampStarted,
+  private ReplicationLoadSink(long age, long timestamp, long timestampStarted,
       long totalOpsProcessed) {
     this.ageOfLastAppliedOp = age;
     this.timestampsOfLastAppliedOp = timestamp;
@@ -46,5 +44,45 @@ public class ReplicationLoadSink {
 
   public long getTotalOpsProcessed() {
     return totalOpsProcessed;
+  }
+
+  @InterfaceAudience.Private
+  public static ReplicationLoadSinkBuilder newBuilder() {
+    return new ReplicationLoadSinkBuilder();
+  }
+
+  @InterfaceAudience.Private
+  public static final class ReplicationLoadSinkBuilder {
+    private long ageOfLastAppliedOp;
+    private long timestampsOfLastAppliedOp;
+    private long timestampStarted;
+    private long totalOpsProcessed;
+
+    private ReplicationLoadSinkBuilder() {}
+
+    public ReplicationLoadSinkBuilder setAgeOfLastAppliedOp(long ageOfLastAppliedOp) {
+      this.ageOfLastAppliedOp = ageOfLastAppliedOp;
+      return this;
+    }
+
+    public ReplicationLoadSinkBuilder setTimestampsOfLastAppliedOp(long timestampsOfLastAppliedOp) {
+      this.timestampsOfLastAppliedOp = timestampsOfLastAppliedOp;
+      return this;
+    }
+
+    public ReplicationLoadSinkBuilder setTimestampStarted(long timestampStarted) {
+      this.timestampStarted = timestampStarted;
+      return this;
+    }
+
+    public ReplicationLoadSinkBuilder setTotalOpsProcessed(long totalOpsProcessed) {
+      this.totalOpsProcessed = totalOpsProcessed;
+      return this;
+    }
+
+    public ReplicationLoadSink build() {
+      return new ReplicationLoadSink(ageOfLastAppliedOp, timestampsOfLastAppliedOp,
+        timestampStarted, totalOpsProcessed);
+    }
   }
 }
