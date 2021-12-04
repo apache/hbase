@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.HadoopKerberosName;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -366,12 +367,16 @@ public class AccessChecker {
 
   public static void logResult(AuthResult result) {
     if (AUDITLOG.isTraceEnabled()) {
+      User user = result.getUser();
+      UserGroupInformation ugi = user != null ? user.getUGI() : null;
       AUDITLOG.trace(
-        "Access {} for user {}; reason: {}; remote address: {}; request: {}; context: {}",
+        "Access {} for user {}; reason: {}; remote address: {}; request: {}; context: {};" +
+          "auth method: {}",
         (result.isAllowed() ? "allowed" : "denied"),
-        (result.getUser() != null ? result.getUser().getShortName() : "UNKNOWN"),
+        (user != null ? user.getShortName() : "UNKNOWN"),
         result.getReason(), RpcServer.getRemoteAddress().map(InetAddress::toString).orElse(""),
-        result.getRequest(), result.toContextString());
+        result.getRequest(), result.toContextString(),
+        ugi != null ? ugi.getAuthenticationMethod() : "UNKNOWN");
     }
   }
 
