@@ -81,6 +81,9 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Progressable;
@@ -690,6 +693,38 @@ public final class FSUtils {
   public static boolean metaRegionExists(FileSystem fs, Path rootDir) throws IOException {
     Path metaRegionDir = getRegionDirFromRootDir(rootDir, RegionInfoBuilder.FIRST_META_REGIONINFO);
     return fs.exists(metaRegionDir);
+  }
+
+  /**
+   * Compute HDFS block distribution of a given HdfsDataInputStream. All HdfsDataInputStreams
+   * are backed by a series of LocatedBlocks, which are fetched periodically from the namenode.
+   * This method retrieves those blocks from the input stream and uses them to calculate
+   * HDFSBlockDistribution.
+   *
+   * The underlying method in DFSInputStream does attempt to use locally cached blocks, but
+   * may hit the namenode if the cache is determined to be incomplete. The method also involves
+   * making copies of all LocatedBlocks rather than return the underlying blocks themselves.
+   */
+  public static HDFSBlocksDistribution computeHDFSBlocksDistribution(
+    HdfsDataInputStream inputStream) throws IOException {
+    List<LocatedBlock> blocks = inputStream.getAllBlocks();
+    HDFSBlocksDistribution blocksDistribution = new HDFSBlocksDistribution();
+    for (LocatedBlock block : blocks) {
+      String[] hosts = getHostsForLocations(block);
+      long len = block.getBlockSize();
+      StorageType[] storageTypes = block.getStorageTypes();
+      blocksDistribution.addHostsAndBlockWeight(hosts, len, storageTypes);
+    }
+    return blocksDistribution;
+  }
+
+  private static String[] getHostsForLocations(LocatedBlock block) {
+    DatanodeInfo[] locations = block.getLocations();
+    String[] hosts = new String[locations.length];
+    for (int i = 0; i < hosts.length; i++) {
+      hosts[i] = locations[i].getHostName();
+    }
+    return hosts;
   }
 
   /**
