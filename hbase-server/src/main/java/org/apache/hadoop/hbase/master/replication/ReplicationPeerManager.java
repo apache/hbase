@@ -553,7 +553,7 @@ public class ReplicationPeerManager {
       if (ReplicationUtils.LEGACY_REGION_REPLICATION_ENDPOINT_NAME
         .equals(peerConfig.getReplicationEndpointImpl())) {
         // we do not use this endpoint for region replication any more, see HBASE-26233
-        LOG.warn("Legacy region replication peer found, removing: {}", peerConfig);
+        LOG.info("Legacy region replication peer found, removing: {}", peerConfig);
         peerStorage.removePeer(peerId);
         continue;
       }
