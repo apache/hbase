@@ -3994,11 +3994,12 @@
               <report>dependency-info</report>
               <report>dependency-management</report>
               <report>index</report>
-              <report>issue-tracking</report>
-              <report>mailing-list</report>
+              <report>issue-management</report>
+              <report>licenses</report>
+              <report>mailing-lists</report>
               <report>plugin-management</report>
               <report>plugins</report>
-              <report>project-team</report>
+              <report>team</report>
               <report>scm</report>
               <report>summary</report>
             </reports>
