@@ -72,9 +72,9 @@ public class SnapshotRegionCallable extends BaseRSProcedureCallable {
             "Unable to complete flush " + regionInfo.getRegionNameAsString() +
               " after " + retryTimes + " attempts");
         }
-        LOG.debug("Snapshotting region {} for {} completed.", region, snapshot.getName());
-        region.addRegionToSnapshot(snapshot, monitor);
       }
+      LOG.debug("Snapshotting region {} for {} completed.", region, snapshot.getName());
+      region.addRegionToSnapshot(snapshot, monitor);
     } finally {
       LOG.debug("Closing snapshot operation on {}", region);
       region.closeRegionOperation(Region.Operation.SNAPSHOT);

@@ -35,6 +35,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -59,6 +60,7 @@ import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
 import org.apache.hadoop.hbase.master.procedure.CloneSnapshotProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RestoreSnapshotProcedure;
+import org.apache.hadoop.hbase.master.procedure.SnapshotProcedure;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure.Procedure;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
@@ -294,18 +296,41 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   }
 
   /**
-   * Cleans up any snapshots in the snapshot/.tmp directory that were left from failed
-   * snapshot attempts.
+   *  Cleans up any zk-coordinated snapshots in the snapshot/.tmp directory that were left from
+   *  failed snapshot attempts. For unfinished procedure2-coordinated snapshots, keep the working
+   *  directory.
    *
    * @throws IOException if we can't reach the filesystem
    */
   private void resetTempDir() throws IOException {
-    // cleanup any existing snapshots.
+    Set<String> workingProcedureCoordinatedSnapshotNames =
+      snapshotToProcIdMap.keySet().stream().map(s -> s.getName()).collect(Collectors.toSet());
+
     Path tmpdir = SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir,
-        master.getConfiguration());
+      master.getConfiguration());
     FileSystem tmpFs = tmpdir.getFileSystem(master.getConfiguration());
-    if (!tmpFs.delete(tmpdir, true)) {
-      LOG.warn("Couldn't delete working snapshot directory: " + tmpdir);
+    FileStatus[] workingSnapshotDirs = CommonFSUtils.listStatus(tmpFs, tmpdir);
+    if (workingSnapshotDirs == null) {
+      return;
+    }
+    for (FileStatus workingSnapshotDir : workingSnapshotDirs) {
+      String workingSnapshotName = workingSnapshotDir.getPath().getName();
+      if (!workingProcedureCoordinatedSnapshotNames.contains(workingSnapshotName)) {
+        try {
+          if (tmpFs.delete(workingSnapshotDir.getPath(), true)) {
+            LOG.info("delete unfinished zk-coordinated snapshot working directory {}",
+              workingSnapshotDir.getPath());
+          } else {
+            LOG.warn("Couldn't delete unfinished zk-coordinated snapshot working directory {}",
+              workingSnapshotDir.getPath());
+          }
+        } catch (IOException e) {
+          LOG.warn("Couldn't delete unfinished zk-coordinated snapshot working directory {}",
+            workingSnapshotDir.getPath(), e);
+        }
+      } else {
+        LOG.debug("find working directory of unfinished procedure {}", workingSnapshotName);
+      }
     }
   }
 
@@ -498,7 +523,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @param snapshot description of the snapshot we want to start
    * @throws HBaseSnapshotException if the filesystem could not be prepared to start the snapshot
    */
-  private synchronized void prepareToTakeSnapshot(SnapshotDescription snapshot)
+  public synchronized void prepareWorkingDirectory(SnapshotDescription snapshot)
       throws HBaseSnapshotException {
     Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir,
         master.getConfiguration());
@@ -532,7 +557,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   private synchronized void snapshotDisabledTable(SnapshotDescription snapshot)
       throws IOException {
     // setup the snapshot
-    prepareToTakeSnapshot(snapshot);
+    prepareWorkingDirectory(snapshot);
 
     // set the snapshot to be a disabled snapshot, since the client doesn't know about that
     snapshot = snapshot.toBuilder().setType(Type.DISABLED).build();
@@ -552,7 +577,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   private synchronized void snapshotEnabledTable(SnapshotDescription snapshot)
           throws IOException {
     // setup the snapshot
-    prepareToTakeSnapshot(snapshot);
+    prepareWorkingDirectory(snapshot);
 
     // Take the snapshot of the enabled table
     EnabledTableSnapshotHandler handler =
@@ -1276,10 +1301,23 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     this.coordinator = new ProcedureCoordinator(comms, tpool, timeoutMillis, wakeFrequency);
     this.executorService = master.getExecutorService();
+    restoreUnfinishedSnapshotProcedure();
     resetTempDir();
     snapshotHandlerChoreCleanerTask =
         scheduleThreadPool.scheduleAtFixedRate(this::cleanupSentinels, 10, 10, TimeUnit.SECONDS);
   }
+
+  private void restoreUnfinishedSnapshotProcedure() {
+    master.getMasterProcedureExecutor()
+      .getActiveProceduresNoCopy()
+      .stream().filter(p -> p instanceof SnapshotProcedure)
+      .filter(p -> !p.isFinished()).map(p -> (SnapshotProcedure) p)
+      .forEach(p -> {
+        registerSnapshotProcedure(p.getSnapshot(), p.getProcId());
+        LOG.info("restore unfinished snapshot procedure {}", p);
+      });
+  }
+
 
   @Override
   public String getProcedureSignature() {
