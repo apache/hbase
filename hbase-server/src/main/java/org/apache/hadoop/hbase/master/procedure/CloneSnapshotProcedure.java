@@ -271,6 +271,8 @@ public class CloneSnapshotProcedure
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setSnapshot(this.snapshot)
         .setTableSchema(ProtobufUtil.toTableSchema(tableDescriptor));
+
+    cloneSnapshotMsg.setRestoreAcl(restoreAcl);
     if (newRegions != null) {
       for (RegionInfo hri: newRegions) {
         cloneSnapshotMsg.addRegionInfo(ProtobufUtil.toRegionInfo(hri));
@@ -303,6 +305,9 @@ public class CloneSnapshotProcedure
     setUser(MasterProcedureUtil.toUserInfo(cloneSnapshotMsg.getUserInfo()));
     snapshot = cloneSnapshotMsg.getSnapshot();
     tableDescriptor = ProtobufUtil.toTableDescriptor(cloneSnapshotMsg.getTableSchema());
+    if (cloneSnapshotMsg.hasRestoreAcl()) {
+      restoreAcl = cloneSnapshotMsg.getRestoreAcl();
+    }
     if (cloneSnapshotMsg.getRegionInfoCount() == 0) {
       newRegions = null;
     } else {
@@ -519,6 +524,13 @@ public class CloneSnapshotProcedure
         new RestoreSnapshotHelper.RestoreMetaChanges(
                 tableDescriptor, parentsToChildrenPairMap);
     metaChanges.updateMetaParentRegions(env.getMasterServices().getConnection(), newRegions);
+  }
+
+  /**
+   * Exposed for Testing: HBASE-26462
+   */
+  public boolean getRestoreAcl() {
+    return restoreAcl;
   }
 
 }
