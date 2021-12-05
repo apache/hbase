@@ -191,6 +191,16 @@ message RestoreParentToChildRegionsPair {
   required string child2_region_name = 3;
 }
 
+message SnapshotRegionProcedureStateData {
+  required RegionInfo region = 1;
+  required SnapshotDescription snapshot = 2;
+}
+
+message SnapshotRegionParameter {
+  required RegionInfo region = 1;
+  required SnapshotDescription snapshot = 2;
+}
+
 message SnapshotVerifyProcedureStateData {
   required SnapshotDescription snapshot = 1;
   repeated RegionInfo region = 2;
