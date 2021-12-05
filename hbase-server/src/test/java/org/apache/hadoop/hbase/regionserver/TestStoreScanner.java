@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixtu
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.ClassRule;
@@ -1023,6 +1025,48 @@ public class TestStoreScanner {
       List<Cell> results = new ArrayList<>();
       assertEquals(true, scan.next(results));
       assertEquals(2, results.size());
+    }
+  }
+
+  @Test
+  public void testScannersClosedWhenCheckingOnlyMemStore() throws IOException {
+    class MyCollectionBackedScanner extends CollectionBackedScanner {
+      final boolean fileScanner;
+      boolean closed;
+
+      MyCollectionBackedScanner(boolean fileScanner) {
+        super(Collections.emptySortedSet());
+        this.fileScanner = fileScanner;
+      }
+
+      @Override
+      public boolean isFileScanner() {
+        return fileScanner;
+      }
+
+      @Override
+      public void close() {
+        super.close();
+        closed = true;
+      }
+    }
+
+    ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, Long.MAX_VALUE,
+      KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0
+      , CellComparator.getInstance(), false);
+    InternalScan scan = new InternalScan(new Scan());
+    scan.checkOnlyMemStore();
+    MyCollectionBackedScanner fileScanner = new MyCollectionBackedScanner(true);
+    MyCollectionBackedScanner memStoreScanner = new MyCollectionBackedScanner(false);
+    List<? extends KeyValueScanner> allScanners = Arrays.asList(fileScanner, memStoreScanner);
+
+    try (StoreScanner scanner = new StoreScanner(scan, scanInfo, null, allScanners)) {
+      List<KeyValueScanner> remaining = scanner.selectScannersFrom(null, allScanners);
+
+      assertEquals(1, remaining.size());
+      assertSame(memStoreScanner, remaining.get(0));
+      assertTrue(fileScanner.closed);
+      assertFalse(memStoreScanner.closed);
     }
   }
 }
