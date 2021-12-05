@@ -504,7 +504,7 @@ public class SplitTableRegionProcedure
   public boolean prepareSplitRegion(final MasterProcedureEnv env) throws IOException {
     // Fail if we are taking snapshot for the given table
     if (env.getMasterServices().getSnapshotManager()
-      .isTakingSnapshot(getParentRegion().getTable())) {
+      .isTableTakingAnySnapshot(getParentRegion().getTable())) {
       setFailure(new IOException("Skip splitting region " + getParentRegion().getShortNameToLog() +
         ", because we are taking snapshot for the table " + getParentRegion().getTable()));
       return false;

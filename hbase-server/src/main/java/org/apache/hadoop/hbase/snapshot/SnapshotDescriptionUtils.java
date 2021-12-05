@@ -34,7 +34,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -296,15 +298,15 @@ public final class SnapshotDescriptionUtils {
           "Descriptor doesn't apply to a table, so we can't build it.");
     }
 
+    SnapshotDescription.Builder builder = snapshot.toBuilder();
+
     // set the creation time, if one hasn't been set
     long time = snapshot.getCreationTime();
     if (time == SnapshotDescriptionUtils.NO_SNAPSHOT_START_TIME_SPECIFIED) {
       time = EnvironmentEdgeManager.currentTime();
       LOG.debug("Creation time not specified, setting to:" + time + " (current time:"
           + EnvironmentEdgeManager.currentTime() + ").");
-      SnapshotDescription.Builder builder = snapshot.toBuilder();
       builder.setCreationTime(time);
-      snapshot = builder.build();
     }
 
     long ttl = snapshot.getTtl();
@@ -319,8 +321,21 @@ public final class SnapshotDescriptionUtils {
       }
       ttl = defaultSnapshotTtl;
     }
-    SnapshotDescription.Builder builder = snapshot.toBuilder();
     builder.setTtl(ttl);
+
+    if (!snapshot.hasVersion()) {
+      builder.setVersion(SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_VERSION);
+      LOG.debug("Snapshot {} VERSION not specified, setting to {}", snapshot.getName(),
+        SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_VERSION);
+    }
+
+    RpcServer.getRequestUser().ifPresent(user -> {
+      if (AccessChecker.isAuthorizationSupported(conf)) {
+        builder.setOwner(user.getShortName());
+        LOG.debug("Set {} as owner of Snapshot", user.getShortName());
+      }
+    });
+
     snapshot = builder.build();
 
     // set the acl to snapshot if security feature is enabled.
