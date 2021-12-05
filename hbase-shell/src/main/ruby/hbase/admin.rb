@@ -1249,6 +1249,38 @@ module Hbase
       end
     end
 
+#----------------------------------------------------------------------------------------------
+    # Take a snapshot of specified table
+    def snapshot_table(table, snapshot_name, *args)
+      # Table name should be a string
+      raise(ArgumentError, 'Table name must be of type String') unless table.is_a?(String)
+
+      # Snapshot name should be a string
+      raise(ArgumentError, 'Snapshot name must be of type String') unless
+          snapshot_name.is_a?(String)
+
+      table_name = TableName.valueOf(table)
+      if args.empty?
+        @admin.snapshotTable(snapshot_name, table_name)
+      else
+        args.each do |arg|
+          ttl = arg[TTL]
+          ttl = ttl ? ttl.to_java(:long) : -1
+          snapshot_props = java.util.HashMap.new
+          snapshot_props.put("TTL", ttl)
+          max_filesize = arg[MAX_FILESIZE]
+          max_filesize = max_filesize ? max_filesize.to_java(:long) : -1
+          snapshot_props.put("MAX_FILESIZE", max_filesize)
+          if arg[SKIP_FLUSH] == true
+            @admin.snapshotTable(snapshot_name, table_name,
+                            org.apache.hadoop.hbase.client.SnapshotType::SKIPFLUSH, snapshot_props)
+          else
+            @admin.snapshotTable(snapshot_name, table_name, snapshot_props)
+          end
+        end
+      end
+    end
+
     #----------------------------------------------------------------------------------------------
     # Restore specified snapshot
     def restore_snapshot(snapshot_name, restore_acl = false)

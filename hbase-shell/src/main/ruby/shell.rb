@@ -529,6 +529,7 @@ Shell.load_command_group(
   full_name: 'CLUSTER SNAPSHOT TOOLS',
   commands: %w[
     snapshot
+    snapshot_table
     clone_snapshot
     restore_snapshot
     delete_snapshot
