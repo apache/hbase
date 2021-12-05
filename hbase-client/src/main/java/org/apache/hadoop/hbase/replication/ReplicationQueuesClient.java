@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -66,6 +67,13 @@ public interface ReplicationQueuesClient {
    * @return cversion of replication rs node
    */
   int getQueuesZNodeCversion() throws KeeperException;
+
+  /**
+   * Get a map of cversion of all replicator nodes. This can be used as optimistic locking
+   * to get a consistent snapshot of the replication queues.
+   * @return a map of replicator to cversion
+   */
+  Map<String, Integer> getReplicatorsZNodeCversion() throws KeeperException;
 
   /**
    * Get the change version number of replication hfile references node. This can be used as

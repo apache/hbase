@@ -106,6 +106,9 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
         LOG.debug("Didn't find any region server that replicates, won't prevent any deletions.");
         return ImmutableSet.of();
       }
+      // We should also check cversions of all rs nodes to Prevent missing of WAL which are claiming
+      // by other regionServer. For details, please see HBASE-26482
+      Map<String, Integer> rsToCversionBefore = replicationQueues.getReplicatorsZNodeCversion();
       Set<String> wals = Sets.newHashSet();
       for (String rs : rss) {
         List<String> listOfPeers = replicationQueues.getAllQueues(rs);
@@ -121,7 +124,8 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
         }
       }
       int v1 = replicationQueues.getQueuesZNodeCversion();
-      if (v0 == v1) {
+      Map<String, Integer> rsToCversionAfter = replicationQueues.getReplicatorsZNodeCversion();
+      if (v0 == v1 && rsToCversionBefore.equals(rsToCversionAfter)) {
         return wals;
       }
       LOG.info(String.format("Replication queue node cversion changed from %d to %d, retry = %d",

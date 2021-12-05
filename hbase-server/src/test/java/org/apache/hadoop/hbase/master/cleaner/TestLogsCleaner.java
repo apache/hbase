@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -41,6 +42,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -188,6 +190,9 @@ public class TestLogsCleaner {
 
     ReplicationQueuesClient rqcMock = mock(ReplicationQueuesClient.class);
     Mockito.when(rqcMock.getQueuesZNodeCversion()).thenReturn(1, 2, 3, 4);
+    // Avoid direct return because there no replicator.
+    Mockito.when(rqcMock.getListOfReplicators())
+      .thenReturn(Lists.newArrayList("s1", "s2"));
 
     Field rqc = ReplicationLogCleaner.class.getDeclaredField("replicationQueues");
     rqc.setAccessible(true);
@@ -196,6 +201,35 @@ public class TestLogsCleaner {
 
     // This should return eventually when cversion stabilizes
     cleaner.getDeletableFiles(new LinkedList<FileStatus>());
+    // Test did get an optimistic lock
+    Mockito.verify(rqcMock, atLeast(5)).getQueuesZNodeCversion();
+  }
+
+  @Test
+  public void testReplicatorZnodeCversionChange()
+    throws KeeperException, NoSuchFieldException, IllegalAccessException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
+    cleaner.setConf(conf);
+
+    ReplicationQueuesClient rqcMock = mock(ReplicationQueuesClient.class);
+    // Avoid direct return because there no replicator.
+    Mockito.when(rqcMock.getListOfReplicators()).thenReturn(Lists.newArrayList("s1", "s2"));
+    Mockito.when(rqcMock.getReplicatorsZNodeCversion()).thenReturn(
+      ImmutableMap.of("s1", 0, "s2", 0),
+      ImmutableMap.of("s1", 1, "s2", 1),
+      ImmutableMap.of("s1", 2, "s2", 2),
+      ImmutableMap.of("s1", 3, "s2", 3));
+
+    Field rqc = ReplicationLogCleaner.class.getDeclaredField("replicationQueues");
+    rqc.setAccessible(true);
+
+    rqc.set(cleaner, rqcMock);
+
+    // This should return eventually when cversion stabilizes
+    cleaner.getDeletableFiles(new LinkedList<FileStatus>());
+    // Test did get an optimistic lock
+    Mockito.verify(rqcMock, atLeast(5)).getReplicatorsZNodeCversion();
   }
 
   @Test(timeout=10000)

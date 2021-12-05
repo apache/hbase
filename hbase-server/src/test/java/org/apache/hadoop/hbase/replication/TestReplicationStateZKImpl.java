@@ -127,6 +127,13 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     assertTrue(rqZK.isPeerPath(peerPath));
   }
 
+  @Test
+  public void testZNodeCversion() throws ReplicationException, KeeperException {
+    rq1.init(server1);
+
+    assertTrue(rqc.getReplicatorsZNodeCversion().containsKey(server1));
+  }
+
   static class DummyServer implements Server {
     private String serverName;
     private boolean isAborted = false;
