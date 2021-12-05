@@ -224,3 +224,6 @@ if interactive
   @shell.print_banner
 end
 IRB::HIRB.new(workspace).run
+unless interactive or @shell.exit_code.nil?
+  exit @shell.exit_code
+end
