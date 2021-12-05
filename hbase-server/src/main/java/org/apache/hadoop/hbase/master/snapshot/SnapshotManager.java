@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
 import org.apache.hadoop.hbase.master.procedure.CloneSnapshotProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.RestoreSnapshotProcedure;
 import org.apache.hadoop.hbase.master.procedure.SnapshotProcedure;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
@@ -647,6 +648,32 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     this.takingSnapshotLock.readLock().lock();
     try {
       takeSnapshotInternal(snapshot);
+    } finally {
+      this.takingSnapshotLock.readLock().unlock();
+    }
+  }
+
+  public synchronized long takeSnapshot(SnapshotDescription snapshot,
+      long nonceGroup, long nonce) throws IOException {
+    this.takingSnapshotLock.readLock().lock();
+    try {
+      return MasterProcedureUtil.submitProcedure(
+        new MasterProcedureUtil.NonceProcedureRunnable(master, nonceGroup, nonce) {
+          @Override
+          protected void run() throws IOException {
+            sanityCheckBeforeSnapshot(snapshot, false);
+
+            long procId = submitProcedure(new SnapshotProcedure(
+              master.getMasterProcedureExecutor().getEnvironment(), snapshot));
+
+            getMaster().getSnapshotManager().registerSnapshotProcedure(snapshot, procId);
+          }
+
+          @Override
+          protected String getDescription() {
+            return "SnapshotTableProcedure";
+          }
+        });
     } finally {
       this.takingSnapshotLock.readLock().unlock();
     }

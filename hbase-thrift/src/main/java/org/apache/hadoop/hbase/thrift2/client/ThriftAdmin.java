@@ -843,7 +843,11 @@ public class ThriftAdmin implements Admin {
   @Override
   public void snapshot(SnapshotDescription snapshot) {
     throw new NotImplementedException("snapshot not supported in ThriftAdmin");
+  }
 
+  @Override
+  public void snapshotTable(SnapshotDescription snapshot) {
+    throw new NotImplementedException("snapshot not supported in ThriftAdmin");
   }
 
   @Override

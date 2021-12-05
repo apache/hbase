@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
@@ -110,6 +112,13 @@ public class TestSnapshotProcedure {
     final byte[][] splitKeys = new RegionSplitter.HexStringSplit().split(10);
     Table table = TEST_UTIL.createTable(TABLE_NAME, CF, splitKeys);
     TEST_UTIL.loadTable(table, CF, false);
+  }
+
+  @Test
+  public void testSimpleSnapshotTable() throws Exception {
+    TEST_UTIL.getAdmin().snapshotTable(snapshot);
+    SnapshotTestingUtils.assertOneSnapshotThatMatches(TEST_UTIL.getAdmin(), snapshotProto);
+    SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotProto, TABLE_NAME, CF);
   }
 
   @Test
@@ -203,8 +212,93 @@ public class TestSnapshotProcedure {
     return procOpt.get();
   }
 
+  @Test(expected = org.apache.hadoop.hbase.snapshot.SnapshotCreationException.class)
+  public void testClientTakingTwoSnapshotOnSameTable() throws Exception {
+    Thread first = new Thread("first-client") {
+      @Override
+      public void run() {
+        try {
+          TEST_UTIL.getAdmin().snapshotTable(snapshot);
+        } catch (IOException e) {
+          LOG.error("first client failed taking snapshot", e);
+          fail("first client failed taking snapshot");
+        }
+      }
+    };
+    first.start();
+    Thread.sleep(1000);
+    // we don't allow different snapshot with same name
+    SnapshotDescription snapshotWithSameName =
+      new SnapshotDescription(SNAPSHOT_NAME, TABLE_NAME, SnapshotType.SKIPFLUSH);
+    TEST_UTIL.getAdmin().snapshotTable(snapshotWithSameName);
+  }
+
+  @Test(expected = org.apache.hadoop.hbase.snapshot.SnapshotCreationException.class)
+  public void testClientTakeSameSnapshotTwice() throws IOException, InterruptedException {
+    Thread first = new Thread("first-client") {
+      @Override
+      public void run() {
+        try {
+          TEST_UTIL.getAdmin().snapshotTable(snapshot);
+        } catch (IOException e) {
+          LOG.error("first client failed taking snapshot", e);
+          fail("first client failed taking snapshot");
+        }
+      }
+    };
+    first.start();
+    Thread.sleep(1000);
+    TEST_UTIL.getAdmin().snapshotTable(snapshot);
+  }
+
   @Test
-  public void testRunningTowSnapshotProcedureOnSameTable() throws Exception {
+  public void testTakeZkCoordinatedSnapshotAndProcedureCoordinatedSnapshotBoth() throws Exception {
+    String newSnapshotName = SNAPSHOT_NAME + "_2";
+    Thread first = new Thread("procedure-snapshot") {
+      @Override
+      public void run() {
+        try {
+          TEST_UTIL.getAdmin().snapshotTable(snapshot);
+        } catch (IOException e) {
+          LOG.error("procedure snapshot failed", e);
+          fail("procedure snapshot failed");
+        }
+      }
+    };
+    first.start();
+    Thread.sleep(1000);
+
+    SnapshotManager sm = master.getSnapshotManager();
+    TEST_UTIL.waitFor(2000, 50, () -> !sm.isTakingSnapshot(TABLE_NAME)
+      && sm.isTableTakingAnySnapshot(TABLE_NAME));
+
+    TEST_UTIL.getConfiguration().setBoolean("hbase.snapshot.zk.coordinated", true);
+    SnapshotDescription snapshotOnSameTable =
+      new SnapshotDescription(newSnapshotName, TABLE_NAME, SnapshotType.SKIPFLUSH);
+    SnapshotProtos.SnapshotDescription snapshotOnSameTableProto = ProtobufUtil
+      .createHBaseProtosSnapshotDesc(snapshotOnSameTable);
+    Thread second = new Thread("zk-snapshot") {
+      @Override
+      public void run() {
+        try {
+          TEST_UTIL.getAdmin().snapshot(snapshotOnSameTable);
+        } catch (IOException e) {
+          LOG.error("zk snapshot failed", e);
+          fail("zk snapshot failed");
+        }
+      }
+    };
+    second.start();
+
+    TEST_UTIL.waitFor(2000, () -> sm.isTakingSnapshot(TABLE_NAME));
+    TEST_UTIL.waitFor(60000, () -> sm.isSnapshotDone(snapshotOnSameTableProto)
+      && !sm.isTakingAnySnapshot());
+    SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotProto, TABLE_NAME, CF);
+    SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotOnSameTableProto, TABLE_NAME, CF);
+  }
+
+  @Test
+  public void testRunningTwoSnapshotProcedureOnSameTable() throws Exception {
     String newSnapshotName = SNAPSHOT_NAME + "_2";
     SnapshotProtos.SnapshotDescription snapshotProto2 = SnapshotProtos.SnapshotDescription
       .newBuilder(snapshotProto).setName(newSnapshotName).build();

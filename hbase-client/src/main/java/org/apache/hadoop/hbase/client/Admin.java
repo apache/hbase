@@ -1590,6 +1590,66 @@ public interface Admin extends Abortable, Closeable {
       throws IOException, SnapshotCreationException, IllegalArgumentException;
 
   /**
+   *  Take a snapshot and wait for the server to complete that snapshot (blocking). It's same as
+   *  {@link org.apache.hadoop.hbase.client.Admin#snapshot(String, TableName)} for users. The
+   *  difference between the two methods is that
+   *  {@link org.apache.hadoop.hbase.client.Admin#snapshotTable(String, TableName)} is based on
+   *  proc-v2.
+   * @param snapshotName name to give the snapshot on the filesystem. Must be unique from all other
+   *                     snapshots stored on the cluster
+   * @param tableName name of the table to snapshot
+   * @throws IOException we fail to reach the master
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+  default void snapshotTable(String snapshotName, TableName tableName)
+      throws IOException, SnapshotCreationException, IllegalArgumentException {
+    snapshotTable(snapshotName, tableName, SnapshotType.FLUSH);
+  }
+
+  /**
+   * Create typed snapshot of the table.
+   * @param snapshotName name to give the snapshot on the filesystem. Must be unique from all other
+   *                     snapshots stored on the cluster
+   * @param tableName name of the table to snapshot
+   * @param type type of snapshot to take
+   * @throws IOException we fail to reach the master
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+  default void snapshotTable(String snapshotName, TableName tableName, SnapshotType type)
+      throws IOException, SnapshotCreationException, IllegalArgumentException {
+    snapshotTable(new SnapshotDescription(snapshotName, tableName, type));
+  }
+
+  /**
+   * Create typed snapshot of the table.
+   * @param snapshotName name to give the snapshot on the filesystem. Must be unique from all other
+   *                     snapshots stored on the cluster
+   * @param tableName  name of the table to snapshot
+   * @param type type of snapshot to take
+   * @param snapshotProps snapshot additional properties e.g. TTL
+   * @throws IOException we fail to reach the master
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+  default void snapshotTable(String snapshotName, TableName tableName,
+      SnapshotType type, Map<String, Object> snapshotProps)
+      throws IOException, SnapshotCreationException, IllegalArgumentException {
+    snapshot(new SnapshotDescription(snapshotName, tableName, type, snapshotProps));
+  }
+
+  /**
+   * Take a snapshot and wait for the server to complete that snapshot (blocking).
+   * @param snapshot snapshot to take
+   * @throws IOException we fail to reach the master
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+  void snapshotTable(SnapshotDescription snapshot)
+    throws IOException, SnapshotCreationException, IllegalArgumentException;
+
+  /**
    * Take a snapshot without waiting for the server to complete that snapshot (asynchronous).
    * Snapshots are considered unique based on <b>the name of the snapshot</b>. Snapshots are taken
    * sequentially even when requested concurrently, across all tables.

@@ -270,6 +270,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ShutdownRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMasterRequest;
@@ -1947,6 +1949,23 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> snapshotTable(SnapshotDescription snapshotDesc) {
+    SnapshotProtos.SnapshotDescription snapshot =
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotDesc);
+    try {
+      ClientSnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
+    } catch (IllegalArgumentException e) {
+      return failedFuture(e);
+    }
+
+    SnapshotTableRequest snapshotTableRequest = SnapshotTableRequest.newBuilder()
+      .setSnapshot(snapshot).setNonceGroup(ng.getNonceGroup()).setNonce(ng.newNonce()).build();
+    return this.<SnapshotTableRequest, SnapshotTableResponse> procedureCall(snapshotTableRequest,
+      (s, c, req, done) -> s.snapshotTable(c, req, done), (resp) -> resp.getProcId(),
+      new SnapshotTableProcedureBiConsumer(TableName.valueOf(snapshot.getTable())));
+  }
+
+  @Override
   public CompletableFuture<Boolean> isSnapshotFinished(SnapshotDescription snapshot) {
     return this
         .<Boolean> newMasterCaller()
@@ -2799,6 +2818,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return "SPLIT_REGION";
     }
   }
+
+  private static class SnapshotTableProcedureBiConsumer extends TableProcedureBiConsumer {
+    SnapshotTableProcedureBiConsumer(TableName tableName) {
+      super(tableName);
+    }
+
+    @Override
+    String getOperationType() {
+      return "SNAPSHOT";
+    }
+  }
+
 
   private static class ReplicationProcedureBiConsumer extends ProcedureBiConsumer {
     private final String peerId;
