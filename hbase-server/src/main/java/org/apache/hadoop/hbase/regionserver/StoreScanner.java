@@ -465,6 +465,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     for (KeyValueScanner kvs : allScanners) {
       boolean isFile = kvs.isFileScanner();
       if ((!isFile && filesOnly) || (isFile && memOnly)) {
+        kvs.close();
         continue;
       }
 
