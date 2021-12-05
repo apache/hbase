@@ -301,7 +301,14 @@ public enum EventType {
    *
    * RS_CLAIM_REPLICATION_QUEUE
    */
-  RS_CLAIM_REPLICATION_QUEUE(86, ExecutorType.RS_CLAIM_REPLICATION_QUEUE);
+  RS_CLAIM_REPLICATION_QUEUE(86, ExecutorType.RS_CLAIM_REPLICATION_QUEUE),
+
+  /**
+   *  RS verify snapshot.<br>
+   *
+   *  RS_VERIFY_SNAPSHOT
+   */
+  RS_VERIFY_SNAPSHOT(88, ExecutorType.RS_SNAPSHOT_OPERATIONS);
 
   private final int code;
   private final ExecutorType executor;

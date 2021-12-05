@@ -50,7 +50,12 @@ public interface ServerProcedureInterface {
     /**
      * send the claim replication queue request to region server to actually assign it
      */
-    CLAIM_REPLICATION_QUEUE_REMOTE
+    CLAIM_REPLICATION_QUEUE_REMOTE,
+
+    /**
+     *  send verify snapshot request to region server and handle the response
+     */
+    VERIFY_SNAPSHOT
   }
 
   /**

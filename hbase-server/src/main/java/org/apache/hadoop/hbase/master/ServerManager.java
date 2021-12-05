@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
+import org.apache.hadoop.hbase.util.ReservoirSample;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -838,6 +839,12 @@ public class ServerManager {
     // TODO: optimize the load balancer call so we don't need to make a new list
     // TODO: FIX. THIS IS POPULAR CALL.
     return new ArrayList<>(this.onlineServers.keySet());
+  }
+
+  public ServerName randomSelect() {
+    ReservoirSample<ServerName> sample = new ReservoirSample<>(1);
+    sample.add(onlineServers.keySet().iterator());
+    return sample.getSamplingResult().get(0);
   }
 
   /**
