@@ -428,12 +428,23 @@ verifies whether the given class is actually contained in the jar file.
 
 ==== Using HBase Shell
 
-. Alter the table to remove the coprocessor.
+. Alter the table to remove the coprocessor with `table_att_unset`.
 +
 [source]
 ----
 hbase> alter 'users', METHOD => 'table_att_unset', NAME => 'coprocessor$1'
 ----
+
+. Alter the table to remove the coprocessor with `table_remove_coprocessor` introduced in
+link:https://issues.apache.org/jira/browse/HBASE-26524[HBASE-26524] by specifying an explicit
+classname
++
+[source]
+----
+hbase> alter 'users', METHOD => 'table_remove_coprocessor', CLASSNAME =>
+         'org.myname.hbase.Coprocessor.RegionObserverExample'
+----
+
 
 ==== Using the Java API
 
