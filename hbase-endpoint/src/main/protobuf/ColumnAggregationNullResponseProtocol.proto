@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 syntax = "proto2";
+package hbase.test.pb;
 
 // Coprocessor test
 option java_package = "org.apache.hadoop.hbase.coprocessor.protobuf.generated";
