@@ -347,7 +347,7 @@ public class ReplicationSourceManager {
     if (ReplicationUtils.LEGACY_REGION_REPLICATION_ENDPOINT_NAME
       .equals(peer.getPeerConfig().getReplicationEndpointImpl())) {
       // we do not use this endpoint for region replication any more, see HBASE-26233
-      LOG.warn("Legacy region replication peer found, skip adding: {}", peer.getPeerConfig());
+      LOG.info("Legacy region replication peer found, skip adding: {}", peer.getPeerConfig());
       return;
     }
     ReplicationSourceInterface src = createSource(peerId, peer);

@@ -25,11 +25,17 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -63,16 +69,22 @@ public class TestStartupWithLegacyRegionReplicationEndpoint {
     ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
       .setClusterKey("127.0.0.1:2181:/hbase")
       .setReplicationEndpointImpl(ReplicationUtils.LEGACY_REGION_REPLICATION_ENDPOINT_NAME).build();
+    SingleProcessHBaseCluster cluster = UTIL.getMiniHBaseCluster();
+    HMaster master = cluster.getMaster();
     // can not use Admin.addPeer as it will fail with ClassNotFound
-    UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().addPeer("legacy", peerConfig,
-      true);
-    UTIL.getMiniHBaseCluster().stopRegionServer(0);
-    RegionServerThread rst = UTIL.getMiniHBaseCluster().startRegionServer();
+    master.getReplicationPeerManager().addPeer("legacy", peerConfig, true);
+    // add a wal file to the queue
+    ServerName rsName = cluster.getRegionServer(0).getServerName();
+    master.getReplicationPeerManager().getQueueStorage().addWAL(rsName,
+      ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER, "test-wal-file");
+    cluster.stopRegionServer(0);
+    RegionServerThread rst = cluster.startRegionServer();
     // we should still have this peer
     assertNotNull(UTIL.getAdmin().getReplicationPeerConfig("legacy"));
     // but at RS side, we should not have this peer loaded as replication source
     assertTrue(rst.getRegionServer().getReplicationSourceService().getReplicationManager()
       .getSources().isEmpty());
+
     UTIL.shutdownMiniHBaseCluster();
     UTIL.restartHBaseCluster(1);
     // now we should have removed the peer
@@ -81,5 +93,13 @@ public class TestStartupWithLegacyRegionReplicationEndpoint {
     // at rs side, we should not have the peer this time, not only for not having replication source
     assertTrue(UTIL.getMiniHBaseCluster().getRegionServer(0).getReplicationSourceService()
       .getReplicationManager().getReplicationPeers().getAllPeerIds().isEmpty());
+
+    // make sure that we can finish the SCP and delete the test-wal-file
+    UTIL.waitFor(15000,
+      () -> UTIL.getMiniHBaseCluster().getMaster().getProcedures().stream()
+        .filter(p -> p instanceof ServerCrashProcedure).map(p -> (ServerCrashProcedure) p)
+        .allMatch(Procedure::isSuccess));
+    assertTrue(UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage()
+      .getAllQueues(rsName).isEmpty());
   }
 }
