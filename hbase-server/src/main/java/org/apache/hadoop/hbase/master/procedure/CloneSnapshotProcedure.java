@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -529,6 +530,8 @@ public class CloneSnapshotProcedure
   /**
    * Exposed for Testing: HBASE-26462
    */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
   public boolean getRestoreAcl() {
     return restoreAcl;
   }

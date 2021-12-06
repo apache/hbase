@@ -225,7 +225,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     // This test is to solve the problems mentioned in HBASE-26462,
     // this needs to simulate the case of RestoreSnapshotProcedure failure and recovery,
     // and verify whether 'restoreAcl' flag can obtain the correct value.
-    
+
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
