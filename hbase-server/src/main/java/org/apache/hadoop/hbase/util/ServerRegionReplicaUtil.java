@@ -51,6 +51,12 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
   private static final boolean DEFAULT_REGION_REPLICA_REPLICATION = false;
 
   /**
+   * @deprecated Since 3.0.0, leave here only for implementing compatibility code.
+   */
+  @Deprecated
+  public static final String REGION_REPLICA_REPLICATION_PEER = "region_replica_replication";
+
+  /**
    * Same as for {@link #REGION_REPLICA_REPLICATION_CONF_KEY} but for catalog replication.
    */
   public static final String REGION_REPLICA_REPLICATION_CATALOG_CONF_KEY
