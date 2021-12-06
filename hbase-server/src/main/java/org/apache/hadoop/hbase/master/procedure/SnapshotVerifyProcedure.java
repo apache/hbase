@@ -66,7 +66,9 @@ public class SnapshotVerifyProcedure
     if (error != null) {
       Throwable realError = error.getCause();
       if (realError instanceof CorruptedSnapshotException) {
-        this.remoteException = (CorruptedSnapshotException) realError;
+        synchronized (this) {
+          this.remoteException = (CorruptedSnapshotException) realError;
+        }
         this.succ = true;
       } else {
         this.succ = false;
