@@ -97,7 +97,10 @@ public class TestSnapshotProcedure {
     config.setBoolean("hbase.snapshot.zk.coordinated", false);
     // using SnapshotVerifyProcedure to verify snapshot
     config.setInt("hbase.snapshot.remote.verify.threshold", 1);
-    config.setInt(HConstants.MASTER_INFO_PORT, 8080);
+    // disable info server. Info server is useful when we run unit tests locally, but it will
+    // fails integration testing of jenkins.
+    // config.setInt(HConstants.MASTER_INFO_PORT, 8080);
+
     // delay dispatch so that we can do something, for example kill a target server
     config.setInt(RemoteProcedureDispatcher.DISPATCH_DELAY_CONF_KEY, 10000);
     config.setInt(RemoteProcedureDispatcher.DISPATCH_MAX_QUEUE_SIZE_CONF_KEY, 128);

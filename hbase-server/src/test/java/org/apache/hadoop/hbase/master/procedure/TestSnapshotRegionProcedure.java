@@ -74,7 +74,10 @@ public class TestSnapshotRegionProcedure {
   public void setup() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(HConstants.MASTER_INFO_PORT, 8080);
+    // disable info server. Info server is useful when we run unit tests locally, but it will
+    // fails integration testing of jenkins.
+    // conf.setInt(HConstants.MASTER_INFO_PORT, 8080);
+
     // delay dispatch so that we can do something, for example kill a target server
     conf.setInt(RemoteProcedureDispatcher.DISPATCH_DELAY_CONF_KEY, 10000);
     conf.setInt(RemoteProcedureDispatcher.DISPATCH_MAX_QUEUE_SIZE_CONF_KEY, 128);
