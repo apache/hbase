@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs.monitor;
 
-import java.util.Deque;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import static org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager.DEFAULT_WAL_EXCLUDE_DATANODE_TTL;
+import static org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager.DEFAULT_WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT;
+import static org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager.WAL_EXCLUDE_DATANODE_TTL_KEY;
+import static org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager.WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT_KEY;
 
+import java.util.Deque;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -29,6 +32,9 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 
 /**
  * Class for monitor the wal file flush performance.
@@ -71,8 +77,7 @@ public class StreamSlowMonitor implements ConfigurationObserver {
 
   private final String name;
   // this is a map of datanodeInfo->queued slow PacketAckData
-  private final Map<DatanodeInfo, Deque<PacketAckData>> datanodeSlowDataQueue =
-    new ConcurrentHashMap<>();
+  private final Cache<DatanodeInfo, Deque<PacketAckData>> datanodeSlowDataQueue;
   private final ExcludeDatanodeManager excludeDatanodeManager;
 
   private int minSlowDetectCount;
@@ -85,6 +90,12 @@ public class StreamSlowMonitor implements ConfigurationObserver {
     setConf(conf);
     this.name = name;
     this.excludeDatanodeManager = excludeDatanodeManager;
+    this.datanodeSlowDataQueue = CacheBuilder.newBuilder()
+      .initialCapacity(conf.getInt(WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT_KEY,
+        DEFAULT_WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT))
+      .expireAfterWrite(conf.getLong(WAL_EXCLUDE_DATANODE_TTL_KEY,
+        DEFAULT_WAL_EXCLUDE_DATANODE_TTL), TimeUnit.HOURS)
+      .build();
     LOG.info("New stream slow monitor {}", this.name);
   }
 
@@ -124,10 +135,18 @@ public class StreamSlowMonitor implements ConfigurationObserver {
     setConf(conf);
   }
 
+  private synchronized Deque<PacketAckData> getSlowDNQueue(DatanodeInfo datanodeInfo) {
+    Deque<PacketAckData> slowDNQueue = datanodeSlowDataQueue.getIfPresent(datanodeInfo);
+    if (slowDNQueue == null) {
+      slowDNQueue = new ConcurrentLinkedDeque<>();
+      datanodeSlowDataQueue.put(datanodeInfo, slowDNQueue);
+    }
+    return slowDNQueue;
+  }
+
   private boolean addSlowAckData(DatanodeInfo datanodeInfo, long dataLength, long processTime) {
-    Deque<PacketAckData> slowDNQueue = datanodeSlowDataQueue.computeIfAbsent(datanodeInfo,
-      d -> new ConcurrentLinkedDeque<>());
-    long current = System.currentTimeMillis();
+    Deque<PacketAckData> slowDNQueue = getSlowDNQueue(datanodeInfo);
+    long current = EnvironmentEdgeManager.currentTime();
     while (!slowDNQueue.isEmpty() && (current - slowDNQueue.getFirst().getTimestamp() > slowDataTtl
       || slowDNQueue.size() >= minSlowDetectCount)) {
       slowDNQueue.removeFirst();

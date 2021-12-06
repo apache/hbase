@@ -33,8 +33,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -489,7 +489,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         DataChecksum summer = createChecksum(client);
         locatedBlock = namenode.addBlock(src, client.getClientName(), null,
           toExcludeNodes.toArray(new DatanodeInfo[0]), stat.getFileId(), null, null);
-        Map<Channel, DatanodeInfo> datanodes = new HashMap<>();
+        Map<Channel, DatanodeInfo> datanodes = new IdentityHashMap<>();
         futureList = connectToDataNodes(conf, client, clientName, locatedBlock, 0L, 0L,
           PIPELINE_SETUP_CREATE, summer, eventLoopGroup, channelClass);
         for (int i = 0, n = futureList.size(); i < n; i++) {

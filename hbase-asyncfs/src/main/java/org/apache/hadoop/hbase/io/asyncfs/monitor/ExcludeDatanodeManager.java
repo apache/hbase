@@ -23,10 +23,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 
@@ -40,16 +42,16 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
   /**
    * Configure for the max count the excluded datanodes.
    */
-  private static final String WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT_KEY =
+  public static final String WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT_KEY =
     "hbase.regionserver.async.wal.max.exclude.datanode.count";
-  private static final int DEFAULT_WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT = 3;
+  public static final int DEFAULT_WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT = 3;
 
   /**
    * Configure for the TTL time of the datanodes excluded
    */
-  private static final String WAL_EXCLUDE_DATANODE_TTL_KEY =
+  public static final String WAL_EXCLUDE_DATANODE_TTL_KEY =
     "hbase.regionserver.async.wal.exclude.datanode.info.ttl.hour";
-  private static final int DEFAULT_WAL_EXCLUDE_DATANODE_TTL = 6; // 6 hours
+  public static final int DEFAULT_WAL_EXCLUDE_DATANODE_TTL = 6; // 6 hours
 
   private volatile Cache<DatanodeInfo, Long> excludeDNsCache;
   private final int maxExcludeDNCount;
@@ -64,10 +66,8 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
       DEFAULT_WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT);
     this.excludeDNsCache = CacheBuilder.newBuilder()
       .expireAfterWrite(this.conf.getLong(WAL_EXCLUDE_DATANODE_TTL_KEY,
-        DEFAULT_WAL_EXCLUDE_DATANODE_TTL),
-        TimeUnit.HOURS)
+        DEFAULT_WAL_EXCLUDE_DATANODE_TTL), TimeUnit.HOURS)
       .maximumSize(this.maxExcludeDNCount)
-      .concurrencyLevel(10)
       .build();
   }
 
@@ -79,18 +79,18 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
    */
   public boolean tryAddExcludeDN(DatanodeInfo datanodeInfo, String cause) {
     boolean alreadyMarkedSlow = getExcludeDNs().containsKey(datanodeInfo);
-    if (excludeDNsCache.size() < maxExcludeDNCount) {
-      if (!alreadyMarkedSlow) {
-        excludeDNsCache.put(datanodeInfo, System.currentTimeMillis());
-        LOG.info(
-          "Added datanode: {} to exclude cache by [{}] success, current excludeDNsCache size={}",
-          datanodeInfo, cause, excludeDNsCache.size());
-        return true;
-      }
-    } else {
+    if (excludeDNsCache.size() >= maxExcludeDNCount) {
       LOG.warn("Try add datanode {} to exclude cache by [{}] failed, up to max exclude limit {}, "
           + "current exclude DNs are {}", datanodeInfo, cause, excludeDNsCache.size(),
         getExcludeDNs().keySet());
+      return false;
+    }
+    if (!alreadyMarkedSlow) {
+      excludeDNsCache.put(datanodeInfo, EnvironmentEdgeManager.currentTime());
+      LOG.info(
+        "Added datanode: {} to exclude cache by [{}] success, current excludeDNsCache size={}",
+        datanodeInfo, cause, excludeDNsCache.size());
+      return true;
     }
     return false;
   }
