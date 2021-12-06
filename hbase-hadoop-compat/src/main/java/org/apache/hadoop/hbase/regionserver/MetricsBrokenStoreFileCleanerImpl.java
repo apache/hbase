@@ -37,9 +37,10 @@ import org.apache.yetus.audience.InterfaceAudience;
     String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
 
-    brokenStoreFileCleanerDeletes = getMetricsRegistry().newCounter(DELETES, DELETES_DESC, 0l);
-    brokenStoreFileCleanerFailedDeletes = getMetricsRegistry().newCounter(FAILED_DELETES, FAILED_DELETES_DESC, 0l);
-    brokenStoreFileCleanerRuns = getMetricsRegistry().newCounter(RUNS, RUNS_DESC, 0l);
+    brokenStoreFileCleanerDeletes = getMetricsRegistry().newCounter(DELETES, DELETES_DESC, 0L);
+    brokenStoreFileCleanerFailedDeletes =
+      getMetricsRegistry().newCounter(FAILED_DELETES, FAILED_DELETES_DESC, 0L);
+    brokenStoreFileCleanerRuns = getMetricsRegistry().newCounter(RUNS, RUNS_DESC, 0L);
     brokenStoreFileCleanerTimer = getMetricsRegistry().newTimeHistogram(RUNTIME, RUNTIME_DESC);
   }
 

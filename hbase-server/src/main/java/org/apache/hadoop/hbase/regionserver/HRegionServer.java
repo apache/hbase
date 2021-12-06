@@ -3562,8 +3562,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return true;
   }
 
-  private RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest buildBrokenSFCReport(long runtime,
-    long deletedFiles, long failedDeletes,
+  private RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest buildBrokenSFCReport(
+    long runtime, long deletedFiles, long failedDeletes,
     RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest storedRequest) {
     RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest.Builder builder;
     if(storedRequest != null) {
@@ -3581,7 +3581,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       builder.setFailedDeletes(builder.getFailedDeletes() + failedDeletes);
     }
     builder.setRuntime(runtime);
-    builder.setRuns(builder.getRuns() +1 );
+    builder.setRuns(builder.getRuns() + 1);
     return builder.build();
   }
 

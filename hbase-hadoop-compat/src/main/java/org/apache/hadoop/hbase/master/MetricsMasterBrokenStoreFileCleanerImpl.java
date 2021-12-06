@@ -25,8 +25,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Implementation of {@link MetricsMasterBrokenStoreFileCleaner} to track latencies for one table
  * in a RegionServer.
  */
-@InterfaceAudience.Private 
-public class MetricsMasterBrokenStoreFileCleanerImpl extends BaseSourceImpl implements 
+@InterfaceAudience.Private
+public class MetricsMasterBrokenStoreFileCleanerImpl extends BaseSourceImpl implements
   MetricsMasterBrokenStoreFileCleaner {
 
   private MutableFastCounter brokenStoreFileCleanerDeletes;
@@ -38,11 +38,11 @@ public class MetricsMasterBrokenStoreFileCleanerImpl extends BaseSourceImpl impl
     String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
 
-    brokenStoreFileCleanerDeletes = 
-      getMetricsRegistry().newCounter(DELETES, DELETES_DESC, 0l);
+    brokenStoreFileCleanerDeletes =
+      getMetricsRegistry().newCounter(DELETES, DELETES_DESC, 0L);
     brokenStoreFileCleanerFailedDeletes =
-      getMetricsRegistry().newCounter(FAILED_DELETES, FAILED_DELETES_DESC, 0l);
-    brokenStoreFileCleanerRuns = getMetricsRegistry().newCounter(RUNS, RUNS_DESC, 0l);
+      getMetricsRegistry().newCounter(FAILED_DELETES, FAILED_DELETES_DESC, 0L);
+    brokenStoreFileCleanerRuns = getMetricsRegistry().newCounter(RUNS, RUNS_DESC, 0L);
     brokenStoreFileCleanerTimer = getMetricsRegistry().newTimeHistogram(RUNTIME, RUNTIME_DESC);
   }
 

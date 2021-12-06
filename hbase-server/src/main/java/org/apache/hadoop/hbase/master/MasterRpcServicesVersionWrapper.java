@@ -25,6 +25,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.BrokenStoreFileCleanerUsageResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersResponse;
 
@@ -118,10 +120,8 @@ public class MasterRpcServicesVersionWrapper
   }
 
   @Override
-  public RegionServerStatusProtos.BrokenStoreFileCleanerUsageResponse reportBrokenStoreFileCleanerUsage(
-    RpcController controller,
-    RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest request)
-    throws ServiceException {
+  public BrokenStoreFileCleanerUsageResponse reportBrokenStoreFileCleanerUsage(
+    RpcController controller, BrokenStoreFileCleanerUsageRequest request) throws ServiceException {
     return masterRpcServices.reportBrokenStoreFileCleanerUsage(controller, request);
   }
 }

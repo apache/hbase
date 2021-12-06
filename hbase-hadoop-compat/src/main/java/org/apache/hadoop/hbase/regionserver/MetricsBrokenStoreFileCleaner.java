@@ -58,13 +58,13 @@ public interface MetricsBrokenStoreFileCleaner {
 
   /**
    * Increment the deleted files counter
-   * @param deletes
+   * @param deletes number of new files deleted
    */
   public void incrementBrokenStoreFileCleanerDeletes(long deletes);
 
   /**
    * Increment the failed file deletes counter
-   * @param failedDeletes
+   * @param failedDeletes number of files the chore failed to delete
    */
   public void incrementBrokenStoreFileCleanerFailedDeletes(long failedDeletes);
 
@@ -75,7 +75,7 @@ public interface MetricsBrokenStoreFileCleaner {
 
   /**
    * Update the chore runtime
-   * @param milis
+   * @param milis Chore runtime
    */
   public void updateBrokenStoreFileCleanerTimer(long milis);
 

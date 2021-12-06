@@ -107,7 +107,6 @@ import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -378,6 +377,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.Rena
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.BrokenStoreFileCleanerUsageResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
@@ -3495,11 +3496,11 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
-  public RegionServerStatusProtos.BrokenStoreFileCleanerUsageResponse reportBrokenStoreFileCleanerUsage(
-    RpcController controller, RegionServerStatusProtos.BrokenStoreFileCleanerUsageRequest request)
+  public BrokenStoreFileCleanerUsageResponse reportBrokenStoreFileCleanerUsage(
+    RpcController controller, BrokenStoreFileCleanerUsageRequest request)
     throws ServiceException {
     this.server.reportBrokenStoreFileCleanerUsage(request.getServerName(), request.getRuntime(),
       request.getDeletedFiles(), request.getFailedDeletes(), request.getRuns());
-    return RegionServerStatusProtos.BrokenStoreFileCleanerUsageResponse.newBuilder().build();
+    return BrokenStoreFileCleanerUsageResponse.newBuilder().build();
   }
 }
