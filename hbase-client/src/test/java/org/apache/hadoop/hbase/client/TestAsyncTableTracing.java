@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEnded;
-import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasKind;
-import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
-import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.TraceTestUtil.buildConnectionAttributesMatcher;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.TraceTestUtil.buildTableAttributesMatcher;
+import static org.apache.hadoop.hbase.trace.hamcrest.SpanDataMatchers.hasEnded;
+import static org.apache.hadoop.hbase.trace.hamcrest.SpanDataMatchers.hasKind;
+import static org.apache.hadoop.hbase.trace.hamcrest.SpanDataMatchers.hasName;
+import static org.apache.hadoop.hbase.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;

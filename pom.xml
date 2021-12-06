@@ -94,6 +94,7 @@
     <module>hbase-asyncfs</module>
     <module>hbase-logging</module>
     <module>hbase-compression</module>
+    <module>hbase-client-test-support</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
@@ -1930,6 +1931,12 @@
         <artifactId>hbase-common</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-client-test-support</artifactId>
+        <version>${project.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>

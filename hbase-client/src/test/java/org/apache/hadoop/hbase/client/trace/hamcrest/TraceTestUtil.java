@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hbase.client.trace.hamcrest;
 
-import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntry;
-import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasAttributes;
+import static org.apache.hadoop.hbase.trace.hamcrest.AttributesMatchers.containsEntry;
+import static org.apache.hadoop.hbase.trace.hamcrest.SpanDataMatchers.hasAttributes;
 import static org.hamcrest.Matchers.allOf;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.sdk.trace.data.SpanData;
