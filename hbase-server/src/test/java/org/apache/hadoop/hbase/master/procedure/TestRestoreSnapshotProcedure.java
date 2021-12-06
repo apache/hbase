@@ -210,6 +210,25 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     validateSnapshotRestore();
   }
 
+  @Test
+  public void testRecoverWithRestoreAclFlag() throws Exception {
+    // This test is to solve the problems mentioned in HBASE-26462,
+    // this needs to simulate the case of RestoreSnapshotProcedure failure and recovery,
+    // and verify whether 'restoreAcl' flag can obtain the correct value.
+
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
+
+    // Start the Restore snapshot procedure (with restoreAcl 'true') && kill the executor
+    long procId = procExec.submitProcedure(
+      new RestoreSnapshotProcedure(procExec.getEnvironment(), snapshotHTD, snapshot, true));
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
+
+    RestoreSnapshotProcedure result = (RestoreSnapshotProcedure)procExec.getResult(procId);
+    // check whether the restoreAcl flag is true after deserialization from Pb.
+    assertEquals(true, result.getRestoreAcl());
+  }
+
   private void validateSnapshotRestore() throws IOException {
     try {
       UTIL.getAdmin().enableTable(snapshotTableName);

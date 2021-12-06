@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
@@ -159,6 +160,31 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.validateTableIsEnabled(
       UTIL.getHBaseCluster().getMaster(),
       clonedTableName);
+  }
+
+  @Test
+  public void testRecoverWithRestoreAclFlag() throws Exception {
+    // This test is to solve the problems mentioned in HBASE-26462,
+    // this needs to simulate the case of CloneSnapshotProcedure failure and recovery,
+    // and verify whether 'restoreAcl' flag can obtain the correct value.
+
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    final TableName clonedTableName = TableName.valueOf("testRecoverWithRestoreAclFlag");
+    final TableDescriptor htd = createTableDescriptor(clonedTableName, CF);
+
+    SnapshotProtos.SnapshotDescription snapshotDesc = getSnapshot();
+    ProcedureTestingUtility.setKillIfHasParent(procExec, false);
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
+
+    // Start the Clone snapshot procedure (with restoreAcl 'true') && kill the executor
+    long procId = procExec.submitProcedure(
+      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc, true));
+
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
+
+    CloneSnapshotProcedure result = (CloneSnapshotProcedure)procExec.getResult(procId);
+    // check whether the 'restoreAcl' flag is true after deserialization from Pb.
+    assertEquals(true, result.getRestoreAcl());
   }
 
   @Test
