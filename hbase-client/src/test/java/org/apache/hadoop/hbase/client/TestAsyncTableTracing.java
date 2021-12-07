@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.NAMESPACE_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.TABLE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -48,7 +50,6 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -227,9 +228,8 @@ public class TestAsyncTableTracing {
       .filter(s -> s.getName().equals("AsyncTable." + methodName)).findFirst().get();
     assertEquals(StatusCode.OK, data.getStatus().getStatusCode());
     TableName tableName = table.getName();
-    assertEquals(tableName.getNamespaceAsString(),
-      data.getAttributes().get(TraceUtil.NAMESPACE_KEY));
-    assertEquals(tableName.getNameAsString(), data.getAttributes().get(TraceUtil.TABLE_KEY));
+    assertEquals(tableName.getNamespaceAsString(), data.getAttributes().get(NAMESPACE_KEY));
+    assertEquals(tableName.getNameAsString(), data.getAttributes().get(TABLE_KEY));
   }
 
   @Test

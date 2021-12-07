@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
@@ -109,7 +109,7 @@ public class TestAsyncRegionLocatorTracing {
     conn.getLocator().clearCache(sn);
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
     assertEquals(StatusCode.OK, span.getStatus().getStatusCode());
-    assertEquals(sn.toString(), span.getAttributes().get(TraceUtil.SERVER_NAME_KEY));
+    assertEquals(sn.toString(), span.getAttributes().get(HBaseSemanticAttributes.SERVER_NAME_KEY));
   }
 
   @Test
@@ -118,9 +118,9 @@ public class TestAsyncRegionLocatorTracing {
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
     assertEquals(StatusCode.OK, span.getStatus().getStatusCode());
     assertEquals(TableName.META_TABLE_NAME.getNamespaceAsString(),
-      span.getAttributes().get(TraceUtil.NAMESPACE_KEY));
+      span.getAttributes().get(HBaseSemanticAttributes.NAMESPACE_KEY));
     assertEquals(TableName.META_TABLE_NAME.getNameAsString(),
-      span.getAttributes().get(TraceUtil.TABLE_KEY));
+      span.getAttributes().get(HBaseSemanticAttributes.TABLE_KEY));
   }
 
   @Test
@@ -130,10 +130,10 @@ public class TestAsyncRegionLocatorTracing {
     SpanData span = waitSpan("AsyncRegionLocator.getRegionLocation");
     assertEquals(StatusCode.OK, span.getStatus().getStatusCode());
     assertEquals(TableName.META_TABLE_NAME.getNamespaceAsString(),
-      span.getAttributes().get(TraceUtil.NAMESPACE_KEY));
+      span.getAttributes().get(HBaseSemanticAttributes.NAMESPACE_KEY));
     assertEquals(TableName.META_TABLE_NAME.getNameAsString(),
-      span.getAttributes().get(TraceUtil.TABLE_KEY));
-    List<String> regionNames = span.getAttributes().get(TraceUtil.REGION_NAMES_KEY);
+      span.getAttributes().get(HBaseSemanticAttributes.TABLE_KEY));
+    List<String> regionNames = span.getAttributes().get(HBaseSemanticAttributes.REGION_NAMES_KEY);
     assertEquals(1, regionNames.size());
     assertEquals(locs.getDefaultRegionLocation().getRegion().getRegionNameAsString(),
       regionNames.get(0));
@@ -146,10 +146,10 @@ public class TestAsyncRegionLocatorTracing {
     SpanData span = waitSpan("AsyncRegionLocator.getRegionLocations");
     assertEquals(StatusCode.OK, span.getStatus().getStatusCode());
     assertEquals(TableName.META_TABLE_NAME.getNamespaceAsString(),
-      span.getAttributes().get(TraceUtil.NAMESPACE_KEY));
+      span.getAttributes().get(HBaseSemanticAttributes.NAMESPACE_KEY));
     assertEquals(TableName.META_TABLE_NAME.getNameAsString(),
-      span.getAttributes().get(TraceUtil.TABLE_KEY));
-    List<String> regionNames = span.getAttributes().get(TraceUtil.REGION_NAMES_KEY);
+      span.getAttributes().get(HBaseSemanticAttributes.TABLE_KEY));
+    List<String> regionNames = span.getAttributes().get(HBaseSemanticAttributes.REGION_NAMES_KEY);
     assertEquals(3, regionNames.size());
     for (int i = 0; i < 3; i++) {
       assertEquals(locs.getRegionLocation(i).getRegion().getRegionNameAsString(),
