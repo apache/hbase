@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -92,6 +93,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
           done = waitUntilDone(startTime * 1000L + asyncProcess.primaryCallTimeoutMicroseconds);
         } catch (InterruptedException ex) {
           LOG.error("Replica thread interrupted - no replica calls {}", ex.getMessage());
+          return;
+        } catch (SocketTimeoutException ex) {
+          LOG.error("Replica thread time out");
           return;
         }
       }
@@ -1152,14 +1156,14 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     }
   }
 
-  private boolean waitUntilDone(long cutoff) throws InterruptedException {
+  private boolean waitUntilDone(long cutoff) throws InterruptedException, SocketTimeoutException {
     boolean hasWait = cutoff != Long.MAX_VALUE;
     long lastLog = EnvironmentEdgeManager.currentTime();
     long currentInProgress;
     while (0 != (currentInProgress = actionsInProgress.get())) {
       long now = EnvironmentEdgeManager.currentTime();
       if (hasWait && (now * 1000L) > cutoff) {
-        return false;
+        throw new SocketTimeoutException("time out before the actionsInProgress changed to zero");
       }
       if (!hasWait) { // Only log if wait is infinite.
         if (now > lastLog + 10000) {

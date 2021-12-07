@@ -158,7 +158,7 @@ public class TestClientOperationTimeout {
   }
 
   /**
-   * Tests that a batch mutate on a table throws {@link RetriesExhaustedException} when the
+   * Tests that a batch mutate on a table throws {@link SocketTimeoutException} when the
    * operation takes longer than 'hbase.client.operation.timeout'.
    */
   @Test
@@ -175,7 +175,7 @@ public class TestClientOperationTimeout {
       TABLE.batch(puts, new Object[2]);
       Assert.fail("should not reach here");
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof RetriesExhaustedWithDetailsException);
+      Assert.assertTrue(e instanceof SocketTimeoutException);
     }
   }
 
