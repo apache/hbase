@@ -2627,19 +2627,19 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     getClusterSchema().getNamespace(dstTable.getNamespaceAsString());
 
     return MasterProcedureUtil.submitProcedure(
-        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
-      @Override
-      protected void run() throws IOException {
-        setProcId(
-          getSnapshotManager().restoreOrCloneSnapshot(snapshotDesc, getNonceKey(), restoreAcl,
-            customSFT));
-      }
+      new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          setProcId(
+            getSnapshotManager().restoreOrCloneSnapshot(snapshotDesc, getNonceKey(), restoreAcl,
+              customSFT));
+        }
 
-      @Override
-      protected String getDescription() {
-        return "RestoreSnapshotProcedure";
-      }
-    });
+        @Override
+        protected String getDescription() {
+          return "RestoreSnapshotProcedure";
+        }
+      });
   }
 
   private void checkTableExists(final TableName tableName)

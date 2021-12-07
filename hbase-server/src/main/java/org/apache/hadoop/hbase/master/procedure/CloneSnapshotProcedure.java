@@ -102,7 +102,7 @@ public class CloneSnapshotProcedure
   public CloneSnapshotProcedure(final MasterProcedureEnv env,
     final TableDescriptor tableDescriptor, final SnapshotDescription snapshot,
     final boolean restoreAcl) {
-    this(env, tableDescriptor, snapshot, false, null);
+    this(env, tableDescriptor, snapshot, restoreAcl, null);
   }
 
   public CloneSnapshotProcedure(final MasterProcedureEnv env,

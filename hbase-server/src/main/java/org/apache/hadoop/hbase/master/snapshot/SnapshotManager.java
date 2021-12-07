@@ -67,7 +67,6 @@ import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
@@ -87,7 +86,6 @@ import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.TablePartiallyOpenException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
@@ -876,30 +874,29 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   static void checkSFTCompatibility(TableDescriptor currentTableDesc,
     TableDescriptor snapshotTableDesc, Configuration baseConf) throws RestoreSnapshotException {
 
-     for (ColumnFamilyDescriptor cfDesc : currentTableDesc.getColumnFamilies()) {
-       ColumnFamilyDescriptor snapCFDesc = snapshotTableDesc.getColumnFamily(cfDesc.getName());
-       // if there is no counterpart in the snapshot it will be just deleted so the config does
-       // not matter
-       if (snapCFDesc != null) {
-         Configuration currentCompositeConf =
-           StoreUtils.createStoreConfiguration(baseConf, currentTableDesc, cfDesc);
-         Configuration snapCompositeConf =
-           StoreUtils.createStoreConfiguration(baseConf, snapshotTableDesc, snapCFDesc);
-         Class<? extends StoreFileTracker> currentSFT =
-           StoreFileTrackerFactory.getTrackerClass(currentCompositeConf);
-         Class<? extends StoreFileTracker> snapSFT =
-           StoreFileTrackerFactory.getTrackerClass(snapCompositeConf);
+    for (ColumnFamilyDescriptor cfDesc : currentTableDesc.getColumnFamilies()) {
+      ColumnFamilyDescriptor snapCFDesc = snapshotTableDesc.getColumnFamily(cfDesc.getName());
+      // if there is no counterpart in the snapshot it will be just deleted so the config does
+      // not matter
+      if (snapCFDesc != null) {
+        Configuration currentCompositeConf =
+          StoreUtils.createStoreConfiguration(baseConf, currentTableDesc, cfDesc);
+        Configuration snapCompositeConf =
+          StoreUtils.createStoreConfiguration(baseConf, snapshotTableDesc, snapCFDesc);
+        Class<? extends StoreFileTracker> currentSFT =
+          StoreFileTrackerFactory.getTrackerClass(currentCompositeConf);
+        Class<? extends StoreFileTracker> snapSFT =
+          StoreFileTrackerFactory.getTrackerClass(snapCompositeConf);
 
-         //restoration is not possible if there is an SFT mismatch
-         if (currentSFT != snapSFT) {
-           throw new RestoreSnapshotException(
-             "Restoring Snapshot is not possible because " + " the config for column family "
-               + cfDesc.getNameAsString() + " has incompatible configuration. Current SFT: "
-               + currentSFT + " SFT from snapshot: " + snapSFT);
-         }
-       }
-     }
-
+        //restoration is not possible if there is an SFT mismatch
+        if (currentSFT != snapSFT) {
+          throw new RestoreSnapshotException(
+            "Restoring Snapshot is not possible because " + " the config for column family "
+              + cfDesc.getNameAsString() + " has incompatible configuration. Current SFT: "
+              + currentSFT + " SFT from snapshot: " + snapSFT);
+        }
+      }
+    }
   }
 
   /**

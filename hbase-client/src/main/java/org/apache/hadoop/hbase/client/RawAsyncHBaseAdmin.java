@@ -2008,7 +2008,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               if (err2 != null) {
                 // Step.3.a Something went wrong during the restore and try to rollback.
                 addListener(
-                  internalRestoreSnapshot(failSafeSnapshotSnapshotName, tableName, restoreAcl, null),
+                  internalRestoreSnapshot(failSafeSnapshotSnapshotName, tableName, restoreAcl,
+                    null),
                   (void3, err3) -> {
                     if (err3 != null) {
                       future.completeExceptionally(err3);
@@ -2077,8 +2078,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     } catch (IllegalArgumentException e) {
       return failedFuture(e);
     }
-    RestoreSnapshotRequest.Builder builder = RestoreSnapshotRequest.newBuilder().setSnapshot(snapshot).setNonceGroup(ng.getNonceGroup())
-          .setNonce(ng.newNonce()).setRestoreACL(restoreAcl);
+    RestoreSnapshotRequest.Builder builder =
+      RestoreSnapshotRequest.newBuilder().setSnapshot(snapshot).setNonceGroup(ng.getNonceGroup())
+        .setNonce(ng.newNonce()).setRestoreACL(restoreAcl);
     if(customSFT != null){
       builder.setCustomSFT(customSFT);
     }

@@ -1647,7 +1647,8 @@ public interface Admin extends Abortable, Closeable {
    * @throws RestoreSnapshotException if snapshot failed to be cloned
    * @throws IllegalArgumentException if the specified table has not a valid name
    */
-  default void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl, String customSFT)
+  default void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl,
+    String customSFT)
     throws IOException, TableExistsException, RestoreSnapshotException {
     get(cloneSnapshotAsync(snapshotName, tableName, restoreAcl, customSFT), getSyncWaitTimeout(),
       TimeUnit.MILLISECONDS);
@@ -1697,7 +1698,8 @@ public interface Admin extends Abortable, Closeable {
    * @throws RestoreSnapshotException if snapshot failed to be cloned
    * @throws IllegalArgumentException if the specified table has not a valid name
    */
-  default Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName, boolean restoreAcl)
+  default Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName,
+    boolean restoreAcl)
       throws IOException, TableExistsException, RestoreSnapshotException {
     return cloneSnapshotAsync(snapshotName, tableName, restoreAcl, null);
   }
