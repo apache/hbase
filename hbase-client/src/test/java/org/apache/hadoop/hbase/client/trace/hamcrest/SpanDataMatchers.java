@@ -24,6 +24,8 @@ import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
+import java.time.Duration;
+import java.time.temporal.TemporalAmount;
 import org.hamcrest.Description;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
@@ -42,6 +44,18 @@ public final class SpanDataMatchers {
     ) {
       @Override protected Attributes featureValueOf(SpanData item) {
         return item.getAttributes();
+      }
+    };
+  }
+
+  public static <T extends Comparable<T> & TemporalAmount> Matcher<SpanData> hasDuration(
+    Matcher<T> matcher
+  ) {
+    return new FeatureMatcher<SpanData, T>(matcher, "SpanData having duration that ", "duration") {
+      @Override
+      @SuppressWarnings("unchecked")
+      protected T featureValueOf(SpanData item) {
+        return (T) Duration.ofNanos(item.getEndEpochNanos() - item.getStartEpochNanos());
       }
     };
   }
@@ -89,6 +103,21 @@ public final class SpanDataMatchers {
       }
       @Override public void describeTo(Description description) {
         description.appendText("SpanData with StatusCode that ").appendDescriptionOf(matcher);
+      }
+    };
+  }
+
+  public static Matcher<SpanData> hasTraceId(String traceId) {
+    return hasTraceId(is(equalTo(traceId)));
+  }
+
+  public static Matcher<SpanData> hasTraceId(Matcher<String> matcher) {
+    return new TypeSafeMatcher<SpanData>() {
+      @Override protected boolean matchesSafely(SpanData item) {
+        return item.getTraceId() != null && matcher.matches(item.getTraceId());
+      }
+      @Override public void describeTo(Description description) {
+        description.appendText("SpanData with a traceId that ").appendDescriptionOf(matcher);
       }
     };
   }
