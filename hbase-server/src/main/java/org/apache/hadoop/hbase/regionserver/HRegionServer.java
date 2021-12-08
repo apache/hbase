@@ -1431,8 +1431,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     int maxCompactedStoreFileRefCount = 0;
     int storeUncompressedSizeMB = 0;
     int storefileSizeMB = 0;
-    //HBASE-26340 Fix false "0" size under 1MB
-    boolean nonEmptyStoreExist = false;
+    long storefileSizeByte = 0L;
     int memstoreSizeMB = (int) (r.getMemStoreDataSize() / 1024 / 1024);
     long storefileIndexSizeKB = 0;
     int rootLevelIndexSizeKB = 0;
@@ -1450,11 +1449,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       maxCompactedStoreFileRefCount = Math.max(maxCompactedStoreFileRefCount,
         currentMaxCompactedStoreFileRefCount);
       storeUncompressedSizeMB += (int) (store.getStoreSizeUncompressed() / 1024 / 1024);
-      storefileSizeMB += (int) (store.getStorefilesSize() / 1024 / 1024);
-      //HBASE-26340 Fix false "0" size under 1MB
-      if(store.getStorefilesSize() > 0) {
-        nonEmptyStoreExist = true;
-      }
+      storefileSizeByte += store.getStorefilesSize();
       //TODO: storefileIndexSizeKB is same with rootLevelIndexSizeKB?
       storefileIndexSizeKB += store.getStorefilesRootLevelIndexSize() / 1024;
       CompactionProgress progress = store.getCompactionProgress();
@@ -1467,9 +1462,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       totalStaticBloomSizeKB += (int) (store.getTotalStaticBloomSize() / 1024);
     }
     //HBASE-26340 Fix false "0" size under 1MB
-    if(storefileSizeMB < 1 && nonEmptyStoreExist) {
-      storefileSizeMB = 1;
-    }
+    storefileSizeMB = storefileSizeByte > 0 && storefileSizeByte <= 1024 * 1024
+       ? 1 : (int) storefileSizeByte / 1024 / 1024;
 
     HDFSBlocksDistribution hdfsBd = r.getHDFSBlocksDistribution();
     float dataLocality = hdfsBd.getBlockLocalityIndex(serverName.getHostname());
