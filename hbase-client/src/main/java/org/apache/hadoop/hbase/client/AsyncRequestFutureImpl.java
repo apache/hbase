@@ -94,9 +94,6 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         } catch (InterruptedException ex) {
           LOG.error("Replica thread interrupted - no replica calls {}", ex.getMessage());
           return;
-        } catch (SocketTimeoutException ex) {
-          LOG.error("Replica thread time out");
-          return;
         }
       }
       if (done) return; // Done within primary timeout
@@ -1141,7 +1138,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         // then the guarantee of operationTimeout will be broken, so we should set cutoff to avoid
         // stuck here forever
         long cutoff = (EnvironmentEdgeManager.currentTime() + this.operationTimeout) * 1000L;
-        waitUntilDone(cutoff);
+        if (!waitUntilDone(cutoff)) {
+          throw new SocketTimeoutException("time out before the actionsInProgress changed to zero");
+        }
       } else {
         waitUntilDone(Long.MAX_VALUE);
       }
@@ -1156,14 +1155,14 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     }
   }
 
-  private boolean waitUntilDone(long cutoff) throws InterruptedException, SocketTimeoutException {
+  private boolean waitUntilDone(long cutoff) throws InterruptedException{
     boolean hasWait = cutoff != Long.MAX_VALUE;
     long lastLog = EnvironmentEdgeManager.currentTime();
     long currentInProgress;
     while (0 != (currentInProgress = actionsInProgress.get())) {
       long now = EnvironmentEdgeManager.currentTime();
       if (hasWait && (now * 1000L) > cutoff) {
-        throw new SocketTimeoutException("time out before the actionsInProgress changed to zero");
+        return false;
       }
       if (!hasWait) { // Only log if wait is infinite.
         if (now > lastLog + 10000) {
