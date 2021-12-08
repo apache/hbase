@@ -24,8 +24,8 @@ import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
-import java.util.Objects;
 import org.hamcrest.Description;
+import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 
@@ -37,13 +37,11 @@ public final class SpanDataMatchers {
   private SpanDataMatchers() { }
 
   public static Matcher<SpanData> hasAttributes(Matcher<Attributes> matcher) {
-    return new TypeSafeMatcher<SpanData>() {
-      @Override protected boolean matchesSafely(SpanData item) {
-        final Attributes attributes = item.getAttributes();
-        return attributes != null && matcher.matches(attributes);
-      }
-      @Override public void describeTo(Description description) {
-        description.appendText("SpanData having ").appendDescriptionOf(matcher);
+    return new FeatureMatcher<SpanData, Attributes>(
+      matcher, "SpanData having attributes that ", "attributes"
+    ) {
+      @Override protected Attributes featureValueOf(SpanData item) {
+        return item.getAttributes();
       }
     };
   }
@@ -60,12 +58,10 @@ public final class SpanDataMatchers {
   }
 
   public static Matcher<SpanData> hasKind(SpanKind kind) {
-    return new TypeSafeMatcher<SpanData>() {
-      @Override protected boolean matchesSafely(SpanData item) {
-        return Objects.equals(item.getKind(), kind);
-      }
-      @Override public void describeTo(Description description) {
-        description.appendText("SpanData with kind of ").appendValue(kind);
+    return new FeatureMatcher<SpanData, SpanKind>(
+      equalTo(kind), "SpanData with kind that", "SpanKind") {
+      @Override protected SpanKind featureValueOf(SpanData item) {
+        return item.getKind();
       }
     };
   }
@@ -75,13 +71,9 @@ public final class SpanDataMatchers {
   }
 
   public static Matcher<SpanData> hasName(Matcher<String> matcher) {
-    return new TypeSafeMatcher<SpanData>() {
-      @Override protected boolean matchesSafely(SpanData item) {
-        final String name = item.getName();
-        return name != null && matcher.matches(name);
-      }
-      @Override public void describeTo(Description description) {
-        description.appendText("SpanData with a name that ").appendDescriptionOf(matcher);
+    return new FeatureMatcher<SpanData, String>(matcher, "SpanKind with a name that", "name") {
+      @Override protected String featureValueOf(SpanData item) {
+        return item.getName();
       }
     };
   }
