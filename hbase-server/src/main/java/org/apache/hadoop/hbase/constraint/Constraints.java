@@ -103,11 +103,7 @@ public final class Constraints {
    *          Constraints}.
    */
   public static void disable(HTableDescriptor desc) {
-    try {
-      desc.removeCoprocessor(ConstraintProcessor.class.getName());
-    } catch (IllegalArgumentException e) {
-      LOG.warn("ConstraintProcessor was unset.", e);
-    }
+    desc.removeCoprocessor(ConstraintProcessor.class.getName());
   }
 
   /**

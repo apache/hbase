@@ -1601,9 +1601,7 @@ public class TableDescriptorBuilder {
       if (match != null) {
         ModifyableTableDescriptor.this.removeValue(match);
       } else {
-        throw new IllegalArgumentException(String
-          .format("coprocessor with class name %s was not found in the table attribute",
-            className));
+        LOG.warn("coprocessor with class name {} was not found in the table attribute", className);
       }
     }
 
