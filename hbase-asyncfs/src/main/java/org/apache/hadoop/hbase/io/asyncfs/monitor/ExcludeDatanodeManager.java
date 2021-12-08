@@ -115,6 +115,6 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
       this.conf.getLong(WAL_EXCLUDE_DATANODE_TTL_KEY, DEFAULT_WAL_EXCLUDE_DATANODE_TTL),
       TimeUnit.HOURS).maximumSize(this.conf
       .getInt(WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT_KEY, DEFAULT_WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT))
-      .concurrencyLevel(10).build();
+      .build();
   }
 }
