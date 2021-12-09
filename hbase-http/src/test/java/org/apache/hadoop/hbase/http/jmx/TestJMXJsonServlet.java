@@ -122,6 +122,12 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
     assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"", result);
     assertReFind("\"committed\"\\s*:", result);
     assertReFind("\\}\\);$", result);
+
+    // test exclude the specific mbean
+    result = readOutput(new URL(baseUrl,
+        "/jmx?excl=Hadoop:service=HBase,name=RegionServer,sub=Regions"));
+    LOG.info("/jmx RESULT: " + result);
+    assertNotFind("\"name\"\\s*:\\s*\"Hadoop:service=HBase,name=RegionServer,sub=Regions\"",result);
   }
 
   @Test
