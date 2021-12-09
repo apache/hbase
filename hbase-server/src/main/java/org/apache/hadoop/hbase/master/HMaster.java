@@ -1844,6 +1844,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   public BalanceResponse balance(BalanceRequest request) throws IOException {
+    checkInitialized();
+
     BalanceResponse.Builder responseBuilder = BalanceResponse.newBuilder();
 
     if (loadBalancerTracker == null
