@@ -95,6 +95,14 @@
     <module>hbase-logging</module>
     <module>hbase-compression</module>
   </modules>
+
+  <repositories>
+    <repository>
+      <id>hbase-thirdparty-4.0.0RC1</id>
+      <name>hbase-thirdparty-4.0.0RC1</name>
+      <url>https://repository.apache.org/content/repositories/orgapachehbase-1471/</url>
+    </repository>
+  </repositories>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
     <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/hbase.git</developerConnection>
@@ -1799,7 +1807,7 @@
     <snappy.version>1.1.8.4</snappy.version>
     <xz.version>1.9</xz.version>
     <zstd-jni.version>1.5.0-4</zstd-jni.version>
-    <hbase-thirdparty.version>4.0.0-SNAPSHOT</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.0.0</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
