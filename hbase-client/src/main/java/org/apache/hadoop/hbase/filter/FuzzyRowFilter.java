@@ -83,7 +83,8 @@ public class FuzzyRowFilter extends FilterBase {
    */
   private RowTracker tracker;
 
-  // this client side constructor ensures that all client-constructed FuzzyRowFilters use the new v2 mask.
+  // this client side constructor ensures that all client-constructed
+  // FuzzyRowFilters use the new v2 mask.
   public FuzzyRowFilter(List<Pair<byte[], byte[]>> fuzzyKeysData) {
     this(fuzzyKeysData, V2_PROCESSED_WILDCARD_MASK);
   }

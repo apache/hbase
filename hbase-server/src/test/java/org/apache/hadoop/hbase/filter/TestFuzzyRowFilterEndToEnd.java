@@ -140,7 +140,8 @@ public class TestFuzzyRowFilterEndToEnd {
     TEST_UTIL.deleteTable(TableName.valueOf(table));
   }
 
-  private void testAllFixedBitsRunScanWithMask(Table ht, int expectedRows, byte processedRowMask) throws IOException {
+  private void testAllFixedBitsRunScanWithMask(Table ht, int expectedRows, byte processedRowMask)
+    throws IOException {
     List<Pair<byte[], byte[]>> data = new ArrayList<Pair<byte[], byte[]>>();
     byte[] fuzzyKey = Bytes.toBytesBinary("\\x9B\\x00\\x044e");
     byte[] mask = new byte[] { 0, 0, 0, 0, 0 };
@@ -205,8 +206,10 @@ public class TestFuzzyRowFilterEndToEnd {
     TEST_UTIL.deleteTable(TableName.valueOf(table));
   }
 
-  private void testHBASE14782RunScanWithMask(Table ht, int expectedRows, byte processedRowMask) throws IOException {
-    List<Pair<byte[], byte[]>> data =  new ArrayList<Pair<byte[], byte[]>>();
+  private void testHBASE14782RunScanWithMask(Table ht, int expectedRows, byte processedRowMask)
+    throws IOException {
+    List<Pair<byte[], byte[]>> data = new ArrayList<Pair<byte[], byte[]>>();
+
     byte[] fuzzyKey = Bytes.toBytesBinary("\\x00\\x00\\x044");
     byte[] mask = new byte[] { 1,0,0,0};
     data.add(new Pair<byte[], byte[]>(fuzzyKey, mask));

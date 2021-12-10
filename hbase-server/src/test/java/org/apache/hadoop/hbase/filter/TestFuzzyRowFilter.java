@@ -33,7 +33,12 @@ public class TestFuzzyRowFilter {
 
   @Test
   public void testIdempotentMaskShift() {
-    byte[] test = new byte[] {-1, FuzzyRowFilter.V1_PROCESSED_WILDCARD_MASK, FuzzyRowFilter.V2_PROCESSED_WILDCARD_MASK};
+    byte[] test = new byte[] {
+      -1,
+      FuzzyRowFilter.V1_PROCESSED_WILDCARD_MASK,
+      FuzzyRowFilter.V2_PROCESSED_WILDCARD_MASK
+    };
+
     byte[] original = Arrays.copyOf(test, test.length);
     byte[] expected = new byte[] { -1, 0, 0};
 
