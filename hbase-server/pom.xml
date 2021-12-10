@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns:ns0="https://www.w3.org/2001/XMLSchema-instance" xmlns="https://maven.apache.org/POM/4.0.0" ns0:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 <!--
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -155,23 +155,23 @@
             <phase>generate-sources</phase>
             <configuration>
               <target>
-                <property name="build.webapps" location="${project.build.directory}/hbase-webapps"/>
-                <property name="src.webapps" location="${basedir}/src/main/resources/hbase-webapps"/>
-                <property name="generated.sources" location="${project.build.directory}/generated-sources"/>
-                <mkdir dir="${build.webapps}"/>
+                <property location="${project.build.directory}/hbase-webapps" name="build.webapps" />
+                <property location="${basedir}/src/main/resources/hbase-webapps" name="src.webapps" />
+                <property location="${project.build.directory}/generated-sources" name="generated.sources" />
+                <mkdir dir="${build.webapps}" />
                 <copy todir="${build.webapps}">
                   <fileset dir="${src.webapps}">
-                    <exclude name="**/*.jsp"/>
-                    <exclude name="**/.*"/>
-                    <exclude name="**/*~"/>
+                    <exclude name="**/*.jsp" />
+                    <exclude name="**/.*" />
+                    <exclude name="**/*~" />
                   </fileset>
                 </copy>
                 <!--The compile.classpath is passed in by maven -->
-                <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" classpathref="maven.compile.classpath"/>
-                <mkdir dir="${build.webapps}/master/WEB-INF"/>
-                <jspcompiler uriroot="${src.webapps}/master" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" webxml="${build.webapps}/master/WEB-INF/web.xml"/>
-                <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
-                <jspcompiler uriroot="${src.webapps}/regionserver" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
+                <taskdef classname="org.apache.jasper.JspC" classpathref="maven.compile.classpath" name="jspcompiler" />
+                <mkdir dir="${build.webapps}/master/WEB-INF" />
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" uriroot="${src.webapps}/master" webxml="${build.webapps}/master/WEB-INF/web.xml" />
+                <mkdir dir="${build.webapps}/regionserver/WEB-INF" />
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" uriroot="${src.webapps}/regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml" />
               </target>
             </configuration>
             <goals>
@@ -589,12 +589,12 @@
                 <goals><goal>run</goal></goals>
                 <configuration>
                   <target>
-                    <mkdir dir="${project.build.directory}/native"/>
-                    <exec executable="cmake" dir="${project.build.directory}/native" failonerror="true">
-                      <arg line="${basedir}/src/main/native -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}"/>
+                    <mkdir dir="${project.build.directory}/native" />
+                    <exec dir="${project.build.directory}/native" executable="cmake" failonerror="true">
+                      <arg line="${basedir}/src/main/native -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}" />
                     </exec>
-                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
-                      <arg line="VERBOSE=1"/>
+                    <exec dir="${project.build.directory}/native" executable="make" failonerror="true">
+                      <arg line="VERBOSE=1" />
                     </exec>
                   </target>
                 </configuration>
@@ -914,7 +914,7 @@
                         </goals>
                       </pluginExecutionFilter>
                       <action>
-                        <ignore></ignore>
+                        <ignore />
                       </action>
                     </pluginExecution>
                   </pluginExecutions>
