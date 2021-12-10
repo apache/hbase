@@ -67,6 +67,10 @@ if exist "%HBASE_CONF_DIR%\hbase-env.cmd" (
   call "%HBASE_CONF_DIR%\hbase-env.cmd"
 )
 
+@rem Disable the JNDI. This feature has critical REC vulnerability.
+@rem when 2.x <= log4j.version <= 2.14.1
+set HBASE_OPTS=%HBASE_OPTS% -Dlog4j2.formatMsgNoLookups=true
+
 if not defined JAVA_HOME (
   echo Warning: JAVA_HOME environment variable is not set. Defaulting to c:\apps\java
   set JAVA_HOME=c:\apps\java
