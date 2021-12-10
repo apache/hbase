@@ -162,6 +162,9 @@ fi
 # memory usage to explode. Tune the variable down to prevent vmem explosion.
 export MALLOC_ARENA_MAX=${MALLOC_ARENA_MAX:-4}
 
+# Disable the JNDI. This feature has critical REC vulnerability when log4j version <= 2.14.1
+export HBASE_OPTS = "$HBASE_OPTS -Dlog4j2.formatMsgNoLookups=true"
+
 # Now having JAVA_HOME defined is required 
 if [ -z "$JAVA_HOME" ]; then
     cat 1>&2 <<EOF
