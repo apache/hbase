@@ -743,11 +743,12 @@ public class ReplicationSourceManager implements ReplicationListener {
           queueStorage.removeReplicatorIfQueueIsEmpty(deadRS);
         }
       } catch (ReplicationException e) {
-        LOG.error(String.format("ReplicationException: cannot claim dead region (%s)'s " +
-            "replication queue. Znode : (%s)" +
+        LOG.error(
+          "ReplicationException: cannot claim dead region ({})'s " +
+            "replication queue. Znode : ({})" +
             " Possible solution: check if znode size exceeds jute.maxBuffer value. " +
             " If so, increase it for both client and server side.",
-          deadRS, queueStorage.getRsNode(deadRS)), e);
+          deadRS, queueStorage.getRsNode(deadRS), e);
         server.abort("Failed to claim queue from dead regionserver.", e);
         return;
       }
