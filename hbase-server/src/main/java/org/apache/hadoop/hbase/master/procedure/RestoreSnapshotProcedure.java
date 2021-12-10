@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -272,6 +273,7 @@ public class RestoreSnapshotProcedure
         restoreSnapshotMsg.addParentToChildRegionsPairList (parentToChildrenPair);
       }
     }
+    restoreSnapshotMsg.setRestoreAcl(restoreAcl);
     serializer.serialize(restoreSnapshotMsg.build());
   }
 
@@ -320,6 +322,9 @@ public class RestoreSnapshotProcedure
             parentToChildrenPair.getChild1RegionName(),
             parentToChildrenPair.getChild2RegionName()));
       }
+    }
+    if (restoreSnapshotMsg.hasRestoreAcl()) {
+      restoreAcl = restoreSnapshotMsg.getRestoreAcl();
     }
   }
 
@@ -544,5 +549,14 @@ public class RestoreSnapshotProcedure
       RestoreSnapshotHelper.restoreSnapshotAcl(snapshot, TableName.valueOf(snapshot.getTable()),
         env.getMasterServices().getConfiguration());
     }
+  }
+
+  /**
+   * Exposed for Testing: HBASE-26462
+   */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  public boolean getRestoreAcl() {
+    return restoreAcl;
   }
 }

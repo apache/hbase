@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,10 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REMOTE_HOST_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REMOTE_PORT_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RPC_METHOD_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RPC_SERVICE_KEY;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
@@ -396,10 +400,10 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     final Message param, Message returnType, final User ticket, final Address addr,
     final RpcCallback<Message> callback) {
     Span span = TraceUtil.createClientSpan("RpcClient.callMethod")
-      .setAttribute(TraceUtil.RPC_SERVICE_KEY, md.getService().getName())
-      .setAttribute(TraceUtil.RPC_METHOD_KEY, md.getName())
-      .setAttribute(TraceUtil.REMOTE_HOST_KEY, addr.getHostName())
-      .setAttribute(TraceUtil.REMOTE_PORT_KEY, addr.getPort());
+      .setAttribute(RPC_SERVICE_KEY, md.getService().getName())
+      .setAttribute(RPC_METHOD_KEY, md.getName())
+      .setAttribute(REMOTE_HOST_KEY, addr.getHostName())
+      .setAttribute(REMOTE_PORT_KEY, addr.getPort());
     try (Scope scope = span.makeCurrent()) {
       final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
       cs.setStartTime(EnvironmentEdgeManager.currentTime());
