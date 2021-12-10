@@ -662,7 +662,7 @@ public class TestSimpleRpcScheduler {
     assertFalse(executor.dispatch(task));
     //make sure we never internally get a handler, which would skip the queue validation
     Mockito.verify(executor, Mockito.never()).getHandler(Mockito.any(), Mockito.anyDouble(),
-      Mockito.any(), Mockito.any());
+      Mockito.anyInt(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
   }
 
   @Test
