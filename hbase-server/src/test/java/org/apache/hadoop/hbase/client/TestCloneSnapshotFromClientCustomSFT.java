@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -51,5 +52,20 @@ public class TestCloneSnapshotFromClientCustomSFT extends CloneSnapshotFromClien
     assertEquals(CLONE_SFT, td.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
 
     TEST_UTIL.deleteTable(clonedTableName);
+  }
+
+  @Test
+  public void testCloneSnapshotWithIncorrectCustomSFT() throws IOException, InterruptedException {
+    TableName clonedTableName =
+      TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
+
+    IOException ioException = assertThrows(IOException.class, () -> {
+      admin.cloneSnapshot(snapshotName1, clonedTableName, false, "IncorrectSFT");
+    });
+
+    assertEquals(
+      "java.lang.UnsupportedOperationException: " +
+        "Specified SFT: IncorrectSFT was not recognized",
+      ioException.getMessage());
   }
 }

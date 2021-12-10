@@ -224,6 +224,8 @@ public class CloneSnapshotProcedure
       return;
     }
 
+    validateSFT();
+
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
     builder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, customSFT);
     for (ColumnFamilyDescriptor family : tableDescriptor.getColumnFamilies()){
@@ -233,6 +235,18 @@ public class CloneSnapshotProcedure
       builder.modifyColumnFamily(cfBuilder.build());
     }
     tableDescriptor = builder.build();
+  }
+
+  private void validateSFT() {
+    try {
+      Configuration sftConfig = new Configuration();
+      sftConfig.set(StoreFileTrackerFactory.TRACKER_IMPL, customSFT);
+      StoreFileTrackerFactory.getTrackerClass(sftConfig);
+    }
+    catch (RuntimeException e){
+      throw new UnsupportedOperationException("Specified SFT: " + customSFT + " was not recognized",
+        e);
+    }
   }
 
   @Override

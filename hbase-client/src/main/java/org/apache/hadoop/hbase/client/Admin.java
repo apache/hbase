@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * The administrative API for HBase. Obtain an instance from {@link Connection#getAdmin()} and
@@ -1641,12 +1642,13 @@ public interface Admin extends Abortable, Closeable {
    * @param snapshotName name of the snapshot to be cloned
    * @param tableName name of the table where the snapshot will be restored
    * @param restoreAcl <code>true</code> to clone acl into newly created table
-   * @param customSFT specify the StroreFileTracker used for the table
+   * @param customSFT specify the StoreFileTracker used for the table
    * @throws IOException if a remote or network exception occurs
    * @throws TableExistsException if table to be created already exists
    * @throws RestoreSnapshotException if snapshot failed to be cloned
    * @throws IllegalArgumentException if the specified table has not a valid name
    */
+  @InterfaceStability.Evolving
   default void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl,
     String customSFT)
     throws IOException, TableExistsException, RestoreSnapshotException {

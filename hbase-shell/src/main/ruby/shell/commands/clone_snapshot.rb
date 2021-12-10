@@ -35,7 +35,7 @@ newly created table.
   hbase> clone_snapshot 'snapshotName', 'namespace:tableName', {RESTORE_ACL=>true}
 
 StoreFileTracker implementation used after restore can be set by the following command.
-  hbase> clone_snapshot 'snapshotName', 'namespace:tableName', {CLONE_SFT=>FILE}
+  hbase> clone_snapshot 'snapshotName', 'namespace:tableName', {CLONE_SFT=>'FILE'}
 EOF
       end
 
