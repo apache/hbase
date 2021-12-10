@@ -1600,6 +1600,8 @@ public class TableDescriptorBuilder {
       // if we found a match, remove it
       if (match != null) {
         ModifyableTableDescriptor.this.removeValue(match);
+      } else {
+        LOG.warn("coprocessor with class name {} was not found in the table attribute", className);
       }
     }
 
