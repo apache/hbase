@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.PrintStream;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -196,5 +198,34 @@ public class Threads {
    */
   public static void printThreadInfo(PrintStream stream, String title) {
     ReflectionUtils.printThreadInfo(stream, title);
+  }
+
+  /**
+   * Checks whether any non-daemon thread is running.
+   * @return true if there are non daemon threads running, otherwise false
+   */
+  public static boolean isNonDaemonThreadRunning() {
+    AtomicInteger nonDaemonThreadCount = new AtomicInteger();
+    Set<Thread> threads =  Thread.getAllStackTraces().keySet();
+    threads.forEach(t -> {
+      // Exclude current thread
+      if (t.getId() != Thread.currentThread().getId() && !t.isDaemon()) {
+        nonDaemonThreadCount.getAndIncrement();
+        LOG.info("Non daemon thread {} is still alive", t.getName());
+        LOG.info(printStackTrace(t));
+      }
+    });
+    return nonDaemonThreadCount.get() > 0;
+  }
+
+  /*
+    Print stack trace of the passed thread
+   */
+  public static String printStackTrace(Thread t) {
+    StringBuilder sb = new StringBuilder();
+    for (StackTraceElement frame: t.getStackTrace()) {
+      sb.append("\n").append("    ").append(frame.toString());
+    }
+    return sb.toString();
   }
 }

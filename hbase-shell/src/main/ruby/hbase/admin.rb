@@ -824,6 +824,17 @@ module Hbase
               tdb.removeValue(name)
             end
             hasTableUpdate = true
+          elsif method == 'table_remove_coprocessor'
+            classname = arg.delete(CLASSNAME)
+            raise(ArgumentError, 'CLASSNAME parameter missing for table_remove_coprocessor method') unless classname
+            if classname.is_a?(Array)
+              classname.each do |key|
+                tdb.removeCoprocessor(key)
+              end
+            else
+              tdb.removeCoprocessor(classname)
+            end
+            hasTableUpdate = true
           # Unset table configuration
           elsif method == 'table_conf_unset'
             raise(ArgumentError, 'NAME parameter missing for table_conf_unset method') unless name
