@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -1132,7 +1133,17 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   @Override
   public void waitUntilDone() throws InterruptedIOException {
     try {
-      waitUntilDone(Long.MAX_VALUE);
+      if (this.operationTimeout > 0) {
+        // the worker thread maybe over by some exception without decrement the actionsInProgress,
+        // then the guarantee of operationTimeout will be broken, so we should set cutoff to avoid
+        // stuck here forever
+        long cutoff = (EnvironmentEdgeManager.currentTime() + this.operationTimeout) * 1000L;
+        if (!waitUntilDone(cutoff)) {
+          throw new SocketTimeoutException("time out before the actionsInProgress changed to zero");
+        }
+      } else {
+        waitUntilDone(Long.MAX_VALUE);
+      }
     } catch (InterruptedException iex) {
       throw new InterruptedIOException(iex.getMessage());
     } finally {
@@ -1144,7 +1155,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     }
   }
 
-  private boolean waitUntilDone(long cutoff) throws InterruptedException {
+  private boolean waitUntilDone(long cutoff) throws InterruptedException{
     boolean hasWait = cutoff != Long.MAX_VALUE;
     long lastLog = EnvironmentEdgeManager.currentTime();
     long currentInProgress;
