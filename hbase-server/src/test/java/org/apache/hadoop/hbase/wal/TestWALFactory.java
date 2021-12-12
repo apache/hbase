@@ -676,12 +676,12 @@ public class TestWALFactory {
       increments++;
     }
 
-    @Override
-    public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) {
-      // To change body of implemented methods use File | Settings | File
-      // Templates.
-      increments++;
-    }
+//    @Override
+//    public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) {
+//      // To change body of implemented methods use File | Settings | File
+//      // Templates.
+//      increments++;
+//    }
   }
 
   @Test

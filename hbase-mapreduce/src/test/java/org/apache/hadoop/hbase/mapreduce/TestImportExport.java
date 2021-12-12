@@ -810,7 +810,7 @@ public class TestImportExport {
     }
 
     @Override
-    public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) {
+    public void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {
       if (logKey.getTableName().getNameAsString().equalsIgnoreCase(
           this.regionInfo.getTable().getNameAsString()) && (!logEdit.isMetaEdit())) {
         isVisited = true;
