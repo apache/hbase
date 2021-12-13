@@ -58,6 +58,16 @@ import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
 @InterfaceAudience.Public
 public class FuzzyRowFilter extends FilterBase {
   private static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+
+  // the wildcard byte is 1 on the user side. but the filter converts it internally
+  // in preprocessMask. This was changed in HBASE-15676 due to a bug with using 0.
+  // in v1, the 1 byte gets converted to 0
+  // in v2, the 1 byte gets converted to 2.
+  // we support both here to ensure backwards compatibility between client and server
+  static final byte V1_PROCESSED_WILDCARD_MASK = 0;
+  static final byte V2_PROCESSED_WILDCARD_MASK = 2;
+
+  private final byte processedWildcardMask;
   private List<Pair<byte[], byte[]>> fuzzyKeysData;
   private boolean done = false;
 
@@ -73,7 +83,18 @@ public class FuzzyRowFilter extends FilterBase {
    */
   private RowTracker tracker;
 
+  // this client side constructor ensures that all client-constructed
+  // FuzzyRowFilters use the new v2 mask.
   public FuzzyRowFilter(List<Pair<byte[], byte[]>> fuzzyKeysData) {
+    this(fuzzyKeysData, V2_PROCESSED_WILDCARD_MASK);
+  }
+
+  // This constructor is only used internally here, when parsing from protos on the server side.
+  // It exists to enable seamless migration from v1 to v2.
+  // Additionally used in tests, but never used on client side.
+  FuzzyRowFilter(List<Pair<byte[], byte[]>> fuzzyKeysData, byte processedWildcardMask) {
+    this.processedWildcardMask = processedWildcardMask;
+
     List<Pair<byte[], byte[]>> fuzzyKeyDataCopy = new ArrayList<>(fuzzyKeysData.size());
 
     for (Pair<byte[], byte[]> aFuzzyKeysData : fuzzyKeysData) {
@@ -88,7 +109,7 @@ public class FuzzyRowFilter extends FilterBase {
       p.setFirst(Arrays.copyOf(aFuzzyKeysData.getFirst(), aFuzzyKeysData.getFirst().length));
       p.setSecond(Arrays.copyOf(aFuzzyKeysData.getSecond(), aFuzzyKeysData.getSecond().length));
 
-      // update mask ( 0 -> -1 (0xff), 1 -> 2)
+      // update mask ( 0 -> -1 (0xff), 1 -> [0 or 2 depending on processedWildcardMask value])
       p.setSecond(preprocessMask(p.getSecond()));
       preprocessSearchKey(p);
 
@@ -107,7 +128,7 @@ public class FuzzyRowFilter extends FilterBase {
     byte[] mask = p.getSecond();
     for (int i = 0; i < mask.length; i++) {
       // set non-fixed part of a search key to 0.
-      if (mask[i] == 2) {
+      if (mask[i] == processedWildcardMask) {
         key[i] = 0;
       }
     }
@@ -129,7 +150,7 @@ public class FuzzyRowFilter extends FilterBase {
       if (mask[i] == 0) {
         mask[i] = -1; // 0 -> -1
       } else if (mask[i] == 1) {
-        mask[i] = 2;// 1 -> 2
+        mask[i] = processedWildcardMask;// 1 -> 0 or 2 depending on mask version
       }
     }
     return mask;
@@ -137,7 +158,7 @@ public class FuzzyRowFilter extends FilterBase {
 
   private boolean isPreprocessedMask(byte[] mask) {
     for (int i = 0; i < mask.length; i++) {
-      if (mask[i] != -1 && mask[i] != 2) {
+      if (mask[i] != -1 && mask[i] != processedWildcardMask) {
         return false;
       }
     }
@@ -157,10 +178,7 @@ public class FuzzyRowFilter extends FilterBase {
     for (int i = startIndex; i < size + startIndex; i++) {
       final int index = i % size;
       Pair<byte[], byte[]> fuzzyData = fuzzyKeysData.get(index);
-      // This shift is idempotent - always end up with 0 and -1 as mask values.
-      for (int j = 0; j < fuzzyData.getSecond().length; j++) {
-        fuzzyData.getSecond()[j] >>= 2;
-      }
+      idempotentMaskShift(fuzzyData.getSecond());
       SatisfiesCode satisfiesCode =
           satisfies(isReversed(), c.getRowArray(), c.getRowOffset(), c.getRowLength(),
             fuzzyData.getFirst(), fuzzyData.getSecond());
@@ -173,7 +191,15 @@ public class FuzzyRowFilter extends FilterBase {
     lastFoundIndex = -1;
 
     return ReturnCode.SEEK_NEXT_USING_HINT;
+  }
 
+  static void idempotentMaskShift(byte[] mask) {
+    // This shift is idempotent - always end up with 0 and -1 as mask values.
+    // This works regardless of mask version, because both 0 >> 2 and 2 >> 2
+    // result in 0.
+    for (int j = 0; j < mask.length; j++) {
+      mask[j] >>= 2;
+    }
   }
 
   @Override
@@ -262,7 +288,9 @@ public class FuzzyRowFilter extends FilterBase {
    */
   @Override
   public byte[] toByteArray() {
-    FilterProtos.FuzzyRowFilter.Builder builder = FilterProtos.FuzzyRowFilter.newBuilder();
+    FilterProtos.FuzzyRowFilter.Builder builder = FilterProtos.FuzzyRowFilter
+        .newBuilder()
+        .setIsMaskV2(processedWildcardMask == V2_PROCESSED_WILDCARD_MASK);
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
       BytesBytesPair.Builder bbpBuilder = BytesBytesPair.newBuilder();
       bbpBuilder.setFirst(UnsafeByteOperations.unsafeWrap(fuzzyData.getFirst()));
@@ -293,7 +321,10 @@ public class FuzzyRowFilter extends FilterBase {
       byte[] keyMeta = current.getSecond().toByteArray();
       fuzzyKeysData.add(new Pair<>(keyBytes, keyMeta));
     }
-    return new FuzzyRowFilter(fuzzyKeysData);
+    byte processedWildcardMask = proto.hasIsMaskV2() && proto.getIsMaskV2()
+        ? V2_PROCESSED_WILDCARD_MASK
+        : V1_PROCESSED_WILDCARD_MASK;
+    return new FuzzyRowFilter(fuzzyKeysData, processedWildcardMask);
   }
 
   @Override

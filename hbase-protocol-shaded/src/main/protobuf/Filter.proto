@@ -94,6 +94,7 @@ message FirstKeyValueMatchingQualifiersFilter {
 
 message FuzzyRowFilter {
   repeated BytesBytesPair fuzzy_keys_data = 1;
+  optional bool is_mask_v2 = 2;
 }
 
 message InclusiveStopFilter {
