@@ -142,7 +142,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   /* Statistics thread */
   private static final String STAT_THREAD_ENABLE_KEY = "hbase.lru.stat.enable";
-  private static final boolean STAT_THREAD_ENABLE_DEFAULT = true;
+  private static final boolean STAT_THREAD_ENABLE_DEFAULT = false;
   private static final int STAT_THREAD_PERIOD = 60 * 5;
   private static final String LRU_MAX_BLOCK_SIZE = "hbase.lru.max.block.size";
   private static final long DEFAULT_MAX_BLOCK_SIZE = 16L * 1024L * 1024L;
@@ -332,8 +332,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
     } else {
       this.evictionThread = null;
     }
-    // TODO: Add means of turning this off.  Bit obnoxious running thread just to make a log
-    // every five minutes.
+
     if (statEnable) {
       this.scheduleThreadPool = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
         .setNameFormat("LruBlockCacheStatsExecutor").setDaemon(true).build());
