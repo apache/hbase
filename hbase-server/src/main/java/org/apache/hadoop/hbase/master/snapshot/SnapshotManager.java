@@ -869,36 +869,6 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     return procId;
   }
 
-  // Makes sure restoring a snapshot does not break the current SFT setup
-  // follows StoreUtils.createStoreConfiguration
-  static void checkSFTCompatibility(TableDescriptor currentTableDesc,
-    TableDescriptor snapshotTableDesc, Configuration baseConf) throws RestoreSnapshotException {
-
-    for (ColumnFamilyDescriptor cfDesc : currentTableDesc.getColumnFamilies()) {
-      ColumnFamilyDescriptor snapCFDesc = snapshotTableDesc.getColumnFamily(cfDesc.getName());
-      // if there is no counterpart in the snapshot it will be just deleted so the config does
-      // not matter
-      if (snapCFDesc != null) {
-        Configuration currentCompositeConf =
-          StoreUtils.createStoreConfiguration(baseConf, currentTableDesc, cfDesc);
-        Configuration snapCompositeConf =
-          StoreUtils.createStoreConfiguration(baseConf, snapshotTableDesc, snapCFDesc);
-        Class<? extends StoreFileTracker> currentSFT =
-          StoreFileTrackerFactory.getTrackerClass(currentCompositeConf);
-        Class<? extends StoreFileTracker> snapSFT =
-          StoreFileTrackerFactory.getTrackerClass(snapCompositeConf);
-
-        //restoration is not possible if there is an SFT mismatch
-        if (currentSFT != snapSFT) {
-          throw new RestoreSnapshotException(
-            "Restoring Snapshot is not possible because " + " the config for column family "
-              + cfDesc.getNameAsString() + " has incompatible configuration. Current SFT: "
-              + currentSFT + " SFT from snapshot: " + snapSFT);
-        }
-      }
-    }
-  }
-
   /**
    * Restore the specified snapshot. The restore will fail if the destination table has a snapshot
    * or restore in progress.
@@ -917,8 +887,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
 
     //have to check first if restoring the snapshot would break current SFT setup
-    checkSFTCompatibility(master.getTableDescriptors().get(tableName), snapshotTableDesc,
-      master.getConfiguration());
+    StoreFileTrackerFactory.checkForRestoreSnapshot(master.getTableDescriptors().get(tableName),
+      snapshotTableDesc, master.getConfiguration());
 
     if (master.getTableStateManager().isTableState(
       TableName.valueOf(snapshot.getTable()), TableState.State.ENABLED)) {

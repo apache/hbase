@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.snapshot;
 
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -29,22 +28,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
-import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -204,49 +196,5 @@ public class TestSnapshotManager {
     } catch (UnsupportedOperationException e) {
       return false;
     }
-  }
-
-  @Test public void testCheckSFTCompatibility() throws Exception {
-    //checking default value change on different configuration levels
-    Configuration conf = new Configuration();
-    conf.set(StoreFileTrackerFactory.TRACKER_IMPL, "DEFAULT");
-
-    //creating a TD with only TableDescriptor level config
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf("TableX"));
-    builder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "FILE");
-    ColumnFamilyDescriptor cf = ColumnFamilyDescriptorBuilder.of("cf");
-    builder.setColumnFamily(cf);
-    TableDescriptor td = builder.build();
-
-    //creating a TD with matching ColumnFamilyDescriptor level setting
-    TableDescriptorBuilder snapBuilder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf("TableY"));
-    snapBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "FILE");
-    ColumnFamilyDescriptorBuilder snapCFBuilder =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf"));
-    snapCFBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "FILE");
-    snapBuilder.setColumnFamily(snapCFBuilder.build());
-    TableDescriptor snapTd = snapBuilder.build();
-
-    // adding a cf config that matches the td config is fine even when it does not match the default
-    SnapshotManager.checkSFTCompatibility(td, snapTd, conf);
-    // removing cf level config is fine when it matches the td config
-    SnapshotManager.checkSFTCompatibility(snapTd, td, conf);
-
-    TableDescriptorBuilder defaultBuilder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf("TableY"));
-    defaultBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "FILE");
-    ColumnFamilyDescriptorBuilder defaultCFBuilder =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf"));
-    defaultCFBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "DEFAULT");
-    defaultBuilder.setColumnFamily(defaultCFBuilder.build());
-    TableDescriptor defaultTd = defaultBuilder.build();
-
-    assertThrows(RestoreSnapshotException.class, () -> {
-      SnapshotManager.checkSFTCompatibility(td, defaultTd, conf);
-    });
-    assertThrows(RestoreSnapshotException.class, () -> {
-      SnapshotManager.checkSFTCompatibility(snapTd, defaultTd, conf);
-    });
   }
 }

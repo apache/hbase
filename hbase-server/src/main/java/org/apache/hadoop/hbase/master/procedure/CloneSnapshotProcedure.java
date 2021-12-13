@@ -225,8 +225,6 @@ public class CloneSnapshotProcedure
       return;
     }
 
-    validateSFT();
-
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
     builder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, customSFT);
     for (ColumnFamilyDescriptor family : tableDescriptor.getColumnFamilies()){
@@ -239,6 +237,10 @@ public class CloneSnapshotProcedure
   }
 
   private void validateSFT() {
+    if (StringUtils.isEmpty(customSFT)){
+      return;
+    }
+
     try {
       Configuration sftConfig = new Configuration();
       sftConfig.set(StoreFileTrackerFactory.TRACKER_IMPL, customSFT);
@@ -393,6 +395,8 @@ public class CloneSnapshotProcedure
     if (env.getMasterServices().getTableDescriptors().exists(tableName)) {
       throw new TableExistsException(tableName);
     }
+
+    validateSFT();
   }
 
   /**
