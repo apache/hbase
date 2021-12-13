@@ -7238,6 +7238,16 @@ public final class FilterProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getFuzzyKeysDataOrBuilder(
         int index);
+
+    // optional bool is_mask_v2 = 2;
+    /**
+     * <code>optional bool is_mask_v2 = 2;</code>
+     */
+    boolean hasIsMaskV2();
+    /**
+     * <code>optional bool is_mask_v2 = 2;</code>
+     */
+    boolean getIsMaskV2();
   }
   /**
    * Protobuf type {@code hbase.pb.FuzzyRowFilter}
@@ -7298,6 +7308,11 @@ public final class FilterProtos {
               fuzzyKeysData_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.PARSER, extensionRegistry));
               break;
             }
+            case 16: {
+              bitField0_ |= 0x00000001;
+              isMaskV2_ = input.readBool();
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -7340,6 +7355,7 @@ public final class FilterProtos {
       return PARSER;
     }
 
+    private int bitField0_;
     // repeated .hbase.pb.BytesBytesPair fuzzy_keys_data = 1;
     public static final int FUZZY_KEYS_DATA_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> fuzzyKeysData_;
@@ -7376,8 +7392,25 @@ public final class FilterProtos {
       return fuzzyKeysData_.get(index);
     }
 
+    // optional bool is_mask_v2 = 2;
+    public static final int IS_MASK_V2_FIELD_NUMBER = 2;
+    private boolean isMaskV2_;
+    /**
+     * <code>optional bool is_mask_v2 = 2;</code>
+     */
+    public boolean hasIsMaskV2() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional bool is_mask_v2 = 2;</code>
+     */
+    public boolean getIsMaskV2() {
+      return isMaskV2_;
+    }
+
     private void initFields() {
       fuzzyKeysData_ = java.util.Collections.emptyList();
+      isMaskV2_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -7400,6 +7433,9 @@ public final class FilterProtos {
       for (int i = 0; i < fuzzyKeysData_.size(); i++) {
         output.writeMessage(1, fuzzyKeysData_.get(i));
       }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBool(2, isMaskV2_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -7412,6 +7448,10 @@ public final class FilterProtos {
       for (int i = 0; i < fuzzyKeysData_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, fuzzyKeysData_.get(i));
+      }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(2, isMaskV2_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -7438,6 +7478,11 @@ public final class FilterProtos {
       boolean result = true;
       result = result && getFuzzyKeysDataList()
           .equals(other.getFuzzyKeysDataList());
+      result = result && (hasIsMaskV2() == other.hasIsMaskV2());
+      if (hasIsMaskV2()) {
+        result = result && (getIsMaskV2()
+            == other.getIsMaskV2());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -7454,6 +7499,10 @@ public final class FilterProtos {
       if (getFuzzyKeysDataCount() > 0) {
         hash = (37 * hash) + FUZZY_KEYS_DATA_FIELD_NUMBER;
         hash = (53 * hash) + getFuzzyKeysDataList().hashCode();
+      }
+      if (hasIsMaskV2()) {
+        hash = (37 * hash) + IS_MASK_V2_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getIsMaskV2());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -7571,6 +7620,8 @@ public final class FilterProtos {
         } else {
           fuzzyKeysDataBuilder_.clear();
         }
+        isMaskV2_ = false;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -7598,6 +7649,7 @@ public final class FilterProtos {
       public org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FuzzyRowFilter buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FuzzyRowFilter result = new org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FuzzyRowFilter(this);
         int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
         if (fuzzyKeysDataBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001)) {
             fuzzyKeysData_ = java.util.Collections.unmodifiableList(fuzzyKeysData_);
@@ -7607,6 +7659,11 @@ public final class FilterProtos {
         } else {
           result.fuzzyKeysData_ = fuzzyKeysDataBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.isMaskV2_ = isMaskV2_;
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -7647,6 +7704,9 @@ public final class FilterProtos {
               fuzzyKeysDataBuilder_.addAllMessages(other.fuzzyKeysData_);
             }
           }
+        }
+        if (other.hasIsMaskV2()) {
+          setIsMaskV2(other.getIsMaskV2());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -7919,6 +7979,39 @@ public final class FilterProtos {
           fuzzyKeysData_ = null;
         }
         return fuzzyKeysDataBuilder_;
+      }
+
+      // optional bool is_mask_v2 = 2;
+      private boolean isMaskV2_ ;
+      /**
+       * <code>optional bool is_mask_v2 = 2;</code>
+       */
+      public boolean hasIsMaskV2() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional bool is_mask_v2 = 2;</code>
+       */
+      public boolean getIsMaskV2() {
+        return isMaskV2_;
+      }
+      /**
+       * <code>optional bool is_mask_v2 = 2;</code>
+       */
+      public Builder setIsMaskV2(boolean value) {
+        bitField0_ |= 0x00000002;
+        isMaskV2_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool is_mask_v2 = 2;</code>
+       */
+      public Builder clearIsMaskV2() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        isMaskV2_ = false;
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:hbase.pb.FuzzyRowFilter)
@@ -17576,38 +17669,39 @@ public final class FilterProtos {
       "MUST_PASS_ONE\020\002\"1\n\rFilterWrapper\022 \n\006filt" +
       "er\030\001 \002(\0132\020.hbase.pb.Filter\"\024\n\022FirstKeyOn" +
       "lyFilter\";\n%FirstKeyValueMatchingQualifi" +
-      "ersFilter\022\022\n\nqualifiers\030\001 \003(\014\"C\n\016FuzzyRo" +
+      "ersFilter\022\022\n\nqualifiers\030\001 \003(\014\"W\n\016FuzzyRo" +
       "wFilter\0221\n\017fuzzy_keys_data\030\001 \003(\0132\030.hbase" +
-      ".pb.BytesBytesPair\"+\n\023InclusiveStopFilte" +
-      "r\022\024\n\014stop_row_key\030\001 \001(\014\"#\n\rKeyOnlyFilter" +
-      "\022\022\n\nlen_as_val\030\001 \002(\010\"5\n\032MultipleColumnPr" +
-      "efixFilter\022\027\n\017sorted_prefixes\030\001 \003(\014\"\037\n\nP",
-      "ageFilter\022\021\n\tpage_size\030\001 \002(\003\"\036\n\014PrefixFi" +
-      "lter\022\016\n\006prefix\030\001 \001(\014\"B\n\017QualifierFilter\022" +
-      "/\n\016compare_filter\030\001 \002(\0132\027.hbase.pb.Compa" +
-      "reFilter\"!\n\017RandomRowFilter\022\016\n\006chance\030\001 " +
-      "\002(\002\"<\n\tRowFilter\022/\n\016compare_filter\030\001 \002(\013" +
-      "2\027.hbase.pb.CompareFilter\"g\n\036SingleColum" +
-      "nValueExcludeFilter\022E\n\032single_column_val" +
-      "ue_filter\030\001 \002(\0132!.hbase.pb.SingleColumnV" +
-      "alueFilter\"\327\001\n\027SingleColumnValueFilter\022\025" +
-      "\n\rcolumn_family\030\001 \001(\014\022\030\n\020column_qualifie",
-      "r\030\002 \001(\014\022)\n\ncompare_op\030\003 \002(\0162\025.hbase.pb.C" +
-      "ompareType\022(\n\ncomparator\030\004 \002(\0132\024.hbase.p" +
-      "b.Comparator\022\031\n\021filter_if_missing\030\005 \001(\010\022" +
-      "\033\n\023latest_version_only\030\006 \001(\010\".\n\nSkipFilt" +
-      "er\022 \n\006filter\030\001 \002(\0132\020.hbase.pb.Filter\"<\n\020" +
-      "TimestampsFilter\022\026\n\ntimestamps\030\001 \003(\003B\002\020\001" +
-      "\022\020\n\010can_hint\030\002 \001(\010\">\n\013ValueFilter\022/\n\016com" +
-      "pare_filter\030\001 \002(\0132\027.hbase.pb.CompareFilt" +
-      "er\"4\n\020WhileMatchFilter\022 \n\006filter\030\001 \002(\0132\020" +
-      ".hbase.pb.Filter\"\021\n\017FilterAllFilter\"h\n\010R",
-      "owRange\022\021\n\tstart_row\030\001 \001(\014\022\033\n\023start_row_" +
-      "inclusive\030\002 \001(\010\022\020\n\010stop_row\030\003 \001(\014\022\032\n\022sto" +
-      "p_row_inclusive\030\004 \001(\010\"A\n\023MultiRowRangeFi" +
-      "lter\022*\n\016row_range_list\030\001 \003(\0132\022.hbase.pb." +
-      "RowRangeBB\n*org.apache.hadoop.hbase.prot" +
-      "obuf.generatedB\014FilterProtosH\001\210\001\001\240\001\001"
+      ".pb.BytesBytesPair\022\022\n\nis_mask_v2\030\002 \001(\010\"+" +
+      "\n\023InclusiveStopFilter\022\024\n\014stop_row_key\030\001 " +
+      "\001(\014\"#\n\rKeyOnlyFilter\022\022\n\nlen_as_val\030\001 \002(\010" +
+      "\"5\n\032MultipleColumnPrefixFilter\022\027\n\017sorted",
+      "_prefixes\030\001 \003(\014\"\037\n\nPageFilter\022\021\n\tpage_si" +
+      "ze\030\001 \002(\003\"\036\n\014PrefixFilter\022\016\n\006prefix\030\001 \001(\014" +
+      "\"B\n\017QualifierFilter\022/\n\016compare_filter\030\001 " +
+      "\002(\0132\027.hbase.pb.CompareFilter\"!\n\017RandomRo" +
+      "wFilter\022\016\n\006chance\030\001 \002(\002\"<\n\tRowFilter\022/\n\016" +
+      "compare_filter\030\001 \002(\0132\027.hbase.pb.CompareF" +
+      "ilter\"g\n\036SingleColumnValueExcludeFilter\022" +
+      "E\n\032single_column_value_filter\030\001 \002(\0132!.hb" +
+      "ase.pb.SingleColumnValueFilter\"\327\001\n\027Singl" +
+      "eColumnValueFilter\022\025\n\rcolumn_family\030\001 \001(",
+      "\014\022\030\n\020column_qualifier\030\002 \001(\014\022)\n\ncompare_o" +
+      "p\030\003 \002(\0162\025.hbase.pb.CompareType\022(\n\ncompar" +
+      "ator\030\004 \002(\0132\024.hbase.pb.Comparator\022\031\n\021filt" +
+      "er_if_missing\030\005 \001(\010\022\033\n\023latest_version_on" +
+      "ly\030\006 \001(\010\".\n\nSkipFilter\022 \n\006filter\030\001 \002(\0132\020" +
+      ".hbase.pb.Filter\"<\n\020TimestampsFilter\022\026\n\n" +
+      "timestamps\030\001 \003(\003B\002\020\001\022\020\n\010can_hint\030\002 \001(\010\">" +
+      "\n\013ValueFilter\022/\n\016compare_filter\030\001 \002(\0132\027." +
+      "hbase.pb.CompareFilter\"4\n\020WhileMatchFilt" +
+      "er\022 \n\006filter\030\001 \002(\0132\020.hbase.pb.Filter\"\021\n\017",
+      "FilterAllFilter\"h\n\010RowRange\022\021\n\tstart_row" +
+      "\030\001 \001(\014\022\033\n\023start_row_inclusive\030\002 \001(\010\022\020\n\010s" +
+      "top_row\030\003 \001(\014\022\032\n\022stop_row_inclusive\030\004 \001(" +
+      "\010\"A\n\023MultiRowRangeFilter\022*\n\016row_range_li" +
+      "st\030\001 \003(\0132\022.hbase.pb.RowRangeBB\n*org.apac" +
+      "he.hadoop.hbase.protobuf.generatedB\014Filt" +
+      "erProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -17691,7 +17785,7 @@ public final class FilterProtos {
           internal_static_hbase_pb_FuzzyRowFilter_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_FuzzyRowFilter_descriptor,
-              new java.lang.String[] { "FuzzyKeysData", });
+              new java.lang.String[] { "FuzzyKeysData", "IsMaskV2", });
           internal_static_hbase_pb_InclusiveStopFilter_descriptor =
             getDescriptor().getMessageTypes().get(13);
           internal_static_hbase_pb_InclusiveStopFilter_fieldAccessorTable = new
