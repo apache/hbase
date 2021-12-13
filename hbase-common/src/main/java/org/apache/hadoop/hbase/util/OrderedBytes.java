@@ -722,6 +722,10 @@ public class OrderedBytes {
     int integerDigits = abs.precision() - abs.scale();
     int lengthToMoveLeft = integerDigits % 2 == 0 ? integerDigits : integerDigits + 1;
     e = lengthToMoveLeft / 2;
+    if (e > 350) {
+      e = 351;
+      lengthToMoveLeft = 702;
+    }
     abs = abs.movePointLeft(lengthToMoveLeft);
 
     // encode appropriate header byte and/or E value.
