@@ -19,32 +19,29 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriBuilder;
-import javax.ws.rs.core.UriInfo;
-
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-
-import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.rest.model.ScannerModel;
+import org.apache.hbase.thirdparty.javax.ws.rs.Consumes;
+import org.apache.hbase.thirdparty.javax.ws.rs.POST;
+import org.apache.hbase.thirdparty.javax.ws.rs.PUT;
+import org.apache.hbase.thirdparty.javax.ws.rs.Path;
+import org.apache.hbase.thirdparty.javax.ws.rs.PathParam;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.Context;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.Response;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.UriBuilder;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.UriInfo;
 
 @InterfaceAudience.Private
 public class ScannerResource extends ResourceBase {
