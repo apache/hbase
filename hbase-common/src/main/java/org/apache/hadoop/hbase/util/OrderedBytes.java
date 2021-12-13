@@ -641,8 +641,11 @@ public class OrderedBytes {
     }
 
     // normalize abs(val) to determine E
-    while (abs.compareTo(EN10) < 0) { abs = abs.movePointRight(8); e += 4; }
-    while (abs.compareTo(EN2) < 0) { abs = abs.movePointRight(2); e++; }
+    int zerosBeforeFirstNonZero = abs.scale() - abs.precision();
+    int lengthToMoveRight = zerosBeforeFirstNonZero % 2 ==
+      0 ? zerosBeforeFirstNonZero : zerosBeforeFirstNonZero - 1;
+    e = lengthToMoveRight / 2;
+    abs = abs.movePointRight(lengthToMoveRight);
 
     putVaruint64(dst, e, !isNeg); // encode appropriate E value.
 
@@ -716,9 +719,10 @@ public class OrderedBytes {
     }
 
     // normalize abs(val) to determine E
-    while (abs.compareTo(E32) >= 0 && e <= 350) { abs = abs.movePointLeft(32); e +=16; }
-    while (abs.compareTo(E8) >= 0 && e <= 350) { abs = abs.movePointLeft(8); e+= 4; }
-    while (abs.compareTo(BigDecimal.ONE) >= 0 && e <= 350) { abs = abs.movePointLeft(2); e++; }
+    int integerDigits = abs.precision() - abs.scale();
+    int lengthToMoveLeft = integerDigits % 2 == 0 ? integerDigits : integerDigits + 1;
+    e = lengthToMoveLeft / 2;
+    abs = abs.movePointLeft(lengthToMoveLeft);
 
     // encode appropriate header byte and/or E value.
     if (e > 10) { /* large number, write out {~,}E */
