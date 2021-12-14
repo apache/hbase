@@ -212,7 +212,11 @@ public class JMXJsonServlet extends HttpServlet {
         if (qry == null) {
           qry = "*:*";
         }
-        if (beanWriter.write(this.mBeanServer, new ObjectName(qry), null, description) != 0) {
+        String excl = request.getParameter("excl");
+        ObjectName excluded = excl == null ? null : new ObjectName(excl);
+
+        if (beanWriter.write(this.mBeanServer, new ObjectName(qry),
+            null, description, excluded) != 0) {
           beanWriter.flush();
           response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         }
