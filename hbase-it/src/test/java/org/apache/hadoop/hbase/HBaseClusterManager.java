@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseClusterManager.CommandProvider.Operation;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounter.RetryConfig;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
@@ -216,7 +217,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     }
 
     public String signalCommand(ServiceType service, String signal) {
-      return String.format("%s | xargs kill -s %s", findPidCommand(service), signal);
+      return String.format("%s | xargs sudo kill -s %s", findPidCommand(service), signal);
     }
   }
 
@@ -322,7 +323,10 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       case ZOOKEEPER_SERVER:
         return new ZookeeperShellCommandProvider(getConf());
       default:
-        return new HBaseShellCommandProvider(getConf());
+        Class<? extends CommandProvider> provider = getConf()
+          .getClass("hbase.it.clustermanager.hbase.command.provider",
+            HBaseShellCommandProvider.class, CommandProvider.class);
+        return ReflectionUtils.newInstance(provider, getConf());
     }
   }
 
