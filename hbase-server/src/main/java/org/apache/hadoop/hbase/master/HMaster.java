@@ -1827,6 +1827,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   public BalanceResponse balance(BalanceRequest request) throws IOException {
+    checkInitialized();
+
     BalanceResponse.Builder responseBuilder = BalanceResponse.newBuilder();
 
     if (loadBalancerTracker == null
