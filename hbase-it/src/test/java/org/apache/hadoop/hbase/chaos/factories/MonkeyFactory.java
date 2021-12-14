@@ -79,6 +79,7 @@ public abstract class MonkeyFactory {
   public static final String SERVER_AND_DEPENDENCIES_KILLING = "serverAndDependenciesKilling";
   public static final String DISTRIBUTED_ISSUES = "distributedIssues";
   public static final String DATA_ISSUES = "dataIssues";
+  public static final String CONFIGURABLE_SLOW_DETERMINISTIC = "configurableSlowDeterministic";
 
   public static Map<String, MonkeyFactory> FACTORIES = ImmutableMap.<String,MonkeyFactory>builder()
     .put(CALM, new CalmMonkeyFactory())
@@ -93,6 +94,7 @@ public abstract class MonkeyFactory {
     .put(SERVER_AND_DEPENDENCIES_KILLING, new ServerAndDependenciesKillingMonkeyFactory())
     .put(DISTRIBUTED_ISSUES, new DistributedIssuesMonkeyFactory())
     .put(DATA_ISSUES, new DataIssuesMonkeyFactory())
+    .put(CONFIGURABLE_SLOW_DETERMINISTIC, new ConfigurableSlowDeterministicMonkeyFactory())
     .build();
 
   public static MonkeyFactory getFactory(String factoryName) {
