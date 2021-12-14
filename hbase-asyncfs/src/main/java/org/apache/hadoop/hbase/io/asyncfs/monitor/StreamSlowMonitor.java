@@ -33,8 +33,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
 
 /**
  * Class for monitor the wal file flush performance.
@@ -63,6 +64,7 @@ public class StreamSlowMonitor implements ConfigurationObserver {
 
   /**
    * Configure for the slow packet process time, a duration from send to ACK.
+   * It is preferred that this value should not be less than 1s.
    */
   private static final String DATANODE_SLOW_PACKET_PROCESS_TIME_KEY =
     "hbase.regionserver.async.wal.datanode.slow.packet.process.time.millis";
@@ -70,6 +72,10 @@ public class StreamSlowMonitor implements ConfigurationObserver {
 
   /**
    * Configure for the packet flush speed.
+   * e.g. If the configured slow slow packet process time is larger than 1s, then here 0.1kbs means
+   * 100B should be processed in less than 1s.
+   * If the configured slow slow packet process time is larger than 10s, then here 0.1kbs means
+   * 1KB should be processed in less than 10s.
    */
   private static final String DATANODE_SLOW_PACKET_FLUSH_SPEED_KEY =
     "hbase.regionserver.async.wal.datanode.slow.packet.flush.speed.kbs";
@@ -77,12 +83,12 @@ public class StreamSlowMonitor implements ConfigurationObserver {
 
   private final String name;
   // this is a map of datanodeInfo->queued slow PacketAckData
-  private final Cache<DatanodeInfo, Deque<PacketAckData>> datanodeSlowDataQueue;
+  private final LoadingCache<DatanodeInfo, Deque<PacketAckData>> datanodeSlowDataQueue;
   private final ExcludeDatanodeManager excludeDatanodeManager;
 
   private int minSlowDetectCount;
   private long slowDataTtl;
-  private long slowPacketAckMillis;
+  private long slowPacketAckMs;
   private double slowPacketAckSpeed;
 
   public StreamSlowMonitor(Configuration conf, String name,
@@ -91,11 +97,16 @@ public class StreamSlowMonitor implements ConfigurationObserver {
     this.name = name;
     this.excludeDatanodeManager = excludeDatanodeManager;
     this.datanodeSlowDataQueue = CacheBuilder.newBuilder()
-      .initialCapacity(conf.getInt(WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT_KEY,
+      .maximumSize(conf.getInt(WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT_KEY,
         DEFAULT_WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT))
       .expireAfterWrite(conf.getLong(WAL_EXCLUDE_DATANODE_TTL_KEY,
         DEFAULT_WAL_EXCLUDE_DATANODE_TTL), TimeUnit.HOURS)
-      .build();
+      .build(new CacheLoader<DatanodeInfo, Deque<PacketAckData>>() {
+        @Override
+        public Deque<PacketAckData> load(DatanodeInfo key) throws Exception {
+          return new ConcurrentLinkedDeque<>();
+        }
+      });
     LOG.info("New stream slow monitor {}", this.name);
   }
 
@@ -107,23 +118,33 @@ public class StreamSlowMonitor implements ConfigurationObserver {
    * Check if the packet process time shows that the relevant datanode is a slow node.
    * @param datanodeInfo the datanode that processed the packet
    * @param packetDataLen the data length of the packet
-   * @param processTime the process time of the packet on the datanode
+   * @param processTimeMs the process time (in ms) of the packet on the datanode,
    * @param lastAckTimestamp the last acked timestamp of the packet on another datanode
    * @param unfinished if the packet is unfinished flushed to the datanode replicas
    */
   public void checkProcessTimeAndSpeed(DatanodeInfo datanodeInfo, long packetDataLen,
-      long processTime, long lastAckTimestamp, int unfinished) {
+      long processTimeMs, long lastAckTimestamp, int unfinished) {
     long current = EnvironmentEdgeManager.currentTime();
-    boolean slow = processTime > slowPacketAckMillis ||
-        (packetDataLen > 100 && (double) packetDataLen / processTime < slowPacketAckSpeed);
+    // A datanode is suspicious slow if it meets one of the following conditions
+    // (please see more details in HBASE-26347):
+    // 1. no matter what the length of packet is, the the packet process time (in ms) is
+    //    greater than the configured slowPacketAckMs. This condition means that all the long enough
+    //    process time should be considered as slow.
+    // 2. if the data length of the packet is more than 100 bytes, and the rate of process bytes is
+    //    less than the configured process speed. Since process time not always works, if 198B
+    //    data is processed by using 2s, this means writing slowly,  but the first condition cannot
+    //    aware it.
+    boolean slow = processTimeMs > slowPacketAckMs ||
+        (packetDataLen > 100 && (double) packetDataLen / processTimeMs < slowPacketAckSpeed);
     if (slow) {
-      // check if large diff ack timestamp between replicas
-      if ((lastAckTimestamp > 0 && current - lastAckTimestamp > slowPacketAckMillis / 2) || (
+      // Check if large diff ack timestamp between replicas,
+      // should avoid misjudgments that caused by GC STW.
+      if ((lastAckTimestamp > 0 && current - lastAckTimestamp > slowPacketAckMs / 2) || (
           lastAckTimestamp <= 0 && unfinished == 0)) {
         LOG.info("Slow datanode: {}, data length={}, duration={}ms, unfinishedReplicas={}, "
-            + "lastAckTimestamp={}, monitor name: {}", datanodeInfo, packetDataLen, processTime,
+            + "lastAckTimestamp={}, monitor name: {}", datanodeInfo, packetDataLen, processTimeMs,
           unfinished, lastAckTimestamp, this.name);
-        if (addSlowAckData(datanodeInfo, packetDataLen, processTime)) {
+        if (addSlowAckData(datanodeInfo, packetDataLen, processTimeMs)) {
           excludeDatanodeManager.tryAddExcludeDN(datanodeInfo, "slow packet ack");
         }
       }
@@ -135,17 +156,8 @@ public class StreamSlowMonitor implements ConfigurationObserver {
     setConf(conf);
   }
 
-  private synchronized Deque<PacketAckData> getSlowDNQueue(DatanodeInfo datanodeInfo) {
-    Deque<PacketAckData> slowDNQueue = datanodeSlowDataQueue.getIfPresent(datanodeInfo);
-    if (slowDNQueue == null) {
-      slowDNQueue = new ConcurrentLinkedDeque<>();
-      datanodeSlowDataQueue.put(datanodeInfo, slowDNQueue);
-    }
-    return slowDNQueue;
-  }
-
   private boolean addSlowAckData(DatanodeInfo datanodeInfo, long dataLength, long processTime) {
-    Deque<PacketAckData> slowDNQueue = getSlowDNQueue(datanodeInfo);
+    Deque<PacketAckData> slowDNQueue = datanodeSlowDataQueue.getUnchecked(datanodeInfo);
     long current = EnvironmentEdgeManager.currentTime();
     while (!slowDNQueue.isEmpty() && (current - slowDNQueue.getFirst().getTimestamp() > slowDataTtl
       || slowDNQueue.size() >= minSlowDetectCount)) {
@@ -159,7 +171,7 @@ public class StreamSlowMonitor implements ConfigurationObserver {
     this.minSlowDetectCount = conf.getInt(WAL_SLOW_DETECT_MIN_COUNT_KEY,
       DEFAULT_WAL_SLOW_DETECT_MIN_COUNT);
     this.slowDataTtl = conf.getLong(WAL_SLOW_DETECT_DATA_TTL_KEY, DEFAULT_WAL_SLOW_DETECT_DATA_TTL);
-    this.slowPacketAckMillis = conf.getLong(DATANODE_SLOW_PACKET_PROCESS_TIME_KEY,
+    this.slowPacketAckMs = conf.getLong(DATANODE_SLOW_PACKET_PROCESS_TIME_KEY,
       DEFAULT_DATANODE_SLOW_PACKET_PROCESS_TIME);
     this.slowPacketAckSpeed = conf.getDouble(DATANODE_SLOW_PACKET_FLUSH_SPEED_KEY,
       DEFAULT_DATANODE_SLOW_PACKET_FLUSH_SPEED);

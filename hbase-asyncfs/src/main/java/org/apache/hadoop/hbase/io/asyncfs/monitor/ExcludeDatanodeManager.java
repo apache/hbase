@@ -79,12 +79,6 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
    */
   public boolean tryAddExcludeDN(DatanodeInfo datanodeInfo, String cause) {
     boolean alreadyMarkedSlow = getExcludeDNs().containsKey(datanodeInfo);
-    if (excludeDNsCache.size() >= maxExcludeDNCount) {
-      LOG.warn("Try add datanode {} to exclude cache by [{}] failed, up to max exclude limit {}, "
-          + "current exclude DNs are {}", datanodeInfo, cause, excludeDNsCache.size(),
-        getExcludeDNs().keySet());
-      return false;
-    }
     if (!alreadyMarkedSlow) {
       excludeDNsCache.put(datanodeInfo, EnvironmentEdgeManager.currentTime());
       LOG.info(
@@ -92,6 +86,8 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
         datanodeInfo, cause, excludeDNsCache.size());
       return true;
     }
+    LOG.debug("Try add datanode {} to exclude cache by [{}] failed, "
+        + "current exclude DNs are {}", datanodeInfo, cause, getExcludeDNs().keySet());
     return false;
   }
 
@@ -110,7 +106,6 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
     for (StreamSlowMonitor monitor : streamSlowMonitors.values()) {
       monitor.onConfigurationChange(conf);
     }
-    this.excludeDNsCache.invalidateAll();
     this.excludeDNsCache = CacheBuilder.newBuilder().expireAfterWrite(
       this.conf.getLong(WAL_EXCLUDE_DATANODE_TTL_KEY, DEFAULT_WAL_EXCLUDE_DATANODE_TTL),
       TimeUnit.HOURS).maximumSize(this.conf
