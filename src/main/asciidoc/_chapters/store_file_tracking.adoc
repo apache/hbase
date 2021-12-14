@@ -37,17 +37,17 @@ Historically, HBase internals have relied on creating hfiles on temporary direct
 those files to the actual store directory at operation commit time. That's a simple and convenient
 way to separate transient from already finalised files that are ready to serve client reads with data.
 This approach works well with strong consistent file systems, but with the popularity of less consistent
-file systems, mainly Object Store file systems, dependency on rename operations starts to introduce
-performance penalties. Amazon S3 Object Store, in particular, has been the most affected deployment,
-due to the its lack of atomic renames, requiring an additional locking layer implemented by HBOSS,
-to guarantee consistency and integrity of operations.
+file systems, mainly Object Store which can be used like file systems, dependency on atomic rename operations starts to introduce
+performance penalties. The Amazon S3 Object Store, in particular, has been the most affected deployment,
+due to its lack of atomic renames. The HBase community temporarily bypassed this problem by building a distributed locking layer called HBOSS,
+to guarantee atomicity of operations against S3.
 
 With *Store File Tracking*, decision on where to originally create new hfiles and how to proceed upon
 commit is delegated to the specific Store File Tracking implementation.
-It can be set at individual Table or Column Family configurations, as well as in processes
-*hbase-site.xml* configuration file.
+The implementation can be set at the HBase service leve in *hbase-site.xml* or at the
+Table or Column Family via the TableDescriptor configuration.
 
-NOTE: When specified in *hbase_site.xml*, this configuration is also saved into tables configuration
+NOTE: When the store file tracking implementation is specified in *hbase_site.xml*, this configuration is also propagated into a tables configuration
 at table creation time. This is to avoid dangerous configuration mismatches between processes, which
 could potentially lead to data loss.
 
@@ -61,9 +61,9 @@ Store File Tracking initial version provides three builtin implementations:
 
 ### DEFAULT
 
-As per the name, this is the Store File Tracking implementation used by default when now explicit
+As per the name, this is the Store File Tracking implementation used by default when no explicit
 configuration has been defined. The DEFAULT tracker implements the standard approach using temporary
-directories and renames.
+directories and renames. This is how all previous (implicit) implementation that HBase used to track store files.
 
 ### FILE
 
@@ -87,10 +87,15 @@ to the first hbase start. Omitting this property sets the *DEFAULT* implementati
 
 ### Switching implementations globally
 
-For running clusters with tables already containing data, Store File Tracking implementation can
-only be changed with the *MIGRATION* implementation, so that the _new tracker_ can safely build its
-list of tracked files based on the list of the _current tracker_. Additional to the
-*hbase.store.file-tracker.impl* property, *MIGRATION* requires the
+For clusters with data that are upgraded to a version of HBase containing the store file tracking
+feature, the Store File Tracking implementation can only be changed with the *MIGRATION*
+implementation, so that the _new tracker_ can safely build its list of tracked files based on the
+list of the _current tracker_.
+
+NOTE: Switch implementations globally is only possible when no Store File Tracking configuration
+has ben explicitly set in *hbase-site.xml* nor in table descriptors.
+
+Additional to the *hbase.store.file-tracker.impl* property, *MIGRATION* requires the
 *hbase.store.file-tracker.migration.src.impl* and *hbase.store.file-tracker.migration.dst.impl*,
 where the _current_ and _new_ tracker should be specified. For example, to set *MIGRATION* from
 *DEFAULT* to *FILE*, the following should be set in the global config:
