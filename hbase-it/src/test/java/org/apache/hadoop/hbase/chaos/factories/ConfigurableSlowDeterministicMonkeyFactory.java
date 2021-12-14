@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.chaos.factories;
 
+import java.lang.reflect.Constructor;
+import java.util.function.Function;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.lang.reflect.Constructor;
-import java.util.function.Function;
 
 public class ConfigurableSlowDeterministicMonkeyFactory extends SlowDeterministicMonkeyFactory {
 
@@ -53,7 +53,7 @@ public class ConfigurableSlowDeterministicMonkeyFactory extends SlowDeterministi
   @Override
   protected Action[] getHeavyWeightedActions() {
     String actions = this.properties.getProperty(HEAVY_ACTIONS);
-    if( actions==null||actions.isEmpty() ){
+    if(actions==null || actions.isEmpty()){
       return super.getHeavyWeightedActions();
     } else {
       try {
@@ -77,6 +77,8 @@ public class ConfigurableSlowDeterministicMonkeyFactory extends SlowDeterministi
     String className = packageName + "." + classAndParams[0];
     String[] params = classAndParams[1].replaceAll(TABLE_PARAM,
       tableName.getNameAsString()).split(",");
+    LOG.info("About to instantiate action class: {}; With constructor params: {}",
+      className, params);
     Class<? extends Action> actionClass = (Class<? extends Action>)Class.forName(className);
     Constructor<? extends Action>[] constructors =
       (Constructor<? extends Action>[]) actionClass.getDeclaredConstructors();

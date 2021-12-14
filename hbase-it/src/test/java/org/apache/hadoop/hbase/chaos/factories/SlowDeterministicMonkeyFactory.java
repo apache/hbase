@@ -72,7 +72,7 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
   private long rollingBatchSuspendRSSleepTime;
   private float rollingBatchSuspendtRSRatio;
 
-  protected Action[] getLightWeigthedActions(){
+  protected Action[] getLightWeightedActions(){
     return new Action[] {
       new CompactTableAction(tableName, compactTableRatio),
       new CompactRandomRegionOfTableAction(tableName, compactRandomRegionRatio),
@@ -122,7 +122,7 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
     // Actions such as compact/flush a table/region,
     // move one region around. They are not so destructive,
     // can be executed more frequently.
-    Action[] actions1 = getLightWeigthedActions();
+    Action[] actions1 = getLightWeightedActions();
 
     // Actions such as split/merge/snapshot.
     // They should not cause data loss, or unreliability
