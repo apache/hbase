@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -275,6 +276,41 @@ public class TestSimpleRpcScheduler {
   }
 
   @Test
+  public void testPluggableRpcQueueWireUpWithFastPathExecutor() throws Exception {
+    String queueType = RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE;
+    Configuration schedConf = HBaseConfiguration.create();
+    schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, queueType);
+    schedConf.set(RpcExecutor.PLUGGABLE_CALL_QUEUE_CLASS_NAME, "org.apache.hadoop.hbase.ipc.TestPluggableQueueImpl");
+    schedConf.setBoolean(RpcExecutor.PLUGGABLE_CALL_QUEUE_WITH_FAST_PATH_ENABLED, true);
+
+    PriorityFunction priority = mock(PriorityFunction.class);
+    when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
+    SimpleRpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 0, 0, 0, priority,
+      HConstants.QOS_THRESHOLD);
+
+    Field f = scheduler.getClass().getDeclaredField("callExecutor");
+    f.setAccessible(true);
+    assertTrue(f.get(scheduler) instanceof FastPathBalancedQueueRpcExecutor);
+  }
+
+  @Test
+  public void testPluggableRpcQueueWireUpWithoutFastPathExecutor() throws Exception {
+    String queueType = RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE;
+    Configuration schedConf = HBaseConfiguration.create();
+    schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, queueType);
+    schedConf.set(RpcExecutor.PLUGGABLE_CALL_QUEUE_CLASS_NAME, "org.apache.hadoop.hbase.ipc.TestPluggableQueueImpl");
+
+    PriorityFunction priority = mock(PriorityFunction.class);
+    when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
+    SimpleRpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 0, 0, 0, priority,
+      HConstants.QOS_THRESHOLD);
+
+    Field f = scheduler.getClass().getDeclaredField("callExecutor");
+    f.setAccessible(true);
+    assertTrue(f.get(scheduler) instanceof BalancedQueueRpcExecutor);
+  }
+
+  @Test
   public void testPluggableRpcQueueCanListenToConfigurationChanges() throws Exception {
 
     Configuration schedConf = HBaseConfiguration.create();
@@ -316,9 +352,7 @@ public class TestSimpleRpcScheduler {
     testRpcScheduler(queueType, null);
   }
 
-  private void testRpcScheduler(final String queueType, final String pluggableQueueClass)
-    throws Exception {
-
+  private void testRpcScheduler(final String queueType, final String pluggableQueueClass) throws Exception {
     Configuration schedConf = HBaseConfiguration.create();
     schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, queueType);
 
@@ -388,7 +422,8 @@ public class TestSimpleRpcScheduler {
       // -> WITH REORDER [10 10 10 10 10 10 50 100] -> 530 (Deadline Queue)
       if (queueType.equals(RpcExecutor.CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
         assertEquals(530, totalTime);
-      } else if (queueType.equals(RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE)) {
+      } else if (queueType.equals(RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE) ||
+        queueType.equals(RpcExecutor.CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE)) {
         assertEquals(930, totalTime);
       }
     } finally {
