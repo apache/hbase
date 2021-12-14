@@ -17,6 +17,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.TestAsyncTableTracing.buildBaseAttributesMatcher;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEnded;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasKind;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -25,6 +34,9 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.ForkJoinPool;
@@ -34,13 +46,17 @@ import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.hamcrest.Matcher;
+import org.hamcrest.core.IsAnything;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -217,56 +233,82 @@ public class TestHTableTracing extends TestTracingBase {
     Closeables.close(conn, true);
   }
 
+  private void assertTrace(String tableOperation) {
+    assertTrace(tableOperation, new IsAnything<>());
+  }
+
+  private void assertTrace(String tableOperation, Matcher<SpanData> matcher) {
+    final TableName tableName = table.getName();
+    final Matcher<SpanData> spanLocator = allOf(
+      hasName(containsString(tableOperation)), hasEnded());
+    final String expectedName = tableOperation + " " + tableName.getNameWithNamespaceInclAsString();
+
+    Waiter.waitFor(conf, 1000, new MatcherPredicate<>(
+      "waiting for span to emit",
+      () -> TRACE_RULE.getSpans(), hasItem(spanLocator)));
+    SpanData data = TRACE_RULE.getSpans()
+      .stream()
+      .filter(spanLocator::matches)
+      .findFirst()
+      .orElseThrow(AssertionError::new);
+    assertThat(data, allOf(
+      hasName(expectedName),
+      hasKind(SpanKind.CLIENT),
+      hasStatusWithCode(StatusCode.OK),
+      buildBaseAttributesMatcher(tableName),
+      matcher));
+  }
+
   @Test
   public void testPut() throws IOException {
     table.put(new Put(Bytes.toBytes(0))
       .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v")));
-    assertTrace(HTable.class.getSimpleName(), "put", null, TableName.META_TABLE_NAME);
+    assertTrace("PUT");
   }
 
   @Test
   public void testExists() throws IOException {
     table.exists(new Get(Bytes.toBytes(0)));
-    assertTrace(HTable.class.getSimpleName(), "get", null, TableName.META_TABLE_NAME);
+    assertTrace("GET");
   }
 
   @Test
   public void testGet() throws IOException {
     table.get(new Get(Bytes.toBytes(0)));
-    assertTrace(HTable.class.getSimpleName(), "get", null, TableName.META_TABLE_NAME);
+    assertTrace("GET");
   }
 
   @Test
   public void testDelete() throws IOException {
     table.delete(new Delete(Bytes.toBytes(0)));
-    assertTrace(HTable.class.getSimpleName(), "delete", null, TableName.META_TABLE_NAME);
+    assertTrace("DELETE");
   }
 
   @Test
   public void testAppend() throws IOException {
     table.append(new Append(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"),
       Bytes.toBytes("v")));
-    assertTrace(HTable.class.getSimpleName(), "append", null, TableName.META_TABLE_NAME);
+    assertTrace("APPEND");
   }
 
   @Test
   public void testIncrement() throws IOException {
     table.increment(
       new Increment(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1));
-    assertTrace(HTable.class.getSimpleName(), "increment", null, TableName.META_TABLE_NAME);
+    assertTrace("INCREMENT");
   }
 
   @Test
   public void testIncrementColumnValue1() throws IOException {
     table.incrementColumnValue(Bytes.toBytes(0), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1);
-    assertTrace(HTable.class.getSimpleName(), "increment", null, TableName.META_TABLE_NAME);
+    assertTrace("INCREMENT");
   }
 
   @Test
   public void testIncrementColumnValue2() throws IOException {
     table.incrementColumnValue(Bytes.toBytes(0), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
       Durability.SYNC_WAL);
-    assertTrace(HTable.class.getSimpleName(), "increment", null, TableName.META_TABLE_NAME);
+    assertTrace("INCREMENT");
   }
 
   @Test
@@ -274,7 +316,7 @@ public class TestHTableTracing extends TestTracingBase {
     table.checkAndMutate(CheckAndMutate.newBuilder(Bytes.toBytes(0))
       .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
       .build(new Delete(Bytes.toBytes(0))));
-    assertTrace(HTable.class.getSimpleName(), "checkAndMutate", null, TableName.META_TABLE_NAME);
+    assertTrace("CHECK_AND_MUTATE");
   }
 
   @Test
@@ -282,8 +324,7 @@ public class TestHTableTracing extends TestTracingBase {
     table.checkAndMutate(Arrays.asList(CheckAndMutate.newBuilder(Bytes.toBytes(0))
       .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
       .build(new Delete(Bytes.toBytes(0)))));
-    assertTrace(HTable.class.getSimpleName(), "checkAndMutateList", null,
-      TableName.META_TABLE_NAME);
+    assertTrace("BATCH");
   }
 
   @Test
@@ -291,52 +332,51 @@ public class TestHTableTracing extends TestTracingBase {
     table.checkAndMutate(Arrays.asList(CheckAndMutate.newBuilder(Bytes.toBytes(0))
       .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
       .build(new Delete(Bytes.toBytes(0)))));
-    assertTrace(HTable.class.getSimpleName(), "checkAndMutateList", null,
-      TableName.META_TABLE_NAME);
+    assertTrace("BATCH");
   }
 
   @Test
   public void testMutateRow() throws Exception {
     byte[] row = Bytes.toBytes(0);
     table.mutateRow(RowMutations.of(Arrays.asList(new Delete(row))));
-    assertTrace(HTable.class.getSimpleName(), "mutateRow", null, TableName.META_TABLE_NAME);
+    assertTrace("BATCH");
   }
 
   @Test
   public void testExistsList() throws IOException {
     table.exists(Arrays.asList(new Get(Bytes.toBytes(0))));
-    assertTrace(HTable.class.getSimpleName(), "getList", null, TableName.META_TABLE_NAME);
+    assertTrace("BATCH");
   }
 
   @Test
   public void testExistsAll() throws IOException {
     table.existsAll(Arrays.asList(new Get(Bytes.toBytes(0))));
-    assertTrace(HTable.class.getSimpleName(), "getList", null, TableName.META_TABLE_NAME);
+    assertTrace("BATCH");
   }
 
   @Test
   public void testGetList() throws IOException {
     table.get(Arrays.asList(new Get(Bytes.toBytes(0))));
-    assertTrace(HTable.class.getSimpleName(), "getList", null, TableName.META_TABLE_NAME);
+    assertTrace("BATCH");
   }
 
   @Test
   public void testPutList() throws IOException {
     table.put(Arrays.asList(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"),
       Bytes.toBytes("cq"), Bytes.toBytes("v"))));
-    assertTrace(HTable.class.getSimpleName(), "putList", null, TableName.META_TABLE_NAME);
+    assertTrace("BATCH");
   }
 
   @Test
   public void testDeleteList() throws IOException {
     table.delete(Lists.newArrayList(new Delete(Bytes.toBytes(0))));
-    assertTrace(HTable.class.getSimpleName(), "deleteList", null, TableName.META_TABLE_NAME);
+    assertTrace("BATCH");
   }
 
   @Test
   public void testBatchList() throws IOException, InterruptedException {
     table.batch(Arrays.asList(new Delete(Bytes.toBytes(0))), null);
-    assertTrace(HTable.class.getSimpleName(), "batch", null, TableName.META_TABLE_NAME);
+    assertTrace("BATCH");
   }
 
   @Test

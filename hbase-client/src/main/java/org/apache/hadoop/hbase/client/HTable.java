@@ -28,6 +28,8 @@ import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -42,6 +44,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
@@ -50,11 +53,13 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.client.trace.TableOperationSpanBuilder;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -354,9 +359,10 @@ public class HTable implements Table {
 
   @Override
   public Result get(final Get get) throws IOException {
-    return TraceUtil.trace(
-      () -> get(get, get.isCheckExistenceOnly()),
-      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".get", tableName));
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(get);
+    return TraceUtil.trace(() -> get(get, get.isCheckExistenceOnly()), supplier);
   }
 
   private Result get(Get get, final boolean checkExistenceOnly) throws IOException {
@@ -396,6 +402,9 @@ public class HTable implements Table {
 
   @Override
   public Result[] get(List<Get> gets) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
     return TraceUtil.trace(() -> {
       if (gets.size() == 1) {
         return new Result[] { get(gets.get(0)) };
@@ -414,12 +423,15 @@ public class HTable implements Table {
       } catch (InterruptedException e) {
         throw (InterruptedIOException) new InterruptedIOException().initCause(e);
       }
-    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".getList", tableName));
+    }, supplier);
   }
 
   @Override
   public void batch(final List<? extends Row> actions, final Object[] results)
       throws InterruptedException, IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
     TraceUtil.traceWithIOException(() -> {
       int rpcTimeout = writeRpcTimeoutMs;
       boolean hasRead = false;
@@ -442,7 +454,7 @@ public class HTable implements Table {
       } catch (InterruptedException e) {
         throw (InterruptedIOException) new InterruptedIOException().initCause(e);
       }
-    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".batch", tableName));
+    }, supplier);
   }
 
   public void batch(final List<? extends Row> actions, final Object[] results, int rpcTimeout)
@@ -456,10 +468,19 @@ public class HTable implements Table {
             .setOperationTimeout(operationTimeoutMs)
             .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
             .build();
-    AsyncRequestFuture ars = multiAp.submit(task);
-    ars.waitUntilDone();
-    if (ars.hasError()) {
-      throw ars.getErrors();
+    final Span span = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH)
+      .build();
+    try (Scope ignored = span.makeCurrent()) {
+      AsyncRequestFuture ars = multiAp.submit(task);
+      ars.waitUntilDone();
+      if (ars.hasError()) {
+        TraceUtil.setError(span, ars.getErrors());
+        throw ars.getErrors();
+      }
+    } finally {
+      span.end();
     }
   }
 
@@ -486,15 +507,27 @@ public class HTable implements Table {
             .setRpcTimeout(writeTimeout)
             .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
             .build();
-    AsyncRequestFuture ars = connection.getAsyncProcess().submit(task);
-    ars.waitUntilDone();
-    if (ars.hasError()) {
-      throw ars.getErrors();
+    final Span span = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH)
+      .build();
+    try (Scope ignored = span.makeCurrent()) {
+      AsyncRequestFuture ars = connection.getAsyncProcess().submit(task);
+      ars.waitUntilDone();
+      if (ars.hasError()) {
+        TraceUtil.setError(span, ars.getErrors());
+        throw ars.getErrors();
+      }
+    } finally {
+      span.end();
     }
   }
 
   @Override
   public void delete(final Delete delete) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(delete);
     TraceUtil.traceWithIOException(() -> {
       ClientServiceCallable<Void> callable =
         new ClientServiceCallable<Void>(this.connection, getName(), delete.getRow(),
@@ -509,12 +542,14 @@ public class HTable implements Table {
         };
       rpcCallerFactory.<Void>newCaller(this.writeRpcTimeoutMs)
         .callWithRetries(callable, this.operationTimeoutMs);
-    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".delete", tableName));
+    }, supplier);
   }
 
   @Override
-  public void delete(final List<Delete> deletes)
-  throws IOException {
+  public void delete(final List<Delete> deletes) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
     TraceUtil.traceWithIOException(() -> {
       Object[] results = new Object[deletes.size()];
       try {
@@ -533,11 +568,14 @@ public class HTable implements Table {
           }
         }
       }
-    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".deleteList", tableName));
+    }, supplier);
   }
 
   @Override
   public void put(final Put put) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(put);
     TraceUtil.traceWithIOException(() -> {
       validatePut(put);
       ClientServiceCallable<Void> callable =
@@ -553,11 +591,14 @@ public class HTable implements Table {
         };
       rpcCallerFactory.<Void>newCaller(this.writeRpcTimeoutMs)
         .callWithRetries(callable, this.operationTimeoutMs);
-    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".put", tableName));
+    }, supplier);
   }
 
   @Override
   public void put(final List<Put> puts) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
     TraceUtil.traceWithIOException(() -> {
       for (Put put : puts) {
         validatePut(put);
@@ -568,11 +609,14 @@ public class HTable implements Table {
       } catch (InterruptedException e) {
         throw (InterruptedIOException) new InterruptedIOException().initCause(e);
       }
-    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".putList", tableName));
+    }, supplier);
   }
 
   @Override
   public Result mutateRow(final RowMutations rm) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
     return TraceUtil.trace(() -> {
       long nonceGroup = getNonceGroup();
       long nonce = getNonce();
@@ -613,7 +657,7 @@ public class HTable implements Table {
         throw ars.getErrors();
       }
       return (Result) results[0];
-    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".mutateRow", tableName));
+    }, supplier);
   }
 
   private long getNonceGroup() {
@@ -626,6 +670,9 @@ public class HTable implements Table {
 
   @Override
   public Result append(final Append append) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(append);
     return TraceUtil.trace(() -> {
       checkHasFamilies(append);
       NoncedRegionServerCallable<Result> callable =
@@ -645,11 +692,14 @@ public class HTable implements Table {
       };
       return rpcCallerFactory.<Result> newCaller(this.writeRpcTimeoutMs).
           callWithRetries(callable, this.operationTimeoutMs);
-    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".append", tableName));
+    }, supplier);
   }
 
   @Override
   public Result increment(final Increment increment) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(increment);
     return TraceUtil.trace(() -> {
       checkHasFamilies(increment);
       NoncedRegionServerCallable<Result> callable =
@@ -667,22 +717,23 @@ public class HTable implements Table {
       };
       return rpcCallerFactory.<Result> newCaller(writeRpcTimeoutMs).callWithRetries(callable,
           this.operationTimeoutMs);
-    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".increment", tableName));
+    }, supplier);
   }
 
   @Override
   public long incrementColumnValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final long amount)
   throws IOException {
-    return TraceUtil.trace(
-      () -> incrementColumnValue(row, family, qualifier, amount, Durability.SYNC_WAL),
-      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".increment", tableName));
+    return incrementColumnValue(row, family, qualifier, amount, Durability.SYNC_WAL);
   }
 
   @Override
   public long incrementColumnValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final long amount, final Durability durability)
   throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.INCREMENT);
     return TraceUtil.trace(() -> {
       NullPointerException npe = null;
       if (row == null) {
@@ -711,65 +762,83 @@ public class HTable implements Table {
       };
       return rpcCallerFactory.<Long> newCaller(this.writeRpcTimeoutMs).
           callWithRetries(callable, this.operationTimeoutMs);
-    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".increment", tableName));
+    }, supplier);
   }
 
   @Override
   @Deprecated
   public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
       final byte [] value, final Put put) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, CompareOperator.EQUAL, value, null, null, put)
         .isSuccess(),
-      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndPut", tableName));
+      supplier);
   }
 
   @Override
   @Deprecated
   public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final byte [] value, final Put put) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, toCompareOperator(compareOp), value, null,
         null, put).isSuccess(),
-      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndPut", tableName));
+      supplier);
   }
 
   @Override
   @Deprecated
   public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOperator op, final byte [] value, final Put put) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, put).isSuccess(),
-      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndPut", tableName));
+      supplier);
   }
 
   @Override
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
     final byte[] value, final Delete delete) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, CompareOperator.EQUAL, value, null, null,
         delete).isSuccess(),
-      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndDelete", tableName));
+      supplier);
   }
 
   @Override
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
     final CompareOp compareOp, final byte[] value, final Delete delete) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, toCompareOperator(compareOp), value, null,
         null, delete).isSuccess(),
-      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndDelete", tableName));
+      supplier);
   }
 
   @Override
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
     final CompareOperator op, final byte[] value, final Delete delete) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, delete).isSuccess(),
-      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndDelete", tableName));
+      supplier);
   }
 
   @Override
@@ -841,25 +910,32 @@ public class HTable implements Table {
   @Deprecated
   public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
     final CompareOp compareOp, final byte [] value, final RowMutations rm) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, toCompareOperator(compareOp), value, null,
         null, rm).isSuccess(),
-      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndMutate",
-        tableName));
+      supplier);
   }
 
   @Override
   @Deprecated
   public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOperator op, final byte [] value, final RowMutations rm) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
       () -> doCheckAndMutate(row, family, qualifier, op, value, null, null, rm).isSuccess(),
-      () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndMutate",
-        tableName));
+      supplier);
   }
 
   @Override
   public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(checkAndMutate);
     return TraceUtil.trace(() -> {
       Row action = checkAndMutate.getAction();
       if (action instanceof Put || action instanceof Delete || action instanceof Increment ||
@@ -875,8 +951,7 @@ public class HTable implements Table {
           checkAndMutate.getQualifier(), checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
           checkAndMutate.getFilter(), checkAndMutate.getTimeRange(), (RowMutations) action);
       }
-    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndMutate",
-      tableName));
+    }, supplier);
   }
 
   private CheckAndMutateResult doCheckAndMutate(final byte[] row, final byte[] family,
@@ -907,6 +982,9 @@ public class HTable implements Table {
   @Override
   public List<CheckAndMutateResult> checkAndMutate(List<CheckAndMutate> checkAndMutates)
     throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
     return TraceUtil.trace(() -> {
       if (checkAndMutates.isEmpty()) {
         return Collections.emptyList();
@@ -929,8 +1007,7 @@ public class HTable implements Table {
         ret.add((CheckAndMutateResult) r);
       }
       return ret;
-    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".checkAndMutateList",
-      tableName));
+    }, supplier);
   }
 
   private CompareOperator toCompareOperator(CompareOp compareOp) {
@@ -963,15 +1040,21 @@ public class HTable implements Table {
 
   @Override
   public boolean exists(final Get get) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(get);
     return TraceUtil.trace(() -> {
       Result r = get(get, true);
       assert r.getExists() != null;
       return r.getExists();
-    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".get", tableName));
+    }, supplier);
   }
 
   @Override
   public boolean[] exists(List<Get> gets) throws IOException {
+    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      .setTableName(tableName)
+      .setOperation(HBaseSemanticAttributes.Operation.BATCH);
     return TraceUtil.trace(() -> {
       if (gets.isEmpty()) {
         return new boolean[] {};
@@ -1003,7 +1086,7 @@ public class HTable implements Table {
       }
 
       return results;
-    },  () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".getList", tableName));
+    }, supplier);
   }
 
   /**
@@ -1373,30 +1456,39 @@ public class HTable implements Table {
 
     @Override
     public boolean thenPut(Put put) throws IOException {
+      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+        .setTableName(tableName)
+        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
         validatePut(put);
         preCheck();
         return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, put)
           .isSuccess();
-      }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".thenPut", tableName));
+      }, supplier);
     }
 
     @Override
     public boolean thenDelete(Delete delete) throws IOException {
+      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+        .setTableName(tableName)
+        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
         preCheck();
         return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, delete)
           .isSuccess();
-      }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".thenDelete", tableName));
+      }, supplier);
     }
 
     @Override
     public boolean thenMutate(RowMutations mutation) throws IOException {
+      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+        .setTableName(tableName)
+        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
         preCheck();
         return doCheckAndMutate(row, family, qualifier, op, value, null, timeRange, mutation)
           .isSuccess();
-      }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".thenMutate", tableName));
+      }, supplier);
     }
   }
 
@@ -1419,26 +1511,35 @@ public class HTable implements Table {
 
     @Override
     public boolean thenPut(Put put) throws IOException {
+      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+        .setTableName(tableName)
+        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
         validatePut(put);
         return doCheckAndMutate(row, null, null, null, null, filter, timeRange, put)
           .isSuccess();
-      }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".thenPut", tableName));
+      }, supplier);
     }
 
     @Override
     public boolean thenDelete(Delete delete) throws IOException {
+      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+        .setTableName(tableName)
+        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(
         () -> doCheckAndMutate(row, null, null, null, null, filter, timeRange, delete).isSuccess(),
-        () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".thenDelete", tableName));
+        supplier);
     }
 
     @Override
     public boolean thenMutate(RowMutations mutation) throws IOException {
+      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+        .setTableName(tableName)
+        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(
         () -> doCheckAndMutate(row, null, null, null, null, filter, timeRange, mutation)
           .isSuccess(),
-        () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".thenMutate", tableName));
+        supplier);
     }
   }
 }
