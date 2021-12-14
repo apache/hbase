@@ -74,6 +74,50 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
   private long rollingBatchSuspendRSSleepTime;
   private float rollingBatchSuspendtRSRatio;
 
+  protected Action[] getLightWeightedActions(){
+    return new Action[] {
+      new CompactTableAction(tableName, compactTableRatio),
+      new CompactRandomRegionOfTableAction(tableName, compactRandomRegionRatio),
+      new FlushTableAction(tableName),
+      new FlushRandomRegionOfTableAction(tableName),
+      new MoveRandomRegionOfTableAction(tableName)
+    };
+  }
+
+  protected Action[] getMidWeightedActions(){
+    return new Action[] {
+      new SplitRandomRegionOfTableAction(tableName),
+      new MergeRandomAdjacentRegionsOfTableAction(tableName),
+      new SnapshotTableAction(tableName),
+      new AddColumnAction(tableName),
+      new RemoveColumnAction(tableName, columnFamilies),
+      new ChangeEncodingAction(tableName),
+      new ChangeCompressionAction(tableName),
+      new ChangeBloomFilterAction(tableName),
+      new ChangeVersionsAction(tableName),
+      new ChangeSplitPolicyAction(tableName),
+    };
+  }
+
+  protected Action[] getHeavyWeightedActions() {
+    return new Action[] {
+      new MoveRegionsOfTableAction(moveRegionsSleepTime, moveRegionsMaxTime,
+        tableName),
+      new MoveRandomRegionOfTableAction(moveRandomRegionSleepTime, tableName),
+      new RestartRandomRsAction(restartRandomRSSleepTime),
+      new BatchRestartRsAction(batchRestartRSSleepTime, batchRestartRSRatio),
+      new RestartActiveMasterAction(restartActiveMasterSleepTime),
+      new RollingBatchRestartRsAction(rollingBatchRestartRSSleepTime,
+        rollingBatchRestartRSRatio),
+      new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime),
+      new DecreaseMaxHFileSizeAction(decreaseHFileSizeSleepTime, tableName),
+      new SplitAllRegionOfTableAction(tableName),
+      new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
+      new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
+        rollingBatchSuspendtRSRatio)
+    };
+  }
+
   @Override
   public ChaosMonkey build() {
 
@@ -81,47 +125,15 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
     // Actions such as compact/flush a table/region,
     // move one region around. They are not so destructive,
     // can be executed more frequently.
-    Action[] actions1 = new Action[] {
-        new CompactTableAction(tableName, compactTableRatio),
-        new CompactRandomRegionOfTableAction(tableName, compactRandomRegionRatio),
-        new FlushTableAction(tableName),
-        new FlushRandomRegionOfTableAction(tableName),
-        new MoveRandomRegionOfTableAction(tableName)
-    };
+    Action[] actions1 = getLightWeightedActions();
 
     // Actions such as split/merge/snapshot.
     // They should not cause data loss, or unreliability
     // such as region stuck in transition.
-    Action[] actions2 = new Action[] {
-        new SplitRandomRegionOfTableAction(tableName),
-        new MergeRandomAdjacentRegionsOfTableAction(tableName),
-        new SnapshotTableAction(tableName),
-        new AddColumnAction(tableName),
-        new RemoveColumnAction(tableName, columnFamilies),
-        new ChangeEncodingAction(tableName),
-        new ChangeCompressionAction(tableName),
-        new ChangeBloomFilterAction(tableName),
-        new ChangeVersionsAction(tableName),
-        new ChangeSplitPolicyAction(tableName),
-    };
+    Action[] actions2 = getMidWeightedActions();
 
     // Destructive actions to mess things around.
-    Action[] actions3 = new Action[] {
-        new MoveRegionsOfTableAction(moveRegionsSleepTime, moveRegionsMaxTime,
-            tableName),
-        new MoveRandomRegionOfTableAction(moveRandomRegionSleepTime, tableName),
-        new RestartRandomRsAction(restartRandomRSSleepTime),
-        new BatchRestartRsAction(batchRestartRSSleepTime, batchRestartRSRatio),
-        new RestartActiveMasterAction(restartActiveMasterSleepTime),
-        new RollingBatchRestartRsAction(rollingBatchRestartRSSleepTime,
-            rollingBatchRestartRSRatio),
-        new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime),
-        new DecreaseMaxHFileSizeAction(decreaseHFileSizeSleepTime, tableName),
-        new SplitAllRegionOfTableAction(tableName),
-      new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
-      new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
-          rollingBatchSuspendtRSRatio)
-    };
+    Action[] actions3 = getHeavyWeightedActions();
 
     // Action to log more info for debugging
     Action[] actions4 = new Action[] {
