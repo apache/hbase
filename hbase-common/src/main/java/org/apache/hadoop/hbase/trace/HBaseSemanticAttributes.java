@@ -28,7 +28,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 */
 @InterfaceAudience.Private
 public final class HBaseSemanticAttributes {
+  public static final AttributeKey<String> DB_NAME = SemanticAttributes.DB_NAME;
   public static final AttributeKey<String> NAMESPACE_KEY = SemanticAttributes.DB_HBASE_NAMESPACE;
+  public static final AttributeKey<String> DB_OPERATION = SemanticAttributes.DB_OPERATION;
   public static final AttributeKey<String> TABLE_KEY = AttributeKey.stringKey("db.hbase.table");
   public static final AttributeKey<List<String>> REGION_NAMES_KEY =
     AttributeKey.stringArrayKey("db.hbase.regions");
@@ -43,6 +45,24 @@ public final class HBaseSemanticAttributes {
   public static final AttributeKey<Boolean> ROW_LOCK_READ_LOCK_KEY =
     AttributeKey.booleanKey("db.hbase.rowlock.readlock");
   public static final AttributeKey<String> WAL_IMPL = AttributeKey.stringKey("db.hbase.wal.impl");
+
+  /**
+   * These are values used with {@link #DB_OPERATION}. They correspond with the implementations of
+   * {@code org.apache.hadoop.hbase.client.Operation}, as well as
+   * {@code org.apache.hadoop.hbase.client.CheckAndMutate}, and "MULTI", meaning a batch of multiple
+   * operations.
+   */
+  public enum Operation {
+    APPEND,
+    BATCH,
+    CHECK_AND_MUTATE,
+    COPROC_EXEC,
+    DELETE,
+    GET,
+    INCREMENT,
+    PUT,
+    SCAN,
+  }
 
   private HBaseSemanticAttributes() { }
 }
