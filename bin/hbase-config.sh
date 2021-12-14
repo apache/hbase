@@ -164,7 +164,7 @@ export MALLOC_ARENA_MAX=${MALLOC_ARENA_MAX:-4}
 
 # Disable the JNDI. This feature has critical REC vulnerability
 # when 2.x <= log4j.version <= 2.14.1
-export HBASE_OPTS = "$HBASE_OPTS -Dlog4j2.formatMsgNoLookups=true"
+export HBASE_OPTS="$HBASE_OPTS -Dlog4j2.formatMsgNoLookups=true"
 
 # Now having JAVA_HOME defined is required 
 if [ -z "$JAVA_HOME" ]; then
