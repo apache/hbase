@@ -91,9 +91,11 @@ public final class TraceUtil {
   /**
    * Trace an asynchronous operation for a table.
    */
-  public static <T> CompletableFuture<T> tracedFuture(Supplier<CompletableFuture<T>> action,
-    String spanName, TableName tableName) {
-    Span span = createTableSpan(spanName, tableName);
+  public static <T> CompletableFuture<T> tracedFuture(
+    Supplier<CompletableFuture<T>> action,
+    Supplier<Span> spanSupplier
+  ) {
+    Span span = spanSupplier.get();
     try (Scope scope = span.makeCurrent()) {
       CompletableFuture<T> future = action.get();
       endSpan(future, span);
@@ -119,8 +121,10 @@ public final class TraceUtil {
    * {@code futures} are completed.
    */
   public static <T> List<CompletableFuture<T>> tracedFutures(
-    Supplier<List<CompletableFuture<T>>> action, String spanName, TableName tableName) {
-    Span span = createTableSpan(spanName, tableName);
+    Supplier<List<CompletableFuture<T>>> action,
+    Supplier<Span> spanSupplier
+  ) {
+    Span span = spanSupplier.get();
     try (Scope scope = span.makeCurrent()) {
       List<CompletableFuture<T>> futures = action.get();
       endSpan(CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])), span);
