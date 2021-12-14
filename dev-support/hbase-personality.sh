@@ -698,6 +698,14 @@ function hadoopcheck_rebuild
 # TODO if we need the protoc check, we probably need to check building all the modules that rely on hbase-protocol
 add_test_type hbaseprotoc
 
+function hbaseprotoc_initialize
+{
+  # So long as there are inter-module dependencies on the protoc modules, we
+  # need to run a full `mvn install` before a patch can be tested.
+  yetus_debug "initializing HBase Protoc plugin."
+  maven_add_install hbaseprotoc
+}
+
 ## @description  hbaseprotoc file filter
 ## @audience     private
 ## @stability    evolving
