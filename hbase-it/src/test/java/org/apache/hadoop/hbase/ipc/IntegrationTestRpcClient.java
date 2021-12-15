@@ -136,15 +136,14 @@ public class IntegrationTestRpcClient {
         int size = rpcServers.size();
         int rand = random.nextInt(size);
         rpcServer = serverList.remove(rand);
-        InetSocketAddress address = rpcServer.getListenerAddress();
-        if (address == null) {
-          // Throw exception here. We can't remove this instance from the server map because
-          // we no longer have access to its map key
-          throw new IOException("Listener channel is closed");
-        }
-        rpcServers.remove(address);
-
         if (rpcServer != null) {
+          InetSocketAddress address = rpcServer.getListenerAddress();
+          if (address == null) {
+            // Throw exception here. We can't remove this instance from the server map because
+            // we no longer have access to its map key
+            throw new IOException("Listener channel is closed");
+          }
+          rpcServers.remove(address);
           stopServer(rpcServer);
         }
       } finally {

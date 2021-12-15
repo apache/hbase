@@ -111,8 +111,6 @@ public class TestBufferedDataBlockEncoder {
         kv2.getTimestamp(), kv2.getTypeByte(), kv2.getValueArray(), kv2.getValueOffset(),
         kv2.getValueLength(), kv2.getSequenceId(), kv2.getTagsArray(), kv2.getTagsOffset(),
         kv2.getTagsLength());
-    KeyValue kv3 = new KeyValue(Bytes.toBytes("r3"), Bytes.toBytes("cf"), Bytes.toBytes("qual"),
-        HConstants.LATEST_TIMESTAMP, Bytes.toBytes("3"));
     BufferedDataBlockEncoder.OffheapDecodedExtendedCell
         c3 = new BufferedDataBlockEncoder.OffheapDecodedExtendedCell(ByteBuffer.wrap(kv2.getKey()),
         kv2.getRowLength(), kv2.getFamilyOffset() - KeyValue.ROW_OFFSET, kv2.getFamilyLength(),

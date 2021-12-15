@@ -242,7 +242,6 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
 
     // Bulk load data into the table of the namespace that is not replicated.
     byte[] row = Bytes.toBytes("001");
-    byte[] value = Bytes.toBytes("v1");
     bulkLoadOnCluster(NO_REPLICATE_TABLE, CF_A);
     Threads.sleep(1000);
 

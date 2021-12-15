@@ -1106,12 +1106,11 @@ public abstract class AbstractTestWALReplay {
   // Flusher used in this test.  Keep count of how often we are called and
   // actually run the flush inside here.
   static class TestFlusher implements FlushRequester {
-    private HRegion r;
 
     @Override
     public boolean requestFlush(HRegion region, FlushLifeCycleTracker tracker) {
       try {
-        r.flush(false);
+        region.flush(false);
         return true;
       } catch (IOException e) {
         throw new RuntimeException("Exception flushing", e);

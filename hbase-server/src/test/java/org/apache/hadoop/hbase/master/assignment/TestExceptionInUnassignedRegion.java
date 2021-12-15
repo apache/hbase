@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.junit.Assert.assertNotNull;
+
 import java.util.Optional;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -83,6 +85,7 @@ public class TestExceptionInUnassignedRegion {
       }
     }
     // find the rs and hri of the table
+    assertNotNull(rsThread);
     HRegionServer rs = rsThread.getRegionServer();
     RegionInfo hri = rs.getRegions(TABLE_NAME).get(0).getRegionInfo();
     TransitRegionStateProcedure moveRegionProcedure = TransitRegionStateProcedure.reopen(

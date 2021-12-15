@@ -100,7 +100,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   @Test
   public void testGetBestLocations() throws IOException {
-    TableSnapshotInputFormatImpl tsif = new TableSnapshotInputFormatImpl();
+    new TableSnapshotInputFormatImpl();
     Configuration conf = UTIL.getConfiguration();
 
     HDFSBlocksDistribution blockDistribution = new HDFSBlocksDistribution();

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertNotNull;
+
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -89,6 +91,7 @@ public class TestMasterAbortAndRSGotKilled {
       }
     }
     // find the rs and hri of the table
+    assertNotNull(rsThread);
     HRegionServer rs = rsThread.getRegionServer();
     RegionInfo hri = rs.getRegions(TABLE_NAME).get(0).getRegionInfo();
     TransitRegionStateProcedure moveRegionProcedure = TransitRegionStateProcedure.reopen(

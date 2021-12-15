@@ -39,8 +39,8 @@ public class TestReadOnlyConfiguration {
 
   @Test
   public void testAddDefaultResource() {
-    Configuration configuration = new Configuration();
-    Configuration readOnlyConf = new ReadOnlyConfiguration(configuration);
-    configuration.addDefaultResource("abc.xml");
+    // XXX: Does this test really do anything?
+    Configuration readOnlyConf = new ReadOnlyConfiguration(new Configuration());
+    readOnlyConf.addDefaultResource("abc.xml");
   }
 }

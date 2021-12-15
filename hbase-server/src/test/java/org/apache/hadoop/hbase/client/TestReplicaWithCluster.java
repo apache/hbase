@@ -117,8 +117,8 @@ public class TestReplicaWithCluster {
             Thread.sleep(sleepTime.get());
           } else if (latch.getCount() > 0) {
             LOG.info("Waiting for the counterCountDownLatch");
-            latch.await(2, TimeUnit.MINUTES); // To help the tests to finish.
-            if (latch.getCount() > 0) {
+            boolean released = latch.await(2, TimeUnit.MINUTES); // To help the tests to finish.
+            if (!released) {
               throw new RuntimeException("Can't wait more");
             }
           }

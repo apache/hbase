@@ -557,7 +557,6 @@ public class TestHeapSize  {
       assertEquals(expected, actual);
     }
 
-    byte[] row = new byte[] { 0 };
     cl = Put.class;
     actual = Mutation.MUTATION_OVERHEAD + ClassSize.align(ClassSize.ARRAY);
     expected = ClassSize.estimateBase(cl, false);

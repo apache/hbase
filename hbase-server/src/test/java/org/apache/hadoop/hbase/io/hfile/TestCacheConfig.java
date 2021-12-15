@@ -372,7 +372,6 @@ public class TestCacheConfig {
 
   @Test
   public void testIndexOnlyLruBlockCache() {
-    CacheConfig cc = new CacheConfig(this.conf);
     conf.set(BlockCacheFactory.BLOCKCACHE_POLICY_KEY, "IndexOnlyLRU");
     BlockCache blockCache = BlockCacheFactory.createBlockCache(this.conf);
     assertTrue(blockCache instanceof IndexOnlyLruBlockCache);

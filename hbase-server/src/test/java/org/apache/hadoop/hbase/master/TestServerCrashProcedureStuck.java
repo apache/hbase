@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertNotNull;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -78,6 +80,7 @@ public class TestServerCrashProcedureStuck {
         break;
       }
     }
+    assertNotNull(rsThread);
     HRegionServer rs = rsThread.getRegionServer();
     RegionInfo hri = rs.getRegions(TABLE_NAME).get(0).getRegionInfo();
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();

@@ -361,7 +361,7 @@ public class TestHFileBlockIndex {
       while (msgPrefix.length() + padding.length() < 70)
         padding.append(' ');
       msgPrefix += padding;
-      if (i % 2 == 1) {
+      if ((i & 1) == 1) {
         dos.writeInt(curAllEntriesSize);
         secondaryIndexEntries[i] = curAllEntriesSize;
         LOG.info(msgPrefix + "secondary index entry #" + ((i - 1) / 2) +
@@ -423,7 +423,7 @@ public class TestHFileBlockIndex {
       int expectedResult;
       int referenceItem;
 
-      if (i % 2 == 1) {
+      if ((i & 1) == 1) {
         // This key is in the array we search as the element (i - 1) / 2. Make
         // sure we find it.
         expectedResult = (i - 1) / 2;
@@ -699,7 +699,7 @@ public class TestHFileBlockIndex {
       // Validate the mid-key.
       assertEquals(
           Bytes.toStringBinary(blockKeys.get((blockKeys.size() - 1) / 2)),
-          reader.midKey());
+          reader.midKey().toString());
 
       assertEquals(UNCOMPRESSED_INDEX_SIZES[testI],
           reader.getTrailer().getUncompressedDataIndexSize());
