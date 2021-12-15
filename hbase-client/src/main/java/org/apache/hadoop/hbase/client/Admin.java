@@ -1648,7 +1648,6 @@ public interface Admin extends Abortable, Closeable {
    * @throws RestoreSnapshotException if snapshot failed to be cloned
    * @throws IllegalArgumentException if the specified table has not a valid name
    */
-  @InterfaceStability.Evolving
   default void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl,
     String customSFT)
     throws IOException, TableExistsException, RestoreSnapshotException {

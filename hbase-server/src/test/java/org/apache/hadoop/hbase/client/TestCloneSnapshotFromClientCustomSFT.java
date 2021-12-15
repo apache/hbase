@@ -64,8 +64,8 @@ public class TestCloneSnapshotFromClientCustomSFT extends CloneSnapshotFromClien
     });
 
     assertEquals(
-      "java.lang.UnsupportedOperationException: " +
-        "Specified SFT: IncorrectSFT was not recognized",
+      "java.lang.RuntimeException: java.lang.RuntimeException: " +
+        "java.lang.ClassNotFoundException: Class IncorrectSFT not found",
       ioException.getMessage());
   }
 }

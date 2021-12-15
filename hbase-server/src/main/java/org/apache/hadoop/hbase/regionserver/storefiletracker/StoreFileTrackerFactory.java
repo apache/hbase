@@ -321,7 +321,7 @@ public final class StoreFileTrackerFactory {
    * @param baseConf Current global configuration
    * @throws RestoreSnapshotException if restore would break the current SFT setup
    */
-  public static void checkForRestoreSnapshot(TableDescriptor currentTableDesc,
+  public static void validatePreRestoreSnapshot(TableDescriptor currentTableDesc,
     TableDescriptor snapshotTableDesc, Configuration baseConf) throws RestoreSnapshotException {
 
     for (ColumnFamilyDescriptor cfDesc : currentTableDesc.getColumnFamilies()) {

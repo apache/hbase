@@ -241,14 +241,10 @@ public class CloneSnapshotProcedure
       return;
     }
 
-    try {
-      Configuration sftConfig = new Configuration();
-      sftConfig.set(StoreFileTrackerFactory.TRACKER_IMPL, customSFT);
-      StoreFileTrackerFactory.getTrackerClass(sftConfig);
-    } catch (RuntimeException e) {
-      throw new UnsupportedOperationException("Specified SFT: " + customSFT + " was not recognized",
-        e);
-    }
+    //if customSFT is invalid getTrackerClass will throw a RuntimeException
+    Configuration sftConfig = new Configuration();
+    sftConfig.set(StoreFileTrackerFactory.TRACKER_IMPL, customSFT);
+    StoreFileTrackerFactory.getTrackerClass(sftConfig);
   }
 
   @Override

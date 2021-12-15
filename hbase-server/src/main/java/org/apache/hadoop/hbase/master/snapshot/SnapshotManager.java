@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
@@ -67,8 +66,6 @@ import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.regionserver.StoreUtils;
-import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
@@ -887,7 +884,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
 
     //have to check first if restoring the snapshot would break current SFT setup
-    StoreFileTrackerFactory.checkForRestoreSnapshot(master.getTableDescriptors().get(tableName),
+    StoreFileTrackerFactory.validatePreRestoreSnapshot(master.getTableDescriptors().get(tableName),
       snapshotTableDesc, master.getConfiguration());
 
     if (master.getTableStateManager().isTableState(

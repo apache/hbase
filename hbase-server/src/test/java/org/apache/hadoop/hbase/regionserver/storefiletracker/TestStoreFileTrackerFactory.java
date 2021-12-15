@@ -87,9 +87,9 @@ public class TestStoreFileTrackerFactory {
     TableDescriptor snapTd = snapBuilder.build();
 
     // adding a cf config that matches the td config is fine even when it does not match the default
-    StoreFileTrackerFactory.checkForRestoreSnapshot(td, snapTd, conf);
+    StoreFileTrackerFactory.validatePreRestoreSnapshot(td, snapTd, conf);
     // removing cf level config is fine when it matches the td config
-    StoreFileTrackerFactory.checkForRestoreSnapshot(snapTd, td, conf);
+    StoreFileTrackerFactory.validatePreRestoreSnapshot(snapTd, td, conf);
 
     TableDescriptorBuilder defaultBuilder =
       TableDescriptorBuilder.newBuilder(TableName.valueOf("TableY"));
@@ -101,10 +101,10 @@ public class TestStoreFileTrackerFactory {
     TableDescriptor defaultTd = defaultBuilder.build();
 
     assertThrows(RestoreSnapshotException.class, () -> {
-      StoreFileTrackerFactory.checkForRestoreSnapshot(td, defaultTd, conf);
+      StoreFileTrackerFactory.validatePreRestoreSnapshot(td, defaultTd, conf);
     });
     assertThrows(RestoreSnapshotException.class, () -> {
-      StoreFileTrackerFactory.checkForRestoreSnapshot(snapTd, defaultTd, conf);
+      StoreFileTrackerFactory.validatePreRestoreSnapshot(snapTd, defaultTd, conf);
     });
   }
 }
