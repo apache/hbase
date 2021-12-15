@@ -44,7 +44,7 @@ public class FastPathRWQueueRpcExecutor extends RWQueueRpcExecutor {
   private final Deque<FastPathRpcHandler> scanHandlerStack = new ConcurrentLinkedDeque<>();
 
   public FastPathRWQueueRpcExecutor(String name, int handlerCount, int maxQueueLength,
-    PriorityFunction priority, Configuration conf, Abortable abortable) {
+      PriorityFunction priority, Configuration conf, Abortable abortable) {
     super(name, handlerCount, maxQueueLength, priority, conf, abortable);
   }
 
