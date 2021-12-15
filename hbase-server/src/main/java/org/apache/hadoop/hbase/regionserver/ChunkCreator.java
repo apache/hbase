@@ -134,35 +134,20 @@ public class ChunkCreator {
     return instance;
   }
 
-  /**
-   * Creates and inits a chunk. The default implementation for a specific chunk size.
-   * @return the chunk that was initialized
-   */
-  Chunk getChunk(ChunkType chunkType) {
-    return getChunk(CompactingMemStore.IndexType.ARRAY_MAP, chunkType);
-  }
 
   /**
-   * Creates and inits a chunk. The default implementation.
+   * Creates and inits a data chunk. The default implementation.
    * @return the chunk that was initialized
    */
   Chunk getChunk() {
-    return getChunk(CompactingMemStore.IndexType.ARRAY_MAP, ChunkType.DATA_CHUNK);
+    return getChunk(ChunkType.DATA_CHUNK);
   }
 
   /**
-   * Creates and inits a chunk. The default implementation for a specific index type.
+   * Creates and inits a chunk with specific type.
    * @return the chunk that was initialized
    */
-  Chunk getChunk(CompactingMemStore.IndexType chunkIndexType) {
-    return getChunk(chunkIndexType, ChunkType.DATA_CHUNK);
-  }
-
-  /**
-   * Creates and inits a chunk with specific index type and type.
-   * @return the chunk that was initialized
-   */
-  Chunk getChunk(CompactingMemStore.IndexType chunkIndexType, ChunkType chunkType) {
+  Chunk getChunk(ChunkType chunkType) {
     switch (chunkType) {
       case INDEX_CHUNK:
         if (indexChunksPool == null) {
@@ -170,15 +155,15 @@ public class ChunkCreator {
             throw new IllegalArgumentException(
                 "chunkType is INDEX_CHUNK but indexChunkSize is:[" + this.indexChunkSize + "]");
           }
-          return getChunk(chunkIndexType, chunkType, indexChunkSize);
+          return getChunk(chunkType, indexChunkSize);
         } else {
-          return getChunk(chunkIndexType, chunkType, indexChunksPool.getChunkSize());
+          return getChunk(chunkType, indexChunksPool.getChunkSize());
         }
       case DATA_CHUNK:
         if (dataChunksPool == null) {
-          return getChunk(chunkIndexType, chunkType, chunkSize);
+          return getChunk(chunkType, chunkSize);
         } else {
-          return getChunk(chunkIndexType, chunkType, dataChunksPool.getChunkSize());
+          return getChunk(chunkType, dataChunksPool.getChunkSize());
         }
       default:
         throw new IllegalArgumentException(
@@ -189,10 +174,9 @@ public class ChunkCreator {
   /**
    * Creates and inits a chunk.
    * @return the chunk that was initialized
-   * @param chunkIndexType whether the requested chunk is going to be used with CellChunkMap index
    * @param size the size of the chunk to be allocated, in bytes
    */
-  Chunk getChunk(CompactingMemStore.IndexType chunkIndexType, ChunkType chunkType, int size) {
+  Chunk getChunk(ChunkType chunkType, int size) {
     Chunk chunk = null;
     MemStoreChunkPool pool = null;
 
@@ -217,9 +201,7 @@ public class ChunkCreator {
     }
 
     if (chunk == null) {
-      // the second parameter explains whether CellChunkMap index is requested,
-      // in that case, put allocated on demand chunk mapping into chunkIdMap
-      chunk = createChunk(false, chunkIndexType, chunkType, size);
+      chunk = createChunk(false, chunkType, size);
     }
 
     // now we need to actually do the expensive memory allocation step in case of a new chunk,
@@ -240,11 +222,11 @@ public class ChunkCreator {
     if (allocSize <= this.getChunkSize(ChunkType.DATA_CHUNK)) {
       LOG.warn("Jumbo chunk size " + jumboSize + " must be more than regular chunk size "
           + this.getChunkSize(ChunkType.DATA_CHUNK) + ". Converting to regular chunk.");
-      return getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
+      return getChunk();
     }
     // the new chunk is going to hold the jumbo cell data and needs to be referenced by
-    // a strong map. Therefore the CCM index type
-    return getChunk(CompactingMemStore.IndexType.CHUNK_MAP, ChunkType.JUMBO_CHUNK, allocSize);
+    // a strong map.
+    return getChunk(ChunkType.JUMBO_CHUNK, allocSize);
   }
 
   /**
@@ -254,8 +236,7 @@ public class ChunkCreator {
    * @param size the size of the chunk to be allocated, in bytes
    * @return the chunk
    */
-  private Chunk createChunk(boolean pool, CompactingMemStore.IndexType chunkIndexType,
-      ChunkType chunkType, int size) {
+  private Chunk createChunk(boolean pool, ChunkType chunkType, int size) {
     Chunk chunk = null;
     int id = chunkID.getAndIncrement();
     assert id > 0;
@@ -265,22 +246,20 @@ public class ChunkCreator {
     } else {
       chunk = new OnheapChunk(size, id, chunkType, pool);
     }
-    if (pool || (chunkIndexType == CompactingMemStore.IndexType.CHUNK_MAP)) {
-      // put the pool chunk into the chunkIdMap so it is not GC-ed
-      this.chunkIdMap.put(chunk.getId(), chunk);
-    }
+    // put the chunk into the chunkIdMap so it is not GC-ed
+    this.chunkIdMap.put(chunk.getId(), chunk);
+
     return chunk;
   }
 
-  // Chunks from pool are created covered with strong references anyway
-  // TODO: change to CHUNK_MAP if it is generally defined
-  private Chunk createChunkForPool(CompactingMemStore.IndexType chunkIndexType, ChunkType chunkType,
+  // Chunks from pool are created covered with strong references anyway.
+  private Chunk createChunkForPool(ChunkType chunkType,
       int chunkSize) {
     if (chunkSize != dataChunksPool.getChunkSize() &&
             chunkSize != indexChunksPool.getChunkSize()) {
       return null;
     }
-    return createChunk(true, chunkIndexType, chunkType, chunkSize);
+    return createChunk(true, chunkType, chunkSize);
   }
 
   // Used to translate the ChunkID into a chunk ref
@@ -346,7 +325,7 @@ public class ChunkCreator {
       this.reclaimedChunks = new LinkedBlockingQueue<>();
       for (int i = 0; i < initialCount; i++) {
         Chunk chunk =
-            createChunk(true, CompactingMemStore.IndexType.ARRAY_MAP, chunkType, chunkSize);
+            createChunk(true, chunkType, chunkSize);
         chunk.init();
         reclaimedChunks.add(chunk);
       }
@@ -368,10 +347,6 @@ public class ChunkCreator {
      * @see #putbackChunks(Chunk)
      */
     Chunk getChunk() {
-      return getChunk(CompactingMemStore.IndexType.ARRAY_MAP);
-    }
-
-    Chunk getChunk(CompactingMemStore.IndexType chunkIndexType) {
       Chunk chunk = reclaimedChunks.poll();
       if (chunk != null) {
         chunk.reset();
@@ -382,7 +357,7 @@ public class ChunkCreator {
           long created = this.chunkCount.get();
           if (created < this.maxCount) {
             if (this.chunkCount.compareAndSet(created, created + 1)) {
-              chunk = createChunkForPool(chunkIndexType, chunkType, chunkSize);
+              chunk = createChunkForPool(chunkType, chunkSize);
               break;
             }
           } else {

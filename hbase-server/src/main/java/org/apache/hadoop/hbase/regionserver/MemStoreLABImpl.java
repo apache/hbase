@@ -77,7 +77,6 @@ public class MemStoreLABImpl implements MemStoreLAB {
   private final int dataChunkSize;
   private final int maxAlloc;
   private final ChunkCreator chunkCreator;
-  private final CompactingMemStore.IndexType idxType; // what index is used for corresponding segment
 
   // This flag is for closing this instance, its set when clearing snapshot of
   // memstore
@@ -101,9 +100,9 @@ public class MemStoreLABImpl implements MemStoreLAB {
     Preconditions.checkArgument(maxAlloc <= dataChunkSize,
         MAX_ALLOC_KEY + " must be less than " + CHUNK_SIZE_KEY);
 
-    // if user requested to work with MSLABs (whether on- or off-heap), then the
-    // immutable segments are going to use CellChunkMap as their index
-    idxType = CompactingMemStore.IndexType.CHUNK_MAP;
+    // NOTE:if user requested to work with MSLABs (whether on- or off-heap), then the
+    // immutable segments are going to use CellChunkMap as their index,see
+    // CompactingMemStore#indexType
   }
 
   @Override
@@ -336,7 +335,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
         if (c != null) {
           return c;
         }
-        c = this.chunkCreator.getChunk(idxType);
+        c = this.chunkCreator.getChunk();
         if (c != null) {
           // set the curChunk. No need of CAS as only one thread will be here
           currChunk.set(c);

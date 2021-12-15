@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator.ChunkType;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -298,6 +299,34 @@ public class TestMemStoreLAB {
       .currentTime(), bigValue);
     assertEquals(bigKV.getSerializedSize(),
       mslab.forceCopyOfBigCellInto(bigKV).getSerializedSize());
+
+    /**
+     * Add test by HBASE-26576,to test all the chunks are in {@link ChunkCreator#chunkIdMap}
+     */
+    assertTrue(mslab.chunks.size() == 2);
+    Chunk dataChunk = null;
+    Chunk jumboChunk = null;
+
+    for (Integer chunkId : mslab.chunks) {
+      Chunk chunk = ChunkCreator.getInstance().getChunk(chunkId);
+      assertTrue(chunk != null);
+      if (chunk.getChunkType() == ChunkType.JUMBO_CHUNK) {
+        jumboChunk = chunk;
+      } else if (chunk.getChunkType() == ChunkType.DATA_CHUNK) {
+        dataChunk = chunk;
+      }
+    }
+
+    assertTrue(dataChunk != null);
+    assertTrue(jumboChunk != null);
+
+    mslab.close();
+    /**
+     * After mslab close,jumboChunk was removed but dataChunk is recycled to pool
+     */
+    assertTrue(ChunkCreator.getInstance().getChunk(jumboChunk.getId()) == null);
+    assertTrue(ChunkCreator.getInstance().getChunk(dataChunk.getId()) == dataChunk);
+
   }
 
   private Thread getChunkQueueTestThread(final MemStoreLABImpl mslab, String threadName,
