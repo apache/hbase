@@ -245,8 +245,7 @@ public class CloneSnapshotProcedure
       Configuration sftConfig = new Configuration();
       sftConfig.set(StoreFileTrackerFactory.TRACKER_IMPL, customSFT);
       StoreFileTrackerFactory.getTrackerClass(sftConfig);
-    }
-    catch (RuntimeException e){
+    } catch (RuntimeException e) {
       throw new UnsupportedOperationException("Specified SFT: " + customSFT + " was not recognized",
         e);
     }
