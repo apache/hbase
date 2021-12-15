@@ -140,7 +140,9 @@ public class StoreHotnessProtector {
     if (tooBusyStore != null) {
       String msg =
           "StoreTooBusy," + this.region.getRegionInfo().getRegionNameAsString() + ":" + tooBusyStore
-              + " Above parallelPutToStoreThreadLimit(" + this.parallelPutToStoreThreadLimit + ")";
+              + " Above parallelPutToStoreThreadLimit(" + this.parallelPutToStoreThreadLimit + ")"
+              + " or parallelPreparePutToStoreThreadLimit("
+              + this.parallelPreparePutToStoreThreadLimit + ")";
       LOG.trace(msg);
       throw new RegionTooBusyException(msg);
     }
