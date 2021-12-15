@@ -101,8 +101,8 @@ public class SecureTestCluster {
     try {
       if (CLUSTER != null) {
         CLUSTER.shutdown();
+        CLUSTER.join();
       }
-      CLUSTER.join();
       if (KDC != null) {
         KDC.stop();
       }

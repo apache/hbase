@@ -118,31 +118,38 @@ public class TestFixedFileTrailer {
 
   @Test
   public void testCreateComparator() throws IOException {
-    FixedFileTrailer t = new FixedFileTrailer(version, HFileReaderImpl.PBUF_TRAILER_MINOR_VERSION);
     try {
       assertEquals(CellComparatorImpl.class,
-          t.createComparator(KeyValue.COMPARATOR.getLegacyKeyComparatorName()).getClass());
+        FixedFileTrailer.createComparator(KeyValue.COMPARATOR.getLegacyKeyComparatorName())
+          .getClass());
       assertEquals(CellComparatorImpl.class,
-          t.createComparator(KeyValue.COMPARATOR.getClass().getName()).getClass());
+        FixedFileTrailer.createComparator(KeyValue.COMPARATOR.getClass().getName()).getClass());
       assertEquals(CellComparatorImpl.class,
-          t.createComparator(CellComparator.class.getName()).getClass());
+        FixedFileTrailer.createComparator(CellComparator.class.getName()).getClass());
       assertEquals(MetaCellComparator.class,
-          t.createComparator(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName()).getClass());
+        FixedFileTrailer.createComparator(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())
+          .getClass());
       assertEquals(MetaCellComparator.class,
-          t.createComparator(KeyValue.META_COMPARATOR.getClass().getName()).getClass());
+        FixedFileTrailer.createComparator(KeyValue.META_COMPARATOR.getClass().getName())
+          .getClass());
       assertEquals(MetaCellComparator.class,
-        t.createComparator("org.apache.hadoop.hbase.CellComparator$MetaCellComparator").getClass());
+        FixedFileTrailer.createComparator(
+          "org.apache.hadoop.hbase.CellComparator$MetaCellComparator").getClass());
       assertEquals(MetaCellComparator.class,
-        t.createComparator("org.apache.hadoop.hbase.CellComparatorImpl$MetaCellComparator")
-            .getClass());
-      assertEquals(MetaCellComparator.class, t.createComparator(
+        FixedFileTrailer.createComparator(
+          "org.apache.hadoop.hbase.CellComparatorImpl$MetaCellComparator").getClass());
+      assertEquals(MetaCellComparator.class, FixedFileTrailer.createComparator(
           MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
-      assertEquals(MetaCellComparator.META_COMPARATOR.getClass(), t.createComparator(
-        MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
-      assertEquals(CellComparatorImpl.COMPARATOR.getClass(), t.createComparator(
-        MetaCellComparator.COMPARATOR.getClass().getName()).getClass());
-      assertNull(t.createComparator(Bytes.BYTES_RAWCOMPARATOR.getClass().getName()));
-      assertNull(t.createComparator("org.apache.hadoop.hbase.KeyValue$RawBytesComparator"));
+      assertEquals(MetaCellComparator.META_COMPARATOR.getClass(),
+        FixedFileTrailer.createComparator(MetaCellComparator.META_COMPARATOR.getClass().getName())
+          .getClass());
+      assertEquals(CellComparatorImpl.COMPARATOR.getClass(),
+        FixedFileTrailer.createComparator(MetaCellComparator.COMPARATOR.getClass().getName())
+          .getClass());
+      assertNull(FixedFileTrailer.createComparator(Bytes.BYTES_RAWCOMPARATOR.getClass()
+        .getName()));
+      assertNull(FixedFileTrailer.createComparator(
+        "org.apache.hadoop.hbase.KeyValue$RawBytesComparator"));
     } catch (IOException e) {
       fail("Unexpected exception while testing FixedFileTrailer#createComparator(), "
           + e.getMessage());
@@ -150,8 +157,7 @@ public class TestFixedFileTrailer {
 
     // Test an invalid comparatorClassName
     expectedEx.expect(IOException.class);
-    t.createComparator("");
-
+    FixedFileTrailer.createComparator("");
   }
 
   @Test

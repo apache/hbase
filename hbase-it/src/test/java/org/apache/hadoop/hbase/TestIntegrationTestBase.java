@@ -40,11 +40,10 @@ public class TestIntegrationTestBase {
     conf.set(MonkeyConstants.BATCH_RESTART_RS_RATIO, "0.85");
     conf.set(MonkeyConstants.MOVE_REGIONS_MAX_TIME, "60000");
     conf.set("hbase.rootdir", "/foo/bar/baz");
-
     final Properties props = new Properties();
-    IntegrationTestBase testBase = new IntegrationTestDDLMasterFailover();
     assertEquals(0, props.size());
-    testBase.loadMonkeyProperties(props, conf);
+    new IntegrationTestDDLMasterFailover();
+    IntegrationTestBase.loadMonkeyProperties(props, conf);
     assertEquals(2, props.size());
     assertEquals("0.85", props.getProperty(MonkeyConstants.BATCH_RESTART_RS_RATIO));
     assertEquals("60000", props.getProperty(MonkeyConstants.MOVE_REGIONS_MAX_TIME));

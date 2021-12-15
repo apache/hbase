@@ -21,12 +21,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -130,16 +127,8 @@ public class TestScannerRetriableFailure {
   // ==========================================================================
   //  Helpers
   // ==========================================================================
-  private FileSystem getFileSystem() {
-    return UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-  }
-
-  private Path getRootDir() {
-    return UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
-  }
 
   public void loadTable(final Table table, int numRows) throws IOException {
-    List<Put> puts = new ArrayList<>(numRows);
     for (int i = 0; i < numRows; ++i) {
       byte[] row = Bytes.toBytes(String.format("%09d", i));
       Put put = new Put(row);

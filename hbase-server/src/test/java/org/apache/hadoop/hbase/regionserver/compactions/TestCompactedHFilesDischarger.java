@@ -441,7 +441,9 @@ public class TestCompactedHFilesDischarger {
         }
       } finally {
         scanCompletedCounter.incrementAndGet();
-        resScanner.close();
+        if (resScanner != null) {
+          resScanner.close();
+        }
       }
     }
   }

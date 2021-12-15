@@ -209,8 +209,10 @@ public class TestStealJobQueue {
       stealPool.execute(task);
     }
 
-    stealJobCountDown.await(1, TimeUnit.SECONDS);
-    stealFromCountDown.await(1, TimeUnit.SECONDS);
+    boolean released = stealJobCountDown.await(1, TimeUnit.SECONDS);
+    assertTrue("stealJobCountDown was not released", released);
+    released = stealFromCountDown.await(1, TimeUnit.SECONDS);
+    assertTrue("stealFromCountDown was not released", released);
     assertEquals(0, stealFromCountDown.getCount());
     assertEquals(0, stealJobCountDown.getCount());
   }

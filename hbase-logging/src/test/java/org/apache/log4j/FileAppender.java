@@ -126,7 +126,7 @@ public class FileAppender extends WriterAppender {
   }
 
   /** Returns the value of the <b>File</b> option. */
-  public String getFile() {
+  public synchronized String getFile() {
     return fileName;
   }
 

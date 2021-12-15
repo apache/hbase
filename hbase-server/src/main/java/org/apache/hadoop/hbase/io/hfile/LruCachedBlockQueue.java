@@ -65,15 +65,15 @@ public class LruCachedBlockQueue implements HeapSize {
    * @param cb block to try to add to the queue
    */
   public void add(LruCachedBlock cb) {
-    if(heapSize < maxSize) {
+    if (heapSize < maxSize) {
       queue.add(cb);
       heapSize += cb.heapSize();
     } else {
       LruCachedBlock head = queue.peek();
-      if(cb.compareTo(head) > 0) {
+      if (head != null && cb.compareTo(head) > 0) {
         heapSize += cb.heapSize();
         heapSize -= head.heapSize();
-        if(heapSize > maxSize) {
+        if (heapSize > maxSize) {
           queue.poll();
         } else {
           heapSize += head.heapSize();

@@ -100,7 +100,8 @@ public class TestStoreHotnessProtector {
       });
     }
 
-    countDownLatch.await(60, TimeUnit.SECONDS);
+    boolean released = countDownLatch.await(60, TimeUnit.SECONDS);
+    Assert.assertTrue("Latch was not released", released);
     //no exception
     Assert.assertEquals(exception.get(), null);
     Assert.assertEquals(storeHotnessProtector.getPreparePutToStoreMap().size(), 1);

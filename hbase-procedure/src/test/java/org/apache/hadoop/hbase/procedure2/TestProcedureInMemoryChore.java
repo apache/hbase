@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.procedure2;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -88,8 +89,8 @@ public class TestProcedureInMemoryChore {
     procExecutor.removeChore(chore);
     latch = new CountDownLatch(nCountDown);
     chore.setLatch(latch);
-    latch.await(timeoutMSec * nCountDown, TimeUnit.MILLISECONDS);
-    LOG.info("chore latch count=" + latch.getCount());
+    boolean reached = latch.await(timeoutMSec * nCountDown, TimeUnit.MILLISECONDS);
+    LOG.info("chore latch reached={} count={}", reached, latch.getCount());
     assertFalse(chore.isWaiting());
     assertTrue("latchCount=" + latch.getCount(), latch.getCount() > 0);
   }

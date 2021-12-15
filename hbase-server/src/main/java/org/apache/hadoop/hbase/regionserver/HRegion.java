@@ -7741,7 +7741,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       long now, long nonceGroup, long nonce, long origLogSeqNum) throws IOException {
     Preconditions.checkArgument(walEdit != null && !walEdit.isEmpty(),
         "WALEdit is null or empty!");
-    Preconditions.checkArgument(!walEdit.isReplay() || origLogSeqNum != SequenceId.NO_SEQUENCE_ID,
+    Preconditions.checkArgument(walEdit != null && !walEdit.isReplay() ||
+          origLogSeqNum != SequenceId.NO_SEQUENCE_ID,
         "Invalid replay sequence Id for replay WALEdit!");
     // Using default cluster id, as this can only happen in the originating cluster.
     // A slave cluster receives the final value (not the delta) as a Put. We use HLogKey

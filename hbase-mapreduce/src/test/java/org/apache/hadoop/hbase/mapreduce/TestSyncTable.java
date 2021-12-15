@@ -314,7 +314,7 @@ public class TestSyncTable {
           if (!CellUtil.matchingQualifier(sourceCell, targetCell)) {
             Assert.fail("Qualifiers don't match");
           }
-          if (targetRowKey < 80 && targetRowKey >= 90){
+          if (targetRowKey < 80 || targetRowKey >= 90){
             if (!CellUtil.matchingTimestamp(sourceCell, targetCell)) {
               Assert.fail("Timestamps don't match");
             }

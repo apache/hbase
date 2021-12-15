@@ -256,8 +256,11 @@ public class TestFSErrorsExposed {
      * Starts to simulate faults on all streams opened so far
      */
     public void startFaults() {
-      for (SoftReference<FaultyInputStream> is: inStreams) {
-        is.get().startFaults();
+      for (SoftReference<FaultyInputStream> ref: inStreams) {
+        FaultyInputStream is = ref.get();
+        if (is != null) {
+          is.startFaults();
+        }
       }
     }
   }

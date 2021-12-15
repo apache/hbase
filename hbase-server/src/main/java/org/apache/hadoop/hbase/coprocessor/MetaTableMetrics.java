@@ -206,6 +206,9 @@ public class MetaTableMetrics implements RegionCoprocessor {
         return "";
       }
       MetaTableOps ops = opsNameMap.get(op.getClass());
+      if (ops == null) {
+        return "";
+      }
       String opWithClientMeterName = "";
       switch (ops) {
         case GET:
@@ -226,6 +229,9 @@ public class MetaTableMetrics implements RegionCoprocessor {
     private String opMeterName(Object op) {
       // Extract meter name containing the access type
       MetaTableOps ops = opsNameMap.get(op.getClass());
+      if (ops == null) {
+        return "";
+      }
       String opMeterName = "";
       switch (ops) {
         case GET:

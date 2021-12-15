@@ -80,7 +80,7 @@ public class TestSchemaResource {
   }
 
   public TestSchemaResource(Boolean csrf) {
-    csrfEnabled = csrf;
+    TestMultiRowResource.setCsrfEnabled(csrf);
   }
 
   @BeforeClass

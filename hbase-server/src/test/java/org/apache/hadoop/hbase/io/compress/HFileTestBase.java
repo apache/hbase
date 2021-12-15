@@ -98,8 +98,12 @@ public class HFileTestBase {
         i++;
       } while (scanner.next());
     } finally {
-      reader.close();
-      scanner.close();
+      if (reader != null) {
+        reader.close();
+      }
+      if (scanner != null) {
+        scanner.close();
+      }
     }
 
     assertEquals("Did not read back as many KVs as written", i, testKvs.size());

@@ -156,7 +156,8 @@ public abstract class ClientPushbackTestBase {
     assertEquals("", runnerStats.delayIntevalHist.getSnapshot().getMean(), (double) backoffTime,
       0.1);
 
-    latch.await(backoffTime * 2, TimeUnit.MILLISECONDS);
+    boolean released = latch.await(backoffTime * 2, TimeUnit.MILLISECONDS);
+    assertTrue("Latch was not released", released);
     assertNotEquals("AsyncProcess did not submit the work time", 0, endTime.get());
     assertTrue("AsyncProcess did not delay long enough", endTime.get() - startTime >= backoffTime);
   }
