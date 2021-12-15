@@ -78,62 +78,61 @@ def add_to_configuration(c, arg)
   c
 end
 
+_configuration = nil
+
+# strip out any config definitions that won't work with GetoptLong
+D_ARG = '-D'.freeze
+ARGV.delete_if do |arg|
+  unless arg.start_with?(D_ARG) and arg.include?("=")
+    false
+  else
+    _configuration = add_to_configuration(_configuration, arg[2..-1])
+    true
+  end
+end
+
 opts = GetoptLong.new(
   [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
-  [ '--debug', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--noninteractive', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--top-level-defs', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--Dkey=value', '-D', GetoptLong::NO_ARGUMENT ]
+  [ '--debug', '-d', GetoptLong::NO_ARGUMENT ],
+  [ '--noninteractive', '-n', GetoptLong::NO_ARGUMENT ],
+  [ '--top-level-defs', GetoptLong::NO_ARGUMENT ],
+  [ '-D', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--return-values', '-r', GetoptLong::NO_ARGUMENT ]
 )
+opts.ordering = GetoptLong::REQUIRE_ORDER
 
-found = []
 script2run = nil
 log_level = org.apache.log4j.Level::ERROR
 @shell_debug = false
 interactive = true
 top_level_definitions = false
-_configuration = nil
-D_ARG = '-D'.freeze
 
 opts.each do |opt, arg|
-  case opt || arg
-  when '--help' || '-h'
+  case opt
+  when '--help'
     puts cmdline_help
+    exit
   when D_ARG
-    argValue = ARGV.shift || (raise "#{D_ARG} takes a 'key=value' parameter")
-    _configuration = add_to_configuration(_configuration, argValue)
-    found.push(arg)
-    found.push(argValue)
-  when arg.start_with?(D_ARG)
-    _configuration = add_to_configuration(_configuration, arg[2..-1])
-    found.push(arg)
-  when '--debug'|| '-d'
+    _configuration = add_to_configuration(_configuration, arg)
+  when '--debug'
     log_level = org.apache.log4j.Level::DEBUG
     $fullBackTrace = true
     @shell_debug = true
-    found.push(arg)
     puts 'Setting DEBUG log level...'
-   when '--noninteractive'||  '-n'
-     interactive = false
-     found.push(arg)
-   when '--return-values' || 'r'
-     warn '[INFO] the -r | --return-values option is ignored. we always behave '\
+  when '--noninteractive'
+    interactive = false
+  when '--return-values'
+    warn '[INFO] the -r | --return-values option is ignored. we always behave '\
            'as though it was given.'
-     found.push(arg)
-   when '--top-level-defs'
-     top_level_definitions = true
-   else
-      # Presume it a script. Save it off for running later below
-      # after we've set up some environment.
-      script2run = arg
-      found.push(arg)
-      # Presume that any other args are meant for the script.
+  when '--top-level-defs'
+    top_level_definitions = true
   end
 end
 
+if ARGV.length > 0
+  script2run = ARGV.shift
+end
 
-# Delete all processed args
-found.each { |arg| ARGV.delete(arg) }
 # Make sure debug flag gets back to IRB
 ARGV.unshift('-d') if @shell_debug
 
