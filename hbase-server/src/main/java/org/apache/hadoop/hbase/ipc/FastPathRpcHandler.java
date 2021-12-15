@@ -36,8 +36,9 @@ public class FastPathRpcHandler extends RpcHandler {
   private CallRunner loadedCallRunner;
 
   FastPathRpcHandler(String name, double handlerFailureThreshhold, int handlerCount,
-    BlockingQueue<CallRunner> q, AtomicInteger activeHandlerCount, AtomicInteger failedHandlerCount,
-    final Abortable abortable, final Deque<FastPathRpcHandler> fastPathHandlerStack) {
+      BlockingQueue<CallRunner> q, AtomicInteger activeHandlerCount,
+      AtomicInteger failedHandlerCount, final Abortable abortable,
+      final Deque<FastPathRpcHandler> fastPathHandlerStack) {
     super(name, handlerFailureThreshhold, handlerCount, q, activeHandlerCount, failedHandlerCount,
       abortable);
     this.fastPathHandlerStack = fastPathHandlerStack;
