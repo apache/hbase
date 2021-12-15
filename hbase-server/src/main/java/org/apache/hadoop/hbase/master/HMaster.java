@@ -813,15 +813,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     // hbck1s against an hbase2 cluster; it could do damage. To skip this behavior, set
     // hbase.write.hbck1.lock.file to false.
     if (this.conf.getBoolean("hbase.write.hbck1.lock.file", true)) {
-      Pair<Path, FSDataOutputStream> result = null;
-      try {
-        result = HBaseFsck.checkAndMarkRunningHbck(this.conf,
-            HBaseFsck.createLockRetryCounterFactory(this.conf).create());
-      } finally {
-        if (result != null) {
-          Closeables.close(result.getSecond(), true);
-        }
-      }
+      HBaseFsck.checkAndMarkRunningHbck(this.conf,
+        HBaseFsck.createLockRetryCounterFactory(this.conf).create());
     }
 
     status.setStatus("Initialize ServerManager and schedule SCP for crash servers");
