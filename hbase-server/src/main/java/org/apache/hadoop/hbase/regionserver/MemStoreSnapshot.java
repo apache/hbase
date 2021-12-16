@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import java.util.List;
 
 /**
  * {@link MemStoreSnapshot} is a Context Object to hold details of the snapshot taken on a MemStore.

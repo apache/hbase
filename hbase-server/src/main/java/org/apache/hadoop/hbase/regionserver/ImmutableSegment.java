@@ -86,8 +86,8 @@ public abstract class ImmutableSegment extends Segment {
   }
 
   /**
-   * This method we must create a new {@link SnapshotSegmentScanner} to increase the reference count
-   * of corresponding {@link MemStoreLABImpl}
+   * We create a new {@link SnapshotSegmentScanner} to increase the reference count of
+   * {@link MemStoreLABImpl} used by this segment.
    */
   List<KeyValueScanner> getSnapshotScanners() {
     return Collections.singletonList(new SnapshotSegmentScanner(this));
