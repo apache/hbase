@@ -1586,7 +1586,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       RestoreSnapshotRequest request) throws ServiceException {
     try {
       long procId = server.restoreSnapshot(request.getSnapshot(), request.getNonceGroup(),
-        request.getNonce(), request.getRestoreACL());
+        request.getNonce(), request.getRestoreACL(), request.getCustomSFT());
       return RestoreSnapshotResponse.newBuilder().setProcId(procId).build();
     } catch (ForeignException e) {
       throw new ServiceException(e.getCause());

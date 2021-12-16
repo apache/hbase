@@ -2619,8 +2619,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   }
 
-  public long restoreSnapshot(final SnapshotDescription snapshotDesc,
-      final long nonceGroup, final long nonce, final boolean restoreAcl) throws IOException {
+  public long restoreSnapshot(final SnapshotDescription snapshotDesc, final long nonceGroup,
+    final long nonce, final boolean restoreAcl, final String customSFT) throws IOException {
     checkInitialized();
     getSnapshotManager().checkSnapshotSupport();
 
@@ -2629,18 +2629,19 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     getClusterSchema().getNamespace(dstTable.getNamespaceAsString());
 
     return MasterProcedureUtil.submitProcedure(
-        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
-      @Override
-      protected void run() throws IOException {
+      new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
           setProcId(
-            getSnapshotManager().restoreOrCloneSnapshot(snapshotDesc, getNonceKey(), restoreAcl));
-      }
+            getSnapshotManager().restoreOrCloneSnapshot(snapshotDesc, getNonceKey(), restoreAcl,
+              customSFT));
+        }
 
-      @Override
-      protected String getDescription() {
-        return "RestoreSnapshotProcedure";
-      }
-    });
+        @Override
+        protected String getDescription() {
+          return "RestoreSnapshotProcedure";
+        }
+      });
   }
 
   private void checkTableExists(final TableName tableName)

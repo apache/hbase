@@ -869,8 +869,8 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName, boolean cloneAcl)
-      throws IOException, TableExistsException, RestoreSnapshotException {
+  public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName, boolean cloneAcl,
+    String customSFT) throws IOException, TableExistsException, RestoreSnapshotException {
     throw new NotImplementedException("cloneSnapshotAsync not supported in ThriftAdmin");
   }
 

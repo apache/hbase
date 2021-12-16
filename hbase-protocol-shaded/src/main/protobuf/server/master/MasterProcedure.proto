@@ -208,6 +208,7 @@ message CloneSnapshotStateData {
   repeated RegionInfo region_info = 4;
   repeated RestoreParentToChildRegionsPair parent_to_child_regions_pair_list = 5;
   optional bool restore_acl = 6;
+  optional string customSFT = 7;
 }
 
 enum RestoreSnapshotState {

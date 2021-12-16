@@ -1967,7 +1967,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         } else if (!exists) {
           // if table does not exist, then just clone snapshot into new table.
           completeConditionalOnFuture(future,
-            internalRestoreSnapshot(snapshotName, finalTableName, restoreAcl));
+            internalRestoreSnapshot(snapshotName, finalTableName, restoreAcl, null));
         } else {
           addListener(isTableDisabled(finalTableName), (disabled, err4) -> {
             if (err4 != null) {
@@ -2003,12 +2003,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           future.completeExceptionally(err);
         } else {
           // Step.2 Restore snapshot
-          addListener(internalRestoreSnapshot(snapshotName, tableName, restoreAcl),
+          addListener(internalRestoreSnapshot(snapshotName, tableName, restoreAcl, null),
             (void2, err2) -> {
               if (err2 != null) {
                 // Step.3.a Something went wrong during the restore and try to rollback.
                 addListener(
-                  internalRestoreSnapshot(failSafeSnapshotSnapshotName, tableName, restoreAcl),
+                  internalRestoreSnapshot(failSafeSnapshotSnapshotName, tableName, restoreAcl,
+                    null),
                   (void3, err3) -> {
                     if (err3 != null) {
                       future.completeExceptionally(err3);
@@ -2036,7 +2037,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       });
       return future;
     } else {
-      return internalRestoreSnapshot(snapshotName, tableName, restoreAcl);
+      return internalRestoreSnapshot(snapshotName, tableName, restoreAcl, null);
     }
   }
 
@@ -2053,7 +2054,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName,
-      boolean restoreAcl) {
+      boolean restoreAcl, String customSFT) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(tableExists(tableName), (exists, err) -> {
       if (err != null) {
@@ -2062,14 +2063,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.completeExceptionally(new TableExistsException(tableName));
       } else {
         completeConditionalOnFuture(future,
-          internalRestoreSnapshot(snapshotName, tableName, restoreAcl));
+          internalRestoreSnapshot(snapshotName, tableName, restoreAcl, customSFT));
       }
     });
     return future;
   }
 
   private CompletableFuture<Void> internalRestoreSnapshot(String snapshotName, TableName tableName,
-      boolean restoreAcl) {
+      boolean restoreAcl, String customSFT) {
     SnapshotProtos.SnapshotDescription snapshot = SnapshotProtos.SnapshotDescription.newBuilder()
       .setName(snapshotName).setTable(tableName.getNameAsString()).build();
     try {
@@ -2077,10 +2078,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     } catch (IllegalArgumentException e) {
       return failedFuture(e);
     }
+    RestoreSnapshotRequest.Builder builder =
+      RestoreSnapshotRequest.newBuilder().setSnapshot(snapshot).setNonceGroup(ng.getNonceGroup())
+        .setNonce(ng.newNonce()).setRestoreACL(restoreAcl);
+    if(customSFT != null){
+      builder.setCustomSFT(customSFT);
+    }
     return waitProcedureResult(this.<Long> newMasterCaller().action((controller, stub) -> this
       .<RestoreSnapshotRequest, RestoreSnapshotResponse, Long> call(controller, stub,
-        RestoreSnapshotRequest.newBuilder().setSnapshot(snapshot).setNonceGroup(ng.getNonceGroup())
-          .setNonce(ng.newNonce()).setRestoreACL(restoreAcl).build(),
+        builder.build(),
         (s, c, req, done) -> s.restoreSnapshot(c, req, done), (resp) -> resp.getProcId()))
       .call());
   }
