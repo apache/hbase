@@ -109,6 +109,8 @@ public class StoreHotnessProtector {
     }
 
     String tooBusyStore = null;
+    boolean aboveParallelThreadLimit = false;
+    boolean aboveParallelPrePutLimit = false;
 
     for (Map.Entry<byte[], List<Cell>> e : familyMaps.entrySet()) {
       Store store = this.region.getStore(e.getKey());
@@ -123,12 +125,16 @@ public class StoreHotnessProtector {
         int preparePutCount = preparePutToStoreMap
             .computeIfAbsent(e.getKey(), key -> new AtomicInteger())
             .incrementAndGet();
-        if (store.getCurrentParallelPutCount() > this.parallelPutToStoreThreadLimit
-            || preparePutCount > this.parallelPreparePutToStoreThreadLimit) {
+        boolean storeAboveThread =
+          store.getCurrentParallelPutCount() > this.parallelPutToStoreThreadLimit;
+        boolean storeAbovePrePut = preparePutCount > this.parallelPreparePutToStoreThreadLimit;
+        if (storeAboveThread || storeAbovePrePut) {
           tooBusyStore = (tooBusyStore == null ?
               store.getColumnFamilyName() :
               tooBusyStore + "," + store.getColumnFamilyName());
         }
+        aboveParallelThreadLimit |= storeAboveThread;
+        aboveParallelPrePutLimit |= storeAbovePrePut;
 
         if (LOG.isTraceEnabled()) {
           LOG.trace(store.getColumnFamilyName() + ": preparePutCount=" + preparePutCount
@@ -137,12 +143,15 @@ public class StoreHotnessProtector {
       }
     }
 
-    if (tooBusyStore != null) {
+    if (aboveParallelThreadLimit || aboveParallelPrePutLimit) {
       String msg =
           "StoreTooBusy," + this.region.getRegionInfo().getRegionNameAsString() + ":" + tooBusyStore
-              + " Above parallelPutToStoreThreadLimit(" + this.parallelPutToStoreThreadLimit + ")"
-              + " or parallelPreparePutToStoreThreadLimit("
-              + this.parallelPreparePutToStoreThreadLimit + ")";
+              + " Above "
+              + (aboveParallelThreadLimit ? "parallelPutToStoreThreadLimit("
+              + this.parallelPutToStoreThreadLimit + ")" : "")
+              + (aboveParallelThreadLimit && aboveParallelPrePutLimit ? " or " : "")
+              + (aboveParallelPrePutLimit ? "parallelPreparePutToStoreThreadLimit("
+              + this.parallelPreparePutToStoreThreadLimit + ")" : "");
       LOG.trace(msg);
       throw new RegionTooBusyException(msg);
     }
