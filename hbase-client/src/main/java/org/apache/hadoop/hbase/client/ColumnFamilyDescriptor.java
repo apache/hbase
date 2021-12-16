@@ -199,6 +199,11 @@ public interface ColumnFamilyDescriptor {
    * @param key The key.
    * @return A clone value. Null if no mapping for the key
    */
+  String getValue(String key);
+  /**
+   * @param key The key.
+   * @return A clone value. Null if no mapping for the key
+   */
   byte[] getValue(byte[] key);
   /**
    * It clone all bytes of all elements.
