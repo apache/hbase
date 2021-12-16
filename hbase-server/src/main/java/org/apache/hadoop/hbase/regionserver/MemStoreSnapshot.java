@@ -19,15 +19,22 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-import java.io.Closeable;
 import java.util.List;
+
 /**
- * Holds details of the snapshot taken on a MemStore. Details include the snapshot's identifier,
- * count of cells in it and total memory size occupied by all the cells, timestamp information of
- * all the cells and a scanner to read all cells in it.
+ * {@link MemStoreSnapshot} is a Context Object to hold details of the snapshot taken on a MemStore.
+ * Details include the snapshot's identifier, count of cells in it and total memory size occupied by
+ * all the cells, timestamp information of all the cells and the snapshot immutableSegment.
+ * <p>
+ * NOTE:Every time when {@link MemStoreSnapshot#getScanners} is called, we create new
+ * {@link SnapshotSegmentScanner}s on the {@link MemStoreSnapshot#snapshotImmutableSegment},and
+ * {@link Segment#incScannerCount} is invoked in the {@link SnapshotSegmentScanner} ctor to increase
+ * the reference count of {@link MemStoreLAB} which used by
+ * {@link MemStoreSnapshot#snapshotImmutableSegment}, so after we finish using these scanners, we
+ * must call their close method to invoke {@link Segment#decScannerCount}.
  */
 @InterfaceAudience.Private
-public class MemStoreSnapshot implements Closeable {
+public class MemStoreSnapshot {
   private final long id;
   private final int cellsCount;
   private final MemStoreSize memStoreSize;
@@ -91,9 +98,5 @@ public class MemStoreSnapshot implements Closeable {
    */
   public boolean isTagsPresent() {
     return this.tagsPresent;
-  }
-
-  @Override
-  public void close() {
   }
 }
