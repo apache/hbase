@@ -81,8 +81,8 @@ public class MemStoreSnapshot {
   }
 
   /**
-   * Create new {@link SnapshotSegmentScanner}s. <br/>
-   * NOTE:here when create new {@link SnapshotSegmentScanner}s, {@link Segment#incScannerCount} is
+   * Create new {@link SnapshotSegmentScanner}s for iterating over the snapshot. <br/>
+   * NOTE:Here when create new {@link SnapshotSegmentScanner}s, {@link Segment#incScannerCount} is
    * invoked in the {@link SnapshotSegmentScanner} ctor,so after we use these
    * {@link SnapshotSegmentScanner}s, we must call {@link SnapshotSegmentScanner#close} to invoke
    * {@link Segment#decScannerCount}.
