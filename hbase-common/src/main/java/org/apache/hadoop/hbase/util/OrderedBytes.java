@@ -314,6 +314,10 @@ public class OrderedBytes {
   private static final BigDecimal EN2 = BigDecimal.valueOf(1e-2);
   private static final BigDecimal EN10 = BigDecimal.valueOf(1e-10);
 
+  // TODO: 36 is an arbitrary encoding limit. Reevaluate once we have a better handling of
+  // numeric scale.
+  private static final int MAX_NUM_ENCODE_BYTES = 18;
+
   /**
    * Max precision guaranteed to fit into a {@code long}.
    */
@@ -651,14 +655,7 @@ public class OrderedBytes {
 
     // encode M by peeling off centimal digits, encoding x as 2x+1
     startM = dst.getPosition();
-    // TODO: 18 is an arbitrary encoding limit. Reevaluate once we have a better handling of
-    // numeric scale.
-    for (int i = 0; i < 18 && abs.compareTo(BigDecimal.ZERO) != 0; i++) {
-      abs = abs.movePointRight(2);
-      d = abs.intValue();
-      dst.put((byte) ((2 * d + 1) & 0xff));
-      abs = abs.subtract(BigDecimal.valueOf(d));
-    }
+    encodeToCentimal(dst, abs);
     // terminal digit should be 2x
     a[offset + dst.getPosition() - 1] = (byte) (a[offset + dst.getPosition() - 1] & 0xfe);
     if (isNeg) {
@@ -741,14 +738,7 @@ public class OrderedBytes {
 
     // encode M by peeling off centimal digits, encoding x as 2x+1
     startM = dst.getPosition();
-    // TODO: 18 is an arbitrary encoding limit. Reevaluate once we have a better handling of
-    // numeric scale.
-    for (int i = 0; i < 18 && abs.compareTo(BigDecimal.ZERO) != 0; i++) {
-      abs = abs.movePointRight(2);
-      d = abs.intValue();
-      dst.put((byte) (2 * d + 1));
-      abs = abs.subtract(BigDecimal.valueOf(d));
-    }
+    encodeToCentimal(dst, abs);
     // terminal digit should be 2x
     a[offset + dst.getPosition() - 1] = (byte) (a[offset + dst.getPosition() - 1] & 0xfe);
     if (isNeg) {
@@ -756,6 +746,21 @@ public class OrderedBytes {
       DESCENDING.apply(a, offset + startM, dst.getPosition() - startM);
     }
     return dst.getPosition() - start;
+  }
+
+  private static void encodeToCentimal(PositionedByteRange dst, BigDecimal val) {
+    String stringOfAbs = val.stripTrailingZeros().toPlainString();
+    String value = stringOfAbs.substring(stringOfAbs.indexOf('.') + 1);
+    int d;
+
+    int maxPrecision = Math.min(MAX_NUM_ENCODE_BYTES * 2, value.length());
+    for (int i = 0; i < maxPrecision; i += 2) {
+      d = (value.charAt(i) - '0') * 10;
+      if (i + 1 < maxPrecision) {
+        d += (value.charAt(i + 1) - '0');
+      }
+      dst.put((byte) (2 * d + 1));
+    }
   }
 
   /**
