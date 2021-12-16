@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
+import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -92,7 +93,7 @@ public final class StoreFileTrackerFactory {
     return name != null ? name.name() : clazz.getName();
   }
 
-  private static Class<? extends StoreFileTracker> getTrackerClass(Configuration conf) {
+  public static Class<? extends StoreFileTracker> getTrackerClass(Configuration conf) {
     try {
       Trackers tracker = Trackers.valueOf(getStoreFileTrackerName(conf).toUpperCase());
       return tracker.clazz;
@@ -307,6 +308,42 @@ public final class StoreFileTrackerFactory {
               + getStoreFileTrackerName(newSrcTracker) + " for family "
               + newFamily.getNameAsString() + " of table " + newTable.getTableName());
           }
+        }
+      }
+    }
+  }
+
+  /**
+   * Makes sure restoring a snapshot does not break the current SFT setup
+   * follows StoreUtils.createStoreConfiguration
+   * @param currentTableDesc Existing Table's TableDescriptor
+   * @param snapshotTableDesc Snapshot's TableDescriptor
+   * @param baseConf Current global configuration
+   * @throws RestoreSnapshotException if restore would break the current SFT setup
+   */
+  public static void validatePreRestoreSnapshot(TableDescriptor currentTableDesc,
+    TableDescriptor snapshotTableDesc, Configuration baseConf) throws RestoreSnapshotException {
+
+    for (ColumnFamilyDescriptor cfDesc : currentTableDesc.getColumnFamilies()) {
+      ColumnFamilyDescriptor snapCFDesc = snapshotTableDesc.getColumnFamily(cfDesc.getName());
+      // if there is no counterpart in the snapshot it will be just deleted so the config does
+      // not matter
+      if (snapCFDesc != null) {
+        Configuration currentCompositeConf =
+          StoreUtils.createStoreConfiguration(baseConf, currentTableDesc, cfDesc);
+        Configuration snapCompositeConf =
+          StoreUtils.createStoreConfiguration(baseConf, snapshotTableDesc, snapCFDesc);
+        Class<? extends StoreFileTracker> currentSFT =
+          StoreFileTrackerFactory.getTrackerClass(currentCompositeConf);
+        Class<? extends StoreFileTracker> snapSFT =
+          StoreFileTrackerFactory.getTrackerClass(snapCompositeConf);
+
+        //restoration is not possible if there is an SFT mismatch
+        if (currentSFT != snapSFT) {
+          throw new RestoreSnapshotException(
+            "Restoring Snapshot is not possible because " + " the config for column family "
+              + cfDesc.getNameAsString() + " has incompatible configuration. Current SFT: "
+              + currentSFT + " SFT from snapshot: " + snapSFT);
         }
       }
     }

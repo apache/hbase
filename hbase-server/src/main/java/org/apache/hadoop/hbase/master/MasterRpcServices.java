@@ -1514,7 +1514,7 @@ public class MasterRpcServices extends RSRpcServices implements
       RestoreSnapshotRequest request) throws ServiceException {
     try {
       long procId = master.restoreSnapshot(request.getSnapshot(), request.getNonceGroup(),
-        request.getNonce(), request.getRestoreACL());
+        request.getNonce(), request.getRestoreACL(), request.getCustomSFT());
       return RestoreSnapshotResponse.newBuilder().setProcId(procId).build();
     } catch (ForeignException e) {
       throw new ServiceException(e.getCause());

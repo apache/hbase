@@ -33,13 +33,17 @@ Following command will restore all acl from origin snapshot table into the
 newly created table.
 
   hbase> clone_snapshot 'snapshotName', 'namespace:tableName', {RESTORE_ACL=>true}
+
+StoreFileTracker implementation used after restore can be set by the following command.
+  hbase> clone_snapshot 'snapshotName', 'namespace:tableName', {CLONE_SFT=>'FILE'}
 EOF
       end
 
       def command(snapshot_name, table, args = {})
         raise(ArgumentError, 'Arguments should be a Hash') unless args.is_a?(Hash)
         restore_acl = args.delete(::HBaseConstants::RESTORE_ACL) || false
-        admin.clone_snapshot(snapshot_name, table, restore_acl)
+        clone_sft = args.delete(::HBaseConstants::CLONE_SFT) || nil
+        admin.clone_snapshot(snapshot_name, table, restore_acl, clone_sft)
       end
 
       def handle_exceptions(cause, *args)

@@ -108,9 +108,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
@@ -2628,7 +2630,7 @@ public class HBaseAdmin implements Admin {
     try {
       // Restore snapshot
       get(
-        internalRestoreSnapshotAsync(snapshotName, tableName, restoreAcl),
+        internalRestoreSnapshotAsync(snapshotName, tableName, restoreAcl, null),
         syncWaitTimeout,
         TimeUnit.MILLISECONDS);
     } catch (IOException e) {
@@ -2637,7 +2639,7 @@ public class HBaseAdmin implements Admin {
       if (takeFailSafeSnapshot) {
         try {
           get(
-            internalRestoreSnapshotAsync(failSafeSnapshotSnapshotName, tableName, restoreAcl),
+            internalRestoreSnapshotAsync(failSafeSnapshotSnapshotName, tableName, restoreAcl, null),
             syncWaitTimeout,
             TimeUnit.MILLISECONDS);
           String msg = "Restore snapshot=" + snapshotName +
@@ -2680,16 +2682,17 @@ public class HBaseAdmin implements Admin {
       throw new TableNotDisabledException(tableName);
     }
 
-    return internalRestoreSnapshotAsync(snapshotName, tableName, false);
+    return internalRestoreSnapshotAsync(snapshotName, tableName, false, null);
   }
 
   @Override
   public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName,
-      boolean restoreAcl) throws IOException, TableExistsException, RestoreSnapshotException {
+    boolean restoreAcl, String customSFT)
+    throws IOException, TableExistsException, RestoreSnapshotException {
     if (tableExists(tableName)) {
       throw new TableExistsException(tableName);
     }
-    return internalRestoreSnapshotAsync(snapshotName, tableName, restoreAcl);
+    return internalRestoreSnapshotAsync(snapshotName, tableName, restoreAcl, customSFT);
   }
 
   @Override
@@ -2778,7 +2781,7 @@ public class HBaseAdmin implements Admin {
    * @throws IllegalArgumentException if the restore request is formatted incorrectly
    */
   private Future<Void> internalRestoreSnapshotAsync(final String snapshotName,
-      final TableName tableName, final boolean restoreAcl)
+      final TableName tableName, final boolean restoreAcl, String customSFT)
       throws IOException, RestoreSnapshotException {
     final SnapshotProtos.SnapshotDescription snapshot =
         SnapshotProtos.SnapshotDescription.newBuilder()
@@ -2793,13 +2796,15 @@ public class HBaseAdmin implements Admin {
           Long nonce = ng.newNonce();
       @Override
       protected RestoreSnapshotResponse rpcCall() throws Exception {
-        final RestoreSnapshotRequest request = RestoreSnapshotRequest.newBuilder()
+        final RestoreSnapshotRequest.Builder builder = RestoreSnapshotRequest.newBuilder()
             .setSnapshot(snapshot)
             .setNonceGroup(nonceGroup)
             .setNonce(nonce)
-            .setRestoreACL(restoreAcl)
-            .build();
-        return master.restoreSnapshot(getRpcController(), request);
+            .setRestoreACL(restoreAcl);
+        if (customSFT != null) {
+          builder.setCustomSFT(customSFT);
+        }
+        return master.restoreSnapshot(getRpcController(), builder.build());
       }
     });
 
@@ -4468,5 +4473,4 @@ public class HBaseAdmin implements Admin {
       }
     });
   }
-
 }
