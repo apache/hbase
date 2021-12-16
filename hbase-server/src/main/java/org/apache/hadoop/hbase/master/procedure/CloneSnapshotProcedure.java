@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -44,6 +46,8 @@ import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure.CreateHdfsR
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
@@ -72,6 +76,7 @@ public class CloneSnapshotProcedure
   private TableDescriptor tableDescriptor;
   private SnapshotDescription snapshot;
   private boolean restoreAcl;
+  private String customSFT;
   private List<RegionInfo> newRegions = null;
   private Map<String, Pair<String, String> > parentsToChildrenPairMap = new HashMap<>();
 
@@ -96,12 +101,19 @@ public class CloneSnapshotProcedure
    * @param snapshot snapshot to clone from
    */
   public CloneSnapshotProcedure(final MasterProcedureEnv env,
+    final TableDescriptor tableDescriptor, final SnapshotDescription snapshot,
+    final boolean restoreAcl) {
+    this(env, tableDescriptor, snapshot, restoreAcl, null);
+  }
+
+  public CloneSnapshotProcedure(final MasterProcedureEnv env,
       final TableDescriptor tableDescriptor, final SnapshotDescription snapshot,
-      final boolean restoreAcl) {
+      final boolean restoreAcl, final String customSFT) {
     super(env);
     this.tableDescriptor = tableDescriptor;
     this.snapshot = snapshot;
     this.restoreAcl = restoreAcl;
+    this.customSFT = customSFT;
 
     getMonitorStatus();
   }
@@ -139,6 +151,7 @@ public class CloneSnapshotProcedure
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_WRITE_FS_LAYOUT);
           break;
         case CLONE_SNAPSHOT_WRITE_FS_LAYOUT:
+          updateTableDescriptorWithSFT();
           newRegions = createFilesystemLayout(env, tableDescriptor, newRegions);
           env.getMasterServices().getTableDescriptors().update(tableDescriptor, true);
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_ADD_TO_META);
@@ -201,6 +214,37 @@ public class CloneSnapshotProcedure
       }
     }
     return Flow.HAS_MORE_STATE;
+  }
+
+  /**
+   * If a StoreFileTracker is specified we strip the TableDescriptor from previous SFT config
+   * and set the specified SFT on the table level
+   */
+  private void updateTableDescriptorWithSFT() {
+    if (StringUtils.isEmpty(customSFT)){
+      return;
+    }
+
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
+    builder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, customSFT);
+    for (ColumnFamilyDescriptor family : tableDescriptor.getColumnFamilies()){
+      ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(family);
+      cfBuilder.setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL, null);
+      cfBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, null);
+      builder.modifyColumnFamily(cfBuilder.build());
+    }
+    tableDescriptor = builder.build();
+  }
+
+  private void validateSFT() {
+    if (StringUtils.isEmpty(customSFT)){
+      return;
+    }
+
+    //if customSFT is invalid getTrackerClass will throw a RuntimeException
+    Configuration sftConfig = new Configuration();
+    sftConfig.set(StoreFileTrackerFactory.TRACKER_IMPL, customSFT);
+    StoreFileTrackerFactory.getTrackerClass(sftConfig);
   }
 
   @Override
@@ -292,6 +336,9 @@ public class CloneSnapshotProcedure
         cloneSnapshotMsg.addParentToChildRegionsPairList(parentToChildrenPair);
       }
     }
+    if (!StringUtils.isEmpty(customSFT)){
+      cloneSnapshotMsg.setCustomSFT(customSFT);
+    }
     serializer.serialize(cloneSnapshotMsg.build());
   }
 
@@ -327,6 +374,9 @@ public class CloneSnapshotProcedure
             parentToChildrenPair.getChild2RegionName()));
       }
     }
+    if (!StringUtils.isEmpty(cloneSnapshotMsg.getCustomSFT())){
+      customSFT = cloneSnapshotMsg.getCustomSFT();
+    }
     // Make sure that the monitor status is set up
     getMonitorStatus();
   }
@@ -340,6 +390,8 @@ public class CloneSnapshotProcedure
     if (env.getMasterServices().getTableDescriptors().exists(tableName)) {
       throw new TableExistsException(tableName);
     }
+
+    validateSFT();
   }
 
   /**
