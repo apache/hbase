@@ -26,11 +26,16 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MiscTests.class, MediumTests.class })
 public class TestRegionReplicationLagEvaluation {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestRegionReplicationLagEvaluation.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
