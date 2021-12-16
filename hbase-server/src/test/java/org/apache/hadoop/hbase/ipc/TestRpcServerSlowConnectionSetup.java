@@ -114,7 +114,7 @@ public class TestRpcServerSlowConnectionSetup {
     socket.getOutputStream().flush();
 
     ConnectionHeader header = ConnectionHeader.newBuilder()
-        .setServiceName(TestRpcServiceProtos.TestProtobufRpcProto.getDescriptor().getFullName())
+        .setServiceName(TestRpcServiceProtos.TestProtobufRpcProto.getDescriptor().getName())
         .setVersionInfo(ProtobufUtil.getVersionInfo()).build();
     DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
     dos.writeInt(header.getSerializedSize());
