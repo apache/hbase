@@ -147,7 +147,7 @@ class AsyncRegionLocator {
 
   CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
     RegionLocateType type, boolean reload, long timeoutNs) {
-    final Supplier<Span> supplier = new TableSpanBuilder<>(conn)
+    final Supplier<Span> supplier = new TableSpanBuilder(conn)
       .setName("AsyncRegionLocator.getRegionLocations")
       .setTableName(tableName);
     return tracedLocationFuture(() -> {
@@ -164,7 +164,7 @@ class AsyncRegionLocator {
 
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
     int replicaId, RegionLocateType type, boolean reload, long timeoutNs) {
-    final Supplier<Span> supplier = new TableSpanBuilder<>(conn)
+    final Supplier<Span> supplier = new TableSpanBuilder(conn)
       .setName("AsyncRegionLocator.getRegionLocation")
       .setTableName(tableName);
     return tracedLocationFuture(() -> {
@@ -225,7 +225,7 @@ class AsyncRegionLocator {
   }
 
   void clearCache(TableName tableName) {
-    Supplier<Span> supplier = new TableSpanBuilder<>(conn)
+    Supplier<Span> supplier = new TableSpanBuilder(conn)
       .setName("AsyncRegionLocator.clearCache")
       .setTableName(tableName);
     TraceUtil.trace(() -> {
@@ -239,7 +239,7 @@ class AsyncRegionLocator {
   }
 
   void clearCache(ServerName serverName) {
-    Supplier<Span> supplier = new ConnectionSpanBuilder<>(conn)
+    Supplier<Span> supplier = new ConnectionSpanBuilder(conn)
       .setName("AsyncRegionLocator.clearCache")
       .addAttribute(SERVER_NAME_KEY, serverName.getServerName());
     TraceUtil.trace(() -> {
@@ -251,7 +251,7 @@ class AsyncRegionLocator {
   }
 
   void clearCache() {
-    Supplier<Span> supplier = new ConnectionSpanBuilder<>(conn)
+    Supplier<Span> supplier = new ConnectionSpanBuilder(conn)
       .setName("AsyncRegionLocator.clearCache");
     TraceUtil.trace(() -> {
       metaRegionLocator.clearCache();

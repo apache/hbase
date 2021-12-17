@@ -38,41 +38,30 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Construct {@link Span} instances originating from the client side of a connection.
  */
 @InterfaceAudience.Private
-public class ConnectionSpanBuilder<B extends ConnectionSpanBuilder<B>>
-  extends HBaseSpanBuilder<ConnectionSpanBuilder<B>>
-  implements Supplier<Span> {
+public class ConnectionSpanBuilder implements Supplier<Span> {
 
-  protected String name;
-  protected final Map<AttributeKey<?>, Object> attributes = new HashMap<>();
+  private String name;
+  private final Map<AttributeKey<?>, Object> attributes = new HashMap<>();
+
+  public ConnectionSpanBuilder(final AsyncConnectionImpl conn) {
+    populateConnectionAttributes(attributes, conn);
+  }
 
   @Override
   public Span get() {
     return build();
   }
 
-  public ConnectionSpanBuilder(final AsyncConnectionImpl conn) {
-    addAttribute(DB_SYSTEM, DB_SYSTEM_VALUE);
-    addAttribute(DB_CONNECTION_STRING, conn.getConnectionRegistry().getConnectionString());
-    addAttribute(DB_USER, Optional.ofNullable(conn.getUser()).map(Object::toString).orElse(null));
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public B self() {
-    return (B) this;
-  }
-
-  public B setName(final String name) {
+  public ConnectionSpanBuilder setName(final String name) {
     this.name = name;
-    return self();
+    return this;
   }
 
-  public <T> B addAttribute(final AttributeKey<T> key, T value) {
+  public <T> ConnectionSpanBuilder addAttribute(final AttributeKey<T> key, T value) {
     attributes.put(key, value);
-    return self();
+    return this;
   }
 
-  @Override
   @SuppressWarnings("unchecked")
   public Span build() {
     final SpanBuilder builder = TraceUtil.getGlobalTracer()
@@ -81,5 +70,22 @@ public class ConnectionSpanBuilder<B extends ConnectionSpanBuilder<B>>
       .setSpanKind(SpanKind.CLIENT);
     attributes.forEach((k, v) -> builder.setAttribute((AttributeKey<? super Object>) k, v));
     return builder.startSpan();
+  }
+
+  /**
+   * Static utility method that performs the primary logic of this builder. It is visible to other
+   * classes in this package so that other builders can use this functionality as a mix-in.
+   * @param attributes the attributes map to be populated.
+   * @param conn the source of attribute values.
+   */
+  static void populateConnectionAttributes(
+    final Map<AttributeKey<?>, Object> attributes,
+    final AsyncConnectionImpl conn
+  ) {
+    attributes.put(DB_SYSTEM, DB_SYSTEM_VALUE);
+    attributes.put(DB_CONNECTION_STRING, conn.getConnectionRegistry().getConnectionString());
+    attributes.put(DB_USER, Optional.ofNullable(conn.getUser())
+      .map(Object::toString)
+      .orElse(null));
   }
 }

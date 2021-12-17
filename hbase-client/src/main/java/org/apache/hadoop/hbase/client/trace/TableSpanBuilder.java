@@ -23,41 +23,66 @@ import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.NAMESPACE_KE
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.TABLE_KEY;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanBuilder;
+import io.opentelemetry.api.trace.SpanKind;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Supplier;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncConnectionImpl;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Construct {@link Span} instances involving data tables.
  */
 @InterfaceAudience.Private
-public class TableSpanBuilder<B extends TableSpanBuilder<B>> extends ConnectionSpanBuilder<B> {
+public class TableSpanBuilder implements Supplier<Span> {
 
-  protected TableName tableName;
+  private String name;
+  private final Map<AttributeKey<?>, Object> attributes = new HashMap<>();
 
   public TableSpanBuilder(AsyncConnectionImpl conn) {
-    super(conn);
+    ConnectionSpanBuilder.populateConnectionAttributes(attributes, conn);
   }
 
   @Override
-  @SuppressWarnings("unchecked")
-  public B self() {
-    return (B) this;
+  public Span get() {
+    return build();
   }
 
-  public B setTableName(final TableName tableName) {
-    this.tableName = tableName;
+  public TableSpanBuilder setName(final String name) {
+    this.name = name;
+    return this;
+  }
+
+  public TableSpanBuilder setTableName(final TableName tableName) {
+    populateTableNameAttributes(attributes, tableName);
+    return this;
+  }
+
+  @SuppressWarnings("unchecked")
+  public Span build() {
+    final SpanBuilder builder = TraceUtil.getGlobalTracer()
+      .spanBuilder(name)
+      // TODO: what about clients embedded in Master/RegionServer/Gateways/&c?
+      .setSpanKind(SpanKind.CLIENT);
+    attributes.forEach((k, v) -> builder.setAttribute((AttributeKey<? super Object>) k, v));
+    return builder.startSpan();
+  }
+
+  /**
+   * Static utility method that performs the primary logic of this builder. It is visible to other
+   * classes in this package so that other builders can use this functionality as a mix-in.
+   * @param attributes the attributes map to be populated.
+   * @param tableName the source of attribute values.
+   */
+  static void populateTableNameAttributes(
+    final Map<AttributeKey<?>, Object> attributes,
+    final TableName tableName
+  ) {
     attributes.put(NAMESPACE_KEY, tableName.getNamespaceAsString());
     attributes.put(DB_NAME, tableName.getNamespaceAsString());
     attributes.put(TABLE_KEY, tableName.getNameAsString());
-    return self();
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public Span build() {
-    final Span span = super.build();
-    attributes.forEach((k, v) -> span.setAttribute((AttributeKey<? super Object>) k, v));
-    return span;
   }
 }
