@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -36,7 +35,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -81,13 +79,13 @@ public class TestMajorCompactionRequest {
     List<StoreFileInfo> storeFiles = mockStoreFiles(regionStoreDir, 5, 10);
     MajorCompactionRequest request = makeMockRequest(storeFiles, false);
     Optional<MajorCompactionRequest> result =
-        request.createRequest(mock(Configuration.class), Sets.newHashSet(FAMILY), 100);
+        request.createRequest(mock(Connection.class), Sets.newHashSet(FAMILY), 100);
     assertTrue(result.isPresent());
 
     // store files newer than timestamp
     storeFiles = mockStoreFiles(regionStoreDir, 5, 101);
     request = makeMockRequest(storeFiles, false);
-    result = request.createRequest(mock(Configuration.class), Sets.newHashSet(FAMILY), 100);
+    result = request.createRequest(mock(Connection.class), Sets.newHashSet(FAMILY), 100);
     assertFalse(result.isPresent());
   }
 
@@ -100,19 +98,18 @@ public class TestMajorCompactionRequest {
     HRegion region =
         HBaseTestingUtil.createRegionAndWAL(hri, rootRegionDir, UTILITY.getConfiguration(), htd);
 
-    Configuration configuration = mock(Configuration.class);
+    Connection connection = mock(Connection.class);
     // the reference file timestamp is newer
     List<StoreFileInfo> storeFiles = mockStoreFiles(regionStoreDir, 4, 101);
     List<Path> paths = storeFiles.stream().map(StoreFileInfo::getPath).collect(Collectors.toList());
     // the files that are referenced are older, thus we still compact.
     HRegionFileSystem fileSystem =
         mockFileSystem(region.getRegionInfo(), true, storeFiles, 50);
-    MajorCompactionRequest majorCompactionRequest = spy(new MajorCompactionRequest(configuration,
+    MajorCompactionRequest majorCompactionRequest = spy(new MajorCompactionRequest(connection,
         region.getRegionInfo(), Sets.newHashSet(FAMILY)));
-    doReturn(mock(Connection.class)).when(majorCompactionRequest).getConnection(eq(configuration));
     doReturn(paths).when(majorCompactionRequest).getReferenceFilePaths(any(FileSystem.class),
         any(Path.class));
-    doReturn(fileSystem).when(majorCompactionRequest).getFileSystem(any(Connection.class));
+    doReturn(fileSystem).when(majorCompactionRequest).getFileSystem();
     Set<String> result =
         majorCompactionRequest.getStoresRequiringCompaction(Sets.newHashSet("a"), 100);
     assertEquals(FAMILY, Iterables.getOnlyElement(result));
@@ -158,16 +155,15 @@ public class TestMajorCompactionRequest {
 
   private MajorCompactionRequest makeMockRequest(List<StoreFileInfo> storeFiles,
       boolean references) throws IOException {
-    Configuration configuration = mock(Configuration.class);
+    Connection connection = mock(Connection.class);
     RegionInfo regionInfo = mock(RegionInfo.class);
     when(regionInfo.getEncodedName()).thenReturn("HBase");
     when(regionInfo.getTable()).thenReturn(TableName.valueOf("foo"));
     MajorCompactionRequest request =
-        new MajorCompactionRequest(configuration, regionInfo, Sets.newHashSet("a"));
+        new MajorCompactionRequest(connection, regionInfo, Sets.newHashSet("a"));
     MajorCompactionRequest spy = spy(request);
     HRegionFileSystem fileSystem = mockFileSystem(regionInfo, references, storeFiles);
-    doReturn(fileSystem).when(spy).getFileSystem(isA(Connection.class));
-    doReturn(mock(Connection.class)).when(spy).getConnection(eq(configuration));
+    doReturn(fileSystem).when(spy).getFileSystem();
     return spy;
   }
 }
