@@ -1,0 +1,30 @@
+<settings>
+    <profiles>
+        <profile>
+            <id>cloudera</id>
+            <repositories>
+                <repository>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                    <id>cloudera.private</id>
+                    <name>Cloudera Nexus-Private</name>
+                    <url>https://nexus-private.hortonworks.com/nexus/content/groups/public/</url>
+                </repository>
+            </repositories>
+        </profile>
+    </profiles>
+    <mirrors>
+        <mirror>
+            <id>public</id>
+            <mirrorOf>*,!IN-QA,!LW-IN-QA,!cloudera.snapshots.repo,!cloudera.repos</mirrorOf>
+            <url>https://nexus-private.hortonworks.com/nexus/content/groups/public</url>
+        </mirror>
+    </mirrors>
+    <activeProfiles>
+        <activeProfile>cloudera</activeProfile>
+    </activeProfiles>
+</settings>
