@@ -1453,6 +1453,7 @@
     <!--This property is for hadoops netty. HBase netty
          comes in via hbase-thirdparty hbase-shaded-netty-->
     <netty.hadoop.version>3.6.2.Final</netty.hadoop.version>
+    <netty.version>4.1.60.Final</netty.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.5.0</audience-annotations.version>
     <avro.version>1.8.2.7.2.15.0-SNAPSHOT</avro.version>
@@ -2308,6 +2309,11 @@
             <artifactId>javax.activation-api</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-all</artifactId>
+        <version>${netty.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

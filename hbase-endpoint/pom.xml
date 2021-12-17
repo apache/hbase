@@ -360,6 +360,11 @@
           <version>3.6.2.Final</version>
           <scope>test</scope>
         </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-all</artifactId>
+          <scope>test</scope>
+        </dependency>
       </dependencies>
     </profile>
     <profile>
