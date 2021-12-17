@@ -99,8 +99,6 @@ public class TestAsyncTableTracing {
 
   private ClientService.Interface stub;
 
-  private User user;
-
   private AsyncConnectionImpl conn;
 
   private AsyncTable<?> table;
@@ -198,7 +196,7 @@ public class TestAsyncTableTracing {
         return null;
       }
     }).when(stub).get(any(HBaseRpcController.class), any(GetRequest.class), any());
-    user = UserProvider.instantiate(CONF).getCurrent();
+    final User user = UserProvider.instantiate(CONF).getCurrent();
     conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF), "test", null,
       user) {
 

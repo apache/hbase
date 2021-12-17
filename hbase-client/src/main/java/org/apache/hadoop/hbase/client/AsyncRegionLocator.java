@@ -124,8 +124,12 @@ class AsyncRegionLocator {
   }
 
   private static List<String> getRegionNames(RegionLocations locs) {
-    if (locs == null) { return Collections.emptyList(); }
-    if (locs.getRegionLocations() == null) { return Collections.emptyList(); }
+    if (locs == null) {
+      return Collections.emptyList();
+    }
+    if (locs.getRegionLocations() == null) {
+      return Collections.emptyList();
+    }
     return Arrays.stream(locs.getRegionLocations())
       .filter(Objects::nonNull)
       .map(HRegionLocation::getRegion)
