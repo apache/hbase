@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.File;
 import java.io.IOException;
@@ -154,6 +150,8 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
+import static org.junit.Assert.*;
+
 /**
  * Facility for testing HBase. Replacement for old HBaseTestCase and HBaseClusterTestCase
  * functionality. Create an instance and keep it around testing HBase.
@@ -220,10 +218,6 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   /** This is for unit tests parameterized with a single boolean. */
   public static final List<Object[]> MEMSTORETS_TAGS_PARAMETRIZED = memStoreTSAndTagsCombination();
 
-  // Whether to use external DFS.
-  private boolean externalDFS = false;
-  // Whether to use external ZK.
-  private boolean externalZK = false;
 
   /**
    * Checks to see if a specific port is available.
@@ -335,36 +329,11 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     }
     // Every cluster is a local cluster until we start DFS
     // Note that conf could be null, but this.conf will not be
-    String dataTestDir = getDataTestDir().toString();
-    this.conf.set("fs.defaultFS", "file:///");
-    this.conf.set(HConstants.HBASE_DIR, "file://" + dataTestDir);
-    LOG.debug("Setting {} to {}", HConstants.HBASE_DIR, dataTestDir);
-    this.conf.setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
-    // If the value for random ports isn't set set it to true, thus making
-    // tests opt-out for random port assignment
-    this.conf.setBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS,
-      this.conf.getBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS, true));
-  }
-
-  /**
-   * Create an HBaseTestingUtility with the option to use external DFS or ZK.
-   * Conf should contain properties about the connection to DFS and ZK.
-   */
-  public HBaseTestingUtil(@Nullable Configuration conf, boolean externalDFS, boolean externalZK) {
-    super(conf);
-
-    this.externalDFS = externalDFS;
-    this.externalZK = externalZK;
-
-    // a hbase checksum verification failure will cause unit tests to fail
-    ChecksumUtil.generateExceptionForChecksumFailureForTest(true);
-
-    // Save this for when setting default file:// breaks things
-    if (this.conf.get("fs.defaultFS") != null) {
-      this.conf.set("original.defaultFS", this.conf.get("fs.defaultFS"));
-    }
-    if (this.conf.get(HConstants.HBASE_DIR) != null) {
-      this.conf.set("original.hbase.dir", this.conf.get(HConstants.HBASE_DIR));
+    if (this.conf.get("fs.defaultFS").isEmpty()) {
+      String dataTestDir = getDataTestDir().toString();
+      this.conf.set("fs.defaultFS", "file:///");
+      this.conf.set(HConstants.HBASE_DIR, "file://" + dataTestDir);
+      LOG.debug("Setting {} to {}", HConstants.HBASE_DIR, dataTestDir);
     }
 
     this.conf.setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
@@ -805,7 +774,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     }
     miniClusterRunning = true;
 
-    if (!externalDFS) {
+    if (!option.isExternalDFS()) {
       setupClusterTestDir();
       System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestDir.getPath());
       // Bring up mini dfs cluster. This spews a bunch of warnings about missing
@@ -816,25 +785,13 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       } else {
         LOG.info("NOT STARTING DFS");
       }
-    } else {
-      if (System.getProperty("HADOOP_USER_NAME") == null) {
-        System.setProperty("HADOOP_USER_NAME", "hdfs");
-      }
-
-      // RS is started with a different user, @see #HBaseTestingUtil.getDifferentUser
-      // this is to ensure the user has permissions to read and write HDFS.
-      conf.set("fs.permissions.umask-mode", "000");
-      LOG.info("USING EXTERNAL DFS: {}, user: {}.",
-        conf.get("fs.defaultFS"), UserGroupInformation.getCurrentUser().getUserName());
     }
 
-    if (!externalZK) {
+    if (!option.isExternalZK()) {
       // Start up a zk cluster.
       if (getZkCluster() == null) {
         startMiniZKCluster(option.getNumZkServers());
       }
-    }else {
-      LOG.info("USING EXTERNAL ZK: " + conf.get(HConstants.ZOOKEEPER_QUORUM));
     }
 
     // Start the MiniHBaseCluster
@@ -850,6 +807,24 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    */
   public SingleProcessHBaseCluster startMiniHBaseCluster(StartTestingClusterOption option)
     throws IOException, InterruptedException {
+
+    if (option.isExternalDFS()) {
+      assertNotNull("fs.defaultFS can not be null, if use external DFS", conf.get("fs.defaultFS"));
+      if (System.getProperty("HADOOP_USER_NAME") == null) {
+        System.setProperty("HADOOP_USER_NAME", "hdfs");
+      }
+
+      // RS is started with a different user, @see #HBaseTestingUtil.getDifferentUser
+      // this is to ensure the user has permissions to read and write HDFS.
+      conf.set("fs.permissions.umask-mode", "000");
+      LOG.info("USING EXTERNAL DFS: {}, user: {}.",
+        conf.get("fs.defaultFS"), UserGroupInformation.getCurrentUser().getUserName());
+    }
+
+    if (option.isExternalZK()) {
+      assertNotNull("ZOOKEEPER_QUORUM can not be null, if use external ZK", conf.get(HConstants.ZOOKEEPER_QUORUM));
+    }
+
     // Now do the mini hbase cluster. Set the hbase.rootdir in config.
     createRootDir(option.isCreateRootDir());
     if (option.isCreateWALDir()) {
@@ -1030,18 +1005,63 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * If zk or hdfs is external, clean the znode or dfs path.
    * @see #startMiniCluster(int)
    */
+  public void shutdownMiniCluster(StartTestingClusterOption option) throws IOException {
+    LOG.info("Shutting down minicluster");
+    shutdownMiniHBaseCluster(option);
+
+    if (!option.isExternalDFS()) {
+      shutdownMiniDFSCluster();
+    }
+    if (!option.isExternalZK()) {
+      shutdownMiniZKCluster();
+    }
+
+    cleanupTestDir();
+    resetUserGroupInformation();
+    miniClusterRunning = false;
+    LOG.info("Minicluster is down");
+  }
+
+  /**
+   * Stops mini hbase, zk, and hdfs clusters.
+   * @see #startMiniCluster(int)
+   */
   public void shutdownMiniCluster() throws IOException {
     LOG.info("Shutting down minicluster");
     shutdownMiniHBaseCluster();
+    shutdownMiniDFSCluster();
+    shutdownMiniZKCluster();
 
-    if (externalDFS) {
+    cleanupTestDir();
+    miniClusterRunning = false;
+    LOG.info("Minicluster is down");
+  }
+
+  /**
+   * Shutdown HBase mini cluster.Does not shutdown zk or dfs if running.
+   * If use external dfs or zk, clean the directory.
+   * @throws java.io.IOException in case command is unsuccessful
+   */
+  public void shutdownMiniHBaseCluster(StartTestingClusterOption option) throws IOException {
+    cleanup();
+    if (this.hbaseCluster != null) {
+      this.hbaseCluster.shutdown();
+      // Wait till hbase is down before going on to shutdown zk.
+      this.hbaseCluster.waitUntilShutDown();
+      this.hbaseCluster = null;
+    }
+    if (zooKeeperWatcher != null) {
+      zooKeeperWatcher.close();
+      zooKeeperWatcher = null;
+    }
+
+    // clean external dfs dir and znode
+    if (option.isExternalDFS()) {
       FileSystem fs = FileSystem.get(this.conf);
       fs.delete(new Path(this.conf.get(HConstants.HBASE_DIR)).getParent(), true);
       fs.close();
-    } else {
-      shutdownMiniDFSCluster();
     }
-    if (externalZK) {
+    if (option.isExternalZK()) {
       try (ZKWatcher watcher = new ZKWatcher(this.conf, "", null)) {
         String znode = this.conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
         if (ZKUtil.checkExists(watcher, znode) != -1) {
@@ -1050,14 +1070,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       } catch(KeeperException e) {
         throw new IOException(e.getMessage(), e);
       }
-    } else {
-      shutdownMiniZKCluster();
     }
-
-    cleanupTestDir();
-    resetUserGroupInformation();
-    miniClusterRunning = false;
-    LOG.info("Minicluster is down");
   }
 
   /**
@@ -1103,7 +1116,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   // When we use external HDFS, we should use an authorised user.
-  // If UGI is not reset, setting hadoop user with HADOOP_USER_NAME does not work.
+  // If UGI is not reseted, setting hadoop user with HADOOP_USER_NAME does not work.
   public void resetUserGroupInformation() {
     UserGroupInformation.reset();
   }

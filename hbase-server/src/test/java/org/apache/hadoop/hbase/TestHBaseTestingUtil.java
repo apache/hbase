@@ -159,14 +159,16 @@ public class TestHBaseTestingUtil {
     conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkCluster.getAddress().getPort());
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/hbase_test");
 
-    HBaseTestingUtil hbt2 = new HBaseTestingUtil(conf, true, true);
-    SingleProcessHBaseCluster cluster = hbt2.startMiniCluster();
+    HBaseTestingUtil hbt2 = new HBaseTestingUtil(conf);
+    StartTestingClusterOption option = StartTestingClusterOption.builder()
+      .externalZK(true).externalDFS(true).build();
+    SingleProcessHBaseCluster cluster = hbt2.startMiniCluster(option);
     String hbaseRootDir = hbt2.conf.get(HConstants.HBASE_DIR);
     String znode = hbt2.conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT);
     try {
       assertEquals(1, cluster.getLiveRegionServerThreads().size());
     } finally {
-      hbt2.shutdownMiniCluster();
+      hbt2.shutdownMiniCluster(option);
     }
 
     // check if we cleaned the dir or znode created by miniHbaseCluster

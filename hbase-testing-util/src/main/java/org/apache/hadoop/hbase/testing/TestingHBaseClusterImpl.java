@@ -122,7 +122,7 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
   public void stopHBaseCluster() throws Exception {
     Preconditions.checkState(miniClusterRunning, "Cluster has already been stopped");
     Preconditions.checkState(miniHBaseClusterRunning, "HBase cluster has already been started");
-    util.shutdownMiniHBaseCluster();
+    util.shutdownMiniHBaseCluster(option);
     miniHBaseClusterRunning = false;
   }
 
@@ -145,7 +145,7 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
   @Override
   public void stop() throws Exception {
     Preconditions.checkState(miniClusterRunning, "Cluster has already been stopped");
-    util.shutdownMiniCluster();
+    util.shutdownMiniCluster(option);
     miniClusterRunning = false;
     miniHBaseClusterRunning = false;
   }

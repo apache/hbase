@@ -107,13 +107,22 @@ public final class StartTestingClusterOption {
   private final boolean createWALDir;
 
   /**
+   * Whether to use external DFS.
+   */
+  private boolean externalDFS = false;
+  /**
+   * Whether to use external ZK.
+   */
+  private boolean externalZK = false;
+
+  /**
    * Private constructor. Use {@link Builder#build()}.
    */
   private StartTestingClusterOption(int numMasters, int numAlwaysStandByMasters,
     Class<? extends HMaster> masterClass, int numRegionServers, List<Integer> rsPorts,
     Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> rsClass,
     int numDataNodes, String[] dataNodeHosts, int numZkServers, boolean createRootDir,
-    boolean createWALDir) {
+    boolean createWALDir, boolean externalDFS, boolean externalZK) {
     this.numMasters = numMasters;
     this.numAlwaysStandByMasters = numAlwaysStandByMasters;
     this.masterClass = masterClass;
@@ -125,6 +134,8 @@ public final class StartTestingClusterOption {
     this.numZkServers = numZkServers;
     this.createRootDir = createRootDir;
     this.createWALDir = createWALDir;
+    this.externalDFS = externalDFS;
+    this.externalZK = externalZK;
   }
 
   public int getNumMasters() {
@@ -171,13 +182,22 @@ public final class StartTestingClusterOption {
     return createWALDir;
   }
 
+  public boolean isExternalDFS() {
+    return externalDFS;
+  }
+
+  public boolean isExternalZK() {
+    return externalZK;
+  }
+
   @Override
   public String toString() {
     return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", masterClass=" + masterClass +
       ", numRegionServers=" + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts) +
       ", rsClass=" + rsClass + ", numDataNodes=" + numDataNodes + ", dataNodeHosts=" +
       Arrays.toString(dataNodeHosts) + ", numZkServers=" + numZkServers + ", createRootDir=" +
-      createRootDir + ", createWALDir=" + createWALDir + '}';
+      createRootDir + ", createWALDir=" + createWALDir + ", externalDFS=" + externalDFS +
+      ", externalZK=" + externalZK +'}';
   }
 
   /**
@@ -205,6 +225,8 @@ public final class StartTestingClusterOption {
     private int numZkServers = 1;
     private boolean createRootDir = false;
     private boolean createWALDir = false;
+    private boolean externalDFS = false;
+    private boolean externalZK = false;
 
     private Builder() {
     }
@@ -215,7 +237,7 @@ public final class StartTestingClusterOption {
       }
       return new StartTestingClusterOption(numMasters, numAlwaysStandByMasters, masterClass,
         numRegionServers, rsPorts, rsClass, numDataNodes, dataNodeHosts, numZkServers,
-        createRootDir, createWALDir);
+        createRootDir, createWALDir, externalDFS, externalZK);
     }
 
     public Builder numMasters(int numMasters) {
@@ -271,6 +293,16 @@ public final class StartTestingClusterOption {
 
     public Builder createWALDir(boolean createWALDir) {
       this.createWALDir = createWALDir;
+      return this;
+    }
+
+    public Builder externalDFS(boolean externalDFS) {
+      this.externalDFS = externalDFS;
+      return this;
+    }
+
+    public Builder externalZK(boolean externalZK) {
+      this.externalZK = externalZK;
       return this;
     }
   }
