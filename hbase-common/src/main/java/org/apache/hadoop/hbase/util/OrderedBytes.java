@@ -636,7 +636,7 @@ public class OrderedBytes {
     byte[] a = dst.getBytes();
     boolean isNeg = val.signum() == -1;
     final int offset = dst.getOffset(), start = dst.getPosition();
-    int e = 0, d, startM;
+    int e = 0, startM;
 
     if (isNeg) { /* Small negative number: 0x14, -E, ~M */
       dst.put(NEG_SMALL);
@@ -707,7 +707,7 @@ public class OrderedBytes {
     byte[] a = dst.getBytes();
     boolean isNeg = val.signum() == -1;
     final int start = dst.getPosition(), offset = dst.getOffset();
-    int e = 0, d, startM;
+    int e = 0, startM;
 
     if (isNeg) { /* Large negative number: 0x08, ~E, ~M */
       dst.put(NEG_LARGE);
