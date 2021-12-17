@@ -206,37 +206,41 @@ public class MetaTableMetrics implements RegionCoprocessor {
         return "";
       }
       MetaTableOps ops = opsNameMap.get(op.getClass());
-      if (ops == null) {
-        return "";
-      }
+      String opWithClientMeterName = "";
       switch (ops) {
         case GET:
-          return String.format("MetaTable_client_%s_get_request", clientIP);
+          opWithClientMeterName = String.format("MetaTable_client_%s_get_request", clientIP);
+          break;
         case PUT:
-          return String.format("MetaTable_client_%s_put_request", clientIP);
+          opWithClientMeterName = String.format("MetaTable_client_%s_put_request", clientIP);
+          break;
         case DELETE:
-          return String.format("MetaTable_client_%s_delete_request", clientIP);
+          opWithClientMeterName = String.format("MetaTable_client_%s_delete_request", clientIP);
+          break;
         default:
-          return "";
+          break;
       }
+      return opWithClientMeterName;
     }
 
     private String opMeterName(Object op) {
       // Extract meter name containing the access type
       MetaTableOps ops = opsNameMap.get(op.getClass());
-      if (ops == null) {
-        return "";
-      }
+      String opMeterName = "";
       switch (ops) {
         case GET:
-          return "MetaTable_get_request";
+          opMeterName = "MetaTable_get_request";
+          break;
         case PUT:
-          return "MetaTable_put_request";
+          opMeterName = "MetaTable_put_request";
+          break;
         case DELETE:
-          return "MetaTable_delete_request";
+          opMeterName = "MetaTable_delete_request";
+          break;
         default:
-          return "";
+          break;
       }
+      return opMeterName;
     }
 
     private String tableMeterName(String tableName) {
