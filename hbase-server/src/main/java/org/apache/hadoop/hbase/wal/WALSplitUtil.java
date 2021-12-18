@@ -148,6 +148,7 @@ public final class WALSplitUtil {
    * named for the sequenceid in the passed <code>logEntry</code>: e.g.
    * /hbase/some_table/2323432434/recovered.edits/2332. This method also ensures existence of
    * RECOVERED_EDITS_DIR under the region creating it if necessary.
+   * And also set storage policy for RECOVERED_EDITS_DIR if WAL_STORAGE_POLICY is configured.
    * @param tableName the table name
    * @param encodedRegionName the encoded region name
    * @param seqId the sequence id which used to generate file name
@@ -182,6 +183,10 @@ public final class WALSplitUtil {
 
     if (!walFS.exists(dir) && !walFS.mkdirs(dir)) {
       LOG.warn("mkdir failed on {}", dir);
+    } else {
+      String storagePolicy =
+        conf.get(HConstants.WAL_STORAGE_POLICY, HConstants.DEFAULT_WAL_STORAGE_POLICY);
+      CommonFSUtils.setStoragePolicy(walFS, dir, storagePolicy);
     }
     // Append fileBeingSplit to prevent name conflict since we may have duplicate wal entries now.
     // Append file name ends with RECOVERED_LOG_TMPFILE_SUFFIX to ensure
