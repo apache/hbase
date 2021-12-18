@@ -861,6 +861,11 @@
             </dependency>
           </dependencies>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
+          <version>${maven.gpg.version}</version>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
@@ -1521,6 +1526,7 @@
     <maven.bundle.version>3.3.0</maven.bundle.version>
     <maven.checkstyle.version>3.1.0</maven.checkstyle.version>
     <maven.eclipse.version>2.10</maven.eclipse.version>
+    <maven.gpg.version>3.0.1</maven.gpg.version>
     <maven.javadoc.version>3.2.0</maven.javadoc.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
