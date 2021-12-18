@@ -548,7 +548,7 @@ public class ChunkCreator {
 
   boolean isChunkInPool(int chunkId) {
     Chunk c = getChunk(chunkId);
-    if (c==null) {
+    if (c == null) {
       return false;
     }
 

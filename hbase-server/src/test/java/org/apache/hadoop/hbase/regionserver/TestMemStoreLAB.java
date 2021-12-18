@@ -301,7 +301,7 @@ public class TestMemStoreLAB {
       mslab.forceCopyOfBigCellInto(bigKV).getSerializedSize());
 
     /**
-     * Add test by HBASE-26576,to test all the chunks are in {@link ChunkCreator#chunkIdMap}
+     * Add test by HBASE-26576,all the chunks are in {@link ChunkCreator#chunkIdMap}
      */
     assertTrue(mslab.chunks.size() == 2);
     Chunk dataChunk = null;
@@ -322,10 +322,13 @@ public class TestMemStoreLAB {
 
     mslab.close();
     /**
-     * After mslab close,jumboChunk was removed but dataChunk is recycled to pool
+     * After mslab close, jumboChunk is removed from {@link ChunkCreator#chunkIdMap} but because
+     * dataChunk is recycled to pool so it is still in {@link ChunkCreator#chunkIdMap}.
      */
     assertTrue(ChunkCreator.getInstance().getChunk(jumboChunk.getId()) == null);
+    assertTrue(!ChunkCreator.getInstance().isChunkInPool(jumboChunk.getId()));
     assertTrue(ChunkCreator.getInstance().getChunk(dataChunk.getId()) == dataChunk);
+    assertTrue(ChunkCreator.getInstance().isChunkInPool(dataChunk.getId()));
 
   }
 
