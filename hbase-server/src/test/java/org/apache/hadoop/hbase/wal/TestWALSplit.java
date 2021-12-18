@@ -1174,6 +1174,18 @@ public class TestWALSplit {
     }
   }
 
+  @Test
+  public void testRecoveredEditsStoragePolicy() throws IOException {
+    conf.set(HConstants.WAL_STORAGE_POLICY, "ALL_SSD");
+    try {
+      Path path = createRecoveredEditsPathForRegion();
+      assertEquals("ALL_SSD", fs.getStoragePolicy(path.getParent()).getName());
+    } finally {
+      conf.unset(HConstants.WAL_STORAGE_POLICY);
+    }
+
+  }
+
   private Writer generateWALs(int leaveOpen) throws IOException {
     return generateWALs(NUM_WRITERS, ENTRIES, leaveOpen, 0);
   }
