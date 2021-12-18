@@ -2103,7 +2103,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       long snapshotId = -1; // -1 means do not drop
       if (dropMemstoreSnapshot && snapshot != null) {
         snapshotId = snapshot.getId();
-        snapshot.close();
       }
       HStore.this.completeFlush(storeFiles, snapshotId);
     }
@@ -2114,10 +2113,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     @Override
     public void abort() throws IOException {
       if (snapshot != null) {
-        //We need to close the snapshot when aborting, otherwise, the segment scanner
-        //won't be closed. If we are using MSLAB, the chunk referenced by those scanners
-        //can't be released, thus memory leak
-        snapshot.close();
         HStore.this.completeFlush(Collections.emptyList(), snapshot.getId());
       }
     }
