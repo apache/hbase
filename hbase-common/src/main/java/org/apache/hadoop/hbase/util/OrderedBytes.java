@@ -309,14 +309,6 @@ public class OrderedBytes {
 
   public static final Charset UTF8 = Charset.forName("UTF-8");
   private static final byte TERM = 0x00;
-  private static final BigDecimal E8 = BigDecimal.valueOf(1e8);
-  private static final BigDecimal E32 = BigDecimal.valueOf(1e32);
-  private static final BigDecimal EN2 = BigDecimal.valueOf(1e-2);
-  private static final BigDecimal EN10 = BigDecimal.valueOf(1e-10);
-
-  // TODO: 36 is an arbitrary encoding limit. Reevaluate once we have a better handling of
-  // numeric scale.
-  private static final int MAX_NUM_ENCODE_BYTES = 18;
 
   /**
    * Max precision guaranteed to fit into a {@code long}.
@@ -719,10 +711,6 @@ public class OrderedBytes {
     int integerDigits = abs.precision() - abs.scale();
     int lengthToMoveLeft = integerDigits % 2 == 0 ? integerDigits : integerDigits + 1;
     e = lengthToMoveLeft / 2;
-    if (e > 350) {
-      e = 351;
-      lengthToMoveLeft = 702;
-    }
     abs = abs.movePointLeft(lengthToMoveLeft);
 
     // encode appropriate header byte and/or E value.
@@ -748,12 +736,23 @@ public class OrderedBytes {
     return dst.getPosition() - start;
   }
 
+  /**
+   * Encode a value val in [0.01, 1.0) into Centimals.
+   * Util function for {@link this.encodeNumericLarge()} and {@link this.encodeNumericSmall()}
+   * @param dst The destination to which encoded digits are written.
+   * @param val A BigDecimal after the normalization. The value must be in [0.01, 1.0).
+   */
   private static void encodeToCentimal(PositionedByteRange dst, BigDecimal val) {
+    // The input value val must be in [0.01, 1.0)
     String stringOfAbs = val.stripTrailingZeros().toPlainString();
     String value = stringOfAbs.substring(stringOfAbs.indexOf('.') + 1);
     int d;
 
-    int maxPrecision = Math.min(MAX_NUM_ENCODE_BYTES * 2, value.length());
+    // If the first float digit is 0, we will encode one digit more than MAX_PRECISION
+    // We encode at most MAX_PRECISION significant digits into centimals,
+    // because the input value, has been already normalized.
+    int maxPrecision = value.charAt(0) == '0' ? MAX_PRECISION + 1 : MAX_PRECISION;
+    maxPrecision = Math.min(maxPrecision, value.length());
     for (int i = 0; i < maxPrecision; i += 2) {
       d = (value.charAt(i) - '0') * 10;
       if (i + 1 < maxPrecision) {

@@ -70,9 +70,14 @@ public class TestOrderedBytes {
   static final BigDecimal[] BD_VALS =
     { null, BigDecimal.valueOf(Long.MAX_VALUE), BigDecimal.valueOf(Long.MIN_VALUE),
       BigDecimal.valueOf(Double.MAX_VALUE), BigDecimal.valueOf(Double.MIN_VALUE),
-      BigDecimal.valueOf(Long.MAX_VALUE).multiply(BigDecimal.valueOf(100)) };
+      BigDecimal.valueOf(Long.MAX_VALUE).multiply(BigDecimal.valueOf(100)),
+      BigDecimal.valueOf(Long.MAX_VALUE).pow(64),
+      BigDecimal.valueOf(Long.MAX_VALUE).pow(64).negate(),
+      new BigDecimal("0." + String.join("", Collections.nCopies(500, "123"))),
+      new BigDecimal("-0." + String.join("", Collections.nCopies(500, "123")))
+    };
   static final int[] BD_LENGTHS =
-    { 1, 11, 11, 11, 4, 12 };
+    { 1, 11, 11, 11, 4, 12, 19, 19, 18, 18 };
 
   /*
    * This is the smallest difference between two doubles in D_VALS
@@ -335,7 +340,11 @@ public class TestOrderedBytes {
         if (null == BD_VALS[i]) {
           assertEquals(BD_VALS[i], decoded);
         } else {
-          assertEquals("Deserialization failed.", 0, BD_VALS[i].compareTo(decoded));
+          // The num will be rounded to a specific precision in the encoding phase.
+          // So that big value will lose precision here. Need to add a normalization here to
+          // make the test pass.
+          assertEquals("Deserialization failed.", 0,
+            OrderedBytes.normalize(BD_VALS[i]).compareTo(decoded));
         }
         assertEquals("Did not consume enough bytes.", BD_LENGTHS[i], buf1.getPosition() - 1);
       }
