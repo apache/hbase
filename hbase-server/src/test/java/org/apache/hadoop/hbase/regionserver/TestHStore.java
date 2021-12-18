@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -784,11 +785,12 @@ public class TestHStore {
     }
   }
 
-  private static void flushStore(HStore store, long id) throws IOException {
+  private static StoreFlushContext flushStore(HStore store, long id) throws IOException {
     StoreFlushContext storeFlushCtx = store.createFlushContext(id, FlushLifeCycleTracker.DUMMY);
     storeFlushCtx.prepare();
     storeFlushCtx.flushCache(Mockito.mock(MonitoredTask.class));
     storeFlushCtx.commit(Mockito.mock(MonitoredTask.class));
+    return storeFlushCtx;
   }
 
   /**
@@ -2238,7 +2240,7 @@ public class TestHStore {
       flushThread.join();
 
       if (myDefaultMemStore.shouldWait) {
-        SegmentScanner segmentScanner = getSegmentScanner(storeScanner);
+        SegmentScanner segmentScanner = getTypeKeyValueScanner(storeScanner, SegmentScanner.class);
         MemStoreLABImpl memStoreLAB = (MemStoreLABImpl) (segmentScanner.segment.getMemStoreLAB());
         assertTrue(memStoreLAB.isClosed());
         assertTrue(!memStoreLAB.chunks.isEmpty());
@@ -2265,16 +2267,16 @@ public class TestHStore {
     }
   }
 
-  private SegmentScanner getSegmentScanner(StoreScanner storeScanner) {
-    List<SegmentScanner> segmentScanners = new ArrayList<SegmentScanner>();
+  @SuppressWarnings("unchecked")
+  private <T> T getTypeKeyValueScanner(StoreScanner storeScanner, Class<T> keyValueScannerClass) {
+    List<T> resultScanners = new ArrayList<T>();
     for (KeyValueScanner keyValueScanner : storeScanner.currentScanners) {
-      if (keyValueScanner instanceof SegmentScanner) {
-        segmentScanners.add((SegmentScanner) keyValueScanner);
+      if (keyValueScannerClass.isInstance(keyValueScanner)) {
+        resultScanners.add((T) keyValueScanner);
       }
     }
-
-    assertTrue(segmentScanners.size() == 1);
-    return segmentScanners.get(0);
+    assertTrue(resultScanners.size() == 1);
+    return resultScanners.get(0);
   }
 
   @Test 
@@ -2324,6 +2326,116 @@ public class TestHStore {
       super(conf, c, regionServices);
     }
 
+  }
+
+  /**
+   * This test is for HBASE-26488
+   */
+  @Test
+  public void testMemoryLeakWhenFlushMemStoreRetrying() throws Exception {
+
+    Configuration conf = HBaseConfiguration.create();
+
+    byte[] smallValue = new byte[3];
+    byte[] largeValue = new byte[9];
+    final long timestamp = EnvironmentEdgeManager.currentTime();
+    final long seqId = 100;
+    final Cell smallCell = createCell(qf1, timestamp, seqId, smallValue);
+    final Cell largeCell = createCell(qf2, timestamp, seqId, largeValue);
+    TreeSet<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+    quals.add(qf1);
+    quals.add(qf2);
+
+    conf.set(HStore.MEMSTORE_CLASS_NAME, MyDefaultMemStore1.class.getName());
+    conf.setBoolean(WALFactory.WAL_ENABLED, false);
+    conf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
+      MyDefaultStoreFlusher.class.getName());
+
+    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
+    MyDefaultMemStore1 myDefaultMemStore = (MyDefaultMemStore1) (store.memstore);
+    assertTrue((store.storeEngine.getStoreFlusher()) instanceof MyDefaultStoreFlusher);
+
+    MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
+    store.add(smallCell, memStoreSizing);
+    store.add(largeCell, memStoreSizing);
+    flushStore(store, id++);
+
+    MemStoreLABImpl memStoreLAB =
+        (MemStoreLABImpl) (myDefaultMemStore.snapshotImmutableSegment.getMemStoreLAB());
+    assertTrue(memStoreLAB.isClosed());
+    assertTrue(memStoreLAB.getOpenScannerCount() == 0);
+    assertTrue(memStoreLAB.isReclaimed());
+    assertTrue(memStoreLAB.chunks.isEmpty());
+    StoreScanner storeScanner = null;
+    try {
+      storeScanner =
+          (StoreScanner) store.getScanner(new Scan(new Get(row)), quals, seqId + 1);
+      assertTrue(store.storeEngine.getStoreFileManager().getStorefileCount() == 1);
+      assertTrue(store.memstore.size().getCellsCount() == 0);
+      assertTrue(store.memstore.getSnapshotSize().getCellsCount() == 0);
+      assertTrue(storeScanner.currentScanners.size() == 1);
+      assertTrue(storeScanner.currentScanners.get(0) instanceof StoreFileScanner);
+
+      List<Cell> results = new ArrayList<>();
+      storeScanner.next(results);
+      assertEquals(2, results.size());
+      CellUtil.equals(smallCell, results.get(0));
+      CellUtil.equals(largeCell, results.get(1));
+    } finally {
+      if (storeScanner != null) {
+        storeScanner.close();
+      }
+    }
+  }
+
+
+  static class MyDefaultMemStore1 extends DefaultMemStore {
+
+    private ImmutableSegment snapshotImmutableSegment;
+
+    public MyDefaultMemStore1(Configuration conf, CellComparator c,
+        RegionServicesForStores regionServices) {
+      super(conf, c, regionServices);
+    }
+
+    @Override
+    public MemStoreSnapshot snapshot() {
+      MemStoreSnapshot result = super.snapshot();
+      this.snapshotImmutableSegment = snapshot;
+      return result;
+    }
+
+  }
+
+  public static class MyDefaultStoreFlusher extends DefaultStoreFlusher {
+    private static final AtomicInteger failCounter = new AtomicInteger(1);
+    private static final AtomicInteger counter = new AtomicInteger(0);
+
+    public MyDefaultStoreFlusher(Configuration conf, HStore store) {
+      super(conf, store);
+    }
+
+    @Override
+    public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
+        MonitoredTask status, ThroughputController throughputController,
+        FlushLifeCycleTracker tracker) throws IOException {
+      counter.incrementAndGet();
+      return super.flushSnapshot(snapshot, cacheFlushId, status, throughputController, tracker);
+    }
+
+    @Override
+    protected void performFlush(InternalScanner scanner, final CellSink sink,
+        ThroughputController throughputController) throws IOException {
+
+      final int currentCount = counter.get();
+      CellSink newCellSink = (cell) -> {
+        if (currentCount <= failCounter.get()) {
+          throw new IOException("Simulated exception by tests");
+        }
+        sink.append(cell);
+      };
+      super.performFlush(scanner, newCellSink, throughputController);
+    }
   }
 
   private HStoreFile mockStoreFileWithLength(long length) {
@@ -3109,7 +3221,5 @@ public class TestHStore {
         }
       }
     }
-
-
   }
 }
