@@ -20,6 +20,26 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.4.9 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-26542](https://issues.apache.org/jira/browse/HBASE-26542) | *Minor* | **Apply a \`package\` to test protobuf files**
+
+The protobuf structures used in test are all now scoped by the package name \`hbase.test.pb\`.
+
+
+---
+
+* [HBASE-26512](https://issues.apache.org/jira/browse/HBASE-26512) | *Major* | **Make timestamp format configurable in HBase shell scan output**
+
+HBASE-23930 changed the formatting of the timestamp attribute on each Cell as displayed by the HBase shell to be formatted as an ISO-8601 string rather that milliseconds since the epoch. Some users may have logic which expects the timestamp to be displayed as milliseconds since the epoch. This change introduces the configuration property hbase.shell.timestamp.format.epoch which controls whether the shell will print an ISO-8601 formatted timestamp (the default "false") or milliseconds since the epoch ("true").
+
+
+
 # HBASE  2.4.8 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
