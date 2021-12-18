@@ -802,6 +802,8 @@ public class OrderedBytes {
 
   /**
    * Encode a numerical value using the variable-length encoding.
+   * If the number of significant digits of the value exceeds the
+   * {@link OrderedBytes#MAX_PRECISION}, the exceeding part will be lost.
    * @param dst The destination to which encoded digits are written.
    * @param val The value to encode.
    * @param ord The {@link Order} to respect while encoding {@code val}.
