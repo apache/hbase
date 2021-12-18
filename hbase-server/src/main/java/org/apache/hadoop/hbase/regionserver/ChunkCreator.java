@@ -232,7 +232,7 @@ public class ChunkCreator {
   /**
    * Creates the chunk either onheap or offheap
    * @param pool indicates if the chunks have to be created which will be used by the Pool
-   * @param chunkIndexType whether the requested chunk is going to be used with CellChunkMap index
+   * @param chunkType whether the requested chunk is data chunk or index chunk.
    * @param size the size of the chunk to be allocated, in bytes
    * @return the chunk
    */
@@ -246,7 +246,21 @@ public class ChunkCreator {
     } else {
       chunk = new OnheapChunk(size, id, chunkType, pool);
     }
-    // put the chunk into the chunkIdMap so it is not GC-ed
+
+    /**
+     * Here we always put the chunk into the chunkIdMap no matter whether the chunk is pooled or
+     * not. <br/>
+     * For {@link CompactingMemStore},because only {@link CompactingMemStore.IndexType#CHUNK_MAP}
+     * could invoke this method, so we must put chunk into this chunkIdMap to make sure the chunk
+     * could be got by chunkId.<br/>
+     * For {@link DefaultMemStore},it is also reasonable to put the chunk in chunkIdMap because:
+     * 1.When the {@link MemStoreLAB} which created the chunk is not closed, this chunk is used by
+     * the {@link Segment} which references this {@link MemStoreLAB}, so this chunk certainly should
+     * not be GC-ed. <br/>
+     * 2.When the {@link MemStoreLAB} which created the chunk is closed, and if the chunk is not
+     * pooled, {@link ChunkCreator#removeChunk} is invoked to remove the chunk from this chunkIdMap,
+     * so there is no memory leak.
+     */
     this.chunkIdMap.put(chunk.getId(), chunk);
 
     return chunk;
