@@ -69,6 +69,8 @@ class CellBlockBuilder {
 
   private final int cellBlockBuildingInitialBufferSize;
 
+  private final ThreadLocal<ByteBufferOutputStream> decompressBuff = new ThreadLocal<>();
+
   public CellBlockBuilder(Configuration conf) {
     this.conf = conf;
     this.cellBlockDecompressionMultiplier = conf
@@ -294,14 +296,15 @@ class CellBlockBuilder {
     }
     Decompressor poolDecompressor = CodecPool.getDecompressor(compressor);
     CompressionInputStream cis = compressor.createInputStream(cellBlockStream, poolDecompressor);
-    ByteBufferOutputStream bbos;
     try {
       // TODO: This is ugly. The buffer will be resized on us if we guess wrong.
-      // TODO: Reuse buffers.
-      bbos = new ByteBufferOutputStream(osInitialSize);
-      IOUtils.copy(cis, bbos);
-      bbos.close();
-      return bbos.getByteBuffer();
+      if (this.decompressBuff.get() == null) {
+        this.decompressBuff.set(new ByteBufferOutputStream(osInitialSize));
+      }
+      ByteBufferOutputStream localBbos = this.decompressBuff.get();
+      localBbos.clear();
+      IOUtils.copy(cis, localBbos);
+      return localBbos.getByteBuffer();
     } finally {
       CodecPool.returnDecompressor(poolDecompressor);
     }
