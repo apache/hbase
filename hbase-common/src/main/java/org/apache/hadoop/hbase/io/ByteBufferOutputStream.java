@@ -180,4 +180,8 @@ public class ByteBufferOutputStream extends OutputStream
     bb.get(chunk, 0, length);
     return chunk;
   }
+
+  public void clear() {
+    curBuf.clear();
+  }
 }
