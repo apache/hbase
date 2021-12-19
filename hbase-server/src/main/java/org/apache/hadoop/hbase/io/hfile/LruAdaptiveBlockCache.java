@@ -22,15 +22,9 @@ import static java.util.Objects.requireNonNull;
 import java.lang.ref.WeakReference;
 import java.util.EnumMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
@@ -46,7 +40,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.base.Objects;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * <b>This realisation improve performance of classical LRU
@@ -146,7 +139,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * Find more information about improvement: https://issues.apache.org/jira/browse/HBASE-23887
  */
 @InterfaceAudience.Private
-public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
+public class LruAdaptiveBlockCache extends FirstLevelBlockCache {
 
   private static final Logger LOG = LoggerFactory.getLogger(LruAdaptiveBlockCache.class);
 
@@ -242,11 +235,6 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
 
   /** Eviction thread */
   private transient final EvictionThread evictionThread;
-
-  /** Statistics thread schedule pool (for heavy debugging, could remove) */
-  private transient final ScheduledExecutorService scheduleThreadPool =
-    Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
-      .setNameFormat("LruAdaptiveBlockCacheStatsExecutor").setDaemon(true).build());
 
   /** Current size of cache */
   private final AtomicLong size;
@@ -345,7 +333,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
       DEFAULT_MAX_BLOCK_SIZE,
       DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT,
       DEFAULT_LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT,
-      DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT);
+      DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT,
+      STAT_THREAD_ENABLE_DEFAULT);
   }
 
   public LruAdaptiveBlockCache(long maxSize, long blockSize,
@@ -368,7 +357,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
       conf.getLong(LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT,
         DEFAULT_LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT),
       conf.getFloat(LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT,
-        DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT));
+        DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT),
+      conf.getBoolean(STAT_THREAD_ENABLE_KEY, STAT_THREAD_ENABLE_DEFAULT));
   }
 
   public LruAdaptiveBlockCache(long maxSize, long blockSize, Configuration conf) {
@@ -397,12 +387,13 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
    * @param heavyEvictionOverheadCoefficient  how aggressive AdaptiveLRU will reduce GC
    */
   public LruAdaptiveBlockCache(long maxSize, long blockSize, boolean evictionThread,
-    int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
-    float minFactor, float acceptableFactor, float singleFactor,
-    float multiFactor, float memoryFactor, float hardLimitFactor,
-    boolean forceInMemory, long maxBlockSize,
-    int heavyEvictionCountLimit, long heavyEvictionMbSizeLimit,
-    float heavyEvictionOverheadCoefficient) {
+      int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
+      float minFactor, float acceptableFactor, float singleFactor,
+      float multiFactor, float memoryFactor, float hardLimitFactor,
+      boolean forceInMemory, long maxBlockSize,
+      int heavyEvictionCountLimit, long heavyEvictionMbSizeLimit,
+      float heavyEvictionOverheadCoefficient, boolean statEnabled) {
+    super(statEnabled);
     this.maxBlockSize = maxBlockSize;
     if(singleFactor + multiFactor + memoryFactor != 1 ||
       singleFactor < 0 || multiFactor < 0 || memoryFactor < 0) {
@@ -446,11 +437,6 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
     heavyEvictionOverheadCoefficient = Math.min(heavyEvictionOverheadCoefficient, 1.0f);
     heavyEvictionOverheadCoefficient = Math.max(heavyEvictionOverheadCoefficient, 0.001f);
     this.heavyEvictionOverheadCoefficient = heavyEvictionOverheadCoefficient;
-
-    // TODO: Add means of turning this off.  Bit obnoxious running thread just to make a log
-    // every five minutes.
-    this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this), STAT_THREAD_PERIOD,
-      STAT_THREAD_PERIOD, TimeUnit.SECONDS);
   }
 
   @Override
@@ -1198,26 +1184,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
     }
   }
 
-  /*
-   * Statistics thread.  Periodically prints the cache statistics to the log.
-   */
-  static class StatisticsThread extends Thread {
-
-    private final LruAdaptiveBlockCache lru;
-
-    public StatisticsThread(LruAdaptiveBlockCache lru) {
-      super("LruAdaptiveBlockCacheStats");
-      setDaemon(true);
-      this.lru = lru;
-    }
-
-    @Override
-    public void run() {
-      lru.logStats();
-    }
-  }
-
-  public void logStats() {
+  @Override
+  protected void logStats() {
     // Log size
     long totalSize = heapSize();
     long freeSize = maxSize - totalSize;
@@ -1375,25 +1343,9 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
 
   @Override
   public void shutdown() {
+    super.shutdown();
     if (victimHandler != null) {
       victimHandler.shutdown();
-    }
-    this.scheduleThreadPool.shutdown();
-    for (int i = 0; i < 10; i++) {
-      if (!this.scheduleThreadPool.isShutdown()) {
-        try {
-          Thread.sleep(10);
-        } catch (InterruptedException e) {
-          LOG.warn("Interrupted while sleeping");
-          Thread.currentThread().interrupt();
-          break;
-        }
-      }
-    }
-
-    if (!this.scheduleThreadPool.isShutdown()) {
-      List<Runnable> runnables = this.scheduleThreadPool.shutdownNow();
-      LOG.debug("Still running " + runnables);
     }
     this.evictionThread.shutdown();
   }

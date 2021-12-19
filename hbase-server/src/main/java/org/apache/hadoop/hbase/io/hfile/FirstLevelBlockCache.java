@@ -17,14 +17,34 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * In-memory BlockCache that may be backed by secondary layer(s).
  */
 @InterfaceAudience.Private
-public interface FirstLevelBlockCache extends ResizableBlockCache, HeapSize {
+public abstract class FirstLevelBlockCache implements ResizableBlockCache, HeapSize {
+
+  /* Statistics thread */
+  protected static String STAT_THREAD_ENABLE_KEY = "hbase.lru.stat.enable";
+  protected static boolean STAT_THREAD_ENABLE_DEFAULT = false;
+  protected static final int STAT_THREAD_PERIOD = 60 * 5;
+
+  protected transient ScheduledExecutorService statsThreadPool;
+
+  FirstLevelBlockCache(boolean statEnabled) {
+    if (statEnabled) {
+      this.statsThreadPool = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
+        .setNameFormat("LruBlockCacheStatsExecutor").setDaemon(true).build());
+      this.statsThreadPool.scheduleAtFixedRate(new LruBlockCache.StatisticsThread(this),
+        STAT_THREAD_PERIOD, STAT_THREAD_PERIOD, TimeUnit.SECONDS);
+    }
+  }
 
   /**
    * Whether the cache contains the block with specified cacheKey
@@ -32,7 +52,7 @@ public interface FirstLevelBlockCache extends ResizableBlockCache, HeapSize {
    * @param cacheKey cache key for the block
    * @return true if it contains the block
    */
-  boolean containsBlock(BlockCacheKey cacheKey);
+  abstract boolean containsBlock(BlockCacheKey cacheKey);
 
   /**
    * Specifies the secondary cache. An entry that is evicted from this cache due to a size
@@ -41,5 +61,42 @@ public interface FirstLevelBlockCache extends ResizableBlockCache, HeapSize {
    * @param victimCache the second level cache
    * @throws IllegalArgumentException if the victim cache had already been set
    */
-  void setVictimCache(BlockCache victimCache);
+  abstract void setVictimCache(BlockCache victimCache);
+
+  public void shutdown() {
+    if (statsThreadPool != null) {
+      this.statsThreadPool.shutdown();
+      for (int i = 0; i < 10; i++) {
+        if (!this.statsThreadPool.isShutdown()) {
+          try {
+            Thread.sleep(10);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  /*
+   * Statistics thread.  Periodically prints the cache statistics to the log.
+   */
+  static class StatisticsThread extends Thread {
+
+    private final FirstLevelBlockCache l1;
+
+    public StatisticsThread(FirstLevelBlockCache l1) {
+      super("LruBlockCacheStats");
+      setDaemon(true);
+      this.l1 = l1;
+    }
+
+    @Override
+    public void run() {
+      l1.logStats();
+    }
+  }
+
+  protected abstract void logStats();
 }

@@ -356,7 +356,8 @@ public class TestLruAdaptiveBlockCache {
       16 * 1024 * 1024,
       10,
       500,
-      0.01f);
+      0.01f,
+      false);
 
     CachedItem [] singleBlocks = generateFixedBlocks(5, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
@@ -493,7 +494,8 @@ public class TestLruAdaptiveBlockCache {
       16 * 1024 * 1024,
       10,
       500,
-      0.01f);
+      0.01f,
+      false);
 
     CachedItem [] singleBlocks = generateFixedBlocks(10, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(10, blockSize, "multi");
@@ -614,7 +616,8 @@ public class TestLruAdaptiveBlockCache {
       16 * 1024 * 1024,
       10,
       500,
-      0.01f);
+      0.01f,
+      false);
 
     CachedItem [] singleBlocks = generateFixedBlocks(20, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
@@ -685,7 +688,8 @@ public class TestLruAdaptiveBlockCache {
       1024,
       10,
       500,
-      0.01f);
+      0.01f,
+      false);
 
     CachedItem [] tooLong = generateFixedBlocks(10, 1024+5, "long");
     CachedItem [] small = generateFixedBlocks(15, 600, "small");
@@ -729,7 +733,8 @@ public class TestLruAdaptiveBlockCache {
       16 * 1024 * 1024,
       10,
       500,
-      0.01f);
+      0.01f,
+      false);
 
     CachedItem [] singleBlocks = generateFixedBlocks(10, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(10, blockSize, "multi");
@@ -902,7 +907,8 @@ public class TestLruAdaptiveBlockCache {
       1024,
       10,
       500,
-      0.01f);
+      0.01f,
+      false);
 
     BlockCacheKey key = new BlockCacheKey("key1", 0);
     ByteBuffer actualBuffer = ByteBuffer.allocate(length);
@@ -1096,7 +1102,8 @@ public class TestLruAdaptiveBlockCache {
         false, 1024,
         10,
         500,
-        0.01f);
+        0.01f,
+        false);
     testMultiThreadGetAndEvictBlockInternal(cache);
   }
 
@@ -1121,7 +1128,8 @@ public class TestLruAdaptiveBlockCache {
         maxSize,
         heavyEvictionCountLimit,
         200,
-        0.01f);
+        0.01f,
+        false);
 
     EvictionThread evictionThread = cache.getEvictionThread();
     assertNotNull(evictionThread);

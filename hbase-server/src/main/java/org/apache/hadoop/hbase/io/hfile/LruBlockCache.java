@@ -22,15 +22,11 @@ import static java.util.Objects.requireNonNull;
 import java.lang.ref.WeakReference;
 import java.util.EnumMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
@@ -45,7 +41,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.base.Objects;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A block cache implementation that is memory-aware using {@link HeapSize}, memory-bound using an
@@ -85,7 +80,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * sizes and usage.
  */
 @InterfaceAudience.Private
-public class LruBlockCache implements FirstLevelBlockCache {
+public class LruBlockCache extends FirstLevelBlockCache {
 
   private static final Logger LOG = LoggerFactory.getLogger(LruBlockCache.class);
 
@@ -140,10 +135,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   private static final boolean DEFAULT_IN_MEMORY_FORCE_MODE = false;
 
-  /* Statistics thread */
-  private static final String STAT_THREAD_ENABLE_KEY = "hbase.lru.stat.enable";
-  private static final boolean STAT_THREAD_ENABLE_DEFAULT = false;
-  private static final int STAT_THREAD_PERIOD = 60 * 5;
   private static final String LRU_MAX_BLOCK_SIZE = "hbase.lru.max.block.size";
   private static final long DEFAULT_MAX_BLOCK_SIZE = 16L * 1024L * 1024L;
 
@@ -187,9 +178,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   /** Cache statistics */
   private final CacheStats stats;
-
-  /** Statistics thread schedule pool (for heavy debugging, could remove) */
-  private transient ScheduledExecutorService scheduleThreadPool;
 
   /** Maximum allowable size of cache (block put if size > max, evict) */
   private long maxSize;
@@ -297,6 +285,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       float minFactor, float acceptableFactor, float singleFactor,
       float multiFactor, float memoryFactor, float hardLimitFactor,
       boolean forceInMemory, long maxBlockSize, boolean statEnable) {
+    super(statEnable);
     this.maxBlockSize = maxBlockSize;
     if(singleFactor + multiFactor + memoryFactor != 1 ||
         singleFactor < 0 || multiFactor < 0 || memoryFactor < 0) {
@@ -331,13 +320,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
       this.evictionThread.start(); // FindBugs SC_START_IN_CTOR
     } else {
       this.evictionThread = null;
-    }
-
-    if (statEnable) {
-      this.scheduleThreadPool = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
-        .setNameFormat("LruBlockCacheStatsExecutor").setDaemon(true).build());
-      this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this), STAT_THREAD_PERIOD,
-        STAT_THREAD_PERIOD, TimeUnit.SECONDS);
     }
   }
 
@@ -979,26 +961,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
     }
   }
 
-  /*
-   * Statistics thread.  Periodically prints the cache statistics to the log.
-   */
-  static class StatisticsThread extends Thread {
-
-    private final LruBlockCache lru;
-
-    public StatisticsThread(LruBlockCache lru) {
-      super("LruBlockCacheStats");
-      setDaemon(true);
-      this.lru = lru;
-    }
-
-    @Override
-    public void run() {
-      lru.logStats();
-    }
-  }
-
-  public void logStats() {
+  @Override
+  protected void logStats() {
     // Log size
     long totalSize = heapSize();
     long freeSize = maxSize - totalSize;
@@ -1156,26 +1120,9 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   @Override
   public void shutdown() {
+    super.shutdown();
     if (victimHandler != null) {
       victimHandler.shutdown();
-    }
-    if (this.scheduleThreadPool != null) {
-      this.scheduleThreadPool.shutdown();
-      for (int i = 0; i < 10; i++) {
-        if (!this.scheduleThreadPool.isShutdown()) {
-          try {
-            Thread.sleep(10);
-          } catch (InterruptedException e) {
-            LOG.warn("Interrupted while sleeping");
-            Thread.currentThread().interrupt();
-            break;
-          }
-        }
-      }
-      if (!this.scheduleThreadPool.isShutdown()) {
-        List<Runnable> runnables = this.scheduleThreadPool.shutdownNow();
-        LOG.debug("Still running " + runnables);
-      }
     }
     this.evictionThread.shutdown();
   }
