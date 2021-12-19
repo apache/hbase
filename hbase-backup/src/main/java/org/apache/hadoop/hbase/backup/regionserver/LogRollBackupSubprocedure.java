@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.procedure.ProcedureMember;
 import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -92,7 +93,14 @@ public class LogRollBackupSubprocedure extends Subprocedure {
 
       LOG.info("Trying to roll log in backup subprocedure, current log number: " + filenum
           + " highest: " + highest + " on " + rss.getServerName());
+      RegionServerCoprocessorHost cpHost = ((HRegionServer) rss).getRegionServerCoprocessorHost();
+      if (cpHost != null) {
+        cpHost.preRollWALWriterRequest();
+      }
       ((HRegionServer) rss).getWalRoller().requestRollAll();
+      if (cpHost != null) {
+        cpHost.postRollWALWriterRequest();
+      }
       long start = EnvironmentEdgeManager.currentTime();
       while (!((HRegionServer) rss).getWalRoller().walRollFinished()) {
         Thread.sleep(20);
