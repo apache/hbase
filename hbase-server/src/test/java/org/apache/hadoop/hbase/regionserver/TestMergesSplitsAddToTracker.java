@@ -56,10 +56,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestMergesSplitsAddToTracker {
+  private static final Logger LOG = LoggerFactory.getLogger(TestMergesSplitsAddToTracker.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -86,6 +89,14 @@ public class TestMergesSplitsAddToTracker {
   @Before
   public void setup(){
     TestStoreFileTracker.trackedFiles = new HashMap<>();
+  }
+
+  void waitForSplit(TableName table, int expectedRegions) {
+    TEST_UTIL.waitFor(30_000, 500, () -> {
+      int regionsForTable = TEST_UTIL.getHBaseCluster().getRegions(table).size();
+      LOG.info("Test waiting... {} has {} regions and we expect {}", table, regionsForTable, expectedRegions);
+      return regionsForTable == expectedRegions;
+    });
   }
 
   @Test
@@ -129,9 +140,12 @@ public class TestMergesSplitsAddToTracker {
     TEST_UTIL.createTable(table, FAMILY_NAME);
     //splitting the table first
     TEST_UTIL.getAdmin().split(table, Bytes.toBytes("002"));
+    // Make sure the split finishes
+    waitForSplit(table, 2);
     //Add data and flush to create files in the two different regions
     putThreeRowsAndFlush(table);
     List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(table);
+    LOG.info("Got Regions {}", regions);
     HRegion first = regions.get(0);
     HRegion second = regions.get(1);
     HRegionFileSystem regionFS = first.getRegionFileSystem();
@@ -173,6 +187,8 @@ public class TestMergesSplitsAddToTracker {
     String copyName = copyResult.getSecond();
     //Now splits the region
     TEST_UTIL.getAdmin().split(table, Bytes.toBytes("002"));
+    // Make sure the split finishes
+    waitForSplit(table, 2);
     List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(table);
     HRegion first = regions.get(0);
     validateDaughterRegionsFiles(first, fileInfo.getActiveFileName(), copyName);
@@ -222,7 +238,7 @@ public class TestMergesSplitsAddToTracker {
     infos.stream().forEach(i -> {
       i.getActiveFileName().contains(orignalFileName);
       if(i.getActiveFileName().contains(untrackedFile)){
-        fail();
+        fail("Found a reference to " + untrackedFile + " which " + region + " should not have");
       }
       if(i.getActiveFileName().contains(orignalFileName)){
         foundLink.setTrue();
