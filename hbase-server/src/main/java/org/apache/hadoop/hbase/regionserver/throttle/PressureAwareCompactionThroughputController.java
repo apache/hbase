@@ -70,7 +70,7 @@ public class PressureAwareCompactionThroughputController extends PressureAwareTh
   private static final String HBASE_HSTORE_COMPACTION_THROUGHPUT_CONTROL_CHECK_INTERVAL =
     "hbase.hstore.compaction.throughput.control.check.interval";
 
-  private long maxThroughputOffpeak;
+  private long maxThroughputOffPeak;
 
   @Override
   public void setup(final ThroughputControllerService server) {
@@ -90,7 +90,7 @@ public class PressureAwareCompactionThroughputController extends PressureAwareTh
       // set to unlimited if some stores already reach the blocking store file count
       maxThroughputToSet = Double.MAX_VALUE;
     } else if (offPeakHours.isOffPeakHour()) {
-      maxThroughputToSet = maxThroughputOffpeak;
+      maxThroughputToSet = maxThroughputOffPeak;
     } else {
       // compactionPressure is between 0.0 and 1.0, we use a simple linear formula to
       // calculate the throughput limitation.
@@ -122,7 +122,7 @@ public class PressureAwareCompactionThroughputController extends PressureAwareTh
     this.maxThroughputLowerBound =
         conf.getLong(HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND,
           DEFAULT_HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND);
-    this.maxThroughputOffpeak =
+    this.maxThroughputOffPeak =
         conf.getLong(HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_OFFPEAK,
           DEFAULT_HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_OFFPEAK);
     this.offPeakHours = OffPeakHours.getInstance(conf);
@@ -136,7 +136,7 @@ public class PressureAwareCompactionThroughputController extends PressureAwareTh
     LOG.info("Compaction throughput configurations, higher bound: "
         + throughputDesc(maxThroughputUpperBound) + ", lower bound "
         + throughputDesc(maxThroughputLowerBound) + ", off peak: "
-        + throughputDesc(maxThroughputOffpeak) + ", tuning period: " + tuningPeriod + " ms");
+        + throughputDesc(maxThroughputOffPeak) + ", tuning period: " + tuningPeriod + " ms");
   }
 
   @Override
@@ -144,5 +144,13 @@ public class PressureAwareCompactionThroughputController extends PressureAwareTh
     return "DefaultCompactionThroughputController [maxThroughput="
         + throughputDesc(getMaxThroughput()) + ", activeCompactions=" + activeOperations.size()
         + "]";
+  }
+
+  public void setMaxThroughputOffPeak(long maxThroughputOffPeak) {
+    this.maxThroughputOffPeak = maxThroughputOffPeak;
+  }
+
+  public long getMaxThroughputOffPeak() {
+    return maxThroughputOffPeak;
   }
 }

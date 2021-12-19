@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
+import org.apache.hadoop.hbase.regionserver.throttle.PressureAwareCompactionThroughputController;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -56,6 +58,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos.CompactionServerStatusService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompactionThroughputBound;
+
 
 @InterfaceAudience.Private
 public class HCompactionServer extends AbstractServer implements RegionCoprocessorService {
@@ -148,7 +152,7 @@ public class HCompactionServer extends AbstractServer implements RegionCoprocess
       SecurityConstants.COMPACTION_SERVER_KRB_PRINCIPAL, host);
   }
 
-  private ClusterStatusProtos.CompactionServerLoad buildServerLoad(long reportStartTime,
+  protected ClusterStatusProtos.CompactionServerLoad buildServerLoad(long reportStartTime,
     long reportEndTime) {
     ClusterStatusProtos.CompactionServerLoad.Builder serverLoad =
       ClusterStatusProtos.CompactionServerLoad.newBuilder();
@@ -183,7 +187,21 @@ public class HCompactionServer extends AbstractServer implements RegionCoprocess
           CompactionServerStatusProtos.CompactionServerReportRequest.newBuilder();
       request.setServer(ProtobufUtil.toServerName(getServerName()));
       request.setLoad(sl);
-      this.cssStub.compactionServerReport(null, request.build());
+      CompactionServerStatusProtos.CompactionServerReportResponse compactionServerReportResponse =
+        this.cssStub.compactionServerReport(null, request.build());
+      ThroughputController throughputController =
+        compactionThreadManager.getCompactionThroughputController();
+      CompactionThroughputBound compactionThroughputBound =
+        compactionServerReportResponse.getCompactionThroughputBound();
+      if (throughputController instanceof PressureAwareCompactionThroughputController
+        && compactionThroughputBound.getMaxThroughputUpperBound() > 0) {
+        ((PressureAwareCompactionThroughputController) throughputController).setMaxThroughputUpperBound(
+          compactionThroughputBound.getMaxThroughputUpperBound());
+        ((PressureAwareCompactionThroughputController) throughputController).setMaxThroughputLowerBound(
+          compactionThroughputBound.getMaxThroughputLowerBound());
+        ((PressureAwareCompactionThroughputController) throughputController).setMaxThroughputOffPeak(
+          compactionThroughputBound.getMaxThroughputOffPeak());
+      }
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof YouAreDeadException) {

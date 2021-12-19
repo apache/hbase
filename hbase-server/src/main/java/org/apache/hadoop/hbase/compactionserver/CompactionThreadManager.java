@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControllerService;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -92,6 +93,10 @@ public class CompactionThreadManager implements ThroughputControllerService {
   private ConcurrentHashMap<String, CompactionTask> runningCompactionTasks =
       new ConcurrentHashMap<>();
   private static CompactionFilesCache compactionFilesCache = new CompactionFilesCache();
+
+  ThroughputController getCompactionThroughputController() {
+    return compactThreadControl.getCompactionThroughputController();
+  }
 
   CompactionThreadManager(final Configuration conf, HCompactionServer server) {
     this.conf = conf;

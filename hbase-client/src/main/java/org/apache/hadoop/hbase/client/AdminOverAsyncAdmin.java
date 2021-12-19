@@ -918,6 +918,11 @@ class AdminOverAsyncAdmin implements Admin {
     return get(admin.switchCompactionOffload(enable));
   }
 
+  @Override public CompactionThroughputBound updateCompactionServerTotalThroughput(
+    CompactionThroughputBound newCompactionThroughputBound) throws IOException {
+    return get(admin.updateCompactionServerTotalThroughput(newCompactionThroughputBound));
+  }
+
   @Override
   public boolean isCompactionOffloadEnabled() throws IOException {
     return get(admin.isCompactionOffloadEnabled());

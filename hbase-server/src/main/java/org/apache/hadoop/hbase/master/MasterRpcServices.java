@@ -171,6 +171,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusP
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos.CompactionServerReportResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionServerStatusProtos.CompactionServerStatusService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompactionThroughputBound;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -343,6 +344,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UpdateCompactionServerTotalThroughputRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UpdateCompactionServerTotalThroughputResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshot;
@@ -683,13 +686,15 @@ public class MasterRpcServices extends RSRpcServices implements
       }
       ServerName serverName = ProtobufUtil.toServerName(request.getServer());
       CompactionServerMetrics newLoad =
-          CompactionServerMetricsBuilder.toCompactionServerMetrics(serverName, versionNumber,
-            version, request.getLoad());
-      master.getCompactionOffloadManager().compactionServerReport(serverName, newLoad);
+        CompactionServerMetricsBuilder.toCompactionServerMetrics(serverName, versionNumber, version,
+          request.getLoad());
+      CompactionThroughputBound compactionThroughputBound =
+        master.getCompactionOffloadManager().compactionServerReport(serverName, newLoad);
+      return CompactionServerReportResponse.newBuilder()
+        .setCompactionThroughputBound(compactionThroughputBound).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return CompactionServerReportResponse.newBuilder().build();
   }
 
   @Override
@@ -3494,6 +3499,33 @@ public class MasterRpcServices extends RSRpcServices implements
   public CompleteCompactionResponse completeCompaction(RpcController controller,
     CompleteCompactionRequest request) {
     throw new UnsupportedOperationException("master not receive completeCompaction");
+  }
+
+  @Override
+  public UpdateCompactionServerTotalThroughputResponse updateCompactionServerTotalThroughput(
+    RpcController controller, UpdateCompactionServerTotalThroughputRequest request)
+    throws ServiceException {
+    HBaseProtos.CompactionThroughputBound compactionThroughputBound =
+      request.getCompactionThroughputBound();
+    if (compactionThroughputBound.getMaxThroughputUpperBound() > 0) {
+      master.getCompactionOffloadManager()
+        .setMaxThroughputUpperBound(compactionThroughputBound.getMaxThroughputUpperBound());
+    }
+    if (compactionThroughputBound.getMaxThroughputLowerBound() > 0) {
+      master.getCompactionOffloadManager()
+        .setMaxThroughputLowerBound(compactionThroughputBound.getMaxThroughputLowerBound());
+    }
+    if (compactionThroughputBound.getMaxThroughputOffPeak() > 0) {
+      master.getCompactionOffloadManager()
+        .setMaxThroughputOffPeak(compactionThroughputBound.getMaxThroughputOffPeak());
+    }
+    compactionThroughputBound = HBaseProtos.CompactionThroughputBound.newBuilder()
+      .setMaxThroughputUpperBound(master.getCompactionOffloadManager().getMaxThroughputUpperBound())
+      .setMaxThroughputLowerBound(master.getCompactionOffloadManager().getMaxThroughputLowerBound())
+      .setMaxThroughputOffPeak(master.getCompactionOffloadManager().getMaxThroughputOffPeak())
+      .build();
+    return UpdateCompactionServerTotalThroughputResponse.newBuilder()
+      .setCompactionThroughputBound(compactionThroughputBound).build();
   }
 
 }
