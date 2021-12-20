@@ -62,11 +62,11 @@ public class FastPathRWQueueRpcExecutor extends RWQueueRpcExecutor {
   @Override
   public boolean dispatch(final CallRunner callTask) throws InterruptedException {
     RpcCall call = callTask.getRpcCall();
-    boolean isWriteRequest = isWriteRequest(call.getHeader(), call.getParam());
+    boolean shouldDispatchToWriteQueue = isWriteRequest(call.getHeader(), call.getParam());
     boolean shouldDispatchToScanQueue = shouldDispatchToScanQueue(callTask);
-    FastPathRpcHandler handler = isWriteRequest ? writeHandlerStack.poll() :
+    FastPathRpcHandler handler = shouldDispatchToWriteQueue ? writeHandlerStack.poll() :
       shouldDispatchToScanQueue ? scanHandlerStack.poll() : readHandlerStack.poll();
     return handler != null ? handler.loadCallRunner(callTask) :
-      dispatchTo(isWriteRequest, shouldDispatchToScanQueue, callTask);
+      dispatchTo(shouldDispatchToWriteQueue, shouldDispatchToScanQueue, callTask);
   }
 }
