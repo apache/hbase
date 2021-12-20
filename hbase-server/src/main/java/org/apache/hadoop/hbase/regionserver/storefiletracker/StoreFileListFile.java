@@ -101,9 +101,11 @@ class StoreFileListFile {
     for (int i = 0; i < 2; i++) {
       try {
         lists[i] = load(trackFiles[i]);
-      } catch (FileNotFoundException | InvalidProtocolBufferException e) {
+      } catch (FileNotFoundException e) {
         // this is normal case, so use info and do not log stacktrace
-        LOG.info("Failed to load track file {}: {}", trackFiles[i], e);
+        LOG.trace("Failed to load track file {}: {}", trackFiles[i], e);
+      } catch (InvalidProtocolBufferException e) {
+        LOG.warn("Failed to load track file {}: {}", trackFiles[i], e);
       }
     }
     int winnerIndex = select(lists);
