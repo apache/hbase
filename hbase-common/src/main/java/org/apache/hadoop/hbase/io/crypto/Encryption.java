@@ -647,7 +647,7 @@ public final class Encryption {
       if (v <= 0) {
         break;
       }
-      sum = v + iv[i];
+      sum = v + (iv[i] & 0xFF);
       v =  sum / 256;
       iv[i] = (byte)(sum % 256);
     }
