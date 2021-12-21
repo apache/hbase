@@ -121,6 +121,20 @@ module Hbase
       @admin.compactionSwitch(java.lang.Boolean.valueOf(on_or_off), servers)
     end
 
+    # update compaction server total throughput bound
+    def update_compaction_server_total_throughput(upper_bound, lower_bound, offpeak)
+      compaction_throughput_bound = org.apache.hadoop.hbase.client.CompactionThroughputBound.new
+      compaction_throughput_bound.setMaxThroughputUpperBound(upper_bound)
+      compaction_throughput_bound.setMaxThroughputLowerBound(lower_bound)
+      compaction_throughput_bound.setMaxThroughputOffPeak(offpeak)
+      compaction_throughput_bound = @admin.updateCompactionServerTotalThroughput(compaction_throughput_bound)
+      result = Hash.new()
+      result["UpperBound"] = compaction_throughput_bound.getMaxThroughputUpperBound()
+      result["LowerBound"] = compaction_throughput_bound.getMaxThroughputLowerBound()
+      result["OffPeak"] = compaction_throughput_bound.getMaxThroughputOffPeak()
+      return result
+    end
+
     #----------------------------------------------------------------------------------------------
     # Gets compaction state for specified table
     def getCompactionState(table_name)

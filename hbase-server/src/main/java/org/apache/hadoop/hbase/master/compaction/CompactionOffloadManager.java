@@ -44,6 +44,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CompactionProtos.CompactResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompactionThroughputBound;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsCompactionOffloadEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsCompactionOffloadEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchCompactionOffloadRequest;
@@ -55,8 +56,47 @@ public class CompactionOffloadManager {
   /** Map of registered servers to their current load */
   private final Cache<ServerName, CompactionServerMetrics> onlineServers;
   private CompactionOffloadSwitchStorage compactionOffloadSwitchStorage;
+  private volatile long maxThroughputUpperBound;
+  private volatile long maxThroughputLowerBound;
+  private volatile long maxThroughputOffPeak;
+  // throughput config
+  public static final String COMPACTION_SERVER_MAX_THROUGHPUT_HIGHER_BOUND =
+      "hbase.compaction.server.compaction.throughput.higher.bound";
+  public static final long DEFAULT_COMPACTION_SERVER_MAX_THROUGHPUT_HIGHER_BOUND =
+      1000L * 1024 * 1024;
+  public static final String COMPACTION_SERVER_MAX_THROUGHPUT_LOWER_BOUND =
+      "hbase.compaction.server.compaction.throughput.lower.bound";
+  public static final long DEFAULT_COMPACTION_SERVER_MAX_THROUGHPUT_LOWER_BOUND =
+      500L * 1024 * 1024;
+  public static final String COMPACTION_SERVER_MAX_THROUGHPUT_OFFPEAK =
+      "hbase.compaction.server.compaction.throughput.offpeak";
+  public static final long DEFAULT_COMPACTION_SERVER_MAX_THROUGHPUT_OFFPEAK = Long.MAX_VALUE;
   private static final Logger LOG =
       LoggerFactory.getLogger(CompactionOffloadManager.class.getName());
+
+  public long getMaxThroughputUpperBound() {
+    return maxThroughputUpperBound;
+  }
+
+  public void setMaxThroughputUpperBound(long maxThroughputUpperBound) {
+    this.maxThroughputUpperBound = maxThroughputUpperBound;
+  }
+
+  public long getMaxThroughputLowerBound() {
+    return maxThroughputLowerBound;
+  }
+
+  public void setMaxThroughputLowerBound(long maxThroughputLowerBound) {
+    this.maxThroughputLowerBound = maxThroughputLowerBound;
+  }
+
+  public long getMaxThroughputOffPeak() {
+    return maxThroughputOffPeak;
+  }
+
+  public void setMaxThroughputOffPeak(long maxThroughputOffPeak) {
+    this.maxThroughputOffPeak = maxThroughputOffPeak;
+  }
 
   public CompactionOffloadManager(final MasterServices master) {
     this.masterServices = master;
@@ -68,10 +108,27 @@ public class CompactionOffloadManager {
       compactionServerMsgInterval * compactionServerExpiredFactor, TimeUnit.MILLISECONDS).build();
     this.compactionOffloadSwitchStorage = new CompactionOffloadSwitchStorage(
         masterServices.getZooKeeper(), masterServices.getConfiguration());
+    this.maxThroughputUpperBound =
+        master.getConfiguration().getLong(COMPACTION_SERVER_MAX_THROUGHPUT_HIGHER_BOUND,
+          DEFAULT_COMPACTION_SERVER_MAX_THROUGHPUT_HIGHER_BOUND);
+    this.maxThroughputLowerBound =
+        master.getConfiguration().getLong(COMPACTION_SERVER_MAX_THROUGHPUT_LOWER_BOUND,
+          DEFAULT_COMPACTION_SERVER_MAX_THROUGHPUT_LOWER_BOUND);
+    this.maxThroughputOffPeak = master.getConfiguration().getLong(
+      COMPACTION_SERVER_MAX_THROUGHPUT_OFFPEAK, DEFAULT_COMPACTION_SERVER_MAX_THROUGHPUT_OFFPEAK);
   }
 
-  public void compactionServerReport(ServerName sn, CompactionServerMetrics sl) {
+  public CompactionThroughputBound compactionServerReport(ServerName sn,
+    CompactionServerMetrics sl) {
     this.onlineServers.put(sn, sl);
+    int totalTask = Math.max(
+      onlineServers.asMap().values().stream().mapToInt(metric -> metric.getCompactionTasks().size())
+        .sum(), 1);
+    double factor = 1.0 * onlineServers.asMap().get(sn).getCompactionTasks().size() / totalTask;
+    return CompactionThroughputBound.newBuilder()
+      .setMaxThroughputLowerBound(Math.round(maxThroughputLowerBound * factor))
+      .setMaxThroughputUpperBound(Math.round(maxThroughputUpperBound * factor))
+      .setMaxThroughputOffPeak(Math.round(maxThroughputOffPeak * factor)).build();
   }
 
   /**

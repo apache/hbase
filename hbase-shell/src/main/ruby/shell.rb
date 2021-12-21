@@ -489,6 +489,9 @@ Shell.load_command_group(
     list_decommissioned_regionservers
     decommission_regionservers
     recommission_regionserver
+    set_compaction_server_throughput_lower_bound
+    set_compaction_server_throughput_upper_bound
+    set_compaction_server_throughput_offpeak
   ],
   # TODO: remove older hlog_roll command
   aliases: {

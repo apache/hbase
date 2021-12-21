@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.CompactionThroughputBound;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -148,6 +149,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetTableSt
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SplitTableRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UpdateCompactionServerTotalThroughputRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
@@ -1900,5 +1902,16 @@ public final class RequestConverter {
     return RemoveServersRequest.newBuilder()
         .addAllServers(hostPorts)
         .build();
+  }
+
+  public static UpdateCompactionServerTotalThroughputRequest buildUpdateCompactionThroughputRequest(
+    CompactionThroughputBound compactionThroughputBound) {
+    HBaseProtos.CompactionThroughputBound compactionThroughputBoundPB =
+      HBaseProtos.CompactionThroughputBound.newBuilder()
+        .setMaxThroughputLowerBound(compactionThroughputBound.getMaxThroughputLowerBound())
+        .setMaxThroughputUpperBound(compactionThroughputBound.getMaxThroughputUpperBound())
+        .setMaxThroughputOffPeak(compactionThroughputBound.getMaxThroughputOffPeak()).build();
+    return UpdateCompactionServerTotalThroughputRequest.newBuilder()
+      .setCompactionThroughputBound(compactionThroughputBoundPB).build();
   }
 }

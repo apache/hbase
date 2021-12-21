@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.CompactionState;
+import org.apache.hadoop.hbase.client.CompactionThroughputBound;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Cursor;
 import org.apache.hadoop.hbase.client.Delete;
@@ -3814,4 +3815,8 @@ public final class ProtobufUtil {
         .append(", major:").append(major).append(", priority:").append(priority).toString();
   }
 
+  public static CompactionThroughputBound toCompactionThroughputBound(
+    HBaseProtos.CompactionThroughputBound compactionThroughputBound) {
+    return new CompactionThroughputBound(compactionThroughputBound);
+  }
 }

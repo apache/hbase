@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
+import org.apache.hadoop.hbase.client.CompactionThroughputBound;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ServerType;
 import org.apache.hadoop.hbase.client.LogEntry;
@@ -456,6 +457,12 @@ public class ThriftAdmin implements Admin {
   public boolean switchCompactionOffload(boolean enable) throws IOException {
     throw new NotImplementedException(
         "switchCompactionOffload by pattern not supported in ThriftAdmin");
+  }
+
+  @Override public CompactionThroughputBound updateCompactionServerTotalThroughput(
+    CompactionThroughputBound newCompactionThroughputBound) throws IOException {
+    throw new NotImplementedException(
+      "updateCompactionServerTotalThroughput by pattern not supported in ThriftAdmin");
   }
 
   @Override

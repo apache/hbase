@@ -37,6 +37,7 @@ message CompactionServerReportRequest {
 }
 
 message CompactionServerReportResponse {
+  required CompactionThroughputBound CompactionThroughputBound = 1;
 }
 
 service CompactionServerStatusService {
