@@ -49,13 +49,13 @@ public class TestExcludeDatanodeManager {
         .setDatanodeUuid("uuid1").setXferPort(111).setInfoPort(222).setInfoSecurePort(333)
         .setIpcPort(444).setNetworkLocation("location1").build();
     streamSlowDNsMonitor
-      .checkProcessTimeAndSpeed(datanodeInfo, 111, 5000,
+      .checkProcessTimeAndSpeed(datanodeInfo, 222, 5000,
         System.currentTimeMillis() - 5000, 0);
     streamSlowDNsMonitor
-      .checkProcessTimeAndSpeed(datanodeInfo, 111, 5000,
+      .checkProcessTimeAndSpeed(datanodeInfo, 222, 5000,
         System.currentTimeMillis() - 5000, 0);
     streamSlowDNsMonitor
-      .checkProcessTimeAndSpeed(datanodeInfo, 111, 5000,
+      .checkProcessTimeAndSpeed(datanodeInfo, 222, 5000,
         System.currentTimeMillis() - 5000, 0);
     assertEquals(1, excludeDatanodeManager.getExcludeDNs().size());
     assertTrue(excludeDatanodeManager.getExcludeDNs().containsKey(datanodeInfo));
