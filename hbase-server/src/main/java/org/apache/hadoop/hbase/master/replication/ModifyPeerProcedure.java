@@ -161,10 +161,17 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         try {
           prePeerModification(env);
         } catch (IOException e) {
-          LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, " +
-            "mark the procedure as failure and give up", getClass().getName(), peerId, e);
-          setFailure("master-" + getPeerOperationType().name().toLowerCase() + "-peer", e);
-          releaseLatch(env);
+          if (e.getMessage().contains(String.format("Replication peer %s has already been", peerId))
+            || e.getMessage().contains(String.format("Replication peer %s already exists", peerId)))
+          {
+            LOG.info("Peer: " + peerId + " is already in desired state");
+          }
+          else {
+            LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, "
+              + "mark the procedure as failure and give up", getClass().getName(), peerId, e);
+            setFailure("master-" + getPeerOperationType().name().toLowerCase() + "-peer", e);
+            releaseLatch(env);
+          }
           return Flow.NO_MORE_STATE;
         } catch (ReplicationException e) {
           throw suspend(env.getMasterConfiguration(),
