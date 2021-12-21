@@ -21,6 +21,8 @@ import static java.lang.String.format;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -33,6 +35,7 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -640,20 +643,17 @@ public final class Encryption {
   }
 
   public static void incrementIv(byte[] iv, int v) {
+    // v should be > 0
     int length = iv.length;
-    boolean carry = true;
-    // TODO: Optimize for v > 1, e.g. 16, 32
-    do {
-      for (int i = 0; i < length; i++) {
-        if (carry) {
-          iv[i] = (byte) ((iv[i] + 1) & 0xFF);
-          carry = 0 == iv[i];
-        } else {
-          break;
-        }
+    int sum = 0;
+    for (int i = 0; i < length; i++) {
+      if (v <= 0) {
+        break;
       }
-      v--;
-    } while (v > 0);
+      sum = v + iv[i];
+      v =  sum / 256;
+      iv[i] = (byte)(sum % 256);
+    }
   }
 
   /**

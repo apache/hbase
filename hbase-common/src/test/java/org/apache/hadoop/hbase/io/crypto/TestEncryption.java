@@ -89,6 +89,19 @@ public class TestEncryption {
     }
   }
 
+  @Test
+  public void testIncrementIV() {
+    byte[] iv = new byte[] {1, 2, 3};
+    Encryption.incrementIv(iv);
+    assertTrue(Bytes.equals(iv, new byte[] {2, 2, 3}));
+
+    Encryption.incrementIv(iv, 255);
+    assertTrue(Bytes.equals(iv, new byte[] {1, 3, 3}));
+
+    Encryption.incrementIv(iv, 1024);
+    assertTrue(Bytes.equals(iv, new byte[] {1, 7, 3}));
+  }
+
   private void checkTransformSymmetry(byte[] keyBytes, byte[] iv, byte[] plaintext)
       throws Exception {
     LOG.info("checkTransformSymmetry: AES, plaintext length = " + plaintext.length);
