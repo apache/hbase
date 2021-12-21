@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs.monitor;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -98,7 +97,7 @@ public class ExcludeDatanodeManager implements ConfigurationObserver {
   }
 
   public Map<DatanodeInfo, Long> getExcludeDNs() {
-    return Collections.unmodifiableMap(excludeDNsCache.asMap());
+    return excludeDNsCache.asMap();
   }
 
   @Override

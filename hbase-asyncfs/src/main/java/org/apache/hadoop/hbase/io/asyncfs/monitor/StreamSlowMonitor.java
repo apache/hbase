@@ -130,15 +130,15 @@ public class StreamSlowMonitor implements ConfigurationObserver {
     // 1. no matter what the length of packet is, the the packet process time (in ms) is
     //    greater than the configured slowPacketAckMs. This condition means that all the long enough
     //    process time should be considered as slow.
-    // 2. if the data length of the packet is more than 100 bytes, and the rate of process bytes is
+    // 2. if the data length of the packet is more than 200 bytes, and the rate of process bytes is
     //    less than the configured process speed. Since process time not always works, if 198B
     //    data is processed by using 2s, this means writing slowly,  but the first condition cannot
     //    aware it.
     boolean slow = processTimeMs > slowPacketAckMs ||
-        (packetDataLen > 100 && (double) packetDataLen / processTimeMs < slowPacketAckSpeed);
+        (packetDataLen > 200 && (double) packetDataLen / processTimeMs < slowPacketAckSpeed);
     if (slow) {
       // Check if large diff ack timestamp between replicas,
-      // should avoid misjudgments that caused by GC STW.
+      // should try to avoid misjudgments that caused by GC STW.
       if ((lastAckTimestamp > 0 && current - lastAckTimestamp > slowPacketAckMs / 2) || (
           lastAckTimestamp <= 0 && unfinished == 0)) {
         LOG.info("Slow datanode: {}, data length={}, duration={}ms, unfinishedReplicas={}, "
