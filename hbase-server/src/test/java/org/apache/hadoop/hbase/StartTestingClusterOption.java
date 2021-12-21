@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -107,13 +109,15 @@ public final class StartTestingClusterOption {
   private final boolean createWALDir;
 
   /**
-   * Whether to use external DFS.
+   * conf of external DFS.
+   * Use the Properties rather than Configuration,
+   * because the Configuration may contain default conf.
    */
-  private boolean externalDFS = false;
+  private Properties externalDFS;
   /**
-   * Whether to use external ZK.
+   * conf of external ZK.
    */
-  private boolean externalZK = false;
+  private Properties externalZK;
 
   /**
    * Private constructor. Use {@link Builder#build()}.
@@ -122,7 +126,7 @@ public final class StartTestingClusterOption {
     Class<? extends HMaster> masterClass, int numRegionServers, List<Integer> rsPorts,
     Class<? extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer> rsClass,
     int numDataNodes, String[] dataNodeHosts, int numZkServers, boolean createRootDir,
-    boolean createWALDir, boolean externalDFS, boolean externalZK) {
+    boolean createWALDir, Properties externalDFS, Properties externalZK) {
     this.numMasters = numMasters;
     this.numAlwaysStandByMasters = numAlwaysStandByMasters;
     this.masterClass = masterClass;
@@ -182,11 +186,11 @@ public final class StartTestingClusterOption {
     return createWALDir;
   }
 
-  public boolean isExternalDFS() {
+  public Properties getExternalDFS() {
     return externalDFS;
   }
 
-  public boolean isExternalZK() {
+  public Properties getExternalZK() {
     return externalZK;
   }
 
@@ -225,8 +229,8 @@ public final class StartTestingClusterOption {
     private int numZkServers = 1;
     private boolean createRootDir = false;
     private boolean createWALDir = false;
-    private boolean externalDFS = false;
-    private boolean externalZK = false;
+    private Properties externalDFS = null;
+    private Properties externalZK = null;
 
     private Builder() {
     }
@@ -296,12 +300,12 @@ public final class StartTestingClusterOption {
       return this;
     }
 
-    public Builder externalDFS(boolean externalDFS) {
+    public Builder externalDFS(Properties externalDFS) {
       this.externalDFS = externalDFS;
       return this;
     }
 
-    public Builder externalZK(boolean externalZK) {
+    public Builder externalZK(Properties externalZK) {
       this.externalZK = externalZK;
       return this;
     }

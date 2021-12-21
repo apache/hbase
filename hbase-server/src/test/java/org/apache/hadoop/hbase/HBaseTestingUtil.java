@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.File;
 import java.io.IOException;
@@ -129,7 +133,10 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.zookeeper.*;
+import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKConfig;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -150,7 +157,6 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
-import static org.junit.Assert.*;
 
 /**
  * Facility for testing HBase. Replacement for old HBaseTestCase and HBaseClusterTestCase
@@ -217,6 +223,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /** This is for unit tests parameterized with a single boolean. */
   public static final List<Object[]> MEMSTORETS_TAGS_PARAMETRIZED = memStoreTSAndTagsCombination();
+
+  private boolean isExternalDFS = false;
+  private boolean isExternalZK = false;
 
 
   /**
@@ -329,12 +338,14 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     }
     // Every cluster is a local cluster until we start DFS
     // Note that conf could be null, but this.conf will not be
-    if (this.conf.get("fs.defaultFS") != null && !this.conf.get("fs.defaultFS").startsWith("hdfs://")) {
-      String dataTestDir = getDataTestDir().toString();
-      this.conf.set("fs.defaultFS", "file:///");
-      this.conf.set(HConstants.HBASE_DIR, "file://" + dataTestDir);
-      LOG.debug("Setting {} to {}", HConstants.HBASE_DIR, dataTestDir);
-    }
+    String dataTestDir = getDataTestDir().toString();
+    this.conf.set("fs.defaultFS", "file:///");
+    this.conf.set(HConstants.HBASE_DIR, "file://" + dataTestDir);
+    LOG.debug("Setting {} to {}", HConstants.HBASE_DIR, dataTestDir);
+
+    // RS is started with a different user, @see #HBaseTestingUtil.getDifferentUser
+    // this is to ensure the user has permissions to read and write external HDFS.
+    this.conf.set("fs.permissions.umask-mode", "000");
 
     this.conf.setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
     // If the value for random ports isn't set set it to true, thus making
@@ -722,6 +733,12 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     return path;
   }
 
+  private void addPropertiesToConf(Properties properties) {
+    properties.forEach((k, v) -> {
+      this.conf.set(k.toString(), v.toString());
+    });
+  }
+
   /**
    * Shuts down instance created by call to {@link #startMiniDFSCluster(int)} or does nothing.
    */
@@ -774,7 +791,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     }
     miniClusterRunning = true;
 
-    if (!option.isExternalDFS()) {
+    if (option.getExternalDFS() == null) {
       setupClusterTestDir();
       System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestDir.getPath());
       // Bring up mini dfs cluster. This spews a bunch of warnings about missing
@@ -787,7 +804,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       }
     }
 
-    if (!option.isExternalZK()) {
+    if (option.getExternalZK() == null) {
       // Start up a zk cluster.
       if (getZkCluster() == null) {
         startMiniZKCluster(option.getNumZkServers());
@@ -808,21 +825,29 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   public SingleProcessHBaseCluster startMiniHBaseCluster(StartTestingClusterOption option)
     throws IOException, InterruptedException {
 
-    if (option.isExternalDFS()) {
-      assertNotNull("fs.defaultFS can not be null, if use external DFS", conf.get("fs.defaultFS"));
+    if (option.getExternalZK() != null) {
+      if(option.getExternalZK().get(HConstants.ZOOKEEPER_QUORUM) == null) {
+        throw new IllegalArgumentException("ZOOKEEPER_QUORUM can not be null.");
+      }
+
+      addPropertiesToConf(option.getExternalZK());
+      this.isExternalZK = true;
+    }
+
+    if (option.getExternalDFS() != null) {
+      if(option.getExternalDFS().get("fs.defaultFS") == null) {
+        throw new IllegalArgumentException("fs.defaultFS can not be null.");
+      }
       if (System.getProperty("HADOOP_USER_NAME") == null) {
         System.setProperty("HADOOP_USER_NAME", "hdfs");
       }
 
-      // RS is started with a different user, @see #HBaseTestingUtil.getDifferentUser
-      // this is to ensure the user has permissions to read and write HDFS.
-      conf.set("fs.permissions.umask-mode", "000");
+      addPropertiesToConf(option.getExternalDFS());
+
       LOG.info("USING EXTERNAL DFS: {}, user: {}.",
         conf.get("fs.defaultFS"), UserGroupInformation.getCurrentUser().getUserName());
-    }
 
-    if (option.isExternalZK()) {
-      assertNotNull("ZOOKEEPER_QUORUM can not be null, if use external ZK", conf.get(HConstants.ZOOKEEPER_QUORUM));
+      this.isExternalDFS = true;
     }
 
     // Now do the mini hbase cluster. Set the hbase.rootdir in config.
@@ -1002,75 +1027,21 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Stops mini hbase, zk, and hdfs clusters.
-   * If zk or hdfs is external, clean the znode or dfs path.
-   * @see #startMiniCluster(int)
-   */
-  public void shutdownMiniCluster(StartTestingClusterOption option) throws IOException {
-    LOG.info("Shutting down minicluster");
-    shutdownMiniHBaseCluster(option);
-
-    if (!option.isExternalDFS()) {
-      shutdownMiniDFSCluster();
-    }
-    if (!option.isExternalZK()) {
-      shutdownMiniZKCluster();
-    }
-
-    cleanupTestDir();
-    resetUserGroupInformation();
-    miniClusterRunning = false;
-    LOG.info("Minicluster is down");
-  }
-
-  /**
-   * Stops mini hbase, zk, and hdfs clusters.
    * @see #startMiniCluster(int)
    */
   public void shutdownMiniCluster() throws IOException {
     LOG.info("Shutting down minicluster");
     shutdownMiniHBaseCluster();
-    shutdownMiniDFSCluster();
-    shutdownMiniZKCluster();
+    if (!this.isExternalDFS) {
+      shutdownMiniDFSCluster();
+    }
+    if (!this.isExternalZK) {
+      shutdownMiniZKCluster();
+    }
 
     cleanupTestDir();
     miniClusterRunning = false;
     LOG.info("Minicluster is down");
-  }
-
-  /**
-   * Shutdown HBase mini cluster.Does not shutdown zk or dfs if running.
-   * If use external dfs or zk, clean the directory.
-   * @throws java.io.IOException in case command is unsuccessful
-   */
-  public void shutdownMiniHBaseCluster(StartTestingClusterOption option) throws IOException {
-    cleanup();
-    if (this.hbaseCluster != null) {
-      this.hbaseCluster.shutdown();
-      // Wait till hbase is down before going on to shutdown zk.
-      this.hbaseCluster.waitUntilShutDown();
-      this.hbaseCluster = null;
-    }
-    if (zooKeeperWatcher != null) {
-      zooKeeperWatcher.close();
-      zooKeeperWatcher = null;
-    }
-
-    // clean external dfs dir and znode
-    if (option.isExternalDFS()) {
-      FileSystem fs = FileSystem.get(this.conf);
-      fs.delete(new Path(this.conf.get(HConstants.HBASE_DIR)).getParent(), true);
-      fs.close();
-    }
-    if (option.isExternalZK()) {
-      try (ZKWatcher watcher = new ZKWatcher(this.conf, "", null)) {
-        String znode = this.conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-        if (ZKUtil.checkExists(watcher, znode) != -1) {
-          ZKUtil.deleteNodeRecursively(watcher, znode);
-        }
-      } catch(KeeperException e) {
-        throw new IOException(e.getMessage(), e);
-      }
-    }
   }
 
   /**
@@ -1088,6 +1059,23 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     if (zooKeeperWatcher != null) {
       zooKeeperWatcher.close();
       zooKeeperWatcher = null;
+    }
+
+    // clean external dfs dir and znode
+    if (this.isExternalDFS) {
+      FileSystem fs = FileSystem.get(this.conf);
+      fs.delete(new Path(this.conf.get(HConstants.HBASE_DIR)).getParent(), true);
+      fs.close();
+    }
+    if (this.isExternalZK) {
+      try (ZKWatcher watcher = new ZKWatcher(this.conf, "", null)) {
+        String znode = this.conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+        if (ZKUtil.checkExists(watcher, znode) != -1) {
+          ZKUtil.deleteNodeRecursively(watcher, znode);
+        }
+      } catch(KeeperException e) {
+        throw new IOException(e.getMessage(), e);
+      }
     }
   }
 
@@ -1162,6 +1150,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     CommonFSUtils.setRootDir(this.conf, hbaseRootdir);
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
+
     return hbaseRootdir;
   }
 
