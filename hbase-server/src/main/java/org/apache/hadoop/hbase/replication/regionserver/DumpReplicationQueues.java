@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.zookeeper.ZKDump;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
@@ -238,7 +239,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
       } else {
         // use ZK instead
         System.out.print("Dumping replication znodes via ZooKeeper:");
-        System.out.println(ZKUtil.getReplicationZnodesDump(zkw));
+        System.out.println(ZKDump.getReplicationZnodesDump(zkw));
       }
       return (0);
     } catch (IOException e) {

@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
 import org.junit.After;
@@ -282,7 +281,7 @@ public final class TestNamespaceReplicationWithBulkLoadedData extends TestBulkLo
     // Verify hfile-refs for 1:ns_peer1, expect is empty
     MiniZooKeeperCluster zkCluster = UTIL1.getZkCluster();
     ZKWatcher watcher = new ZKWatcher(UTIL1.getConfiguration(), "TestZnodeHFiles-refs", null);
-    RecoverableZooKeeper zk = ZKUtil.connect(UTIL1.getConfiguration(), watcher);
+    RecoverableZooKeeper zk = RecoverableZooKeeper.connect(UTIL1.getConfiguration(), watcher);
     ZKReplicationQueueStorage replicationQueueStorage =
         new ZKReplicationQueueStorage(watcher, UTIL1.getConfiguration());
     Set<String> hfiles = replicationQueueStorage.getAllHFileRefs();
