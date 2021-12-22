@@ -59,10 +59,13 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ ClientTests.class, MediumTests.class })
 public class TestAsyncRegionLocatorTracing {
+  private static final Logger LOG = LoggerFactory.getLogger(TestAsyncRegionLocatorTracing.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -112,7 +115,9 @@ public class TestAsyncRegionLocatorTracing {
         "waiting for span",
         () -> traceRule.getSpans(), hasItem(spanLocator)));
     } catch (AssertionError e) {
-      traceRule.getSpans().forEach(System.err::println);
+      LOG.error("AssertionError while waiting for matching span. Span reservoir contains: {}",
+        traceRule.getSpans());
+      throw e;
     }
     return traceRule.getSpans()
       .stream()
