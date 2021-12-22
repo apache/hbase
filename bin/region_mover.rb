@@ -495,16 +495,13 @@ end
 
 def getServersRSGroup(rsgroup_admin, hostname, port)
   rsgroup = rsgroup_admin.getRSGroupOfServer(Address.fromParts(hostname,
-  java.lang.Integer.parseInt(port)))
+                                             java.lang.Integer.parseInt(port)))
   # If the rsgroup is nil, that means this server belongs to no rsgroup.
   # It should be already offline.
   # Here we directly log and exit.
-  if rsgroup.nil?
-    $LOG.info('The server ' + hostname + 'belongs to no rsgroup. Exit regions moving.')
-    exit
-  else
-    return rsgroup
-  end
+  return rsgroup unless rsgroup.nil?
+  $LOG.info('The server ' + hostname + 'belongs to no rsgroup. Exit regions moving.')
+  exit
 end
 
 # Get servers in the same regionserver group as the given server
