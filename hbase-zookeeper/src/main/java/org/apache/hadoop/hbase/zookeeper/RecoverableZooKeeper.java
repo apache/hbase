@@ -86,15 +86,7 @@ public class RecoverableZooKeeper {
   private final int maxMultiSize;
 
   /**
-   * Creates a new connection to ZooKeeper, pulling settings and ensemble config
-   * from the specified configuration object using methods from {@link ZKConfig}.
-   *
-   * Sets the connection status monitoring watcher to the specified watcher.
-   *
-   * @param conf configuration to pull ensemble and other settings from
-   * @param watcher watcher to monitor connection changes
-   * @return connection to zookeeper
-   * @throws IOException if unable to connect to zk or config problem
+   * @see #connect(Configuration, String, Watcher, String)
    */
   public static RecoverableZooKeeper connect(Configuration conf, Watcher watcher)
     throws IOException {
@@ -102,12 +94,28 @@ public class RecoverableZooKeeper {
     return connect(conf, ensemble, watcher);
   }
 
+  /**
+   * @see #connect(Configuration, String, Watcher, String)
+   */
   public static RecoverableZooKeeper connect(Configuration conf, String ensemble,
     Watcher watcher)
     throws IOException {
     return connect(conf, ensemble, watcher, null);
   }
 
+  /**
+   * Creates a new connection to ZooKeeper, pulling settings and ensemble config
+   * from the specified configuration object using methods from {@link ZKConfig}.
+   *
+   * Sets the connection status monitoring watcher to the specified watcher.
+   *
+   * @param conf configuration to pull ensemble and other settings from
+   * @param watcher watcher to monitor connection changes
+   * @param ensemble ZooKeeper servers quorum string
+   * @param identifier value used to identify this client instance.
+   * @return connection to zookeeper
+   * @throws IOException if unable to connect to zk or config problem
+   */
   public static RecoverableZooKeeper connect(Configuration conf, String ensemble,
     Watcher watcher, final String identifier)
     throws IOException {
