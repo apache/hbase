@@ -55,6 +55,7 @@ public class AlwaysStandByHMaster extends HMaster {
     /**
      * An implementation that never transitions to an active master.
      */
+    @Override
     boolean blockUntilBecomingActiveMaster(int checkInterval, MonitoredTask startupStatus) {
       while (!(master.isAborted() || master.isStopped())) {
         startupStatus.setStatus("Forever looping to stay as a standby master.");

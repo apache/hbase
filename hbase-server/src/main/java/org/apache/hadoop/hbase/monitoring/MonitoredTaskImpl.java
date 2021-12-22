@@ -45,6 +45,7 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   private boolean journalEnabled = false;
   private List<StatusJournalEntry> journal;
+  private StatusJournalEntry lastJournalEntry = null;
 
   private static final Gson GSON = GsonUtil.createGson().create();
 
@@ -56,12 +57,13 @@ class MonitoredTaskImpl implements MonitoredTask {
   }
 
   private static class StatusJournalEntryImpl implements StatusJournalEntry {
-    private long statusTime;
+    private long startTime;
+    private long endTime = Long.MAX_VALUE;
     private String status;
 
-    public StatusJournalEntryImpl(String status, long statusTime) {
+    public StatusJournalEntryImpl(String status, long startTime) {
       this.status = status;
-      this.statusTime = statusTime;
+      this.startTime = startTime;
     }
 
     @Override
@@ -70,8 +72,18 @@ class MonitoredTaskImpl implements MonitoredTask {
     }
 
     @Override
-    public long getTimeStamp() {
-      return statusTime;
+    public long getStartTimeStamp() {
+      return startTime;
+    }
+
+    @Override
+    public long getEndTimeStamp() {
+      return endTime;
+    }
+
+    @Override
+    public void setEndTimeStamp(long endTime) {
+      this.endTime = endTime;
     }
 
     @Override
@@ -79,7 +91,10 @@ class MonitoredTaskImpl implements MonitoredTask {
       StringBuilder sb = new StringBuilder();
       sb.append(status);
       sb.append(" at ");
-      sb.append(statusTime);
+      sb.append(" startTime: " + startTime);
+      if (endTime != Long.MAX_VALUE) {
+        sb.append(" and endTime: " + endTime);
+      }
       return sb.toString();
     }
   }
@@ -140,6 +155,8 @@ class MonitoredTaskImpl implements MonitoredTask {
   public void markComplete(String status) {
     setState(State.COMPLETE);
     setStatus(status);
+    // We need to set the end time of this status since we don't expect anymore status changes.
+    setLastStatusEndTime();
   }
 
   @Override
@@ -158,14 +175,31 @@ class MonitoredTaskImpl implements MonitoredTask {
   public void abort(String msg) {
     setStatus(msg);
     setState(State.ABORTED);
+    // We need to set the end time of this status since we don't expect anymore status changes.
+    setLastStatusEndTime();
   }
   
   @Override
   public void setStatus(String status) {
+    // Before changing the status, set the last status end time.
+    setLastStatusEndTime();
     this.status = status;
-    statusTime = EnvironmentEdgeManager.currentTime();
+    startTime = EnvironmentEdgeManager.currentTime();
     if (journalEnabled) {
-      journal.add(new StatusJournalEntryImpl(this.status, statusTime));
+      StatusJournalEntry entry = new StatusJournalEntryImpl(this.status, startTime);
+      journal.add(entry);
+      lastJournalEntry = entry;
+    }
+  }
+
+  /**
+   * Set the last status end time.
+   */
+  public void setLastStatusEndTime() {
+    if (journalEnabled && status != null) {
+      if (lastJournalEntry != null) {
+        lastJournalEntry.setEndTimeStamp(EnvironmentEdgeManager.currentTime());
+      }
     }
   }
 
@@ -281,7 +315,7 @@ class MonitoredTaskImpl implements MonitoredTask {
       sb.append(je.toString());
       if (i != 0) {
         StatusJournalEntry jep = journal.get(i-1);
-        long delta = je.getTimeStamp() - jep.getTimeStamp();
+        long delta = je.getStartTimeStamp() - jep.getStartTimeStamp();
         if (delta != 0) {
           sb.append(" (+" + delta + " ms)");
         }

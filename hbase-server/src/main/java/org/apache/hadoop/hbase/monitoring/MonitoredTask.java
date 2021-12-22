@@ -36,7 +36,9 @@ public interface MonitoredTask extends Cloneable {
   public interface StatusJournalEntry {
     String getStatus();
 
-    long getTimeStamp();
+    long getStartTimeStamp();
+    long getEndTimeStamp();
+    void setEndTimeStamp(long endTime);
   }
 
   long getStartTime();
