@@ -501,7 +501,7 @@ def getServersRSGroup(rsgroup_admin, hostname, port)
   # Here we directly log and exit.
   return rsgroup unless rsgroup.nil?
   $LOG.info('The server ' + hostname + 'belongs to no rsgroup. Exit regions moving.')
-  exit
+  exit 0
 end
 
 # Get servers in the same regionserver group as the given server
