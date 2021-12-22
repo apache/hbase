@@ -503,6 +503,7 @@ def getServersRSGroup(rsgroupAdmin, hostname, port)
     $LOG.info("The server " + hostname + "belongs to no rsgroup. Exit regions moving.")
     exit
   end
+end
 
 # Get servers in the same regionserver group as the given server
 def getSameRSGroupServers(servers, rsgroupAdmin, hostname, port)
