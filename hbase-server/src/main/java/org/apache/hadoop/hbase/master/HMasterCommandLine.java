@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ServerCommandLine;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKAuthentication;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -214,7 +214,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         }
 
         // login the zookeeper server principal (if using security)
-        ZKUtil.loginServer(conf, HConstants.ZK_SERVER_KEYTAB_FILE,
+        ZKAuthentication.loginServer(conf, HConstants.ZK_SERVER_KEYTAB_FILE,
           HConstants.ZK_SERVER_KERBEROS_PRINCIPAL, null);
         int localZKClusterSessionTimeout =
           conf.getInt(HConstants.ZK_SESSION_TIMEOUT + ".localHBaseCluster", 10*1000);
