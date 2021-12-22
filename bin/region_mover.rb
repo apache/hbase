@@ -498,6 +498,14 @@ def getSameRSGroupServers(servers, rsgroupAdmin, hostname, port)
   results = []
   rsgroup = rsgroupAdmin.getRSGroupOfServer(Address.fromParts(hostname,
     java.lang.Integer.parseInt(port)))
+
+  # If the rsgroup is nil, that means this server belongs to no rsgroup.
+  # It should be already offline.
+  # So we just return and do nothing more.
+  if rsgroup.nil?
+    $LOG.warn("The server " + hostname + " belongs to no rsgroup. Is it already offline?")
+    return results
+  end
   # rsgroup must be default or others, can't be nil
   $LOG.info("Getting servers list from group: " + rsgroup.getName())
   rsservers = rsgroup.getServers()
