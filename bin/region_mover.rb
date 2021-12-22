@@ -502,7 +502,7 @@ def getSameRSGroupServers(servers, rsgroupAdmin, hostname, port)
   # If the rsgroup is nil, that means this server belongs to no rsgroup.
   # It should be already offline.
   # So we just return the empty list and do nothing more.
-  if rsgroup.nil? return results end
+  return result if rsgroup.nil?
 
   # rsgroup must be default or others, can't be nil
   $LOG.info("Getting servers list from group: " + rsgroup.getName())
