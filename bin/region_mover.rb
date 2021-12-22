@@ -503,7 +503,6 @@ def getSameRSGroupServers(servers, rsgroupAdmin, hostname, port)
   # It should be already offline.
   # So we just return and do nothing more.
   if rsgroup.nil?
-    $LOG.warn("The server " + hostname + " belongs to no rsgroup. Is it already offline?")
     return results
   end
   # rsgroup must be default or others, can't be nil
