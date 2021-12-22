@@ -493,12 +493,9 @@ def getFilename(options, targetServer, port)
   return filename
 end
 
-# Get servers in the same regionserver group as the given server
-def getSameRSGroupServers(servers, rsgroupAdmin, hostname, port)
-  results = []
+def getServersRSGroup(rsgroupAdmin, hostname, port)
   rsgroup = rsgroupAdmin.getRSGroupOfServer(Address.fromParts(hostname,
     java.lang.Integer.parseInt(port)))
-
   # If the rsgroup is nil, that means this server belongs to no rsgroup.
   # It should be already offline.
   # Here we directly log and exit.
@@ -506,6 +503,11 @@ def getSameRSGroupServers(servers, rsgroupAdmin, hostname, port)
     $LOG.info("The server " + hostname + "belongs to no rsgroup. Exit regions moving.")
     exit
   end
+
+# Get servers in the same regionserver group as the given server
+def getSameRSGroupServers(servers, rsgroupAdmin, hostname, port)
+  results = []
+  rsgroup = getServersRSGroup(rsgroupAdmin, hostname, port)
 
   # rsgroup must be default or others, can't be nil
   $LOG.info("Getting servers list from group: " + rsgroup.getName())
