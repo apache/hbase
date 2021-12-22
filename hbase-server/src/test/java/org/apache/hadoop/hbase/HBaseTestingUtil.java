@@ -343,10 +343,6 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     this.conf.set(HConstants.HBASE_DIR, "file://" + dataTestDir);
     LOG.debug("Setting {} to {}", HConstants.HBASE_DIR, dataTestDir);
 
-    // RS is started with a different user, @see #HBaseTestingUtil.getDifferentUser
-    // this is to ensure the user has permissions to read and write external HDFS.
-    this.conf.set("fs.permissions.umask-mode", "000");
-
     this.conf.setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
     // If the value for random ports isn't set set it to true, thus making
     // tests opt-out for random port assignment
@@ -844,6 +840,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
       addPropertiesToConf(option.getExternalDFS());
 
+      // RS is started with a different user, @see #HBaseTestingUtil.getDifferentUser
+      // this is to ensure the user has permissions to read and write external HDFS.
+      this.conf.set("fs.permissions.umask-mode", "000");
       LOG.info("USING EXTERNAL DFS: {}, user: {}.",
         conf.get("fs.defaultFS"), UserGroupInformation.getCurrentUser().getUserName());
 
@@ -1077,6 +1076,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
         throw new IOException(e.getMessage(), e);
       }
     }
+    resetUserGroupInformation();
   }
 
   /**
