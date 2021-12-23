@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.codec;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -96,10 +97,7 @@ public class CodecPerformance {
   }
 
   static void verifyCells(final Cell [] input, final Cell [] output) {
-    assertEquals(input.length, output.length);
-    for (int i = 0; i < input.length; i ++) {
-      input[i].equals(output[i]);
-    }
+    assertArrayEquals(input, output);
   }
 
   static void doCodec(final Codec codec, final Cell [] cells, final int cycles, final int count,

@@ -68,7 +68,7 @@ public class HBaseSaslRpcServer {
   public String getAttemptingUser() {
     Optional<UserGroupInformation> optionalUser = serverWithProvider.getAttemptingUser();
     if (optionalUser.isPresent()) {
-      optionalUser.get().toString();
+      return optionalUser.get().toString();
     }
     return "Unknown";
   }
