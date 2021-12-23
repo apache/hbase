@@ -467,6 +467,48 @@ public class TestTableSnapshotScanner {
     }
   }
 
+  @Test
+  public void testDeleteTableWithMergedRegions() throws Exception {
+    setupCluster();
+    final TableName tableName = TableName.valueOf(this.name.getMethodName());
+    String snapshotName = tableName.getNameAsString() + "_snapshot";
+    Configuration conf = UTIL.getConfiguration();
+    try (Admin admin = UTIL.getConnection().getAdmin()) {
+      // disable compaction
+      admin.compactionSwitch(false,
+        admin.getRegionServers().stream().map(s -> s.getServerName()).collect(Collectors.toList()));
+      // create table
+      Table table = UTIL.createTable(tableName, FAMILIES, 1, bbb, yyy, 3);
+      List<RegionInfo> regions = admin.getRegions(tableName);
+      Assert.assertEquals(3, regions.size());
+      // write some data
+      UTIL.loadTable(table, FAMILIES);
+      // merge region
+      admin.mergeRegionsAsync(new byte[][] { regions.get(0).getEncodedNameAsBytes(),
+          regions.get(1).getEncodedNameAsBytes() },
+        false).get();
+      regions = admin.getRegions(tableName);
+      Assert.assertEquals(2, regions.size());
+      // snapshot
+      admin.snapshot(snapshotName, tableName);
+      // verify snapshot
+      try (TableSnapshotScanner scanner =
+          new TableSnapshotScanner(conf, UTIL.getDataTestDirOnTestFS(snapshotName), snapshotName,
+              new Scan().withStartRow(bbb).withStopRow(yyy))) {
+        verifyScanner(scanner, bbb, yyy);
+      }
+      // drop table
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+      // verify snapshot
+      try (TableSnapshotScanner scanner =
+          new TableSnapshotScanner(conf, UTIL.getDataTestDirOnTestFS(snapshotName), snapshotName,
+              new Scan().withStartRow(bbb).withStopRow(yyy))) {
+        verifyScanner(scanner, bbb, yyy);
+      }
+    }
+  }
+
   private void traverseAndSetFileTime(Path path, long time) throws IOException {
     fs.setTimes(path, time, -1);
     if (fs.isDirectory(path)) {
