@@ -155,7 +155,6 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
    * id-&gt;scanner hash-map.
    *
    * @param id the ID of the scanner to remove
-   * @return a Scanner, or null if ID was invalid.
    */
   private synchronized void removeScanner(int id) {
     scannerMap.invalidate(id);

@@ -256,6 +256,7 @@ public class RegionCoprocessorHost
    * @param rsServices interface to available region server functionality
    * @param conf the configuration
    */
+  @SuppressWarnings("ReturnValueIgnored") // Checking method exists as CPU optimization
   public RegionCoprocessorHost(final HRegion region,
       final RegionServerServices rsServices, final Configuration conf) {
     super(rsServices);

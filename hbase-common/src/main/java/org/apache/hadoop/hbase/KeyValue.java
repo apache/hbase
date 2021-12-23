@@ -1102,10 +1102,10 @@ public class KeyValue implements ExtendedCell, Cloneable {
    */
   @Override
   public KeyValue clone() throws CloneNotSupportedException {
-    super.clone();
-    byte [] b = new byte[this.length];
-    System.arraycopy(this.bytes, this.offset, b, 0, this.length);
-    KeyValue ret = new KeyValue(b, 0, b.length);
+    KeyValue ret = (KeyValue) super.clone();
+    ret.bytes = Arrays.copyOf(this.bytes, this.bytes.length);
+    ret.offset = 0;
+    ret.length = ret.bytes.length;
     // Important to clone the memstoreTS as well - otherwise memstore's
     // update-in-place methods (eg increment) will end up creating
     // new entries
@@ -1720,8 +1720,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     @Override
-    protected Object clone() throws CloneNotSupportedException {
-      return new MetaComparator();
+    protected MetaComparator clone() throws CloneNotSupportedException {
+      return (MetaComparator) super.clone();
     }
 
     /**
@@ -2248,9 +2248,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     @Override
-    protected Object clone() throws CloneNotSupportedException {
-      super.clone();
-      return new KVComparator();
+    protected KVComparator clone() throws CloneNotSupportedException {
+      return (KVComparator) super.clone();
     }
 
   }
