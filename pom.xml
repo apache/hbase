@@ -1725,7 +1725,9 @@
       yyyy-MM-dd'T'HH:mm
     </maven.build.timestamp.format>
     <buildDate>${maven.build.timestamp}</buildDate>
+    <!-- these two control the Java language version and JVM runtime version supported -->
     <compileSource>1.8</compileSource>
+    <releaseTarget>8</releaseTarget>
     <!-- Build dependencies -->
     <maven.min.version>3.0.4</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
@@ -2718,6 +2720,7 @@
         <jdk>[1.11,)</jdk>
       </activation>
       <properties>
+        <maven.compiler.release>${releaseTarget}</maven.compiler.release>
         <!-- TODO: replicate logic for windows support -->
         <argLine>--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED ${hbase-surefire.argLine}</argLine>
         <!-- We need a minimum HDFS version of 3.2.0 for HADOOP-12760 -->
