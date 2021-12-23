@@ -149,7 +149,7 @@ public class TestRpcMetrics {
     HELPER.assertCounter("exceptions.RegionTooBusyException", 1, serverSource);
     HELPER.assertCounter("exceptions.OutOfOrderScannerNextException", 1, serverSource);
     HELPER.assertCounter("exceptions.NotServingRegionException", 1, serverSource);
-    HELPER.assertCounter("exceptions.CallDroppedException", 1, serverSource);
+    HELPER.assertCounter("exceptions.callDropped", 1, serverSource);
     HELPER.assertCounter("exceptions", 6, serverSource);
   }
 
