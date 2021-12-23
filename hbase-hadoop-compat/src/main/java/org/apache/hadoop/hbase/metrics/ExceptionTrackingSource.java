@@ -43,6 +43,7 @@ public interface ExceptionTrackingSource extends BaseSource {
   String EXCEPTIONS_CALL_QUEUE_TOO_BIG_DESC = "Call queue is full";
   String EXCEPTIONS_QUOTA_EXCEEDED = "exceptions.quotaExceeded";
   String EXCEPTIONS_RPC_THROTTLING = "exceptions.rpcThrottling";
+  String EXCEPTIONS_CALL_DROPPED = "exceptions.callDropped";
 
   void exception();
 
@@ -60,4 +61,5 @@ public interface ExceptionTrackingSource extends BaseSource {
   void callQueueTooBigException();
   void quotaExceededException();
   void rpcThrottlingException();
+  void callDroppedException();
 }

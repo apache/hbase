@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.junit.Assert.*;
 
+import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -143,11 +144,13 @@ public class TestRpcMetrics {
     mrpc.exception(new RegionTooBusyException("Some region"));
     mrpc.exception(new OutOfOrderScannerNextException());
     mrpc.exception(new NotServingRegionException());
+    mrpc.exception(new CallDroppedException());
     HELPER.assertCounter("exceptions.RegionMovedException", 1, serverSource);
     HELPER.assertCounter("exceptions.RegionTooBusyException", 1, serverSource);
     HELPER.assertCounter("exceptions.OutOfOrderScannerNextException", 1, serverSource);
     HELPER.assertCounter("exceptions.NotServingRegionException", 1, serverSource);
-    HELPER.assertCounter("exceptions", 5, serverSource);
+    HELPER.assertCounter("exceptions.CallDroppedException", 1, serverSource);
+    HELPER.assertCounter("exceptions", 6, serverSource);
   }
 
   @Test
