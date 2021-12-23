@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteTableState;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 @InterfaceAudience.Private
 public class DeleteTableProcedure
@@ -317,9 +318,18 @@ public class DeleteTableProcedure
 
     // Archive regions from FS (temp directory)
     if (archive) {
-      List<Path> regionDirList = regions.stream().filter(RegionReplicaUtil::isDefaultReplica)
-        .map(region -> FSUtils.getRegionDirFromTableDir(tempTableDir, region))
-        .collect(Collectors.toList());
+      List<Path> regionDirList = new ArrayList<>();
+      for (RegionInfo region : regions) {
+        if (RegionReplicaUtil.isDefaultReplica(region)) {
+          regionDirList.add(FSUtils.getRegionDirFromTableDir(tempTableDir, region));
+          List<RegionInfo> mergeRegions = MetaTableAccessor
+              .getMergeRegions(env.getMasterServices().getConnection(), region.getRegionName());
+          if (!CollectionUtils.isEmpty(mergeRegions)) {
+            mergeRegions.stream()
+                .forEach(r -> regionDirList.add(FSUtils.getRegionDirFromTableDir(tempTableDir, r)));
+          }
+        }
+      }
       HFileArchiver.archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(), tempTableDir,
         regionDirList);
       if (!regionDirList.isEmpty()) {
