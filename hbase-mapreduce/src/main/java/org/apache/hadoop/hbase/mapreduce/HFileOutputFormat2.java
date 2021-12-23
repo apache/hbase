@@ -95,7 +95,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Writes HFiles. Passed Cells must arrive in order.
  * Writes current time as the sequence id for the file. Sets the major compacted
- * attribute on created @{link {@link HFile}s. Calling write(null,null) will forcibly roll
+ * attribute on created {@link HFile}s. Calling write(null,null) will forcibly roll
  * all HFiles being written.
  * <p>
  * Using this class as part of a MapReduce job is best done
