@@ -94,7 +94,7 @@ public class TestPutDeleteEtcCellIteration {
     for (CellScanner cellScanner = d.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();
       byte [] bytes = Bytes.toBytes(index++);
-      assertEquals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, KeyValue.Type.DeleteColumn), cell);
+      assertEquals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, KeyValue.Type.Delete), cell);
     }
     assertEquals(COUNT, index);
   }
