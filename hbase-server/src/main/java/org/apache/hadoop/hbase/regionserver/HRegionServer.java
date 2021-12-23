@@ -1418,6 +1418,20 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return regionServerAccounting;
   }
 
+  // Round the size with KB or MB.
+  // A trick here is that if the sizeInBytes is less than sizeUnit, we will round the size to 1
+  // instead of 0 if it is not 0, to avoid some schedulers think the region has no data. See
+  // HBASE-26340 for more details on why this is important.
+  private static int roundSize(long sizeInByte, int sizeUnit) {
+    if (sizeInByte == 0) {
+      return 0;
+    } else if (sizeInByte < sizeUnit) {
+      return 1;
+    } else {
+      return (int) Math.min(sizeInByte / sizeUnit, Integer.MAX_VALUE);
+    }
+  }
+
   /**
    * @param r Region to get RegionLoad for.
    * @param regionLoadBldr the RegionLoad.Builder, can be null
@@ -1431,16 +1445,14 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     int storefiles = 0;
     int storeRefCount = 0;
     int maxCompactedStoreFileRefCount = 0;
-    int storeUncompressedSizeMB = 0;
-    int storefileSizeMB = 0;
-    long storefileSizeByte = 0L;
-    int memstoreSizeMB = (int) (r.getMemStoreDataSize() / 1024 / 1024);
-    long storefileIndexSizeKB = 0;
-    int rootLevelIndexSizeKB = 0;
-    int totalStaticIndexSizeKB = 0;
-    int totalStaticBloomSizeKB = 0;
-    long totalCompactingKVs = 0;
-    long currentCompactedKVs = 0;
+    long storeUncompressedSize = 0L;
+    long storefileSize = 0L;
+    long storefileIndexSize = 0L;
+    long rootLevelIndexSize = 0L;
+    long totalStaticIndexSize = 0L;
+    long totalStaticBloomSize = 0L;
+    long totalCompactingKVs = 0L;
+    long currentCompactedKVs = 0L;
     List<HStore> storeList = r.getStores();
     stores += storeList.size();
     for (HStore store : storeList) {
@@ -1450,22 +1462,30 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       int currentMaxCompactedStoreFileRefCount = store.getMaxCompactedStoreFileRefCount();
       maxCompactedStoreFileRefCount = Math.max(maxCompactedStoreFileRefCount,
         currentMaxCompactedStoreFileRefCount);
-      storeUncompressedSizeMB += (int) (store.getStoreSizeUncompressed() / 1024 / 1024);
-      storefileSizeByte += store.getStorefilesSize();
+      storeUncompressedSize += store.getStoreSizeUncompressed();
+      storefileSize += store.getStorefilesSize();
       //TODO: storefileIndexSizeKB is same with rootLevelIndexSizeKB?
-      storefileIndexSizeKB += store.getStorefilesRootLevelIndexSize() / 1024;
+      storefileIndexSize += store.getStorefilesRootLevelIndexSize();
       CompactionProgress progress = store.getCompactionProgress();
       if (progress != null) {
         totalCompactingKVs += progress.getTotalCompactingKVs();
         currentCompactedKVs += progress.currentCompactedKVs;
       }
-      rootLevelIndexSizeKB += (int) (store.getStorefilesRootLevelIndexSize() / 1024);
-      totalStaticIndexSizeKB += (int) (store.getTotalStaticIndexSize() / 1024);
-      totalStaticBloomSizeKB += (int) (store.getTotalStaticBloomSize() / 1024);
+      rootLevelIndexSize += store.getStorefilesRootLevelIndexSize();
+      totalStaticIndexSize += store.getTotalStaticIndexSize();
+      totalStaticBloomSize += store.getTotalStaticBloomSize();
     }
-    //HBASE-26340 Fix false "0" size under 1MB
-    storefileSizeMB = storefileSizeByte > 0 && storefileSizeByte <= 1024 * 1024
-       ? 1 : (int) storefileSizeByte / 1024 / 1024;
+
+    int unitMB = 1024 * 1024;
+    int unitKB = 1024;
+
+    int memstoreSizeMB = roundSize(r.getMemStoreDataSize(), unitMB);
+    int storeUncompressedSizeMB = roundSize(storeUncompressedSize, unitMB);
+    int storefileSizeMB = roundSize(storefileSize, unitMB);
+    int storefileIndexSizeKB = roundSize(storefileIndexSize, unitKB);
+    int rootLevelIndexSizeKB = roundSize(rootLevelIndexSize, unitKB);
+    int totalStaticIndexSizeKB = roundSize(totalStaticIndexSize, unitKB);
+    int totalStaticBloomSizeKB = roundSize(totalStaticBloomSize, unitKB);
 
     HDFSBlocksDistribution hdfsBd = r.getHDFSBlocksDistribution();
     float dataLocality = hdfsBd.getBlockLocalityIndex(serverName.getHostname());
@@ -1479,6 +1499,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     if (regionSpecifier == null) {
       regionSpecifier = RegionSpecifier.newBuilder();
     }
+
     regionSpecifier.setType(RegionSpecifierType.REGION_NAME);
     regionSpecifier.setValue(UnsafeByteOperations.unsafeWrap(name));
     regionLoadBldr.setRegionSpecifier(regionSpecifier.build())
