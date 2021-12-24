@@ -496,23 +496,19 @@ end
 def getServersRSGroup(rsgroup_admin, hostname, port)
   rsgroup = rsgroup_admin.getRSGroupOfServer(Address.fromParts(hostname,
                                              java.lang.Integer.parseInt(port)))
-  if rsgroup.nil?
-    begin
-      regions = getRegions(getConfiguration(), hostname)
-    rescue java.io.IOException => e
-      $LOG.warn(e)
-      exit 0
-    end
-
-    if not regions.nil? and regions.length == 0
+  return rsgroup unless rsgroup.nil?
+  begin
+    regions = getRegions(getConfiguration(), hostname)
+    if !regions.nil? && regions.empty?
       exit 0
     else
       $LOG.warn('The server ' + hostname + ' belongs to no rsgroup. But still holds regions.')
       exit 5
     end
-
+  rescue java.io.IOException => e
+    $LOG.warn(e)
+    exit 0
   end
-  return rsgroup
 end
 
 # Get servers in the same regionserver group as the given server
