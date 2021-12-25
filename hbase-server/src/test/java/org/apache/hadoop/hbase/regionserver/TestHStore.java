@@ -2351,7 +2351,7 @@ public class TestHStore {
     MemStoreLABImpl memStoreLAB =
         (MemStoreLABImpl) (myDefaultMemStore.snapshotImmutableSegment.getMemStoreLAB());
     assertTrue(memStoreLAB.isClosed());
-    assertTrue(memStoreLAB.getOpenScannerCount() == 0);
+    assertTrue(memStoreLAB.getRefCntValue() == 0);
     assertTrue(memStoreLAB.isReclaimed());
     assertTrue(memStoreLAB.chunks.isEmpty());
     StoreScanner storeScanner = null;
@@ -2423,6 +2423,103 @@ public class TestHStore {
         sink.append(cell);
       };
       super.performFlush(scanner, newCellSink, throughputController);
+    }
+  }
+
+  /**
+   * This test is for HBASE-26494, test the {@link RefCnt} behaviors in {@link ImmutableMemStoreLAB}
+   */
+  @Test
+  public void testImmutableMemStoreLABRefCnt() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+
+    byte[] smallValue = new byte[3];
+    byte[] largeValue = new byte[9];
+    final long timestamp = EnvironmentEdgeManager.currentTime();
+    final long seqId = 100;
+    final Cell smallCell1 = createCell(qf1, timestamp, seqId, smallValue);
+    final Cell largeCell1 = createCell(qf2, timestamp, seqId, largeValue);
+    final Cell smallCell2 = createCell(qf3, timestamp, seqId+1, smallValue);
+    final Cell largeCell2 = createCell(qf4, timestamp, seqId+1, largeValue);
+    final Cell smallCell3 = createCell(qf5, timestamp, seqId+2, smallValue);
+    final Cell largeCell3 = createCell(qf6, timestamp, seqId+2, largeValue);
+
+    int smallCellByteSize = MutableSegment.getCellLength(smallCell1);
+    int largeCellByteSize = MutableSegment.getCellLength(largeCell1);
+    int firstWriteCellByteSize = (smallCellByteSize + largeCellByteSize);
+    int flushByteSize = firstWriteCellByteSize - 2;
+
+    // set CompactingMemStore.inmemoryFlushSize to flushByteSize.
+    conf.set(HStore.MEMSTORE_CLASS_NAME, CompactingMemStore.class.getName());
+    conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.005);
+    conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(flushByteSize * 200));
+    conf.setBoolean(WALFactory.WAL_ENABLED, false);
+
+    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
+
+    final CompactingMemStore myCompactingMemStore = ((CompactingMemStore) store.memstore);
+    assertTrue((int) (myCompactingMemStore.getInmemoryFlushSize()) == flushByteSize);
+    myCompactingMemStore.allowCompaction.set(false);
+
+    NonThreadSafeMemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
+    store.add(smallCell1, memStoreSizing);
+    store.add(largeCell1, memStoreSizing);
+    store.add(smallCell2, memStoreSizing);
+    store.add(largeCell2, memStoreSizing);
+    store.add(smallCell3, memStoreSizing);
+    store.add(largeCell3, memStoreSizing);
+    VersionedSegmentsList versionedSegmentsList = myCompactingMemStore.getImmutableSegments();
+    assertTrue(versionedSegmentsList.getNumOfSegments() == 3);
+    List<ImmutableSegment> segments = versionedSegmentsList.getStoreSegments();
+    List<MemStoreLABImpl> memStoreLABs = new ArrayList<MemStoreLABImpl>(segments.size());
+    for (ImmutableSegment segment : segments) {
+      memStoreLABs.add((MemStoreLABImpl) segment.getMemStoreLAB());
+    }
+    List<KeyValueScanner> scanners1 = myCompactingMemStore.getScanners(Long.MAX_VALUE);
+    for (MemStoreLABImpl memStoreLAB : memStoreLABs) {
+      assertTrue(memStoreLAB.getRefCntValue() == 2);
+    }
+
+    myCompactingMemStore.allowCompaction.set(true);
+    myCompactingMemStore.flushInMemory();
+
+    versionedSegmentsList = myCompactingMemStore.getImmutableSegments();
+    assertTrue(versionedSegmentsList.getNumOfSegments() == 1);
+    ImmutableMemStoreLAB immutableMemStoreLAB =
+        (ImmutableMemStoreLAB) (versionedSegmentsList.getStoreSegments().get(0).getMemStoreLAB());
+    for (MemStoreLABImpl memStoreLAB : memStoreLABs) {
+      assertTrue(memStoreLAB.getRefCntValue() == 2);
+    }
+
+    List<KeyValueScanner> scanners2 = myCompactingMemStore.getScanners(Long.MAX_VALUE);
+    for (MemStoreLABImpl memStoreLAB : memStoreLABs) {
+      assertTrue(memStoreLAB.getRefCntValue() == 2);
+    }
+    assertTrue(immutableMemStoreLAB.getRefCntValue() == 2);
+    for (KeyValueScanner scanner : scanners1) {
+      scanner.close();
+    }
+    for (MemStoreLABImpl memStoreLAB : memStoreLABs) {
+      assertTrue(memStoreLAB.getRefCntValue() == 1);
+    }
+    for (KeyValueScanner scanner : scanners2) {
+      scanner.close();
+    }
+    for (MemStoreLABImpl memStoreLAB : memStoreLABs) {
+      assertTrue(memStoreLAB.getRefCntValue() == 1);
+    }
+    assertTrue(immutableMemStoreLAB.getRefCntValue() == 1);
+    flushStore(store, id++);
+    for (MemStoreLABImpl memStoreLAB : memStoreLABs) {
+      assertTrue(memStoreLAB.getRefCntValue() == 0);
+    }
+    assertTrue(immutableMemStoreLAB.getRefCntValue() == 0);
+    assertTrue(immutableMemStoreLAB.isClosed());
+    for (MemStoreLABImpl memStoreLAB : memStoreLABs) {
+      assertTrue(memStoreLAB.isClosed());
+      assertTrue(memStoreLAB.isReclaimed());
+      assertTrue(memStoreLAB.chunks.isEmpty());
     }
   }
 

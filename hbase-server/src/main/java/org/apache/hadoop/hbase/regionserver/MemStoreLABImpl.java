@@ -24,7 +24,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
@@ -32,6 +31,7 @@ import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,8 +85,11 @@ public class MemStoreLABImpl implements MemStoreLAB {
   // This flag is for reclaiming chunks. Its set when putting chunks back to
   // pool
   private final AtomicBoolean reclaimed = new AtomicBoolean(false);
-  // Current count of open scanners which reading data from this MemStoreLAB
-  private final AtomicInteger openScannerCount = new AtomicInteger();
+  /**
+   * Its initial value is 1, so it is one bigger than the current count of open scanners which
+   * reading data from this MemStoreLAB.
+   */
+  private final RefCnt refCnt;
 
   // Used in testing
   public MemStoreLABImpl() {
@@ -100,6 +103,9 @@ public class MemStoreLABImpl implements MemStoreLAB {
     // if we don't exclude allocations >CHUNK_SIZE, we'd infiniteloop on one!
     Preconditions.checkArgument(maxAlloc <= dataChunkSize,
         MAX_ALLOC_KEY + " must be less than " + CHUNK_SIZE_KEY);
+    this.refCnt = RefCnt.create(() -> {
+      recycleChunks();
+    });
 
     // if user requested to work with MSLABs (whether on- or off-heap), then the
     // immutable segments are going to use CellChunkMap as their index
@@ -264,14 +270,15 @@ public class MemStoreLABImpl implements MemStoreLAB {
     }
     // We could put back the chunks to pool for reusing only when there is no
     // opening scanner which will read their data
-    int count  = openScannerCount.get();
-    if(count == 0) {
-      recycleChunks();
-    }
+    this.refCnt.release();
   }
 
-  int getOpenScannerCount() {
-    return this.openScannerCount.get();
+  /**
+   * This method is only used for test.
+   * @return
+   */
+  int getRefCntValue() {
+    return this.refCnt.refCnt();
   }
 
   /**
@@ -279,7 +286,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
    */
   @Override
   public void incScannerCount() {
-    this.openScannerCount.incrementAndGet();
+    this.refCnt.retain();
   }
 
   /**
@@ -287,10 +294,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
    */
   @Override
   public void decScannerCount() {
-    int count = this.openScannerCount.decrementAndGet();
-    if (this.closed.get() && count == 0) {
-      recycleChunks();
-    }
+    this.refCnt.release();
   }
 
   private void recycleChunks() {

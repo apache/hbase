@@ -160,7 +160,7 @@ public class TestStoreScannerClosure {
           memStoreLAB = ((SegmentScanner) scanner).segment.getMemStoreLAB();
           if (memStoreLAB != null) {
             // There should be no unpooled chunks
-            int refCount = ((MemStoreLABImpl) memStoreLAB).getOpenScannerCount();
+            int refCount = ((MemStoreLABImpl) memStoreLAB).getRefCntValue();
             assertTrue("The memstore should not have unpooled chunks", refCount == 0);
           }
         }
