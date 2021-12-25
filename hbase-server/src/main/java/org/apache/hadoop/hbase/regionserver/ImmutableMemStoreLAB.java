@@ -98,7 +98,7 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
     // both of them were referred by ongoing scanners. So they have > 0 'refCnt'. Now over
     // the new Segment some scanners come in and this MSLABs 'refCnt' also goes up and
     // then come down on finish of scanners. Now a close() call comes to this Immutable MSLAB. As
-    // it's 'refCnt' is 1 it will call close() on both of the Heap MSLABs. Say by that
+    // it's 'refCnt' is zero it will call close() on both of the Heap MSLABs. Say by that
     // time the old scanners on one of the MSLAB got over where as on the other, still an old
     // scanner is going on. The call close() on that MSLAB will not close it immediately but will
     // just decrease it's 'refCnt' and it's 'refCnt' still > 0. Later once the old scan is
