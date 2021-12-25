@@ -523,12 +523,6 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     admin.snapshot(snapshot);
   }
 
-  @Override
-  public void snapshotTable(SnapshotDescription snapshot)
-    throws IOException, SnapshotCreationException, IllegalArgumentException {
-    admin.snapshotTable(snapshot);
-  }
-
   public Future<Void> snapshotAsync(SnapshotDescription snapshot)
     throws IOException, SnapshotCreationException {
     return admin.snapshotAsync(snapshot);

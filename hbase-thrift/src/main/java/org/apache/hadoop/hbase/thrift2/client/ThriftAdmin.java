@@ -846,11 +846,6 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void snapshotTable(SnapshotDescription snapshot) {
-    throw new NotImplementedException("snapshot not supported in ThriftAdmin");
-  }
-
-  @Override
   public Future<Void> snapshotAsync(SnapshotDescription snapshot) {
     throw new NotImplementedException("snapshotAsync not supported in ThriftAdmin");
 

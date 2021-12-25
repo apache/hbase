@@ -119,7 +119,7 @@ public class TestSnapshotProcedure {
 
   @Test
   public void testSimpleSnapshotTable() throws Exception {
-    TEST_UTIL.getAdmin().snapshotTable(snapshot);
+    TEST_UTIL.getAdmin().snapshot(snapshot);
     SnapshotTestingUtils.assertOneSnapshotThatMatches(TEST_UTIL.getAdmin(), snapshotProto);
     SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotProto, TABLE_NAME, CF);
   }
@@ -221,7 +221,7 @@ public class TestSnapshotProcedure {
       @Override
       public void run() {
         try {
-          TEST_UTIL.getAdmin().snapshotTable(snapshot);
+          TEST_UTIL.getAdmin().snapshot(snapshot);
         } catch (IOException e) {
           LOG.error("first client failed taking snapshot", e);
           fail("first client failed taking snapshot");
@@ -233,7 +233,7 @@ public class TestSnapshotProcedure {
     // we don't allow different snapshot with same name
     SnapshotDescription snapshotWithSameName =
       new SnapshotDescription(SNAPSHOT_NAME, TABLE_NAME, SnapshotType.SKIPFLUSH);
-    TEST_UTIL.getAdmin().snapshotTable(snapshotWithSameName);
+    TEST_UTIL.getAdmin().snapshot(snapshotWithSameName);
   }
 
   @Test(expected = org.apache.hadoop.hbase.snapshot.SnapshotCreationException.class)
@@ -242,7 +242,7 @@ public class TestSnapshotProcedure {
       @Override
       public void run() {
         try {
-          TEST_UTIL.getAdmin().snapshotTable(snapshot);
+          TEST_UTIL.getAdmin().snapshot(snapshot);
         } catch (IOException e) {
           LOG.error("first client failed taking snapshot", e);
           fail("first client failed taking snapshot");
@@ -251,7 +251,7 @@ public class TestSnapshotProcedure {
     };
     first.start();
     Thread.sleep(1000);
-    TEST_UTIL.getAdmin().snapshotTable(snapshot);
+    TEST_UTIL.getAdmin().snapshot(snapshot);
   }
 
   @Test
@@ -261,7 +261,7 @@ public class TestSnapshotProcedure {
       @Override
       public void run() {
         try {
-          TEST_UTIL.getAdmin().snapshotTable(snapshot);
+          TEST_UTIL.getAdmin().snapshot(snapshot);
         } catch (IOException e) {
           LOG.error("procedure snapshot failed", e);
           fail("procedure snapshot failed");
@@ -284,7 +284,7 @@ public class TestSnapshotProcedure {
       @Override
       public void run() {
         try {
-          TEST_UTIL.getAdmin().snapshot(snapshotOnSameTable);
+          master.getSnapshotManager().takeSnapshot(snapshotOnSameTableProto);
         } catch (IOException e) {
           LOG.error("zk snapshot failed", e);
           fail("zk snapshot failed");

@@ -391,6 +391,15 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
          "No snapshot name passed in request, can't figure out which snapshot you want to check.");
     }
 
+    Long procId = snapshotToProcIdMap.get(expected);
+    if (procId != null) {
+      if (master.getMasterProcedureExecutor().isRunning()) {
+        return master.getMasterProcedureExecutor().isFinished(procId);
+      } else {
+       return false;
+      }
+    }
+
     String ssString = ClientSnapshotDescriptionUtils.toString(expected);
 
     // check to see if the sentinel exists,
@@ -657,26 +666,31 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       long nonceGroup, long nonce) throws IOException {
     this.takingSnapshotLock.readLock().lock();
     try {
-      return MasterProcedureUtil.submitProcedure(
-        new MasterProcedureUtil.NonceProcedureRunnable(master, nonceGroup, nonce) {
-          @Override
-          protected void run() throws IOException {
-            sanityCheckBeforeSnapshot(snapshot, false);
-
-            long procId = submitProcedure(new SnapshotProcedure(
-              master.getMasterProcedureExecutor().getEnvironment(), snapshot));
-
-            getMaster().getSnapshotManager().registerSnapshotProcedure(snapshot, procId);
-          }
-
-          @Override
-          protected String getDescription() {
-            return "SnapshotTableProcedure";
-          }
-        });
+      return submitSnapshotProcedure(snapshot, nonceGroup, nonce);
     } finally {
       this.takingSnapshotLock.readLock().unlock();
     }
+  }
+
+  private long submitSnapshotProcedure(SnapshotDescription snapshot,
+      long nonceGroup, long nonce) throws IOException {
+    return MasterProcedureUtil.submitProcedure(
+      new MasterProcedureUtil.NonceProcedureRunnable(master, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          sanityCheckBeforeSnapshot(snapshot, false);
+
+          long procId = submitProcedure(new SnapshotProcedure(
+            master.getMasterProcedureExecutor().getEnvironment(), snapshot));
+
+          getMaster().getSnapshotManager().registerSnapshotProcedure(snapshot, procId);
+        }
+
+        @Override
+        protected String getDescription() {
+          return "SnapshotProcedure";
+        }
+      });
   }
 
   private void takeSnapshotInternal(SnapshotDescription snapshot) throws IOException {

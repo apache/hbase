@@ -638,12 +638,6 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public void snapshotTable(SnapshotDescription snapshot)
-      throws IOException, SnapshotCreationException, IllegalArgumentException {
-    get(admin.snapshotTable(snapshot));
-  }
-
-  @Override
   public Future<Void> snapshotAsync(SnapshotDescription snapshot)
       throws IOException, SnapshotCreationException {
     return admin.snapshot(snapshot);
