@@ -63,23 +63,33 @@ public class StreamSlowMonitor implements ConfigurationObserver {
   private static final long DEFAULT_WAL_SLOW_DETECT_DATA_TTL = 10 * 60 * 1000; // 10min in ms
 
   /**
-   * Configure for the slow packet process time, a duration from send to ACK.
-   * It is preferred that this value should not be less than 1s.
+   * Configure for the speed check of packet min length.
+   * For packets whose data length smaller than this value, check slow by processing time.
+   * While for packets whose data length larger than this value, check slow by flushing speed.
    */
-  private static final String DATANODE_SLOW_PACKET_PROCESS_TIME_KEY =
-    "hbase.regionserver.async.wal.datanode.slow.packet.process.time.millis";
-  private static final long DEFAULT_DATANODE_SLOW_PACKET_PROCESS_TIME = 6000; //6s in ms
+  private static final String DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH_KEY =
+    "hbase.regionserver.async.wal.datanode.slow.check.packet.speed.data.length.min";
+  private static final long DEFAULT_DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH =
+    64 * 1024; //64KB
 
   /**
-   * Configure for the packet flush speed.
-   * e.g. If the configured slow slow packet process time is larger than 1s, then here 0.1kbs means
-   * 100B should be processed in less than 1s.
-   * If the configured slow slow packet process time is larger than 10s, then here 0.1kbs means
-   * 1KB should be processed in less than 10s.
+   * Configure for the slow packet process time, a duration from send to ACK.
+   * The processing time check is for packets that data length smaller than
+   * {@link DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH_KEY}
    */
-  private static final String DATANODE_SLOW_PACKET_FLUSH_SPEED_KEY =
-    "hbase.regionserver.async.wal.datanode.slow.packet.flush.speed.kbs";
-  private static final double DEFAULT_DATANODE_SLOW_PACKET_FLUSH_SPEED = 0.1;
+  public static final String DATANODE_SLOW_PACKET_PROCESS_TIME_KEY =
+    "hbase.regionserver.async.wal.datanode.slow.packet.process.time.millis";
+  private static final long DEFAULT_DATANODE_SLOW_PACKET_PROCESS_TIME = 6000; // 6s in ms
+
+  /**
+   * Configure for the check of large packet(which is configured by
+   * {@link DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH_KEY}) flush speed.
+   * e.g. If the configured slow packet process time is smaller than 10s, then here 20KB/s means
+   * 64KB should be processed in less than 3.2s.
+   */
+  private static final String DATANODE_SLOW_PACKET_FLUSH_MIN_SPEED_KEY =
+    "hbase.regionserver.async.wal.datanode.slow.packet.speed.min.kbs";
+  private static final double DEFAULT_DATANODE_SLOW_PACKET_FLUSH_MIN_SPEED = 20; // 20KB/s
 
   private final String name;
   // this is a map of datanodeInfo->queued slow PacketAckData
@@ -89,7 +99,8 @@ public class StreamSlowMonitor implements ConfigurationObserver {
   private int minSlowDetectCount;
   private long slowDataTtl;
   private long slowPacketAckMs;
-  private double slowPacketAckSpeed;
+  private double minPacketFlushSpeedKBs;
+  private long minLengthForSpeedCheck;
 
   public StreamSlowMonitor(Configuration conf, String name,
       ExcludeDatanodeManager excludeDatanodeManager) {
@@ -117,7 +128,7 @@ public class StreamSlowMonitor implements ConfigurationObserver {
   /**
    * Check if the packet process time shows that the relevant datanode is a slow node.
    * @param datanodeInfo the datanode that processed the packet
-   * @param packetDataLen the data length of the packet
+   * @param packetDataLen the data length of the packet (in bytes)
    * @param processTimeMs the process time (in ms) of the packet on the datanode,
    * @param lastAckTimestamp the last acked timestamp of the packet on another datanode
    * @param unfinished if the packet is unfinished flushed to the datanode replicas
@@ -132,8 +143,8 @@ public class StreamSlowMonitor implements ConfigurationObserver {
     //    process time should be considered as slow.
     // 2. if the data length of the packet is more than 4MB bytes, and the rate of process bytes is
     //    less than the configured process speed. For large packet, speed should be considered.
-    boolean slow = processTimeMs > slowPacketAckMs || (packetDataLen > 4 * 1024 * 1024
-        && (double) packetDataLen / processTimeMs < slowPacketAckSpeed);
+    boolean slow = processTimeMs > slowPacketAckMs || (packetDataLen > minLengthForSpeedCheck
+        && (double) packetDataLen / processTimeMs < minPacketFlushSpeedKBs);
     if (slow) {
       // Check if large diff ack timestamp between replicas,
       // should try to avoid misjudgments that caused by GC STW.
@@ -167,12 +178,15 @@ public class StreamSlowMonitor implements ConfigurationObserver {
 
   private void setConf(Configuration conf) {
     this.minSlowDetectCount = conf.getInt(WAL_SLOW_DETECT_MIN_COUNT_KEY,
-      DEFAULT_WAL_SLOW_DETECT_MIN_COUNT);
+        DEFAULT_WAL_SLOW_DETECT_MIN_COUNT);
     this.slowDataTtl = conf.getLong(WAL_SLOW_DETECT_DATA_TTL_KEY, DEFAULT_WAL_SLOW_DETECT_DATA_TTL);
     this.slowPacketAckMs = conf.getLong(DATANODE_SLOW_PACKET_PROCESS_TIME_KEY,
-      DEFAULT_DATANODE_SLOW_PACKET_PROCESS_TIME);
-    this.slowPacketAckSpeed = conf.getDouble(DATANODE_SLOW_PACKET_FLUSH_SPEED_KEY,
-      DEFAULT_DATANODE_SLOW_PACKET_FLUSH_SPEED);
+        DEFAULT_DATANODE_SLOW_PACKET_PROCESS_TIME);
+    this.minLengthForSpeedCheck = conf.getLong(
+        DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH_KEY,
+        DEFAULT_DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH);
+    this.minPacketFlushSpeedKBs = conf.getDouble(DATANODE_SLOW_PACKET_FLUSH_MIN_SPEED_KEY,
+      DEFAULT_DATANODE_SLOW_PACKET_FLUSH_MIN_SPEED);
   }
 
   public ExcludeDatanodeManager getExcludeDatanodeManager() {
