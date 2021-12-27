@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -53,7 +54,7 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
   }
 
   @Override
-  public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException {
+  public void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {
     scopeWALEdits(logKey, logEdit, conf);
   }
 

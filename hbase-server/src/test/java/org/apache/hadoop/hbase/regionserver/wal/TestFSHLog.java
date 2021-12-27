@@ -240,8 +240,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
       log.init();
       log.registerWALActionsListener(new WALActionsListener() {
         @Override
-        public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit)
-            throws IOException {
+        public void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {
           if (startHoldingForAppend.get()) {
             try {
               holdAppend.await();

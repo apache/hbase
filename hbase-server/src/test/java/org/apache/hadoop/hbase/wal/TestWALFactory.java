@@ -675,13 +675,6 @@ public class TestWALFactory {
     public void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {
       increments++;
     }
-
-    @Override
-    public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) {
-      // To change body of implemented methods use File | Settings | File
-      // Templates.
-      increments++;
-    }
   }
 
   @Test
