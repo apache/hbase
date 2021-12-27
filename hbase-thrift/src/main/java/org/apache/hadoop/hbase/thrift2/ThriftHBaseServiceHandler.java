@@ -478,7 +478,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     ResultScanner scanner = getScanner(scannerId);
     if (scanner == null) {
       LOG.warn("scanner ID: " + scannerId + "is invalid");
-      // While the scanner could be already closed by the periodic cleaner,
+      // While the scanner could be already expired,
       // we should not throw exception here. Just log and return.
       return;
     }
