@@ -28,6 +28,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
+
+import org.apache.hadoop.hbase.regionserver.CompactingMemStore.IndexType;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.HeapMemoryTuneObserver;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
@@ -250,16 +252,21 @@ public class ChunkCreator {
     /**
      * Here we always put the chunk into the chunkIdMap no matter whether the chunk is pooled or
      * not. <br/>
-     * For {@link CompactingMemStore},because only {@link CompactingMemStore.IndexType#CHUNK_MAP}
-     * could invoke this method, so we must put chunk into this chunkIdMap to make sure the chunk
-     * could be got by chunkId.<br/>
-     * For {@link DefaultMemStore},it is also reasonable to put the chunk in chunkIdMap because:
+     * For {@link CompactingMemStore},because the chunk could only be acquired from
+     * {@link ChunkCreator} through {@link MemStoreLABImpl}, and
+     * {@link CompactingMemStore#indexType} could only be {@link IndexType.CHUNK_MAP} when using
+     * {@link MemStoreLABImpl}, so we must put chunk into this {@link ChunkCreator#chunkIdMap} to
+     * make sure the chunk could be got by chunkId.
+     * <p>
+     * For {@link DefaultMemStore},it is also reasonable to put the chunk in
+     * {@link ChunkCreator#chunkIdMap} because: <br/>
      * 1.When the {@link MemStoreLAB} which created the chunk is not closed, this chunk is used by
      * the {@link Segment} which references this {@link MemStoreLAB}, so this chunk certainly should
-     * not be GC-ed. <br/>
+     * not be GC-ed, putting the chunk in {@link ChunkCreator#chunkIdMap} does not prevent useless
+     * chunk to be GC-ed. <br/>
      * 2.When the {@link MemStoreLAB} which created the chunk is closed, and if the chunk is not
-     * pooled, {@link ChunkCreator#removeChunk} is invoked to remove the chunk from this chunkIdMap,
-     * so there is no memory leak.
+     * pooled, {@link ChunkCreator#removeChunk} is invoked to remove the chunk from this
+     * {@link ChunkCreator#chunkIdMap}, so there is no memory leak.
      */
     this.chunkIdMap.put(chunk.getId(), chunk);
 
