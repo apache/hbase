@@ -90,16 +90,6 @@ public interface WALActionsListener {
   default void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {}
 
   /**
-   * @param logKey
-   * @param logEdit TODO: Retire this in favor of
-   *          {@link #visitLogEntryBeforeWrite(RegionInfo, WALKey, WALEdit)} It only exists to get
-   *          scope when replicating. Scope should be in the WALKey and not need us passing in a
-   *          <code>htd</code>.
-   * @throws IOException If failed to parse the WALEdit
-   */
-  default void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException {}
-
-  /**
    * For notification post append to the writer.  Used by metrics system at least.
    * TODO: Combine this with above.
    * @param entryLen approx length of cells in this append.

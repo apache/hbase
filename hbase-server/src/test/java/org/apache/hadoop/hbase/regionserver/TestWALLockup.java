@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.DamagedWALException;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -533,26 +534,6 @@ public class TestWALLockup {
     public Connection createConnection(Configuration conf) throws IOException {
       return null;
     }
-  }
-
-  static class DummyWALActionsListener implements WALActionsListener {
-
-    @Override
-    public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit)
-        throws IOException {
-      if (logKey.getTableName().getNameAsString().equalsIgnoreCase("sleep")) {
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-      }
-      if (logKey.getTableName().getNameAsString()
-          .equalsIgnoreCase("DamagedWALException")) {
-        throw new DamagedWALException("Failed appending");
-      }
-    }
-
   }
 
   /**

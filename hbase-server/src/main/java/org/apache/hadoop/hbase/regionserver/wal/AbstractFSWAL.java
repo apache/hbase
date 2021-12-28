@@ -1051,7 +1051,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     coprocessorHost.preWALWrite(entry.getRegionInfo(), entry.getKey(), entry.getEdit());
     if (!listeners.isEmpty()) {
       for (WALActionsListener i : listeners) {
-        i.visitLogEntryBeforeWrite(entry.getKey(), entry.getEdit());
+        i.visitLogEntryBeforeWrite(entry.getRegionInfo(), entry.getKey(), entry.getEdit());
       }
     }
     doAppend(writer, entry);
