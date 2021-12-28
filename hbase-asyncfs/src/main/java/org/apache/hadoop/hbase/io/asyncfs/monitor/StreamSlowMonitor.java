@@ -68,7 +68,7 @@ public class StreamSlowMonitor implements ConfigurationObserver {
    * While for packets whose data length larger than this value, check slow by flushing speed.
    */
   private static final String DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH_KEY =
-    "hbase.regionserver.async.wal.datanode.slow.check.packet.speed.data.length.min";
+    "hbase.regionserver.async.wal.datanode.slow.check.speed.packet.data.length.min";
   private static final long DEFAULT_DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH =
     64 * 1024; //64KB
 
@@ -136,14 +136,12 @@ public class StreamSlowMonitor implements ConfigurationObserver {
   public void checkProcessTimeAndSpeed(DatanodeInfo datanodeInfo, long packetDataLen,
       long processTimeMs, long lastAckTimestamp, int unfinished) {
     long current = EnvironmentEdgeManager.currentTime();
-    // A datanode is suspicious slow if it meets one of the following conditions
-    // (please see more details in HBASE-26347):
-    // 1. no matter what the length of packet is, the the packet process time (in ms) is
-    //    greater than the configured slowPacketAckMs. This condition means that all the long enough
-    //    process time should be considered as slow.
-    // 2. if the data length of the packet is more than 4MB bytes, and the rate of process bytes is
-    //    less than the configured process speed. For large packet, speed should be considered.
-    boolean slow = processTimeMs > slowPacketAckMs || (packetDataLen > minLengthForSpeedCheck
+    // Here are two conditions used to determine whether a datanode is slow,
+    // 1. For small packet, we just have a simple time limit, without considering
+    // the size of the packet.
+    // 2. For large packet, we will calculate the speed, and check if the speed is too slow.
+    boolean slow = (packetDataLen <= minLengthForSpeedCheck && processTimeMs > slowPacketAckMs) || (
+      packetDataLen > minLengthForSpeedCheck
         && (double) packetDataLen / processTimeMs < minPacketFlushSpeedKBs);
     if (slow) {
       // Check if large diff ack timestamp between replicas,

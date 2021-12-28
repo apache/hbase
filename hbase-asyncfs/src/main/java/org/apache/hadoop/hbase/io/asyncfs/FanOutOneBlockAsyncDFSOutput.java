@@ -527,7 +527,6 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     return future;
   }
 
-  @SuppressWarnings("FutureReturnValueIgnored")
   private void endBlock() throws IOException {
     Preconditions.checkState(waitingAckQueue.isEmpty(),
       "should call flush first before calling close");
