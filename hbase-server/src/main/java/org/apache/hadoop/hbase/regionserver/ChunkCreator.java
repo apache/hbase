@@ -250,8 +250,8 @@ public class ChunkCreator {
     }
 
     /**
-     * Here we always put the chunk into the chunkIdMap no matter whether the chunk is pooled or
-     * not. <br/>
+     * Here we always put the chunk into the {@link ChunkCreator#chunkIdMap} no matter whether the
+     * chunk is pooled or not. <br/>
      * For {@link CompactingMemStore},because the chunk could only be acquired from
      * {@link ChunkCreator} through {@link MemStoreLABImpl}, and
      * {@link CompactingMemStore#indexType} could only be {@link IndexType.CHUNK_MAP} when using
