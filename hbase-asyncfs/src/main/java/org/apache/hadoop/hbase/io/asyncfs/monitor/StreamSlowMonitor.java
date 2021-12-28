@@ -75,7 +75,7 @@ public class StreamSlowMonitor implements ConfigurationObserver {
   /**
    * Configure for the slow packet process time, a duration from send to ACK.
    * The processing time check is for packets that data length smaller than
-   * {@link DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH_KEY}
+   * {@link StreamSlowMonitor#DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH_KEY}
    */
   public static final String DATANODE_SLOW_PACKET_PROCESS_TIME_KEY =
     "hbase.regionserver.async.wal.datanode.slow.packet.process.time.millis";
@@ -83,7 +83,7 @@ public class StreamSlowMonitor implements ConfigurationObserver {
 
   /**
    * Configure for the check of large packet(which is configured by
-   * {@link DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH_KEY}) flush speed.
+   * {@link StreamSlowMonitor#DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH_KEY}) flush speed.
    * e.g. If the configured slow packet process time is smaller than 10s, then here 20KB/s means
    * 64KB should be processed in less than 3.2s.
    */
