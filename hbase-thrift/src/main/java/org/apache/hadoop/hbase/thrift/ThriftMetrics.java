@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.thrift;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
@@ -152,6 +153,8 @@ public class ThriftMetrics  {
         source.quotaExceededException();
       } else if (throwable instanceof RpcThrottlingException) {
         source.rpcThrottlingException();
+      } else if (throwable instanceof CallDroppedException) {
+        source.callDroppedException();
       } else if (LOG.isDebugEnabled()) {
         LOG.debug("Unknown exception type", throwable);
       }

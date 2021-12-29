@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -85,6 +86,8 @@ public class ErrorThrowingGetObserver implements RegionCoprocessor, RegionObserv
           throw new QuotaExceededException("Failing for test");
         case RPC_THROTTLING:
           throw new RpcThrottlingException("Failing for test");
+        case CALL_DROPPED:
+          throw new CallDroppedException("Failing for test");
         default:
           throw new DoNotRetryIOException("Failing for test");
       }
@@ -102,7 +105,8 @@ public class ErrorThrowingGetObserver implements RegionCoprocessor, RegionObserv
     REGION_TOO_BUSY(ExceptionTrackingSource.EXCEPTIONS_BUSY_NAME),
     OUT_OF_ORDER_SCANNER_NEXT(ExceptionTrackingSource.EXCEPTIONS_OOO_NAME),
     QUOTA_EXCEEDED(ExceptionTrackingSource.EXCEPTIONS_QUOTA_EXCEEDED),
-    RPC_THROTTLING(ExceptionTrackingSource.EXCEPTIONS_RPC_THROTTLING);
+    RPC_THROTTLING(ExceptionTrackingSource.EXCEPTIONS_RPC_THROTTLING),
+    CALL_DROPPED(ExceptionTrackingSource.EXCEPTIONS_CALL_DROPPED);
 
     private final String metricName;
 
