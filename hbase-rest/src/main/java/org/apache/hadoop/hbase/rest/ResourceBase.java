@@ -19,13 +19,14 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Response;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.javax.ws.rs.WebApplicationException;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.Response;
 
 @InterfaceAudience.Private
 public class ResourceBase implements Constants {
