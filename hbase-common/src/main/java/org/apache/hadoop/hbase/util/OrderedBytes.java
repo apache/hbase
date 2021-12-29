@@ -556,8 +556,8 @@ public class OrderedBytes {
     byte[] a = src.getBytes();
     final int start = src.getPosition(), offset = src.getOffset(), remaining = src.getRemaining();
     Order ord = comp ? DESCENDING : ASCENDING;
-    BigDecimal m = BigDecimal.ZERO;
-    e--;
+    BigDecimal m;
+    StringBuilder sb = new StringBuilder();
     for (int i = 0;; i++) {
       if (i > remaining) {
         // we've exceeded this range's window
@@ -566,18 +566,23 @@ public class OrderedBytes {
             "Read exceeds range before termination byte found. offset: " + offset + " position: "
                 + (start + i));
       }
+      // one byte -> 2 digits
       // base-100 digits are encoded as val * 2 + 1 except for the termination digit.
-      m = m.add( // m +=
-        new BigDecimal(BigInteger.ONE, e * -2).multiply( // 100 ^ p * [decoded digit]
-          BigDecimal.valueOf((ord.apply(a[offset + start + i]) & 0xff) / 2)));
-      e--;
+      int twoDigits = (ord.apply(a[offset + start + i]) & 0xff) / 2;
+      sb.append(String.format("%02d", twoDigits));
       // detect termination digit
-      if ((ord.apply(a[offset + start + i]) & 1) == 0) {
+      // Besides, as we will normalise the return value at last,
+      // we only need to decode at most MAX_PRECISION + 2 digits here.
+      if ((ord.apply(a[offset + start + i]) & 1) == 0 || sb.length() > MAX_PRECISION + 1) {
         src.setPosition(start + i + 1);
         break;
       }
     }
-    return normalize(m);
+    m = new BigDecimal(sb.toString());
+    int stepsMoveLeft = sb.charAt(0) != '0' ? m.precision() : m.precision() + 1;
+    stepsMoveLeft -= e * 2;
+
+    return normalize(m.movePointLeft(stepsMoveLeft));
   }
 
   /**
