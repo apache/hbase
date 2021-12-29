@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -126,6 +127,8 @@ public class MetricsHBaseServer {
         source.quotaExceededException();
       } else if (throwable instanceof RpcThrottlingException) {
         source.rpcThrottlingException();
+      } else if (throwable instanceof CallDroppedException) {
+        source.callDroppedException();
       } else if (LOG.isDebugEnabled()) {
         LOG.debug("Unknown exception type", throwable);
       }
