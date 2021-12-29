@@ -23,17 +23,16 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
-
-import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.ext.MessageBodyWriter;
-import javax.ws.rs.ext.Provider;
-
 import org.apache.hadoop.hbase.rest.Constants;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.javax.ws.rs.Produces;
+import org.apache.hbase.thirdparty.javax.ws.rs.WebApplicationException;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.MultivaluedMap;
+import org.apache.hbase.thirdparty.javax.ws.rs.ext.MessageBodyWriter;
+import org.apache.hbase.thirdparty.javax.ws.rs.ext.Provider;
 
 /**
  * An adapter between Jersey and ProtobufMessageHandler implementors. Hooks up
