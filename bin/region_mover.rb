@@ -493,12 +493,13 @@ def getFilename(options, targetServer, port)
   return filename
 end
 
-def getServersRSGroup(rsgroup_admin, hostname, port)
+def getServersRSGroup(servers, rsgroup_admin, hostname, port)
   rsgroup = rsgroup_admin.getRSGroupOfServer(Address.fromParts(hostname,
                                              java.lang.Integer.parseInt(port)))
   return rsgroup unless rsgroup.nil?
   begin
-    regions = getRegions(getConfiguration(), hostname)
+    server_name = getServerName(servers, hostname, port)
+    regions = getRegions(getConfiguration(), server_name)
     if !regions.nil? && regions.empty?
       exit 0
     else
@@ -514,7 +515,7 @@ end
 # Get servers in the same regionserver group as the given server
 def getSameRSGroupServers(servers, rsgroup_admin, hostname, port)
   results = []
-  rsgroup = getServersRSGroup(rsgroup_admin, hostname, port)
+  rsgroup = getServersRSGroup(servers, rsgroup_admin, hostname, port)
 
   # rsgroup must be default or others, can't be nil
   $LOG.info("Getting servers list from group: " + rsgroup.getName())
