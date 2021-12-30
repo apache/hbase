@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -1333,6 +1332,7 @@ public class TestOrderedBytes {
         ThreadLocalRandom.current().nextLong());
       PositionedByteRange tmp = new SimplePositionedMutableByteRange(100);
       Order ord = ThreadLocalRandom.current().nextBoolean() ? Order.DESCENDING : Order.ASCENDING;
+
       OrderedBytes.encodeNumeric(tmp, randomData, ord);
       tmp.setPosition(0);
 
