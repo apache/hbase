@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -49,10 +50,13 @@ public class TestLocalAsyncOutput {
 
   private static final HBaseCommonTestingUtil TEST_UTIL = new HBaseCommonTestingUtil();
 
+  private static StreamSlowMonitor MONITOR;
+
   @AfterClass
   public static void tearDownAfterClass() throws IOException {
     TEST_UTIL.cleanupTestDir();
     GROUP.shutdownGracefully();
+    MONITOR = StreamSlowMonitor.create(TEST_UTIL.getConfiguration(), "testMonitor");
   }
 
   @Test
@@ -61,7 +65,7 @@ public class TestLocalAsyncOutput {
     Path f = new Path(TEST_UTIL.getDataTestDir(), "test");
     FileSystem fs = FileSystem.getLocal(TEST_UTIL.getConfiguration());
     AsyncFSOutput out = AsyncFSOutputHelper.createOutput(fs, f, false, true,
-      fs.getDefaultReplication(f), fs.getDefaultBlockSize(f), GROUP, CHANNEL_CLASS);
+      fs.getDefaultReplication(f), fs.getDefaultBlockSize(f), GROUP, CHANNEL_CLASS, MONITOR);
     TestFanOutOneBlockAsyncDFSOutput.writeAndVerify(fs, f, out);
   }
 }

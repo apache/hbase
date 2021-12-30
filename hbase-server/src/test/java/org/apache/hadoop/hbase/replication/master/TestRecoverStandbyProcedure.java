@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.replication.RecoverStandbyProcedure;
@@ -161,7 +162,9 @@ public class TestRecoverStandbyProcedure {
     for (int i = 0; i < WAL_NUMBER; i++) {
       try (ProtobufLogWriter writer = new ProtobufLogWriter()) {
         Path wal = new Path(peerRemoteWALDir, "srv1,8888." + i + ".syncrep");
-        writer.init(fs, wal, conf, true, WALUtil.getWALBlockSize(conf, fs, peerRemoteWALDir));
+        writer.init(fs, wal, conf, true,
+            WALUtil.getWALBlockSize(conf, fs, peerRemoteWALDir),
+            StreamSlowMonitor.create(conf, "defaultMonitor"));
         List<Entry> entries = setupWALEntries(i * ROW_COUNT, (i + 1) * ROW_COUNT);
         for (Entry entry : entries) {
           writer.append(entry);
