@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.nio.ByteBuffer;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -35,8 +36,6 @@ import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.errorprone.annotations.RestrictedApi;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
