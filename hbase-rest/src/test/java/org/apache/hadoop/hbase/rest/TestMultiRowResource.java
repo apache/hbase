@@ -26,8 +26,6 @@ import java.io.IOException;
 import java.util.Collection;
 import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -81,8 +79,6 @@ public class TestMultiRowResource {
 
   private static Client client;
   private static JAXBContext context;
-  private static Marshaller marshaller;
-  private static Unmarshaller unmarshaller;
   private static Configuration conf;
 
   private static Header extraHdr = null;
@@ -94,7 +90,11 @@ public class TestMultiRowResource {
   }
 
   public TestMultiRowResource(Boolean csrf) {
-    csrfEnabled = csrf;
+    setCsrfEnabled(csrf);
+  }
+
+  protected static void setCsrfEnabled(boolean flag) {
+    csrfEnabled = flag;
   }
 
   @BeforeClass
@@ -111,8 +111,6 @@ public class TestMultiRowResource {
             CellModel.class,
             CellSetModel.class,
             RowModel.class);
-    marshaller = context.createMarshaller();
-    unmarshaller = context.createUnmarshaller();
     client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
     Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(TABLE)) {

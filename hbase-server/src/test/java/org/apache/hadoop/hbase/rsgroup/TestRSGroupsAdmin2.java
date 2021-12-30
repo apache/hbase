@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.rsgroup;
 import static org.apache.hadoop.hbase.util.Threads.sleep;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -126,6 +127,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
         break;
       }
     }
+    assertNotNull(tmpTargetServer);
     final ServerName targetServer = tmpTargetServer;
     // move target server to group
     ADMIN.moveServersToRSGroup(Sets.newHashSet(targetServer.getAddress()), newGroup.getName());

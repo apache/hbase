@@ -4732,7 +4732,7 @@ public class TestHRegion {
 
   protected class PutThread extends Thread {
     private volatile boolean done;
-    private volatile int numPutsFinished = 0;
+    private int numPutsFinished = 0;
 
     private Throwable error = null;
     private int numRows;
@@ -7188,7 +7188,8 @@ public class TestHRegion {
         return null;
       }
     });
-    obtainedRowLock.await(30, TimeUnit.SECONDS);
+    boolean released = obtainedRowLock.await(30, TimeUnit.SECONDS);
+    assertTrue("Latch was not released", released);
 
     Future<Void> f2 = exec.submit(new Callable<Void>() {
       @Override
@@ -7274,7 +7275,8 @@ public class TestHRegion {
         return null;
       }
     });
-    obtainedRowLock.await(30, TimeUnit.SECONDS);
+    boolean released = obtainedRowLock.await(30, TimeUnit.SECONDS);
+    assertTrue("Latch was not released", released);
 
     Future<Void> f2 = exec.submit(new Callable<Void>() {
       @Override

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -797,6 +798,7 @@ public class TestQuotaAdmin {
       default:
     }
 
+    assertNotNull(t);
     assertEquals(scope, ProtobufUtil.toQuotaScope(t.getScope()));
     assertEquals(t.getSoftLimit(), limit);
     assertEquals(t.getTimeUnit(), ProtobufUtil.toProtoTimeUnit(tu));

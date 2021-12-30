@@ -395,10 +395,6 @@ public class TestWALSplit {
 
   private Path createRecoveredEditsPathForRegion() throws IOException {
     byte[] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
-    long now = EnvironmentEdgeManager.currentTime();
-    Entry entry = new Entry(
-        new WALKeyImpl(encoded, TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
-        new WALEdit());
     Path p = WALSplitUtil
         .getRegionSplitEditsPath(TableName.META_TABLE_NAME, encoded, 1, FILENAME_BEING_SPLIT,
             TMPDIRNAME, conf);

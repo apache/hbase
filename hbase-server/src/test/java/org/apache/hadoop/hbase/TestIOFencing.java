@@ -386,7 +386,9 @@ public class TestIOFencing {
       if (compactingRegion != null) {
         compactingRegion.allowCompactions();
       }
-      admin.close();
+      if (admin != null) {
+        admin.close();
+      }
       TEST_UTIL.shutdownMiniCluster();
     }
   }

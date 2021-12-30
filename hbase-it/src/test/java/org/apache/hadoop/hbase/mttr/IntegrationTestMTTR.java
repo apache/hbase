@@ -133,7 +133,7 @@ public class IntegrationTestMTTR {
   /**
    * Util to get at the cluster.
    */
-  private static IntegrationTestingUtility util;
+  private static final IntegrationTestingUtility util = new IntegrationTestingUtility();
 
   /**
    * Executor for test threads.
@@ -157,10 +157,6 @@ public class IntegrationTestMTTR {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    // Set up the integration test util
-    if (util == null) {
-      util = new IntegrationTestingUtility();
-    }
 
     // Make sure there are three servers.
     util.initializeCluster(3);
@@ -251,7 +247,6 @@ public class IntegrationTestMTTR {
   public static void after() throws IOException {
     // Clean everything up.
     util.restoreCluster();
-    util = null;
 
     // Stop the threads so that we know everything is complete.
     executorService.shutdown();

@@ -67,7 +67,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   // Helpers
   //////////////////////////////////////////////////////////////////////////////
   public TestCompactingToCellFlatMapMemStore(String type){
-    if (type == "CHUNK_MAP") {
+    if (type.equals("CHUNK_MAP")) {
       toCellChunkMap = true;
     } else {
       toCellChunkMap = false;

@@ -118,9 +118,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
         TableDescriptor desc, RegionInfo[] regions) throws IOException {
       // cause a NullPointerException and don't catch it: this will cause the
       // master to abort().
-      Integer i;
-      i = null;
-      i = i++;
+      throw new NullPointerException("injected fault");
     }
 
     public boolean wasCreateTableCalled() {

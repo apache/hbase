@@ -64,8 +64,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
           c.getEnvironment().getRegion().getRegionInfo().getTable().getNameAsString();
       if (tableName.equals("observed_table")) {
         // Trigger a NPE to fail the coprocessor
-        Integer i = null;
-        i = i + 1;
+        throw new NullPointerException("injected fault");
       }
     }
   }

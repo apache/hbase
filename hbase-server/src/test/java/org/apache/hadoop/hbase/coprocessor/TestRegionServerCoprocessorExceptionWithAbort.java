@@ -146,8 +146,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
     @Override
     public void start(CoprocessorEnvironment e) throws IOException {
       // Trigger a NPE to fail the coprocessor
-      Integer i = null;
-      i = i + 1;
+      throw new NullPointerException("injected fault");
     }
   }
 
@@ -161,8 +160,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
           c.getEnvironment().getRegion().getRegionInfo().getTable().getNameAsString();
       if (tableName.equals("observed_table")) {
         // Trigger a NPE to fail the coprocessor
-        Integer i = null;
-        i = i + 1;
+        throw new NullPointerException("injected fault");
       }
     }
   }

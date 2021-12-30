@@ -482,6 +482,7 @@ public abstract class TestVisibilityLabels {
           }
         } catch (Throwable e) {
         }
+        assertNotNull(authsResponse);
         List<String> authsList = new ArrayList<>(authsResponse.getAuthList().size());
         for (ByteString authBS : authsResponse.getAuthList()) {
           authsList.add(Bytes.toString(authBS.toByteArray()));

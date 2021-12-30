@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security.token;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -81,13 +82,13 @@ public class TestClientTokenUtil {
     shouldInjectFault.set(null, new ServiceException(injected));
 
     try {
-      ClientTokenUtil.obtainToken((Connection)null);
+      ClientTokenUtil.obtainToken(mock(Connection.class));
       fail("Should have injected exception.");
     } catch (IOException e) {
       assertException(injected, e);
     }
 
-    CompletableFuture<?> future = ClientTokenUtil.obtainToken((AsyncConnection)null);
+    CompletableFuture<?> future = ClientTokenUtil.obtainToken(mock(AsyncConnection.class));
     try {
       future.get();
       fail("Should have injected exception.");

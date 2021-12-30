@@ -92,8 +92,10 @@ public class TestRegionServerCrashDisableWAL {
       }
     }
     // shutdown rs
-    thread.getRegionServer().abort("For testing");
-    thread.join();
+    if (thread != null) {
+      thread.getRegionServer().abort("For testing");
+      thread.join();
+    }
     // restart master
     UTIL.getMiniHBaseCluster().startMaster();
     // make sure that we can schedule a SCP for the crashed server which WAL is disabled and bring

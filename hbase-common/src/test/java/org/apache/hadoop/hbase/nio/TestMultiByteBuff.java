@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.nio;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -153,7 +154,7 @@ public class TestMultiByteBuff {
     mbb1 = new SingleByteBuff(bb1);
     assertTrue(mbb1.hasArray());
     assertEquals(1, mbb1.arrayOffset());
-    assertEquals(b, mbb1.array());
+    assertArrayEquals(b, mbb1.array());
     mbb1 = new SingleByteBuff(ByteBuffer.allocateDirect(10));
     assertFalse(mbb1.hasArray());
     try {

@@ -127,7 +127,9 @@ public class TestDefaultMobStoreFlusher {
       scanner.close();
       Assert.assertEquals(1, size);
     } finally {
-      table.close();
+      if (table != null) {
+        table.close();
+      }
     }
   }
 }
