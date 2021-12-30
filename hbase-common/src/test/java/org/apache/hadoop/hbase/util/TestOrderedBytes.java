@@ -26,6 +26,7 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -1321,17 +1322,21 @@ public class TestOrderedBytes {
     }
   }
 
+  /**
+   * Test if the data encoded by our encoding function can be decoded correctly.
+   */
   @Test
   public void testEncodeDecodeMatch() {
-    BigDecimal[] randomData = new BigDecimal[200];
-    Random rand = new Random(System.currentTimeMillis());
-    for (int i = 0; i < randomData.length; i++) {
-      randomData[i] = BigDecimal.valueOf(rand.nextDouble() + rand.nextLong());
+    int samplesQuantity = 200;
+    for (int i = 0; i < samplesQuantity; i++) {
+      BigDecimal randomData = BigDecimal.valueOf(ThreadLocalRandom.current().nextDouble() +
+        ThreadLocalRandom.current().nextLong());
       PositionedByteRange tmp = new SimplePositionedMutableByteRange(100);
-      Order ord = rand.nextBoolean() ? Order.DESCENDING : Order.ASCENDING;
-      OrderedBytes.encodeNumeric(tmp, randomData[i], ord);
+      Order ord = ThreadLocalRandom.current().nextBoolean() ? Order.DESCENDING : Order.ASCENDING;
+      OrderedBytes.encodeNumeric(tmp, randomData, ord);
       tmp.setPosition(0);
-      BigDecimal left = OrderedBytes.normalize(randomData[i]);
+
+      BigDecimal left = OrderedBytes.normalize(randomData);
       BigDecimal right = OrderedBytes.decodeNumericAsBigDecimal(tmp);
       assertEquals(0, left.compareTo(right));
     }
