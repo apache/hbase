@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrapper {
 
   @Override
@@ -373,6 +376,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   @Override
   public long getWALFileSize() {
     return 1024000;
+  }
+
+  @Override
+  public List<String> getWALExcludeDNs() {
+    return new ArrayList<>();
   }
 
   @Override
