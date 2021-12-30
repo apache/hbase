@@ -356,6 +356,7 @@ public class TestAdmin1 extends TestAdminBase {
       } catch (IOException e) {
         e.printStackTrace();
       }
+      assertNotNull(regions);
       assertEquals(2, regions.size());
       if (splitPoint != null) {
         // make sure the split point matches our explicit configuration

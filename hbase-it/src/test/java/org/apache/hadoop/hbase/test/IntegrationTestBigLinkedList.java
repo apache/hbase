@@ -1316,15 +1316,15 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
                 hrl = rl.getRegionLocation(key.getBytes());
                 if (hrl != null) keyRegionLocation = hrl.toString();
               }
+              LOG.error("Extras on ref without a def, ref=" + Bytes.toStringBinary(ref) +
+                ", refPrevEqualsKey=" +
+                  (Bytes.compareTo(key.getBytes(), 0, key.getLength(), b, 0, b.length) == 0) +
+                  ", key=" + Bytes.toStringBinary(key.getBytes(), 0, key.getLength()) +
+                  ", ref row date=" + ts + ", jobStr=" + jobStr +
+                  ", ref row count=" + count +
+                  ", ref row regionLocation=" + refRegionLocation +
+                  ", key row regionLocation=" + keyRegionLocation);
             }
-            LOG.error("Extras on ref without a def, ref=" + Bytes.toStringBinary(ref) +
-              ", refPrevEqualsKey=" +
-                (Bytes.compareTo(key.getBytes(), 0, key.getLength(), b, 0, b.length) == 0) +
-                ", key=" + Bytes.toStringBinary(key.getBytes(), 0, key.getLength()) +
-                ", ref row date=" + ts + ", jobStr=" + jobStr +
-                ", ref row count=" + count +
-                ", ref row regionLocation=" + refRegionLocation +
-                ", key row regionLocation=" + keyRegionLocation);
             refsSb.append(comma);
             comma = ",";
             refsSb.append(Bytes.toStringBinary(ref));

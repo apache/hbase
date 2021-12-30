@@ -22,6 +22,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -155,8 +156,15 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
       this.connection = null;
     }
 
-    public boolean equals(ClusterID other) {
+    public boolean equals(Object other) {
+      if (other == null) {
+        return false;
+      }
       return this.toString().equalsIgnoreCase(other.toString());
+    }
+
+    public int hashCode() {
+      return this.toString().hashCode();
     }
   }
 
@@ -264,7 +272,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
      */
     protected void runGenerator() throws Exception {
       Path outputPath = new Path(outputDir);
-      UUID uuid = util.getRandomUUID(); //create a random UUID.
+      UUID uuid = HBaseCommonTestingUtil.getRandomUUID(); //create a random UUID.
       Path generatorOutput = new Path(outputPath, uuid.toString());
 
       Generator generator = new Generator();
@@ -288,7 +296,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
      */
     protected void runVerify(long expectedNumNodes) throws Exception {
       Path outputPath = new Path(outputDir);
-      UUID uuid = util.getRandomUUID(); //create a random UUID.
+      UUID uuid = HBaseCommonTestingUtil.getRandomUUID(); //create a random UUID.
       Path iterationOutput = new Path(outputPath, uuid.toString());
 
       Verify verify = new Verify();

@@ -474,12 +474,12 @@ public class TestReversibleScanners {
       ReversedKeyValueHeap kvHeap, int startRowNum) throws IOException {
     // Test next and seek
     for (int i = startRowNum; i >= 0; i--) {
-      if (i % 2 == 1 && i - 2 >= 0) {
+      if ((i & 1) == 1 && i - 2 >= 0) {
         i = i - 2;
         kvHeap.seekToPreviousRow(KeyValueUtil.createFirstOnRow(ROWS[i + 1]));
       }
       for (int j = 0; j < QUALSIZE; j++) {
-        if (j % 2 == 1 && (j + 1) < QUALSIZE) {
+        if ((j & 1) == 1 && (j + 1) < QUALSIZE) {
           j = j + 1;
           kvHeap.backwardSeek(makeKV(i, j));
         }
@@ -709,7 +709,7 @@ public class TestReversibleScanners {
     // Add another half of the keyvalues to snapshot
     for (int i = 0; i < ROWSIZE; i++) {
       for (int j = 0; j < QUALSIZE; j++) {
-        if ((i + j) % 2 == 1) {
+        if (((i + j) & 1) == 1) {
           memstore.add(makeKV(i, j), null);
         }
       }

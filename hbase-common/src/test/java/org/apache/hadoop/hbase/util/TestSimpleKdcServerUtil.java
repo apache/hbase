@@ -49,7 +49,9 @@ public class TestSimpleKdcServerUtil {
         getRunningSimpleKdcServer(dir, HBaseCommonTestingUtility::randomFreePort, true);
       kdc.createPrincipal("wah");
     } finally {
-      kdc.stop();
+      if (kdc != null) {
+        kdc.stop();
+      }
     }
   }
 }

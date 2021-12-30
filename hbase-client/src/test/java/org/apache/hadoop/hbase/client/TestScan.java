@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -107,7 +108,7 @@ public class TestScan {
     assertEquals(get.getColumnFamilyTimeRange().get(Bytes.toBytes("cf")).getMax(),
             scan.getColumnFamilyTimeRange().get(Bytes.toBytes("cf")).getMax());
     assertEquals(get.getReplicaId(), scan.getReplicaId());
-    assertEquals(get.getACL(), scan.getACL());
+    assertArrayEquals(get.getACL(), scan.getACL());
     assertEquals(get.getAuthorizations().getLabels(), scan.getAuthorizations().getLabels());
     assertEquals(get.getPriority(), scan.getPriority());
   }
@@ -259,9 +260,9 @@ public class TestScan {
     Scan scanCopy = new Scan(scan);
 
     // validate fields of copied scan object match with the original scan object
-    assertEquals(scan.getACL(), scanCopy.getACL());
+    assertArrayEquals(scan.getACL(), scanCopy.getACL());
     assertEquals(scan.getAllowPartialResults(), scanCopy.getAllowPartialResults());
-    assertEquals(scan.getAttribute("test_key"), scanCopy.getAttribute("test_key"));
+    assertArrayEquals(scan.getAttribute("test_key"), scanCopy.getAttribute("test_key"));
     assertEquals(scan.getAttributeSize(), scanCopy.getAttributeSize());
     assertEquals(scan.getAttributesMap(), scanCopy.getAttributesMap());
     assertEquals(scan.getAuthorizations().getLabels(), scanCopy.getAuthorizations().getLabels());
@@ -270,7 +271,7 @@ public class TestScan {
     assertEquals(scan.getCaching(), scanCopy.getCaching());
     assertEquals(scan.getConsistency(), scanCopy.getConsistency());
     assertEquals(scan.getFamilies().length, scanCopy.getFamilies().length);
-    assertEquals(scan.getFamilies()[0], scanCopy.getFamilies()[0]);
+    assertArrayEquals(scan.getFamilies()[0], scanCopy.getFamilies()[0]);
     assertEquals(scan.getFamilyMap(), scanCopy.getFamilyMap());
     assertEquals(scan.getFilter(), scanCopy.getFilter());
     assertEquals(scan.getId(), scanCopy.getId());
@@ -286,8 +287,8 @@ public class TestScan {
     assertEquals(scan.getReadType(), scanCopy.getReadType());
     assertEquals(scan.getReplicaId(), scanCopy.getReplicaId());
     assertEquals(scan.getRowOffsetPerColumnFamily(), scanCopy.getRowOffsetPerColumnFamily());
-    assertEquals(scan.getStartRow(), scanCopy.getStartRow());
-    assertEquals(scan.getStopRow(), scanCopy.getStopRow());
+    assertArrayEquals(scan.getStartRow(), scanCopy.getStartRow());
+    assertArrayEquals(scan.getStopRow(), scanCopy.getStopRow());
     assertEquals(scan.getTimeRange(), scanCopy.getTimeRange());
 
     assertTrue("Make sure copy constructor adds all the fields in the copied object",

@@ -160,8 +160,11 @@ public final class LockManager {
         Long.MAX_VALUE;
       while (deadline >= EnvironmentEdgeManager.currentTime() && !proc.isLocked()) {
         try {
-          lockAcquireLatch.await(deadline - EnvironmentEdgeManager.currentTime(),
+          boolean released = lockAcquireLatch.await(deadline - EnvironmentEdgeManager.currentTime(),
             TimeUnit.MILLISECONDS);
+          if (!released) {
+            LOG.warn("Timed out waiting for latch acquisition");
+          }
         } catch (InterruptedException e) {
           LOG.info("InterruptedException when waiting for lock: " + proc.toString());
           // kind of weird, releasing a lock which is not locked. This is to make the procedure

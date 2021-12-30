@@ -248,7 +248,8 @@ public class TestExecutorService {
     });
 
     //Wait EventHandler to start
-    waitForEventToStart.await(10, TimeUnit.SECONDS);
+    boolean released = waitForEventToStart.await(10, TimeUnit.SECONDS);
+    Assert.assertTrue("Latch was not released", released);
     int activeCount = executorService.getExecutor(ExecutorType.MASTER_SNAPSHOT_OPERATIONS)
         .getThreadPoolExecutor().getActiveCount();
     Assert.assertEquals(1, activeCount);

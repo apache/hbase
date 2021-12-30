@@ -190,13 +190,13 @@ public class TestCoprocessorConfiguration {
     RegionCoprocessorHost rcp = new RegionCoprocessorHost(region, rsServices, conf);
     boolean found = false;
     for (String cpStr: rcp.getCoprocessors()) {
-      CoprocessorEnvironment cpenv = rcp.findCoprocessorEnvironment(cpStr);
+      CoprocessorEnvironment<?> cpenv = rcp.findCoprocessorEnvironment(cpStr);
       if (cpenv != null) {
         found = true;
+        Configuration c = cpenv.getConfiguration();
+        thrown.expect(UnsupportedOperationException.class);
+        c.set("one.two.three", "four.five.six");
       }
-      Configuration c = cpenv.getConfiguration();
-      thrown.expect(UnsupportedOperationException.class);
-      c.set("one.two.three", "four.five.six");
     }
     assertTrue("Should be at least one CP found", found);
   }
