@@ -507,7 +507,7 @@ def getServersRSGroup(servers, rsgroup_admin, hostname, port)
       exit 5
     end
   rescue java.io.IOException => e
-    $LOG.warn(e)
+    $LOG.info(e)
     exit 0
   end
 end
