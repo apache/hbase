@@ -24,6 +24,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import com.google.errorprone.annotations.RestrictedApi;
+
 /**
  * A MemStoreLAB implementation which wraps N MemStoreLABs. Its main duty is in proper managing the
  * close of the individual MemStoreLAB. This is treated as an immutable one and so do not allow to
@@ -138,13 +140,14 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
     return ChunkCreator.getInstance().isOffheap();
   }
 
-  /**
-   * This method is only used for test.
-   */
-  public int getRefCntValue() {
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  int getRefCntValue() {
     return this.refCnt.refCnt();
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
   boolean isClosed() {
     return this.closed.get();
   }

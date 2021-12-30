@@ -36,6 +36,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.errorprone.annotations.RestrictedApi;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -273,10 +275,8 @@ public class MemStoreLABImpl implements MemStoreLAB {
     this.refCnt.release();
   }
 
-  /**
-   * This method is only used for test.
-   * @return
-   */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
   int getRefCntValue() {
     return this.refCnt.refCnt();
   }
