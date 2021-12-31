@@ -25,6 +25,7 @@ import java.util.Map;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.MinMaxPriorityQueue;
 
 /**
@@ -54,6 +55,8 @@ public class CachedEntryQueue {
    * @param blockSize expected average size of blocks
    */
   public CachedEntryQueue(long maxSize, long blockSize) {
+    Preconditions.checkArgument(blockSize > 0, "negative blockSize %s", blockSize);
+    Preconditions.checkArgument(maxSize > 0, "negative maxSize %s", maxSize);
     int initialSize = (int) (maxSize / blockSize);
     if (initialSize == 0) {
       initialSize++;
@@ -71,6 +74,10 @@ public class CachedEntryQueue {
    * to the queue. Otherwise, there is no side effect of this call.
    * @param entry a bucket entry with key to try to add to the queue
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
+    justification = "head can not be null as cacheSize is greater than maxSize,"
+      + " which means we have something in the queue")
   public void add(Map.Entry<BlockCacheKey, BucketEntry> entry) {
     if (cacheSize < maxSize) {
       queue.add(entry);

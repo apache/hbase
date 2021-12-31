@@ -22,13 +22,6 @@ package org.apache.hadoop.hbase.rest;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Map;
-import javax.ws.rs.GET;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.CacheControl;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.ResponseBuilder;
-import javax.ws.rs.core.UriInfo;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -39,6 +32,14 @@ import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.javax.ws.rs.GET;
+import org.apache.hbase.thirdparty.javax.ws.rs.Produces;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.CacheControl;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.Context;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.Response;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.Response.ResponseBuilder;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.UriInfo;
 
 @InterfaceAudience.Private
 public class StorageClusterStatusResource extends ResourceBase {
