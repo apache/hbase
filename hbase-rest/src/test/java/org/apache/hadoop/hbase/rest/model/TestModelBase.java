@@ -21,17 +21,18 @@ import static org.junit.Assert.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.Base64;
-import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.provider.JAXBContextResolver;
 import org.junit.Test;
+
+import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
 public abstract class TestModelBase<T> {
 

@@ -20,10 +20,8 @@ package org.apache.hadoop.hbase.rest;
 import static org.junit.Assert.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import java.io.IOException;
 import java.util.Collection;
-import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
@@ -54,7 +52,10 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-@Category({ RestTests.class, MediumTests.class })
+import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
+
+@Category({RestTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class TestMultiRowResource {
   @ClassRule

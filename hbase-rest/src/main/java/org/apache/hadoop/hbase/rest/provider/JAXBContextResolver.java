@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.rest.provider;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import javax.ws.rs.ext.ContextResolver;
-import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
@@ -39,6 +37,9 @@ import org.apache.hadoop.hbase.rest.model.TableRegionModel;
 import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 import org.apache.hadoop.hbase.rest.model.VersionModel;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.javax.ws.rs.ext.ContextResolver;
+import org.apache.hbase.thirdparty.javax.ws.rs.ext.Provider;
 
 /**
  * Plumbing for hooking up Jersey's JSON entity body encoding and decoding support to JAXB. Modify
