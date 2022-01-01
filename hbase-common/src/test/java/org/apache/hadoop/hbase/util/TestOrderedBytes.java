@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -1317,6 +1318,27 @@ public class TestOrderedBytes {
     for (int i = 0; i < cnt; i++) {
       assertTrue(OrderedBytes.isEncodedValue(buff));
       OrderedBytes.skip(buff);
+    }
+  }
+
+  /**
+   * Test if the data encoded by our encoding function can be decoded correctly.
+   */
+  @Test
+  public void testEncodeDecodeMatch() {
+    int samplesQuantity = 200;
+    for (int i = 0; i < samplesQuantity; i++) {
+      BigDecimal randomData = BigDecimal.valueOf(ThreadLocalRandom.current().nextDouble() +
+        ThreadLocalRandom.current().nextLong());
+      PositionedByteRange tmp = new SimplePositionedMutableByteRange(100);
+      Order ord = ThreadLocalRandom.current().nextBoolean() ? Order.DESCENDING : Order.ASCENDING;
+
+      OrderedBytes.encodeNumeric(tmp, randomData, ord);
+      tmp.setPosition(0);
+
+      BigDecimal left = OrderedBytes.normalize(randomData);
+      BigDecimal right = OrderedBytes.decodeNumericAsBigDecimal(tmp);
+      assertEquals(0, left.compareTo(right));
     }
   }
 }
