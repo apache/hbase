@@ -742,7 +742,7 @@ public class OrderedBytes {
 
   /**
    * Encode a value val in [0.01, 1.0) into Centimals.
-   * Util function for {@link OrderedBytes#encodeNumericLarge(PositionedByteRange, BigDecimal)} 
+   * Util function for {@link OrderedBytes#encodeNumericLarge(PositionedByteRange, BigDecimal)
    * and {@link OrderedBytes#encodeNumericSmall(PositionedByteRange, BigDecimal)}
    * @param dst The destination to which encoded digits are written.
    * @param val A BigDecimal after the normalization. The value must be in [0.01, 1.0).
