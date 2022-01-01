@@ -327,6 +327,11 @@ Quitting...
 The RegionServer Grouping feature has been reimplemented. See section
 <<migrating.rsgroup>> in <<ops_mgt>> for more details.
 
+[[upgrade2.4]]
+There is no special consideration upgrading to hbase-2.4.x from 2.3.x. And for earlier versions,
+just follow the <<upgrade2.3>> guide. In general, 2.2.x should be rolling upgradeable, for 2.1.x
+or 2.0.x, you will need to clear the <<upgrade2.2>> hurdle first.
+
 [[upgrade2.3]]
 === Upgrade from 2.0.x-2.2.x to 2.3+
 There is no special consideration upgrading to hbase-2.3.x from earlier versions. From 2.2.x, it should be
