@@ -68,7 +68,7 @@ public class CompactionPipeline {
   /**
    * <pre>
    * Version is volatile to ensure it is atomically read when not using a lock.
-   * To indicate whether the suffix of pipleline changes：
+   * To indicate whether the suffix of pipeline changes:
    * 1.for {@link CompactionPipeline#pushHead(MutableSegment)},new {@link ImmutableSegment} only
    *   added at Head, {@link #version} not change.
    * 2.for {@link CompactionPipeline#swap},{@link #version} increase.
