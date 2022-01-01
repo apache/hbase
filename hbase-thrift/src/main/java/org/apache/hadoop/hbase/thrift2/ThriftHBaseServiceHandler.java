@@ -100,6 +100,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TThriftServerType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.cache.RemovalListener;
 import org.apache.thrift.TException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -167,6 +168,8 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     isReadOnly = conf.getBoolean(THRIFT_READONLY_ENABLED, THRIFT_READONLY_ENABLED_DEFAULT);
     scannerMap = CacheBuilder.newBuilder()
       .expireAfterAccess(cacheTimeout, TimeUnit.MILLISECONDS)
+      .removalListener((RemovalListener<Integer, ResultScanner>) removalNotification ->
+          removalNotification.getValue().close())
       .build();
   }
 
