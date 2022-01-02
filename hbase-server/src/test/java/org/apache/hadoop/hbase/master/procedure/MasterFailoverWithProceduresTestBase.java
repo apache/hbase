@@ -28,7 +28,7 @@ import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MasterFailoverWithProceduresTestBase {
+public abstract class MasterFailoverWithProceduresTestBase {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(MasterFailoverWithProceduresTestBase.class);
