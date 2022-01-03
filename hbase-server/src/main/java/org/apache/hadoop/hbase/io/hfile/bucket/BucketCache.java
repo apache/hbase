@@ -328,7 +328,8 @@ public class BucketCache implements BlockCache, HeapSize {
     // Run the statistics thread periodically to print the cache statistics log if it is enabled.
     if (conf.getBoolean(STAT_THREAD_ENABLE_KEY, STAT_THREAD_ENABLE_DEFAULT)) {
       this.scheduleThreadPool = Executors.newScheduledThreadPool(1,
-        new ThreadFactoryBuilder().setNameFormat("BucketCacheStatsExecutor").setDaemon(true).build());
+        new ThreadFactoryBuilder().setNameFormat("BucketCacheStatsExecutor").
+          setDaemon(true).build());
       this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
         statThreadPeriod, statThreadPeriod, TimeUnit.SECONDS);
     } else {
