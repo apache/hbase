@@ -216,7 +216,7 @@ public class BucketCache implements BlockCache, HeapSize {
   });
 
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
-  private transient ScheduledExecutorService scheduleThreadPool;
+  private final transient ScheduledExecutorService scheduleThreadPool;
 
   // Allocate or free space for the block
   private transient BucketAllocator bucketAllocator;
@@ -325,14 +325,14 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     startWriterThreads();
 
-    // Run the statistics thread periodically to print the cache statistics log
-    // TODO: Add means of turning this off.  Bit obnoxious running thread just to make a log
-    // every five minutes.
+    // Run the statistics thread periodically to print the cache statistics log if it is enabled.
     if (conf.getBoolean(STAT_THREAD_ENABLE_KEY, STAT_THREAD_ENABLE_DEFAULT)) {
       this.scheduleThreadPool = Executors.newScheduledThreadPool(1,
         new ThreadFactoryBuilder().setNameFormat("BucketCacheStatsExecutor").setDaemon(true).build());
       this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
         statThreadPeriod, statThreadPeriod, TimeUnit.SECONDS);
+    } else {
+      this.scheduleThreadPool = null;
     }
     LOG.info("Started bucket cache; ioengine=" + ioEngineName +
         ", capacity=" + StringUtils.byteDesc(capacity) +
