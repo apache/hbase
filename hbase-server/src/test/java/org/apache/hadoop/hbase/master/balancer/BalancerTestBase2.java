@@ -24,9 +24,9 @@ public class BalancerTestBase2 extends BalancerTestBase {
 
   @Before
   public void before() {
-    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
+    conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 10000000L);
     conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
-    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 3 * 60 * 1000L);
+    conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 5 * 60 * 1000L);
     conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
     loadBalancer.onConfigurationChange(conf);
   }
