@@ -83,10 +83,6 @@ public class OAuthBearerSaslClientTest {
         }
       }
     }
-
-    @Override
-    public void close() {
-    }
   }
 
   @Test

@@ -24,7 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.security.sasl.SaslException;
 import org.apache.hadoop.hbase.security.auth.SaslExtensions;
-import org.apache.hadoop.hbase.security.oauthbearer.Utils;
+import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerStringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -64,7 +64,7 @@ public class OAuthBearerClientInitialResponse {
     String authzid = matcher.group("authzid");
     this.authorizationId = authzid == null ? "" : authzid;
     String kvPairs = matcher.group("kvpairs");
-    Map<String, String> properties = Utils.parseMap(kvPairs, "=", SEPARATOR);
+    Map<String, String> properties = OAuthBearerStringUtils.parseMap(kvPairs, "=", SEPARATOR);
     String auth = properties.get(AUTH_KEY);
     if (auth == null) {
       throw new SaslException("Invalid OAUTHBEARER client first message: 'auth' not specified");
@@ -207,6 +207,6 @@ public class OAuthBearerClientInitialResponse {
    * Converts the SASLExtensions to an OAuth protocol-friendly string
    */
   private String extensionsMessage() {
-    return Utils.mkString(saslExtensions.map(), "", "", "=", SEPARATOR);
+    return OAuthBearerStringUtils.mkString(saslExtensions.map(), "", "", "=", SEPARATOR);
   }
 }

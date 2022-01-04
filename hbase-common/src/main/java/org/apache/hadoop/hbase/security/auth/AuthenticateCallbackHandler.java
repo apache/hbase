@@ -45,9 +45,4 @@ public interface AuthenticateCallbackHandler extends CallbackHandler {
    */
   default void configure(
     Configuration configs, String saslMechanism, Map<String, String> saslProps) {}
-
-  /**
-   * Closes this instance.
-   */
-  default void close() {}
 }

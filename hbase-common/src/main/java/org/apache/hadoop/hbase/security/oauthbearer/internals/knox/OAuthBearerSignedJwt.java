@@ -37,8 +37,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;
-import org.apache.hadoop.hbase.security.oauthbearer.Utils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -145,7 +145,7 @@ public class OAuthBearerSignedJwt implements OAuthBearerToken {
       }
       lifetime = expirationTimeSeconds.toInstant().toEpochMilli();
       String principalName = claims.getSubject();
-      if (Utils.isBlank(principalName)) {
+      if (StringUtils.isBlank(principalName)) {
         throw new OAuthBearerIllegalTokenException(OAuthBearerValidationResult
           .newFailure("No principal name in JWT claim"));
       }
@@ -165,13 +165,13 @@ public class OAuthBearerSignedJwt implements OAuthBearerToken {
     JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
 
     // Audience
-    if (!Utils.isBlank(requiredAudience)) {
+    if (!StringUtils.isBlank(requiredAudience)) {
       requiredClaims.add("aud");
       jwtClaimsSetBuilder.audience(requiredAudience);
     }
 
     // Issuer
-    if (!Utils.isBlank(requiredIssuer)) {
+    if (!StringUtils.isBlank(requiredIssuer)) {
       requiredClaims.add("iss");
       jwtClaimsSetBuilder.issuer(requiredIssuer);
     }

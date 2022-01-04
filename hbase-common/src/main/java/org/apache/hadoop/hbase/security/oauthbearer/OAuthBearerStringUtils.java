@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
-public final class Utils {
+public final class OAuthBearerStringUtils {
   /**
    *  Converts a {@code Map} class into a string, concatenating keys and values
    *  Example:
@@ -76,16 +76,7 @@ public final class Utils {
       .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
   }
 
-  /**
-   * Checks if a string is null, empty or whitespace only.
-   * @param str a string to be checked
-   * @return true if the string is null, empty or whitespace only; otherwise, return false.
-   */
-  public static boolean isBlank(String str) {
-    return str == null || str.trim().isEmpty();
-  }
-
-  private Utils() {
+  private OAuthBearerStringUtils() {
     // empty
   }
 }

@@ -36,5 +36,4 @@ public class IllegalSaslStateException extends IllegalStateException {
   public IllegalSaslStateException(String message, Throwable cause) {
     super(message, cause);
   }
-
 }

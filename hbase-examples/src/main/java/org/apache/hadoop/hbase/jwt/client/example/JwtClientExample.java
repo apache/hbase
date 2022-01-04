@@ -50,12 +50,17 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class JwtClientExample extends Configured implements Tool {
   private static final Logger LOG = LoggerFactory.getLogger(JwtClientExample.class);
-  private static final String jwt = "<base64_encoded_jwt_token>";
+  private static final String JWT_TOKEN = "<base64_encoded_jwt_token>";
 
   private static final byte[] FAMILY = Bytes.toBytes("d");
 
   public JwtClientExample() {
-    setConf(HBaseConfiguration.create());
+    Configuration conf = HBaseConfiguration.create();
+    conf.set("hbase.client.sasl.provider.class",
+      "org.apache.hadoop.hbase.security.provider.OAuthBearerSaslProviderSelector");
+    conf.set("hbase.client.sasl.provider.extras",
+      "org.apache.hadoop.hbase.security.provider.OAuthBearerSaslClientAuthenticationProvider");
+    setConf(conf);
   }
 
   @Override public int run(String[] args) throws Exception {
@@ -66,7 +71,7 @@ public class JwtClientExample extends Configured implements Tool {
     UserProvider provider = UserProvider.instantiate(conf);
     User user = provider.getCurrent();
 
-    OAuthBearerTokenUtil.addTokenForUser(user, jwt);
+    OAuthBearerTokenUtil.addTokenForUser(user, JWT_TOKEN);
     LOG.info("JWT token added");
 
     try (final Connection conn = ConnectionFactory.createConnection(conf, user)) {

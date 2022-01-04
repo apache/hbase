@@ -27,11 +27,11 @@ import java.util.Map;
 import java.util.Objects;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.UnsupportedCallbackException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.auth.AuthenticateCallbackHandler;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerExtensionsValidatorCallback;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerValidatorCallback;
-import org.apache.hadoop.hbase.security.oauthbearer.Utils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,7 +91,7 @@ public class OAuthBearerSignedJwtValidatorCallbackHandler implements Authenticat
   public void handle(Callback[] callbacks) throws UnsupportedCallbackException {
     if (!configured) {
       throw new RuntimeException(
-        "OAuthBearerSignedJwtValidatorCallbackHandler handler be configured first.");
+        "OAuthBearerSignedJwtValidatorCallbackHandler must be configured first.");
     }
 
     for (Callback callback : callbacks) {
@@ -171,7 +171,7 @@ public class OAuthBearerSignedJwtValidatorCallbackHandler implements Authenticat
       ALLOWABLE_CLOCK_SKEW_SECONDS_OPTION);
     int allowableClockSkewSeconds = 0;
     try {
-      allowableClockSkewSeconds = Utils.isBlank(allowableClockSkewSecondsValue)
+      allowableClockSkewSeconds = StringUtils.isBlank(allowableClockSkewSecondsValue)
         ? 0 : Integer.parseInt(allowableClockSkewSecondsValue.trim());
     } catch (NumberFormatException e) {
       throw new OAuthBearerConfigException(e.getMessage(), e);
@@ -188,12 +188,12 @@ public class OAuthBearerSignedJwtValidatorCallbackHandler implements Authenticat
     String jwksFile = hBaseConfiguration.get(JWKS_FILE);
     String jwksUrl = hBaseConfiguration.get(JWKS_URL);
 
-    if (Utils.isBlank(jwksFile) && Utils.isBlank(jwksUrl)) {
+    if (StringUtils.isBlank(jwksFile) && StringUtils.isBlank(jwksUrl)) {
       throw new RuntimeException("Failed to initialize JWKS db. "
         + JWKS_FILE + " or " + JWKS_URL + " must be specified in the config.");
     }
 
-    if (!Utils.isBlank(jwksFile)) {
+    if (!StringUtils.isBlank(jwksFile)) {
       this.jwkSet = JWKSet.load(new File(jwksFile));
       LOG.debug("JWKS db initialized from file: {}", jwksFile);
       return;

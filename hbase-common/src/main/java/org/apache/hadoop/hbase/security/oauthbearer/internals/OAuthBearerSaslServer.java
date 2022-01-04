@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.security.auth.SaslExtensions;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerExtensionsValidatorCallback;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerValidatorCallback;
-import org.apache.hadoop.hbase.security.oauthbearer.Utils;
+import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerStringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,7 +103,7 @@ public class OAuthBearerSaslServer implements SaslServer {
       return process(clientResponse.tokenValue(), clientResponse.authorizationId(),
         clientResponse.extensions());
     } catch (SaslAuthenticationException e) {
-      LOG.error("SASL authentication error: {}", e.getMessage());
+      LOG.error("SASL authentication error", e);
       throw e;
     } catch (Exception e) {
       LOG.error("SASL server problem", e);
@@ -215,7 +215,7 @@ public class OAuthBearerSaslServer implements SaslServer {
     if (!extensionsCallback.invalidExtensions().isEmpty()) {
       String errorMessage = String.format("Authentication failed: %d extensions are invalid! "
           + "They are: %s", extensionsCallback.invalidExtensions().size(),
-        Utils.mkString(extensionsCallback.invalidExtensions(), "", "", ": ", "; "));
+        OAuthBearerStringUtils.mkString(extensionsCallback.invalidExtensions(), "", "", ": ", "; "));
       LOG.debug(errorMessage);
       throw new SaslAuthenticationException(errorMessage);
     }

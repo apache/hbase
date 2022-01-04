@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.oauthbearer;
 
-import static org.apache.hadoop.hbase.security.oauthbearer.Utils.subtractMap;
+import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerStringUtils.subtractMap;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
