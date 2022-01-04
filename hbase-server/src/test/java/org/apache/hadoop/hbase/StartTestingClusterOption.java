@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.yetus.audience.InterfaceAudience;

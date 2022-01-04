@@ -157,7 +157,6 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
-
 /**
  * Facility for testing HBase. Replacement for old HBaseTestCase and HBaseClusterTestCase
  * functionality. Create an instance and keep it around testing HBase.
@@ -226,7 +225,6 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   private boolean isExternalDFS = false;
   private boolean isExternalZK = false;
-
 
   /**
    * Checks to see if a specific port is available.
@@ -342,7 +340,6 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     this.conf.set("fs.defaultFS", "file:///");
     this.conf.set(HConstants.HBASE_DIR, "file://" + dataTestDir);
     LOG.debug("Setting {} to {}", HConstants.HBASE_DIR, dataTestDir);
-
     this.conf.setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
     // If the value for random ports isn't set set it to true, thus making
     // tests opt-out for random port assignment
@@ -820,7 +817,6 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    */
   public SingleProcessHBaseCluster startMiniHBaseCluster(StartTestingClusterOption option)
     throws IOException, InterruptedException {
-
     if (option.getExternalZK() != null) {
       if(option.getExternalZK().get(HConstants.ZOOKEEPER_QUORUM) == null) {
         throw new IllegalArgumentException("ZOOKEEPER_QUORUM can not be null.");
@@ -1039,6 +1035,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     }
 
     cleanupTestDir();
+    resetUserGroupInformation();
     miniClusterRunning = false;
     LOG.info("Minicluster is down");
   }
@@ -1076,7 +1073,6 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
         throw new IOException(e.getMessage(), e);
       }
     }
-    resetUserGroupInformation();
   }
 
   /**
@@ -1150,7 +1146,6 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     CommonFSUtils.setRootDir(this.conf, hbaseRootdir);
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
-
     return hbaseRootdir;
   }
 
