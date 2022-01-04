@@ -1035,7 +1035,6 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     }
 
     cleanupTestDir();
-    resetUserGroupInformation();
     miniClusterRunning = false;
     LOG.info("Minicluster is down");
   }
