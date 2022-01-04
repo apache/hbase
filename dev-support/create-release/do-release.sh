@@ -81,9 +81,12 @@ if [ "$RUNNING_IN_DOCKER" = "1" ]; then
   if [ -n "$JAVA_HOME" ]; then
     echo "Using JAVA_HOME from host."
     export PATH="$JAVA_HOME/bin:$PATH"
-  else
-    # JAVA_HOME for the openjdk package.
+  elif [ -n "$JDK8" ] ; then
+    # JAVA_HOME for the openjdk8 package.
     export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
+  else
+    # default to JAVA_HOME for the openjdk11 package.
+    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64/
   fi
 else
   # Outside docker, need to ask for information about the release.

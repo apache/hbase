@@ -18,9 +18,7 @@
 # Image for building HBase releases. Based on Ubuntu 22.04.
 #
 # Includes:
-# * Java 8
 FROM ubuntu:22.04
-
 
 # Install extra needed repos and refresh.
 #
@@ -35,13 +33,14 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
     libxml2-dev='2.9.13+dfsg-*' \
     libxml2-utils='2.9.13+dfsg-*' \
     lsof='4.93.2+dfsg-*' \
-    openjdk-8-jdk='8u*' \
+    openjdk-8-jdk-headless='8*' \
+    openjdk-11-jdk-headless='11*' \
     python3-pip='22.0.2+dfsg-*' \
     subversion='1.14.1-*' \
     wget='1.21.2-*' \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* \
-  && update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java \
+  && update-alternatives --set java /usr/lib/jvm/java-11-openjdk-amd64/bin/java \
   && pip3 install --no-cache-dir python-dateutil==2.8.2
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]

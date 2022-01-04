@@ -62,51 +62,120 @@ function usage {
 Usage: $NAME [OPTIONS]
 Runs release scripts inside a docker image.
 Options:
-  -d [path]    Required. Working directory. Output will be written to "output" in here.
-  -f           "force" -- actually publish this release. Unless you specify '-f', it will
-               default to dry run mode, which checks and does local builds, but does not
-               upload anything.
-  -t [tag]     Tag for the hbase-rm docker image to use for building (default: "latest").
-  -j [path]    Path to local JDK installation to use building. By default the script will
-               use openjdk8 installed in the docker image.
-  -p [project] Project to build: e.g. 'hbase' or 'hbase-thirdparty'; defaults to PROJECT env var
-  -r [repo]    Git repo to use for remote git operations. defaults to ASF gitbox for project.
-  -s [step]    Runs a single step of the process; valid steps: tag|publish-dist|publish-release.
-               If none specified, runs tag, then publish-dist, and then publish-release.
-               'publish-snapshot' is also an allowed, less used, option.
-  -x           Debug. Does less clean up (env file, gpg forwarding on mac)
+  -d [path], --directory=[path]
+     Required. Working directory. Output will be written to "output" in here.
+  -f, --force
+     Optional. Perform any associated permanent action. Without this flag, the
+     release defaults to 'dry run' mode, which checks and does local builds, but
+     does not upload anything.
+  -j [path], --java=[path]
+     Optional. Path to JDK installation on the host OS, which is mounted into
+     the container runtime. Mutually exclusive with the --jdk8 and --jdk11
+     options.
+  --jdk8
+     Optional. Override the default JDK selection and use the OpenJDK 8
+     installation provided by the container runtime. Mutually exclusive with the
+     -j and --jdk11 options.
+  --jdk11
+     Optional. Override the default JDK selection and use the OpenJDK 11
+     installation provided by the container runtime. Mutually exclusive with the
+     -j and --jdk8 options. When none of -j, --jdk8, --jdk11 are specified, the
+     default behavior is to behave as if this flag had been specified.
+  -p [project], --project=[project]
+     Optional. The name of the project to build: e.g. 'hbase' or
+     'hbase-thirdparty'; defaults to \`PROJECT\` environment variable.
+  -r [repo], --repo=[repo]
+     Optional. Git repo to use for remote git operations. defaults to ASF gitbox
+     for project.
+  -s [step], --step=[step]
+     Optional. Runs a single step of the process; valid steps: \`tag\`,
+     \`publish-dist\`, \`publish-snapshot\`, \`publish-release\`. If not
+     specified, runs \`tag\`, then \`publish-dist\`, and then \`publish-release\`.
+  -t [tag], --tag=[tag]
+     Optional. Tag for the hbase-rm docker image to use for building (default:
+     "latest").
+  -x, --debug
+     Optional. Enable debug mode, which produces more verbose output and
+     performs less clean up (env file, gpg forwarding on mac).
 EOF
   exit 1
 }
 
+# For long option names, use GNU getopt. This script assumes the presence of docker anyway, so use
+# the getopt provided out-of-the-box by the linux distro. Use the same base image as is used by
+# hbase-rm/Dockerfile.
+GETOPT_OPTS="$(docker container run \
+  ubuntu:18.04 \
+  /usr/bin/getopt \
+  -o 'd:fhj:p:r:s:t:x' \
+  --long 'directory:,force,help,java:,jdk8,jdk11,project:,repo:,step:,tag:,debug' \
+  -n 'do-release-docker.sh' \
+  -- \
+  "$@")"
+eval set -- "$GETOPT_OPTS"
+
+if [[ "$1" == "--" ]] ; then
+  usage
+fi
+
 WORKDIR=
-IMGTAG=latest
-JAVA=
+IMGTAG='latest'
 RELEASE_STEP=
 GIT_REPO=
-while getopts "d:fhj:p:r:s:t:x" opt; do
-  case $opt in
-    d) WORKDIR="$OPTARG" ;;
-    f) DRY_RUN=0 ;;
-    t) IMGTAG="$OPTARG" ;;
-    j) JAVA="$OPTARG" ;;
-    p) PROJECT="$OPTARG" ;;
-    r) GIT_REPO="$OPTARG" ;;
-    s) RELEASE_STEP="$OPTARG" ;;
-    x) DEBUG=1 ;;
-    h) usage ;;
-    ?) error "Invalid option. Run with -h for help." ;;
+while true ; do
+  case "$1" in
+    -d | --directory )
+      case "$2" in
+        "" ) shift 2 ;;
+        *  ) WORKDIR="$2" ; shift 2 ;;
+      esac ;;
+    -f | --force ) DRY_RUN=0 ; shift ;;
+    -h | --help ) usage ;;
+    -j | --java )
+      case "$2" in
+        "" ) shift 2 ;;
+        *  ) JAVA="$2" ; shift 2 ;;
+      esac ;;
+    --jdk8 ) JDK8=1 ; shift ;;
+    --jdk11 ) JDK11=1 ; shift ;;
+    -p | --project )
+      case "$2" in
+        "" ) shift 2 ;;
+        *  ) PROJECT="$2" ; shift 2 ;;
+      esac ;;
+    -r | --repo )
+      case "$2" in
+        "" ) shift 2 ;;
+        *  ) GIT_REPO="$2" ; shift 2 ;;
+      esac ;;
+    -s | --step )
+      case "$2" in
+        "" ) shift 2 ;;
+        *  ) RELEASE_STEP="$2" ; shift 2 ;;
+      esac ;;
+    -t | --tag )
+      case "$2" in
+        "" ) shift 2 ;;
+        *  ) IMGTAG="$2" ; shift 2 ;;
+      esac ;;
+    -x | --debug ) DEBUG=1 ; shift ;;
+    -- ) shift ; break ;;
+    * ) error "Invalid option '$1'. Run with -h for help." ;;
   esac
 done
-shift $((OPTIND-1))
-if (( $# > 0 )); then
-  error "Arguments can only be provided with option flags, invalid args: $*"
-fi
+
 export DEBUG
 
 if [ -z "$WORKDIR" ] || [ ! -d "$WORKDIR" ]; then
   error "Work directory (-d) must be defined and exist. Run with -h for help."
 fi
+
+JDK_ONE_OR_NONE="${JAVA:+x}${JDK8:+x}${JDK11:+x}"
+case "$JDK_ONE_OR_NONE" in
+  xx | xxx )
+    error "Options --java, --jdk8, --jdk11 are mutually exclusive. Run with -h for help."
+    ;;
+esac
 
 if [ -d "$WORKDIR/output" ]; then
   read -r -p "Output directory already exists. Overwrite and continue? [y/n] " ANSWER
@@ -227,6 +296,14 @@ JAVA_MOUNT=()
 if [ -n "$JAVA" ]; then
   echo "JAVA_HOME=/opt/hbase-java" >> "$ENVFILE"
   JAVA_MOUNT=(--mount "type=bind,src=${JAVA},dst=/opt/hbase-java,readonly")
+fi
+
+if [ -n "$JDK8" ] ; then
+  echo "JDK8=${JDK8}" >> "$ENVFILE"
+fi
+
+if [ -n "$JDK11" ] ; then
+  echo "JDK11=${JDK11}" >> "$ENVFILE"
 fi
 
 #TODO some debug output would be good here
