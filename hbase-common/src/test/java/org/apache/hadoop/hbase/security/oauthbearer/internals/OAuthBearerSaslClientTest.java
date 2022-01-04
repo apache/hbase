@@ -94,7 +94,8 @@ public class OAuthBearerSaslClientTest {
     String expectedToken = new String(
       new OAuthBearerClientInitialResponse("", testExtensions).toBytes(), StandardCharsets.UTF_8);
     OAuthBearerSaslClient client = new OAuthBearerSaslClient(new ExtensionsCallbackHandler(false));
-    String message = new String(client.evaluateChallenge("".getBytes()), StandardCharsets.UTF_8);
+    String message = new String(client.evaluateChallenge("".getBytes(StandardCharsets.UTF_8)),
+      StandardCharsets.UTF_8);
     assertEquals(expectedToken, message);
   }
 
@@ -106,7 +107,8 @@ public class OAuthBearerSaslClientTest {
       new SaslExtensions(TEST_PROPERTIES)).toBytes(), StandardCharsets.UTF_8);
     OAuthBearerSaslClient client = new OAuthBearerSaslClient(new ExtensionsCallbackHandler(false));
 
-    String message = new String(client.evaluateChallenge("".getBytes()), StandardCharsets.UTF_8);
+    String message = new String(client.evaluateChallenge("".getBytes(StandardCharsets.UTF_8)),
+      StandardCharsets.UTF_8);
 
     assertEquals(expectedToken, message);
   }
@@ -115,7 +117,7 @@ public class OAuthBearerSaslClientTest {
   public void testWrapsExtensionsCallbackHandlingErrorInSaslExceptionInFirstClientMessage() {
     OAuthBearerSaslClient client = new OAuthBearerSaslClient(new ExtensionsCallbackHandler(true));
     try {
-      client.evaluateChallenge("".getBytes());
+      client.evaluateChallenge("".getBytes(StandardCharsets.UTF_8));
       fail("Should have failed with " + SaslException.class.getName());
     } catch (SaslException e) {
       // assert it has caught our expected exception

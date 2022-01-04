@@ -40,8 +40,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Callback handlers should communicate other problems by raising an {@code IOException}.
  * <p>
  * The OAuth bearer token is provided in the callback for better context in extension validation.
- * It is very important that token validation is done in its own {@link OAuthBearerValidatorCallback}
- * irregardless of provided extensions, as they are inherently insecure.
+ * It is very important that token validation is done in its own
+ * {@link OAuthBearerValidatorCallback} irregardless of provided extensions, as they are inherently
+ * insecure.
  */
 @InterfaceAudience.Public
 public class OAuthBearerExtensionsValidatorCallback implements Callback {
@@ -64,7 +65,7 @@ public class OAuthBearerExtensionsValidatorCallback implements Callback {
 
   /**
    * @return {@link SaslExtensions} consisting of the unvalidated extension names and values that
-   * were sent by the client
+   *   were sent by the client
    */
   public SaslExtensions inputExtensions() {
     return inputExtensions;
@@ -72,7 +73,7 @@ public class OAuthBearerExtensionsValidatorCallback implements Callback {
 
   /**
    * @return an unmodifiable {@link Map} consisting of the validated and recognized by the server
-   * extension names and values.
+   *   extension names and values.
    */
   public Map<String, String> validatedExtensions() {
     return Collections.unmodifiableMap(validatedExtensions);
@@ -80,7 +81,7 @@ public class OAuthBearerExtensionsValidatorCallback implements Callback {
 
   /**
    * @return An immutable {@link Map} consisting of the name-&gt;error messages of extensions
-   * which failed validation
+   *   which failed validation
    */
   public Map<String, String> invalidExtensions() {
     return Collections.unmodifiableMap(invalidExtensions);
@@ -88,7 +89,7 @@ public class OAuthBearerExtensionsValidatorCallback implements Callback {
 
   /**
    * @return An immutable {@link Map} consisting of the extensions that have neither been
-   * validated nor invalidated
+   *   validated nor invalidated
    */
   public Map<String, String> ignoredExtensions() {
     return Collections.unmodifiableMap(

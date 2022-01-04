@@ -25,7 +25,7 @@ import static org.junit.Assert.assertTrue;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
-import java.util.Date;
+import java.time.LocalDate;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -65,18 +65,18 @@ public class OAuthBearerSignedJwtValidatorCallbackHandlerTest {
   @Test
   public void missingPrincipal()
     throws UnsupportedCallbackException, JOSEException {
-    Date now = new Date();
+    LocalDate now = LocalDate.now();
     String token = JwtTestUtils.createSignedJwt(RSA_KEY, "me", "",
-      new Date(now.getTime() + JwtTestUtils.ONE_DAY), now, "test-aud");
+      now.plusDays(1), now, "test-aud");
     confirmFailsValidation(EMPTY_CONFIG, token);
   }
 
   @Test
   public void tooEarlyExpirationTime() throws JOSEException, UnsupportedCallbackException {
-    Date now = new Date();
+    LocalDate now = LocalDate.now();
     String token = JwtTestUtils.createSignedJwt(RSA_KEY, "me", "",
-      new Date(now.getTime() - JwtTestUtils.ONE_DAY),
-      new Date(now.getTime() - JwtTestUtils.ONE_DAY),
+      now.minusDays(1),
+      now.minusDays(1),
       "test-aud");
     confirmFailsValidation(EMPTY_CONFIG, token);
   }

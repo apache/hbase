@@ -32,12 +32,11 @@ import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import java.text.ParseException;
-import java.util.Calendar;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import org.apache.commons.lang3.time.DateUtils;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;
 import org.apache.hadoop.hbase.security.oauthbearer.Utils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -139,13 +138,12 @@ public class OAuthBearerSignedJwt implements OAuthBearerToken {
   public OAuthBearerSignedJwt validate(){
     try {
       this.claims = validateToken(compactSerialization);
-      Number expirationTimeSeconds =
-        DateUtils.ceiling(claims.getExpirationTime(), Calendar.SECOND).getTime() / 1000L;
+      Date expirationTimeSeconds = claims.getExpirationTime();
       if (expirationTimeSeconds == null) {
         throw new OAuthBearerIllegalTokenException(
           OAuthBearerValidationResult.newFailure("No expiration time in JWT"));
       }
-      lifetime = convertClaimTimeInSecondsToMs(expirationTimeSeconds);
+      lifetime = expirationTimeSeconds.toInstant().toEpochMilli();
       String principalName = claims.getSubject();
       if (Utils.isBlank(principalName)) {
         throw new OAuthBearerIllegalTokenException(OAuthBearerValidationResult
@@ -191,9 +189,5 @@ public class OAuthBearerSignedJwt implements OAuthBearerToken {
         new ImmutableJWKSet<>(jwkSet));
     jwtProcessor.setJWSKeySelector(keySelector);
     return jwtProcessor.process(jwtToken, null);
-  }
-
-  private static long convertClaimTimeInSecondsToMs(Number claimValue) {
-    return Math.round(claimValue.doubleValue() * 1000);
   }
 }

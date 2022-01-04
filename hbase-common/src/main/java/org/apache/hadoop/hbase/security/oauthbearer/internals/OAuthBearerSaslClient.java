@@ -51,7 +51,7 @@ import org.slf4j.LoggerFactory;
  * @see <a href="https://tools.ietf.org/html/rfc6750#section-2.1">RFC 6750,
  *      Section 2.1</a>
  *
- * This class has been copy-and-pasted from Kafka codebase.
+ *   This class has been copy-and-pasted from Kafka codebase.
  */
 @InterfaceAudience.Public
 public class OAuthBearerSaslClient implements SaslClient {

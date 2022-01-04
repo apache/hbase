@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.security.token;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Set;
 import javax.security.auth.Subject;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;

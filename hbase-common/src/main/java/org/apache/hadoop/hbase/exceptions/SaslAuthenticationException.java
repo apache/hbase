@@ -32,7 +32,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * authentication, the message from the exception will be sent to clients in the SaslAuthenticate
  * response. Custom {@link SaslServer} implementations may throw this exception in order to
  * provide custom error messages to clients, but should take care not to include any
- * security-critical information in the message that should not be leaked to unauthenticated clients.
+ * security-critical information in the message that should not be leaked to unauthenticated
+ * clients.
  * </p>
  */
 @InterfaceAudience.Public

@@ -22,9 +22,9 @@ import static org.junit.Assert.assertThrows;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
-import java.util.Calendar;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Date;
-import org.apache.commons.lang3.time.DateUtils;
 import org.apache.hadoop.hbase.security.oauthbearer.JwtTestUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,27 +42,28 @@ public class OAuthBearerSignedJwtTest {
   @Test
   public void validCompactSerialization() throws JOSEException {
     String subject = "foo";
-    Date issuedAt = new Date();
-    Date expirationTime = new Date(issuedAt.getTime() + 60 * 60);
+
+    LocalDate issuedAt = LocalDate.now();
+    LocalDate expirationTime = issuedAt.plusDays(1);
     String validCompactSerialization =
       compactSerialization(subject, issuedAt, expirationTime);
     OAuthBearerSignedJwt jws = new OAuthBearerSignedJwt(validCompactSerialization, JWK_SET)
       .validate();
     assertEquals(5, jws.claims().size());
     assertEquals(subject, jws.claims().get("sub"));
-    assertEquals(DateUtils.ceiling(issuedAt, Calendar.SECOND),
-      DateUtils.ceiling(Date.class.cast(jws.claims().get("iat")), Calendar.SECOND));
-    assertEquals(DateUtils.ceiling(expirationTime, Calendar.SECOND),
-      DateUtils.ceiling(Date.class.cast(jws.claims().get("exp")), Calendar.SECOND));
-    assertEquals(DateUtils.ceiling(expirationTime, Calendar.SECOND).getTime(),
+    assertEquals(issuedAt,  Date.class.cast(jws.claims().get("iat")).toInstant()
+      .atZone(ZoneId.systemDefault()).toLocalDate());
+    assertEquals(expirationTime, Date.class.cast(jws.claims().get("exp")).toInstant()
+      .atZone(ZoneId.systemDefault()).toLocalDate());
+    assertEquals(expirationTime.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
       jws.lifetimeMs());
   }
 
   @Test
   public void missingPrincipal() throws JOSEException {
     String subject = null;
-    Date issuedAt = new Date();
-    Date expirationTime = new Date(issuedAt.getTime() + 60 * 60);
+    LocalDate issuedAt = LocalDate.now();
+    LocalDate expirationTime = issuedAt.plusDays(1);
     String validCompactSerialization =
       compactSerialization(subject, issuedAt, expirationTime);
     assertThrows(OAuthBearerIllegalTokenException.class,
@@ -72,8 +73,8 @@ public class OAuthBearerSignedJwtTest {
   @Test
   public void blankPrincipalName() throws JOSEException {
     String subject = "   ";
-    Date issuedAt = new Date();
-    Date expirationTime = new Date(issuedAt.getTime() + 60 * 60);
+    LocalDate issuedAt = LocalDate.now();
+    LocalDate expirationTime = issuedAt.plusDays(1);
     String validCompactSerialization =
       compactSerialization(subject, issuedAt, expirationTime);
     assertThrows(OAuthBearerIllegalTokenException.class,
@@ -101,7 +102,7 @@ public class OAuthBearerSignedJwtTest {
   }
 
 
-  private String compactSerialization(String subject, Date issuedAt, Date expirationTime)
+  private String compactSerialization(String subject, LocalDate issuedAt, LocalDate expirationTime)
     throws JOSEException {
     return JwtTestUtils.createSignedJwt(RSA_KEY, "me", subject,
         expirationTime, issuedAt, "test-audience");

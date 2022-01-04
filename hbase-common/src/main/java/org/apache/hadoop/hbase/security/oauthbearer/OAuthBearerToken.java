@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceStability;
  * <p>
  * A network request would be required to re-hydrate an opaque token, and that
  * could result in (for example) an {@code IOException}, but retrievers for
- * various attributes ({@link #scope()}, {@link #lifetimeMs()}, etc.) declare no
+ * various attributes ({@link #lifetimeMs()}, etc.) declare no
  * exceptions. Therefore, if a network request is required for any of these
  * retriever methods, that request could be performed at construction time so
  * that the various attributes can be reliably provided thereafter. For example,

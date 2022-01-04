@@ -203,18 +203,13 @@ public class OAuthBearerSaslServerTest {
   }
 
   private byte[] clientInitialResponse(String authorizationId)
-    throws OAuthBearerConfigException, IOException, UnsupportedCallbackException {
-    return clientInitialResponse(authorizationId, false);
-  }
-
-  private byte[] clientInitialResponse(String authorizationId, boolean illegalToken)
-    throws OAuthBearerConfigException, IOException, UnsupportedCallbackException {
+    throws OAuthBearerConfigException, IOException {
     return clientInitialResponse(authorizationId, false, Collections.emptyMap());
   }
 
   private byte[] clientInitialResponse(String authorizationId, boolean illegalToken,
     Map<String, String> customExtensions)
-    throws OAuthBearerConfigException, IOException, UnsupportedCallbackException {
+    throws OAuthBearerConfigException, IOException {
     String compactSerialization = JWT;
     String tokenValue = compactSerialization + (illegalToken ? "AB" : "");
     return new OAuthBearerClientInitialResponse(tokenValue, authorizationId,
