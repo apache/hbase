@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security.oauthbearer;
 
 import java.util.Objects;
 import javax.security.auth.callback.Callback;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -54,7 +55,7 @@ public class OAuthBearerValidatorCallback implements Callback {
    *            the mandatory/non-blank token value
    */
   public OAuthBearerValidatorCallback(String tokenValue) {
-    if (Objects.requireNonNull(tokenValue).isEmpty()) {
+    if (StringUtils.isEmpty(tokenValue)) {
       throw new IllegalArgumentException("token value must not be empty");
     }
     this.tokenValue = tokenValue;
@@ -144,7 +145,7 @@ public class OAuthBearerValidatorCallback implements Callback {
    *            the optional error openid-configuration value to set
    */
   public void error(String errorStatus, String errorScope, String errorOpenIDConfiguration) {
-    if (Objects.requireNonNull(errorStatus).isEmpty()) {
+    if (StringUtils.isEmpty(errorStatus)) {
       throw new IllegalArgumentException("error status must not be empty");
     }
     this.errorStatus = errorStatus;

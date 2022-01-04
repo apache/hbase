@@ -58,7 +58,7 @@ public class OAuthBearerSaslServerAuthenticationProvider
     throws IOException {
 
     if (!initialized) {
-      throw new RuntimeException(
+      throw new IllegalStateException(
         "OAuthBearerSaslServerAuthenticationProvider must be initialized first.");
     }
 

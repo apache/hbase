@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.security.oauthbearer.internals;
 
 import static org.apache.hadoop.hbase.security.token.OAuthBearerTokenUtil.OAUTHBEARER_MECHANISM;
+import com.nimbusds.jose.shaded.json.JSONObject;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Objects;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.UnsupportedCallbackException;
@@ -30,13 +30,14 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 import javax.security.sasl.SaslServerFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.exceptions.SaslAuthenticationException;
 import org.apache.hadoop.hbase.security.auth.AuthenticateCallbackHandler;
 import org.apache.hadoop.hbase.security.auth.SaslExtensions;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerExtensionsValidatorCallback;
+import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerStringUtils;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerValidatorCallback;
-import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerStringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +66,7 @@ public class OAuthBearerSaslServer implements SaslServer {
   private SaslExtensions extensions;
 
   public OAuthBearerSaslServer(CallbackHandler callbackHandler) {
-    if (!(Objects.requireNonNull(callbackHandler) instanceof AuthenticateCallbackHandler)) {
+    if (!(callbackHandler instanceof AuthenticateCallbackHandler)) {
       throw new IllegalArgumentException(
         String.format("Callback handler must be castable to %s: %s",
           AuthenticateCallbackHandler.class.getName(), callbackHandler.getClass().getName()));
@@ -215,7 +216,8 @@ public class OAuthBearerSaslServer implements SaslServer {
     if (!extensionsCallback.invalidExtensions().isEmpty()) {
       String errorMessage = String.format("Authentication failed: %d extensions are invalid! "
           + "They are: %s", extensionsCallback.invalidExtensions().size(),
-        OAuthBearerStringUtils.mkString(extensionsCallback.invalidExtensions(), "", "", ": ", "; "));
+        OAuthBearerStringUtils.mkString(extensionsCallback.invalidExtensions(),
+          "", "", ": ", "; "));
       LOG.debug(errorMessage);
       throw new SaslAuthenticationException(errorMessage);
     }
@@ -225,16 +227,15 @@ public class OAuthBearerSaslServer implements SaslServer {
 
   private static String jsonErrorResponse(String errorStatus, String errorScope,
     String errorOpenIDConfiguration) {
-    String jsonErrorResponse = String.format("{\"status\":\"%s\"", errorStatus);
-    if (errorScope != null) {
-      jsonErrorResponse = String.format("%s, \"scope\":\"%s\"", jsonErrorResponse, errorScope);
+    JSONObject jsonObject = new JSONObject();
+    jsonObject.put("status", errorStatus);
+    if (!StringUtils.isBlank(errorScope)) {
+      jsonObject.put("scope", errorScope);
     }
-    if (errorOpenIDConfiguration != null) {
-      jsonErrorResponse = String.format("%s, \"openid-configuration\":\"%s\"", jsonErrorResponse,
-        errorOpenIDConfiguration);
+    if (!StringUtils.isBlank(errorOpenIDConfiguration)) {
+      jsonObject.put("openid-configuration", errorOpenIDConfiguration);
     }
-    jsonErrorResponse = String.format("%s}", jsonErrorResponse);
-    return jsonErrorResponse;
+    return jsonObject.toJSONString();
   }
 
   private void handleCallbackError(Exception e) throws SaslException {

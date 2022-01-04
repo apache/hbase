@@ -30,6 +30,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class OAuthBearerSignedJwtTest {
+  private final static ZoneId ZONE_ID = ZoneId.of("America/Los_Angeles");
+
   private JWKSet JWK_SET;
   private RSAKey RSA_KEY;
 
@@ -43,7 +45,7 @@ public class OAuthBearerSignedJwtTest {
   public void validCompactSerialization() throws JOSEException {
     String subject = "foo";
 
-    LocalDate issuedAt = LocalDate.now();
+    LocalDate issuedAt = LocalDate.now(ZONE_ID);
     LocalDate expirationTime = issuedAt.plusDays(1);
     String validCompactSerialization =
       compactSerialization(subject, issuedAt, expirationTime);
@@ -62,7 +64,7 @@ public class OAuthBearerSignedJwtTest {
   @Test
   public void missingPrincipal() throws JOSEException {
     String subject = null;
-    LocalDate issuedAt = LocalDate.now();
+    LocalDate issuedAt = LocalDate.now(ZONE_ID);
     LocalDate expirationTime = issuedAt.plusDays(1);
     String validCompactSerialization =
       compactSerialization(subject, issuedAt, expirationTime);
@@ -73,7 +75,7 @@ public class OAuthBearerSignedJwtTest {
   @Test
   public void blankPrincipalName() throws JOSEException {
     String subject = "   ";
-    LocalDate issuedAt = LocalDate.now();
+    LocalDate issuedAt = LocalDate.now(ZONE_ID);
     LocalDate expirationTime = issuedAt.plusDays(1);
     String validCompactSerialization =
       compactSerialization(subject, issuedAt, expirationTime);
@@ -100,7 +102,6 @@ public class OAuthBearerSignedJwtTest {
         .issuer("test-issuer")
         .validate());
   }
-
 
   private String compactSerialization(String subject, LocalDate issuedAt, LocalDate expirationTime)
     throws JOSEException {

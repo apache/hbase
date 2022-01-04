@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import javax.security.auth.callback.Callback;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.security.auth.SaslExtensions;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -116,7 +117,7 @@ public class OAuthBearerExtensionsValidatorCallback implements Callback {
    *            error message describing why the validation failed
    */
   public void error(String invalidExtensionName, String errorMessage) {
-    if (Objects.requireNonNull(invalidExtensionName).isEmpty()) {
+    if (StringUtils.isEmpty(invalidExtensionName)) {
       throw new IllegalArgumentException("extension name must not be empty");
     }
     this.invalidExtensions.put(invalidExtensionName, errorMessage);

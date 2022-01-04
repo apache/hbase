@@ -26,6 +26,7 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -35,6 +36,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class OAuthBearerSignedJwtValidatorCallbackHandlerTest {
+  private final static ZoneId ZONE_ID = ZoneId.of("America/Los_Angeles");
   private static final HBaseConfiguration EMPTY_CONFIG = new HBaseConfiguration();
   private static final HBaseConfiguration REQUIRED_AUDIENCE_CONFIG;
   static {
@@ -65,7 +67,7 @@ public class OAuthBearerSignedJwtValidatorCallbackHandlerTest {
   @Test
   public void missingPrincipal()
     throws UnsupportedCallbackException, JOSEException {
-    LocalDate now = LocalDate.now();
+    LocalDate now = LocalDate.now(ZONE_ID);
     String token = JwtTestUtils.createSignedJwt(RSA_KEY, "me", "",
       now.plusDays(1), now, "test-aud");
     confirmFailsValidation(EMPTY_CONFIG, token);
@@ -73,7 +75,7 @@ public class OAuthBearerSignedJwtValidatorCallbackHandlerTest {
 
   @Test
   public void tooEarlyExpirationTime() throws JOSEException, UnsupportedCallbackException {
-    LocalDate now = LocalDate.now();
+    LocalDate now = LocalDate.now(ZONE_ID);
     String token = JwtTestUtils.createSignedJwt(RSA_KEY, "me", "",
       now.minusDays(1),
       now.minusDays(1),

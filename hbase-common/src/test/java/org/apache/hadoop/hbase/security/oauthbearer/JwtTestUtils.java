@@ -28,10 +28,12 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
 public final class JwtTestUtils {
+  private final static ZoneId ZONE_ID = ZoneId.of("America/Los_Angeles");
   public static final String USER = "user";
 
   public static RSAKey generateRSAKey() throws JOSEException {
@@ -60,7 +62,7 @@ public final class JwtTestUtils {
   }
 
   public static String createSignedJwt(RSAKey rsaKey) throws JOSEException {
-    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime now = LocalDateTime.now(ZONE_ID);
     JWSHeader jwsHeader =
       new JWSHeader.Builder(JWSAlgorithm.RS256)
         .type(JOSEObjectType.JWT)
@@ -76,7 +78,7 @@ public final class JwtTestUtils {
   }
 
   public static String createSignedJwtWithAudience(RSAKey rsaKey, String aud) throws JOSEException {
-    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime now = LocalDateTime.now(ZONE_ID);
     JWSHeader jwsHeader =
       new JWSHeader.Builder(JWSAlgorithm.RS256)
         .type(JOSEObjectType.JWT)
@@ -93,7 +95,7 @@ public final class JwtTestUtils {
   }
 
   public static String createSignedJwtWithIssuer(RSAKey rsaKey, String iss) throws JOSEException {
-    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime now = LocalDateTime.now(ZONE_ID);
     JWSHeader jwsHeader =
       new JWSHeader.Builder(JWSAlgorithm.RS256)
         .type(JOSEObjectType.JWT)

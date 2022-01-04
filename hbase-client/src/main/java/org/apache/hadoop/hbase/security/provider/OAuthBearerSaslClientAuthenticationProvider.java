@@ -82,7 +82,7 @@ public class OAuthBearerSaslClientAuthenticationProvider
     @Override
     public void handle(Callback[] callbacks) throws IOException, UnsupportedCallbackException {
       if (!configured) {
-        throw new RuntimeException(
+        throw new IllegalStateException(
           "OAuthBearerSaslClientCallbackHandler handler must be configured first.");
       }
 
@@ -131,11 +131,12 @@ public class OAuthBearerSaslClientAuthenticationProvider
               }
             });
         sortedByLifetime.addAll(privateCredentials);
-        LOG.warn("Found {} OAuth Bearer tokens in Subject's private credentials; "
-            + "the oldest expires at {}, will use the newest, which expires at {}",
-          sortedByLifetime.size(),
-          new Date(sortedByLifetime.first().lifetimeMs()),
-          new Date(sortedByLifetime.last().lifetimeMs()));
+        if (LOG.isWarnEnabled()) {
+          LOG.warn("Found {} OAuth Bearer tokens in Subject's private credentials; " +
+              "the oldest expires at {}, will use the newest, which expires at {}",
+            sortedByLifetime.size(), new Date(sortedByLifetime.first().lifetimeMs()),
+            new Date(sortedByLifetime.last().lifetimeMs()));
+        }
         callback.token(sortedByLifetime.last());
       }
     }

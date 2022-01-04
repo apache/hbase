@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.security.oauthbearer;
 
-import java.util.Objects;
 import javax.security.auth.callback.Callback;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -111,7 +111,7 @@ public class OAuthBearerTokenCallback implements Callback {
    *            the optional error URI to set
    */
   public void error(String errorCode, String errorDescription, String errorUri) {
-    if (Objects.requireNonNull(errorCode).isEmpty()) {
+    if (StringUtils.isEmpty(errorCode)) {
       throw new IllegalArgumentException("error code must not be empty");
     }
     this.errorCode = errorCode;
