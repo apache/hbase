@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -144,17 +142,16 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   };
 
   private final CellSinkFactory<StoreFileWriter> writerFactory =
-      new CellSinkFactory<StoreFileWriter>() {
-        @Override
-        public StoreFileWriter createWriter(InternalScanner scanner,
-            org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
-            boolean shouldDropBehind, boolean major) throws IOException {
-          // make this writer with tags always because of possible new cells with tags.
-          return store.createWriterInTmp(fd.maxKeyCount,
-            major ? majorCompactionCompression : minorCompactionCompression,
-            true, true, true, shouldDropBehind);
-        }
-      };
+    new CellSinkFactory<StoreFileWriter>() {
+      @Override
+      public StoreFileWriter createWriter(InternalScanner scanner,
+        org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
+        boolean shouldDropBehind, boolean major) throws IOException {
+        // make this writer with tags always because of possible new cells with tags.
+        return store.getStoreEngine().createWriter(
+          createParams(fd, shouldDropBehind, major).includeMVCCReadpoint(true).includesTag(true));
+      }
+    };
 
   public DefaultMobStoreCompactor(Configuration conf, HStore store) {
     super(conf, store);
@@ -288,7 +285,6 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
    * </ol>
    * @param fd File details
    * @param scanner Where to read from.
-   * @param writer Where to write to.
    * @param smallestReadPoint Smallest read point.
    * @param cleanSeqId When true, remove seqId(used to be mvcc) value which is <= smallestReadPoint
    * @param throughputController The compaction throughput controller.
@@ -297,7 +293,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
    * @return Whether compaction ended; false if it was interrupted for any reason.
    */
   @Override
-  protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
+  protected boolean performCompaction(FileDetails fd, InternalScanner scanner,
       long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
       boolean major, int numofFilesToCompact) throws IOException {
     long bytesWrittenProgressForLog = 0;
@@ -667,7 +663,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
 
 
   @Override
-  protected List<Path> commitWriter(StoreFileWriter writer, FileDetails fd,
+  protected List<Path> commitWriter(FileDetails fd,
       CompactionRequestImpl request) throws IOException {
     List<Path> newFiles = Lists.newArrayList(writer.getPath());
     writer.appendMetadata(fd.maxSeqId, request.isAllFiles(), request.getFiles());

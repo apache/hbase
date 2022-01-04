@@ -1586,7 +1586,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       RestoreSnapshotRequest request) throws ServiceException {
     try {
       long procId = server.restoreSnapshot(request.getSnapshot(), request.getNonceGroup(),
-        request.getNonce(), request.getRestoreACL());
+        request.getNonce(), request.getRestoreACL(), request.getCustomSFT());
       return RestoreSnapshotResponse.newBuilder().setProcId(procId).build();
     } catch (ForeignException e) {
       throw new ServiceException(e.getCause());
@@ -3491,5 +3491,11 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     regionServers.stream().limit(request.getCount()).map(ProtobufUtil::toServerName)
       .forEach(builder::addServer);
     return builder.build();
+  }
+
+  @Override
+  public ReplicateWALEntryResponse replicateToReplica(RpcController controller,
+    ReplicateWALEntryRequest request) throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
   }
 }

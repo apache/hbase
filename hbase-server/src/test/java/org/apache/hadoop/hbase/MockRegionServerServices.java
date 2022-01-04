@@ -47,13 +47,13 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.LeaseManager;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ReplicationSourceService;
 import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
+import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationBufferManager;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
@@ -72,7 +72,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  */
 public class MockRegionServerServices implements RegionServerServices {
   protected static final Logger LOG = LoggerFactory.getLogger(MockRegionServerServices.class);
-  private final Map<String, Region> regions = new HashMap<>();
+  private final Map<String, HRegion> regions = new HashMap<>();
   private final ConcurrentSkipListMap<byte[], Boolean> rit =
     new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
   private HFileSystem hfs = null;
@@ -108,17 +108,17 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public Region getRegion(String encodedRegionName) {
+  public HRegion getRegion(String encodedRegionName) {
     return this.regions.get(encodedRegionName);
   }
 
   @Override
-  public List<Region> getRegions(TableName tableName) throws IOException {
+  public List<HRegion> getRegions(TableName tableName) throws IOException {
     return null;
   }
 
   @Override
-  public List<Region> getRegions() {
+  public List<HRegion> getRegions() {
     return null;
   }
 
@@ -377,6 +377,11 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public AsyncClusterConnection getAsyncClusterConnection() {
+    return null;
+  }
+
+  @Override
+  public RegionReplicationBufferManager getRegionReplicationBufferManager() {
     return null;
   }
 }

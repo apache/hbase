@@ -85,14 +85,6 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
   }
 
   @Override
-  public CompletableFuture<Long> replay(TableName tableName, byte[] encodedRegionName, byte[] row,
-      List<Entry> entries, int replicaId, int retries, long operationTimeoutNs) {
-    return new AsyncRegionReplicaReplayRetryingCaller(RETRY_TIMER, this,
-      ConnectionUtils.retries2Attempts(retries), operationTimeoutNs, tableName, encodedRegionName,
-      row, entries, replicaId).call();
-  }
-
-  @Override
   public CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
       boolean reload) {
     return getLocator().getRegionLocations(tableName, row, RegionLocateType.CURRENT, reload, -1L);
@@ -175,5 +167,14 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
         }
       });
     return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> replicate(RegionInfo replica,
+    List<Entry> entries, int retries, long rpcTimeoutNs,
+    long operationTimeoutNs) {
+    return new AsyncRegionReplicationRetryingCaller(RETRY_TIMER, this,
+      ConnectionUtils.retries2Attempts(retries), rpcTimeoutNs, operationTimeoutNs, replica, entries)
+        .call();
   }
 }

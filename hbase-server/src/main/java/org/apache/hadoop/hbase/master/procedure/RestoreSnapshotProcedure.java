@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -90,6 +91,7 @@ public class RestoreSnapshotProcedure
   throws HBaseIOException {
     this(env, tableDescriptor, snapshot, false);
   }
+
   /**
    * Constructor
    * @param env MasterProcedureEnv
@@ -387,14 +389,15 @@ public class RestoreSnapshotProcedure
     FileSystem fs = fileSystemManager.getFileSystem();
     Path rootDir = fileSystemManager.getRootDir();
     final ForeignExceptionDispatcher monitorException = new ForeignExceptionDispatcher();
+    final Configuration conf = new Configuration(env.getMasterConfiguration());
 
     LOG.info("Starting restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot));
     try {
       Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
       SnapshotManifest manifest = SnapshotManifest.open(
-        env.getMasterServices().getConfiguration(), fs, snapshotDir, snapshot);
+        conf, fs, snapshotDir, snapshot);
       RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(
-        env.getMasterServices().getConfiguration(),
+        conf,
         fs,
         manifest,
         modifiedTableDescriptor,

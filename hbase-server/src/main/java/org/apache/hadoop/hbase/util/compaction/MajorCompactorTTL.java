@@ -76,7 +76,7 @@ public class MajorCompactorTTL extends MajorCompactor {
   @Override
   protected Optional<MajorCompactionRequest> getMajorCompactionRequest(RegionInfo hri)
       throws IOException {
-    return MajorCompactionTTLRequest.newRequest(connection.getConfiguration(), hri, htd);
+    return MajorCompactionTTLRequest.newRequest(connection, hri, htd);
   }
 
   @Override

@@ -23,7 +23,7 @@
   <parent>
     <artifactId>hbase-compression</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>3.0.0-alpha-2</version>
+    <version>3.0.0-alpha-3-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
   <artifactId>hbase-compression-aircompressor</artifactId>

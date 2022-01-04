@@ -357,6 +357,12 @@ Master itself. Otherwise, it is like any other with the Master process running f
 archiving WALs when over-flushed, and so on. Its files are readable by standard Region and Store file
 tooling for triage and analysis as long as they are pointed to the appropriate location in the filesystem.
 
+Notice that, after the migration, you should make sure to not start an active master with old code,
+as it can not recognize the new procedure store. So it is suggested to upgrade backup master(s) to
+new 2.3 first, and then upgrade the active master. And unless explicitly mentioned, this is the
+suggested way for all upgrading, i.e, upgrading backup master(s) first, then active master, and then
+region servers.
+
 [[upgrade2.2]]
 === Upgrade from 2.0 or 2.1 to 2.2+
 

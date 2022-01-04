@@ -17,6 +17,7 @@
  */
 // Coprocessor test
 syntax = "proto2";
+package hbase.test.pb;
 option java_package = "org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated";
 option java_outer_classname = "PingProtos";
 option java_generic_services = true;

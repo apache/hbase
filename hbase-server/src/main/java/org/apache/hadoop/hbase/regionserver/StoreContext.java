@@ -22,7 +22,9 @@ import java.util.Collection;
 import java.util.function.Supplier;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -106,6 +108,18 @@ public final class StoreContext implements HeapSize {
 
   public RegionCoprocessorHost getCoprocessorHost() {
     return coprocessorHost;
+  }
+
+  public TableName getTableName() {
+    return getRegionInfo().getTable();
+  }
+
+  public RegionInfo getRegionInfo() {
+    return regionFileSystem.getRegionInfo();
+  }
+
+  public boolean isPrimaryReplicaStore() {
+    return getRegionInfo().getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID;
   }
 
   public static Builder getBuilder() {

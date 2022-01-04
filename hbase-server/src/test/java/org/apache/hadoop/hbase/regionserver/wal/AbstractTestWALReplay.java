@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreFlusher;
@@ -1179,7 +1180,8 @@ public abstract class AbstractTestWALReplay {
     throws IOException, StreamLacksCapabilityException {
     fs.mkdirs(file.getParent());
     ProtobufLogWriter writer = new ProtobufLogWriter();
-    writer.init(fs, file, conf, true, WALUtil.getWALBlockSize(conf, fs, file));
+    writer.init(fs, file, conf, true, WALUtil.getWALBlockSize(conf, fs, file),
+      StreamSlowMonitor.create(conf, "testMonitor"));
     for (FSWALEntry entry : entries) {
       writer.append(entry);
     }

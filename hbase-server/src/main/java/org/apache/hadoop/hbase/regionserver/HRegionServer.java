@@ -126,6 +126,7 @@ import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
 import org.apache.hadoop.hbase.regionserver.http.RSDumpServlet;
 import org.apache.hadoop.hbase.regionserver.http.RSStatusServlet;
+import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationBufferManager;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
@@ -432,6 +433,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
    */
   final ServerNonceManager nonceManager;
 
+  private BrokenStoreFileCleaner brokenStoreFileCleaner;
+
   @InterfaceAudience.Private
   CompactedHFilesDischarger compactedFileDischarger;
 
@@ -459,6 +462,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   // A timer to shutdown the process if abort takes too long
   private Timer abortMonitor;
 
+  private RegionReplicationBufferManager regionReplicationBufferManager;
   /**
    * Starts a HRegionServer at the default location.
    * <p/>
@@ -643,6 +647,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       initializeZooKeeper();
       setupClusterConnection();
       bootstrapNodeManager = new BootstrapNodeManager(asyncClusterConnection, masterAddressTracker);
+      regionReplicationBufferManager = new RegionReplicationBufferManager(this);
       // Setup RPC client for master communication
       this.rpcClient = asyncClusterConnection.getRpcClient();
     } catch (Throwable t) {
@@ -881,7 +886,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       closeUserRegions(abortRequested.get());
       LOG.info("stopping server " + this.serverName);
     }
-
+    regionReplicationBufferManager.stop();
     closeClusterConnection();
     // Closing the compactSplit thread before closing meta regions
     if (!this.killed && containsMetaTableRegions()) {
@@ -1416,6 +1421,20 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return regionServerAccounting;
   }
 
+  // Round the size with KB or MB.
+  // A trick here is that if the sizeInBytes is less than sizeUnit, we will round the size to 1
+  // instead of 0 if it is not 0, to avoid some schedulers think the region has no data. See
+  // HBASE-26340 for more details on why this is important.
+  private static int roundSize(long sizeInByte, int sizeUnit) {
+    if (sizeInByte == 0) {
+      return 0;
+    } else if (sizeInByte < sizeUnit) {
+      return 1;
+    } else {
+      return (int) Math.min(sizeInByte / sizeUnit, Integer.MAX_VALUE);
+    }
+  }
+
   /**
    * @param r Region to get RegionLoad for.
    * @param regionLoadBldr the RegionLoad.Builder, can be null
@@ -1429,15 +1448,14 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     int storefiles = 0;
     int storeRefCount = 0;
     int maxCompactedStoreFileRefCount = 0;
-    int storeUncompressedSizeMB = 0;
-    int storefileSizeMB = 0;
-    int memstoreSizeMB = (int) (r.getMemStoreDataSize() / 1024 / 1024);
-    long storefileIndexSizeKB = 0;
-    int rootLevelIndexSizeKB = 0;
-    int totalStaticIndexSizeKB = 0;
-    int totalStaticBloomSizeKB = 0;
-    long totalCompactingKVs = 0;
-    long currentCompactedKVs = 0;
+    long storeUncompressedSize = 0L;
+    long storefileSize = 0L;
+    long storefileIndexSize = 0L;
+    long rootLevelIndexSize = 0L;
+    long totalStaticIndexSize = 0L;
+    long totalStaticBloomSize = 0L;
+    long totalCompactingKVs = 0L;
+    long currentCompactedKVs = 0L;
     List<HStore> storeList = r.getStores();
     stores += storeList.size();
     for (HStore store : storeList) {
@@ -1447,19 +1465,30 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       int currentMaxCompactedStoreFileRefCount = store.getMaxCompactedStoreFileRefCount();
       maxCompactedStoreFileRefCount = Math.max(maxCompactedStoreFileRefCount,
         currentMaxCompactedStoreFileRefCount);
-      storeUncompressedSizeMB += (int) (store.getStoreSizeUncompressed() / 1024 / 1024);
-      storefileSizeMB += (int) (store.getStorefilesSize() / 1024 / 1024);
+      storeUncompressedSize += store.getStoreSizeUncompressed();
+      storefileSize += store.getStorefilesSize();
       //TODO: storefileIndexSizeKB is same with rootLevelIndexSizeKB?
-      storefileIndexSizeKB += store.getStorefilesRootLevelIndexSize() / 1024;
+      storefileIndexSize += store.getStorefilesRootLevelIndexSize();
       CompactionProgress progress = store.getCompactionProgress();
       if (progress != null) {
         totalCompactingKVs += progress.getTotalCompactingKVs();
         currentCompactedKVs += progress.currentCompactedKVs;
       }
-      rootLevelIndexSizeKB += (int) (store.getStorefilesRootLevelIndexSize() / 1024);
-      totalStaticIndexSizeKB += (int) (store.getTotalStaticIndexSize() / 1024);
-      totalStaticBloomSizeKB += (int) (store.getTotalStaticBloomSize() / 1024);
+      rootLevelIndexSize += store.getStorefilesRootLevelIndexSize();
+      totalStaticIndexSize += store.getTotalStaticIndexSize();
+      totalStaticBloomSize += store.getTotalStaticBloomSize();
     }
+
+    int unitMB = 1024 * 1024;
+    int unitKB = 1024;
+
+    int memstoreSizeMB = roundSize(r.getMemStoreDataSize(), unitMB);
+    int storeUncompressedSizeMB = roundSize(storeUncompressedSize, unitMB);
+    int storefileSizeMB = roundSize(storefileSize, unitMB);
+    int storefileIndexSizeKB = roundSize(storefileIndexSize, unitKB);
+    int rootLevelIndexSizeKB = roundSize(rootLevelIndexSize, unitKB);
+    int totalStaticIndexSizeKB = roundSize(totalStaticIndexSize, unitKB);
+    int totalStaticBloomSizeKB = roundSize(totalStaticBloomSize, unitKB);
 
     HDFSBlocksDistribution hdfsBd = r.getHDFSBlocksDistribution();
     float dataLocality = hdfsBd.getBlockLocalityIndex(serverName.getHostname());
@@ -1473,6 +1502,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     if (regionSpecifier == null) {
       regionSpecifier = RegionSpecifier.newBuilder();
     }
+
     regionSpecifier.setType(RegionSpecifierType.REGION_NAME);
     regionSpecifier.setValue(UnsafeByteOperations.unsafeWrap(name));
     regionLoadBldr.setRegionSpecifier(regionSpecifier.build())
@@ -1831,6 +1861,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     if (this.slowLogTableOpsChore != null) {
       choreService.scheduleChore(slowLogTableOpsChore);
     }
+    if (this.brokenStoreFileCleaner != null) {
+      choreService.scheduleChore(brokenStoreFileCleaner);
+    }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
@@ -1910,6 +1943,22 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       this.storefileRefresher = new StorefileRefresherChore(storefileRefreshPeriod,
           onlyMetaRefresh, this, this);
     }
+
+    int brokenStoreFileCleanerPeriod  = conf.getInt(
+      BrokenStoreFileCleaner.BROKEN_STOREFILE_CLEANER_PERIOD,
+      BrokenStoreFileCleaner.DEFAULT_BROKEN_STOREFILE_CLEANER_PERIOD);
+    int brokenStoreFileCleanerDelay  = conf.getInt(
+      BrokenStoreFileCleaner.BROKEN_STOREFILE_CLEANER_DELAY,
+      BrokenStoreFileCleaner.DEFAULT_BROKEN_STOREFILE_CLEANER_DELAY);
+    double brokenStoreFileCleanerDelayJitter = conf.getDouble(
+      BrokenStoreFileCleaner.BROKEN_STOREFILE_CLEANER_DELAY_JITTER,
+      BrokenStoreFileCleaner.DEFAULT_BROKEN_STOREFILE_CLEANER_DELAY_JITTER);
+    double jitterRate = (RandomUtils.nextDouble() - 0.5D) * brokenStoreFileCleanerDelayJitter;
+    long jitterValue = Math.round(brokenStoreFileCleanerDelay * jitterRate);
+    this.brokenStoreFileCleaner =
+      new BrokenStoreFileCleaner((int) (brokenStoreFileCleanerDelay + jitterValue),
+        brokenStoreFileCleanerPeriod, this, conf, this);
+
     registerConfigurationObservers();
   }
 
@@ -3484,6 +3533,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return !conf.getBoolean(MASTERLESS_CONFIG_NAME, false);
   }
 
+  @InterfaceAudience.Private
+  public BrokenStoreFileCleaner getBrokenStoreFileCleaner(){
+    return brokenStoreFileCleaner;
+  }
+
   @Override
   protected void stopChores() {
     shutdownChore(nonceManagerChore);
@@ -3494,5 +3548,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     shutdownChore(storefileRefresher);
     shutdownChore(fsUtilizationChore);
     shutdownChore(slowLogTableOpsChore);
+    shutdownChore(brokenStoreFileCleaner);
+  }
+
+  @Override
+  public RegionReplicationBufferManager getRegionReplicationBufferManager() {
+    return regionReplicationBufferManager;
   }
 }

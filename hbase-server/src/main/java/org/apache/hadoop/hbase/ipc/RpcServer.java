@@ -679,6 +679,17 @@ public abstract class RpcServer implements RpcServerInterface,
     return Optional.ofNullable(CurCall.get());
   }
 
+  /**
+   * Just return the current rpc call if it is a {@link ServerCall} and also has {@link CellScanner}
+   * attached.
+   * <p/>
+   * Mainly used for reference counting as {@link CellScanner} may reference non heap memory.
+   */
+  public static Optional<ServerCall<?>> getCurrentServerCallWithCellScanner() {
+    return getCurrentCall().filter(c -> c instanceof ServerCall)
+      .filter(c -> c.getCellScanner() != null).map(c -> (ServerCall<?>) c);
+  }
+
   public static boolean isInRpcCallContext() {
     return CurCall.get() != null;
   }
