@@ -412,7 +412,7 @@ class MetricsRegionServerWrapperImpl
     return excludeDatanodeManager.getExcludeDNs().entrySet()
       .stream()
       .map(e -> e.getKey().toString() + ", " + e.getValue())
-      .collect(Collectors.toCollection(ArrayList::new));
+      .collect(Collectors.toList());
   }
 
   @Override
