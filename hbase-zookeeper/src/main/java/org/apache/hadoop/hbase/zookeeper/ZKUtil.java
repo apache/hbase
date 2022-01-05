@@ -923,8 +923,9 @@ public final class ZKUtil {
       if (zk.exists(znode, false) == null) {
         zk.create(znode, create.getData(), create.getAcl(), CreateMode.fromFlag(create.getFlags()));
       }
-    } catch(KeeperException.NodeExistsException nee) {
-    } catch(KeeperException.NoAuthException nee){
+    } catch (KeeperException.NodeExistsException nee) {
+      // pass
+    } catch (KeeperException.NoAuthException nee) {
       try {
         if (null == zkw.getRecoverableZooKeeper().exists(znode, false)) {
           // If we failed to create the file and it does not already exist.
@@ -933,7 +934,7 @@ public final class ZKUtil {
       } catch (InterruptedException ie) {
         zkw.interruptedException(ie);
       }
-    } catch(InterruptedException ie) {
+    } catch (InterruptedException ie) {
       zkw.interruptedException(ie);
     }
   }

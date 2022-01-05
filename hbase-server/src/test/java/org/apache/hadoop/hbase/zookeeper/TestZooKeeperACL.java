@@ -289,7 +289,8 @@ public class TestZooKeeperACL {
     System.setProperty("java.security.auth.login.config",
         saslConfFile.getAbsolutePath());
 
-    testJaasConfig = ZKAuthentication.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
+    testJaasConfig = ZKAuthentication.isSecureZooKeeper(
+      new Configuration(TEST_UTIL.getConfiguration()));
     assertFalse(testJaasConfig);
     saslConfFile.delete();
   }
