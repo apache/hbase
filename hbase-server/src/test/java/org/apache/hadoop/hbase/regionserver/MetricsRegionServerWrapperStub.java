@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrapper {
@@ -380,7 +380,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
 
   @Override
   public List<String> getWALExcludeDNs() {
-    return new ArrayList<>();
+    return Collections.emptyList();
   }
 
   @Override

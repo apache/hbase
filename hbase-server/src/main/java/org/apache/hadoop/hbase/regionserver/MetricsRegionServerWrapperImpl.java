@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
@@ -406,7 +407,7 @@ class MetricsRegionServerWrapperImpl
   @Override
   public List<String> getWALExcludeDNs() {
     if (excludeDatanodeManager == null) {
-      return new ArrayList<>();
+      return Collections.emptyList();
     }
     return excludeDatanodeManager.getExcludeDNs().entrySet()
       .stream()
