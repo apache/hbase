@@ -51,8 +51,9 @@ cd $HBASE_HOME
 workDir="hbase-webapps/static/maven"
 
 # Ensure directory being created exists
-if [ ! -d "$workDir" ]; then
-  echo "Directory should exist but it does not: $workDir"
+mkdir -p "$workDir"
+if [ $? -ne 0 ]; then
+  echo "Could not create $workDir"
   exit 1
 fi
 
@@ -97,7 +98,7 @@ copy_hbase_artifacts() {
 
   # Exclude libs which clients don't need
   for pattern in "${LIBS_TO_EXCLUDE[@]}"; do
-    rm -r "$clientTarballDir/lib/"$pattern
+    rm -r "$clientTarballDir/lib/"$pattern || true
   done
 
   # Supplemental text files
