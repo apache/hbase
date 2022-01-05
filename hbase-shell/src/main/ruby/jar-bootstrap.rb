@@ -78,26 +78,26 @@ def add_to_configuration(c, arg)
   c
 end
 
-_configuration = nil
+conf_from_cli = nil
 
 # strip out any config definitions that won't work with GetoptLong
 D_ARG = '-D'.freeze
 ARGV.delete_if do |arg|
-  unless arg.start_with?(D_ARG) and arg.include?("=")
-    false
-  else
-    _configuration = add_to_configuration(_configuration, arg[2..-1])
+  if arg.start_with?(D_ARG) && arg.include?('=')
+    conf_from_cli = add_to_configuration(conf_from_cli, arg[2..-1])
     true
+  else
+    false
   end
 end
 
 opts = GetoptLong.new(
-  [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
-  [ '--debug', '-d', GetoptLong::NO_ARGUMENT ],
-  [ '--noninteractive', '-n', GetoptLong::NO_ARGUMENT ],
-  [ '--top-level-defs', GetoptLong::NO_ARGUMENT ],
-  [ '-D', GetoptLong::REQUIRED_ARGUMENT ],
-  [ '--return-values', '-r', GetoptLong::NO_ARGUMENT ]
+  ['--help', '-h', GetoptLong::NO_ARGUMENT],
+  ['--debug', '-d', GetoptLong::NO_ARGUMENT],
+  ['--noninteractive', '-n', GetoptLong::NO_ARGUMENT],
+  ['--top-level-defs', GetoptLong::NO_ARGUMENT],
+  ['-D', GetoptLong::REQUIRED_ARGUMENT],
+  ['--return-values', '-r', GetoptLong::NO_ARGUMENT]
 )
 opts.ordering = GetoptLong::REQUIRE_ORDER
 
@@ -113,7 +113,7 @@ opts.each do |opt, arg|
     puts cmdline_help
     exit
   when D_ARG
-    _configuration = add_to_configuration(_configuration, arg)
+    conf_from_cli = add_to_configuration(conf_from_cli, arg)
   when '--debug'
     log_level = org.apache.log4j.Level::DEBUG
     $fullBackTrace = true
@@ -129,9 +129,7 @@ opts.each do |opt, arg|
   end
 end
 
-if ARGV.length > 0
-  script2run = ARGV.shift
-end
+script2run = ARGV.shift unless ARGV.empty?
 
 # Make sure debug flag gets back to IRB
 ARGV.unshift('-d') if @shell_debug
@@ -150,7 +148,7 @@ require 'hbase_shell'
 require 'shell/formatter'
 
 # Setup the HBase module.  Create a configuration.
-@hbase = _configuration.nil? ? Hbase::Hbase.new : Hbase::Hbase.new(_configuration)
+@hbase = conf_from_cli.nil? ? Hbase::Hbase.new : Hbase::Hbase.new(conf_from_cli)
 
 # Setup console
 @shell = Shell::Shell.new(@hbase, interactive)
