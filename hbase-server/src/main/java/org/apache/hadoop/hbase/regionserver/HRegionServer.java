@@ -2732,6 +2732,7 @@ public class HRegionServer extends Thread implements
     if (this.choreService != null) {
       shutdownChore(nonceManagerChore);
       shutdownChore(compactionChecker);
+      shutdownChore(compactedFileDischarger);
       shutdownChore(periodicFlusher);
       shutdownChore(healthCheckChore);
       shutdownChore(storefileRefresher);
