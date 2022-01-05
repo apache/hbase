@@ -28,12 +28,22 @@ import java.util.Set;
 import javax.security.auth.Subject;
 import javax.security.auth.callback.Callback;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerTokenCallback;
 import org.apache.hadoop.hbase.security.token.OAuthBearerTokenUtil;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category({ MiscTests.class, SmallTests.class})
 public class OAuthBearerSaslClientCallbackHandlerTest {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(OAuthBearerSaslClientCallbackHandlerTest.class);
+
   private static OAuthBearerToken createTokenWithLifetimeMillis(final long lifetimeMillis) {
     return new OAuthBearerToken() {
       @Override

@@ -23,10 +23,20 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.security.auth.SaslExtensions;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category({ MiscTests.class, SmallTests.class})
 public class OAuthBearerExtensionsValidatorCallbackTest {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(OAuthBearerExtensionsValidatorCallbackTest.class);
+
   private static final OAuthBearerToken TOKEN = new OAuthBearerTokenMock();
 
   @Test

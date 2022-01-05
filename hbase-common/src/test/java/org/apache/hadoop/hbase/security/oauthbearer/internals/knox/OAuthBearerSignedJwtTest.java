@@ -25,11 +25,20 @@ import com.nimbusds.jose.jwk.RSAKey;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.security.oauthbearer.JwtTestUtils;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category({ MiscTests.class, SmallTests.class})
 public class OAuthBearerSignedJwtTest {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(OAuthBearerSignedJwtTest.class);
   private final static ZoneId ZONE_ID = ZoneId.of("America/Los_Angeles");
 
   private JWKSet JWK_SET;

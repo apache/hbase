@@ -29,13 +29,23 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.UnsupportedCallbackException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.security.oauthbearer.JwtTestUtils;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerValidatorCallback;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category({ MiscTests.class, SmallTests.class})
 public class OAuthBearerSignedJwtValidatorCallbackHandlerTest {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(OAuthBearerSignedJwtValidatorCallbackHandlerTest.class);
+
   private final static ZoneId ZONE_ID = ZoneId.of("America/Los_Angeles");
   private static final HBaseConfiguration EMPTY_CONFIG = new HBaseConfiguration();
   private static final HBaseConfiguration REQUIRED_AUDIENCE_CONFIG;
