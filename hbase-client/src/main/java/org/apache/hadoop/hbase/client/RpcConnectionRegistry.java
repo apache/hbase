@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -72,9 +73,23 @@ public class RpcConnectionRegistry extends AbstractRpcBasedConnectionRegistry {
 
   private static final char ADDRS_CONF_SEPARATOR = ',';
 
+  private final String connectionString;
+
   RpcConnectionRegistry(Configuration conf) throws IOException {
     super(conf, HEDGED_REQS_FANOUT_KEY, INITIAL_REFRESH_DELAY_SECS, PERIODIC_REFRESH_INTERVAL_SECS,
       MIN_SECS_BETWEEN_REFRESHES);
+    connectionString = buildConnectionString(conf);
+  }
+
+  private String buildConnectionString(Configuration conf) throws UnknownHostException {
+    final String configuredBootstrapNodes = conf.get(BOOTSTRAP_NODES);
+    if (StringUtils.isBlank(configuredBootstrapNodes)) {
+      return MasterRegistry.getConnectionString(conf);
+    }
+    return Splitter.on(ADDRS_CONF_SEPARATOR)
+      .trimResults()
+      .splitToStream(configuredBootstrapNodes)
+      .collect(Collectors.joining(String.valueOf(ADDRS_CONF_SEPARATOR)));
   }
 
   @Override
@@ -89,6 +104,11 @@ public class RpcConnectionRegistry extends AbstractRpcBasedConnectionRegistry {
       // otherwise, just use master addresses
       return MasterRegistry.parseMasterAddrs(conf);
     }
+  }
+
+  @Override
+  public String getConnectionString() {
+    return connectionString;
   }
 
   private static Set<ServerName> transformServerNames(GetBootstrapNodesResponse resp) {

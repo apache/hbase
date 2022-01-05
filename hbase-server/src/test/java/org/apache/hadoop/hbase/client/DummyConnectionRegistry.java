@@ -47,6 +47,11 @@ public class DummyConnectionRegistry implements ConnectionRegistry {
   }
 
   @Override
+  public String getConnectionString() {
+    return null;
+  }
+
+  @Override
   public void close() {
   }
 }

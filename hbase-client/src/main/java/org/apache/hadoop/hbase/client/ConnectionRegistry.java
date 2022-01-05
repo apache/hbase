@@ -29,7 +29,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Internal use only.
  */
 @InterfaceAudience.Private
-interface ConnectionRegistry extends Closeable {
+public interface ConnectionRegistry extends Closeable {
 
   /**
    * Get the location of meta region(s).
@@ -47,6 +47,13 @@ interface ConnectionRegistry extends Closeable {
    * Get the address of active HMaster.
    */
   CompletableFuture<ServerName> getActiveMaster();
+
+  /**
+   * Return the connection string associated with this registry instance. This value is
+   * informational, used for annotating traces. Values returned may not be valid for establishing a
+   * working cluster connection.
+   */
+  String getConnectionString();
 
   /**
    * Closes this instance and releases any system resources associated with it
