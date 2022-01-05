@@ -166,7 +166,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Updat
     value="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION",
     justification="Access to the conncurrent hash map is under a lock so should be fine.")
 @InterfaceAudience.Private
-class ConnectionImplementation implements ClusterConnection, Closeable {
+public class ConnectionImplementation implements ClusterConnection, Closeable {
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionImplementation.class);
 
@@ -511,6 +511,16 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   @Override
   public MetricsConnection getConnectionMetrics() {
     return this.metrics;
+  }
+
+  @Override
+  public User getUser() {
+    return user;
+  }
+
+  @Override
+  public ConnectionRegistry getConnectionRegistry() {
+    return registry;
   }
 
   private ThreadPoolExecutor getBatchPool() {

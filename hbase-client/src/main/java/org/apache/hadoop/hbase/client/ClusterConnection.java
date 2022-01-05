@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
@@ -175,8 +176,7 @@ public interface ClusterConnection extends Connection {
    *   question
    * @throws IOException if a remote or network exception occurs
    */
-  HRegionLocation locateRegion(final byte[] regionName)
-  throws IOException;
+  HRegionLocation locateRegion(final byte[] regionName) throws IOException;
 
   /**
    * Gets the locations of all regions in the specified table, <i>tableName</i>.
@@ -335,4 +335,14 @@ public interface ClusterConnection extends Connection {
    * Get the bootstrap node list of another region server.
    */
   List<ServerName> getAllBootstrapNodes(ServerName regionServer) throws IOException;
+
+  /**
+   * Get the {@link User} associated with this connection. Maybe be {@code null}.
+   */
+  User getUser();
+
+  /**
+   * Get the {@link ConnectionRegistry} used to orient this cluster.
+   */
+  ConnectionRegistry getConnectionRegistry();
 }

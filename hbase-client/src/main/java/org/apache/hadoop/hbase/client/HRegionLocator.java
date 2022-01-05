@@ -18,18 +18,26 @@
 */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.trace.TableSpanBuilder;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
  * An implementation of {@link RegionLocator}. Used to view region location information for a single
@@ -62,41 +70,47 @@ public class HRegionLocator implements RegionLocator {
   @Override
   public HRegionLocation getRegionLocation(byte[] row, int replicaId, boolean reload)
     throws IOException {
-    return TraceUtil.trace(() -> connection.locateRegion(tableName, row, !reload, true, replicaId)
-      .getRegionLocation(replicaId), () -> TraceUtil
-      .createTableSpan(getClass().getSimpleName() + ".getRegionLocation", tableName));
+    final Supplier<Span> supplier = new TableSpanBuilder(connection)
+      .setName("HRegionLocator.getRegionLocation")
+      .setTableName(tableName);
+    return tracedLocationFuture(
+      () -> connection.locateRegion(tableName, row, !reload, true, replicaId)
+        .getRegionLocation(replicaId),
+      AsyncRegionLocator::getRegionNames,
+      supplier);
   }
 
   @Override
   public List<HRegionLocation> getRegionLocations(byte[] row, boolean reload) throws IOException {
-    return TraceUtil.trace(() -> {
-      RegionLocations locs =
-        connection.locateRegion(tableName, row, !reload, true, RegionInfo.DEFAULT_REPLICA_ID);
-      return Arrays.asList(locs.getRegionLocations());
-    }, () -> TraceUtil
-      .createTableSpan(getClass().getSimpleName() + ".getRegionLocations", tableName));
+    final Supplier<Span> supplier = new TableSpanBuilder(connection)
+      .setName("HRegionLocator.getRegionLocations")
+      .setTableName(tableName);
+    final RegionLocations locs = tracedLocationFuture(
+      () -> connection.locateRegion(tableName, row, !reload, true,
+        RegionInfo.DEFAULT_REPLICA_ID),
+      AsyncRegionLocator::getRegionNames, supplier);
+    return Arrays.asList(locs.getRegionLocations());
   }
 
   @Override
   public List<HRegionLocation> getAllRegionLocations() throws IOException {
-    return TraceUtil.trace(() -> {
-      ArrayList<HRegionLocation> regions = new ArrayList<>();
-      for (RegionLocations locations : listRegionLocations()) {
-        for (HRegionLocation location : locations.getRegionLocations()) {
-          regions.add(location);
-        }
-        connection.cacheLocation(tableName, locations);
-      }
-      return regions;
-    }, () -> TraceUtil
-      .createTableSpan(getClass().getSimpleName() + ".getAllRegionLocations", tableName));
+    final Supplier<Span> supplier = new TableSpanBuilder(connection)
+      .setName("HRegionLocator.getAllRegionLocations")
+      .setTableName(tableName);
+    final RegionLocations locs = tracedLocationFuture(() -> {
+      final RegionLocations rlocs = listRegionLocations();
+      connection.cacheLocation(tableName, rlocs);
+      return rlocs;
+    }, AsyncRegionLocator::getRegionNames, supplier);
+    return Arrays.asList(locs.getRegionLocations());
   }
 
   @Override
   public void clearRegionLocationCache() {
-    TraceUtil.trace(() ->
-      connection.clearRegionCache(tableName), () -> TraceUtil
-      .createTableSpan(this.getClass().getSimpleName() + ".clearRegionLocationCache", tableName));
+    final Supplier<Span> supplier = new TableSpanBuilder(connection)
+      .setName("HRegionLocator.clearRegionLocationCache")
+      .setTableName(tableName);
+    TraceUtil.trace(() -> connection.clearRegionCache(tableName), supplier);
   }
 
   @Override
@@ -104,10 +118,9 @@ public class HRegionLocator implements RegionLocator {
     return this.tableName;
   }
 
-  private List<RegionLocations> listRegionLocations() throws IOException {
+  private RegionLocations listRegionLocations() throws IOException {
     if (TableName.isMetaTableName(tableName)) {
-      return Collections
-        .singletonList(connection.locateRegion(tableName, HConstants.EMPTY_START_ROW, false, true));
+      return connection.locateRegion(tableName, HConstants.EMPTY_START_ROW, false, true);
     }
     final List<RegionLocations> regions = new ArrayList<>();
     MetaTableAccessor.Visitor visitor = new MetaTableAccessor.TableVisitorBase(tableName) {
@@ -122,6 +135,37 @@ public class HRegionLocator implements RegionLocator {
       }
     };
     MetaTableAccessor.scanMetaForTableRegions(connection, visitor, tableName);
-    return regions;
+    return consolidate(regions);
+  }
+
+  private static RegionLocations consolidate(final List<RegionLocations> locations) {
+    final HRegionLocation[] consolidated = locations.stream()
+      .filter(Objects::nonNull)
+      .flatMap(locs -> Arrays.stream(locs.getRegionLocations()))
+      .filter(Objects::nonNull)
+      .toArray(HRegionLocation[]::new);
+    return new RegionLocations(consolidated);
+  }
+
+  private <T> T tracedLocationFuture(
+    TraceUtil.IOExceptionCallable<T> action,
+    Function<T, List<String>> getRegionNames,
+    Supplier<Span> spanSupplier
+  ) throws IOException {
+    final Span span = spanSupplier.get();
+    try (Scope ignored = span.makeCurrent()) {
+      final T result = action.call();
+      final List<String> regionNames = getRegionNames.apply(result);
+      if (!CollectionUtils.isEmpty(regionNames)) {
+        span.setAttribute(REGION_NAMES_KEY, regionNames);
+      }
+      span.setStatus(StatusCode.OK);
+      span.end();
+      return result;
+    } catch (IOException e) {
+      TraceUtil.setError(span, e);
+      span.end();
+      throw e;
+    }
   }
 }

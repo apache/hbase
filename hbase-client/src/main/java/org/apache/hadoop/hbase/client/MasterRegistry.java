@@ -87,9 +87,12 @@ public class MasterRegistry extends AbstractRpcBasedConnectionRegistry {
     return masterAddrs;
   }
 
+  private final String connectionString;
+
   MasterRegistry(Configuration conf) throws IOException {
     super(conf, MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, MASTER_REGISTRY_INITIAL_REFRESH_DELAY_SECS,
       MASTER_REGISTRY_PERIODIC_REFRESH_INTERVAL_SECS, MASTER_REGISTRY_MIN_SECS_BETWEEN_REFRESHES);
+    connectionString = getConnectionString(conf);
   }
 
   @Override
@@ -100,6 +103,15 @@ public class MasterRegistry extends AbstractRpcBasedConnectionRegistry {
   @Override
   protected CompletableFuture<Set<ServerName>> fetchEndpoints() {
     return getMasters();
+  }
+
+  @Override
+  public String getConnectionString() {
+    return connectionString;
+  }
+
+  static String getConnectionString(Configuration conf) throws UnknownHostException {
+    return getMasterAddr(conf);
   }
 
   /**

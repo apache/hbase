@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEnded;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import io.opentelemetry.api.trace.SpanKind;
@@ -30,15 +34,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
+import org.hamcrest.Matcher;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestTracingBase {
+  private static final Logger LOG = LoggerFactory.getLogger(TestTracingBase.class);
 
   protected static final ServerName MASTER_HOST = ServerName.valueOf("localhost", 16010, 12345);
   protected static final RegionLocations META_REGION_LOCATION =
@@ -86,6 +95,28 @@ public class TestTracingBase {
     }
   }
 
+  protected SpanData waitSpan(String name) {
+    return waitSpan(hasName(name));
+  }
+
+  protected SpanData waitSpan(Matcher<SpanData> matcher) {
+    Matcher<SpanData> spanLocator = allOf(matcher, hasEnded());
+    try {
+      Waiter.waitFor(conf, 1000, new MatcherPredicate<>(
+        "waiting for span",
+        () -> TRACE_RULE.getSpans(), hasItem(spanLocator)));
+    } catch (AssertionError e) {
+      LOG.error("AssertionError while waiting for matching span. Span reservoir contains: {}",
+        TRACE_RULE.getSpans());
+      throw e;
+    }
+    return TRACE_RULE.getSpans()
+      .stream()
+      .filter(spanLocator::matches)
+      .findFirst()
+      .orElseThrow(AssertionError::new);
+  }
+
   static class RegistryForTracingTest implements ConnectionRegistry {
 
     public RegistryForTracingTest(Configuration conf) {
@@ -104,6 +135,10 @@ public class TestTracingBase {
     @Override
     public CompletableFuture<ServerName> getActiveMaster() {
       return CompletableFuture.completedFuture(MASTER_HOST);
+    }
+
+    @Override public String getConnectionString() {
+      return "nothing";
     }
 
     @Override public void close() {

@@ -75,6 +75,11 @@ public class RegionServerRegistry implements ConnectionRegistry {
   }
 
   @Override
+  public String getConnectionString() {
+    return "short-circuit";
+  }
+
+  @Override
   public void close() {
     // nothing
   }

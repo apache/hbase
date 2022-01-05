@@ -17,9 +17,23 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntryWithStringValuesOf;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasAttributes;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasKind;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.TraceTestUtil.buildConnectionAttributesMatcher;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.TraceTestUtil.buildTableAttributesMatcher;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
+import java.util.Arrays;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -51,33 +65,65 @@ public class TestRegionLocatorTracing extends TestTracingBase {
     Closeables.close(conn, true);
   }
 
-
   @Test
   public void testGetRegionLocation() throws IOException {
     conn.getRegionLocator(TableName.META_TABLE_NAME).getRegionLocation(HConstants.EMPTY_START_ROW);
-    assertTrace(HRegionLocator.class.getSimpleName(), "getRegionLocation",
-      null, TableName.META_TABLE_NAME);
+    SpanData span = waitSpan("HRegionLocator.getRegionLocation");
+    assertThat(span, allOf(
+      hasStatusWithCode(StatusCode.OK),
+      hasKind(SpanKind.CLIENT),
+      buildConnectionAttributesMatcher(conn),
+      buildTableAttributesMatcher(TableName.META_TABLE_NAME),
+      hasAttributes(
+        containsEntryWithStringValuesOf("db.hbase.regions",
+          META_REGION_LOCATION.getDefaultRegionLocation().getRegion().getRegionNameAsString()))));
   }
 
   @Test
   public void testGetRegionLocations() throws IOException {
     conn.getRegionLocator(TableName.META_TABLE_NAME).getRegionLocations(HConstants.EMPTY_START_ROW);
-    assertTrace(HRegionLocator.class.getSimpleName(), "getRegionLocations",
-      null, TableName.META_TABLE_NAME);
+    SpanData span = waitSpan("HRegionLocator.getRegionLocations");
+    // TODO: Use a value of `META_REGION_LOCATION` that contains multiple region locations.
+    String[] expectedRegions = Arrays.stream(META_REGION_LOCATION.getRegionLocations())
+      .map(HRegionLocation::getRegion)
+      .map(RegionInfo::getRegionNameAsString)
+      .toArray(String[]::new);
+    assertThat(span, allOf(
+      hasStatusWithCode(StatusCode.OK),
+      hasKind(SpanKind.CLIENT),
+      buildConnectionAttributesMatcher(conn),
+      buildTableAttributesMatcher(TableName.META_TABLE_NAME),
+      hasAttributes(
+        containsEntryWithStringValuesOf("db.hbase.regions", containsInAnyOrder(expectedRegions)))));
   }
 
   @Test
   public void testGetAllRegionLocations() throws IOException {
     conn.getRegionLocator(TableName.META_TABLE_NAME).getAllRegionLocations();
-    assertTrace(HRegionLocator.class.getSimpleName(), "getAllRegionLocations",
-      null, TableName.META_TABLE_NAME);
+    SpanData span = waitSpan("HRegionLocator.getAllRegionLocations");
+    // TODO: Use a value of `META_REGION_LOCATION` that contains multiple region locations.
+    String[] expectedRegions = Arrays.stream(META_REGION_LOCATION.getRegionLocations())
+      .map(HRegionLocation::getRegion)
+      .map(RegionInfo::getRegionNameAsString)
+      .toArray(String[]::new);
+    assertThat(span, allOf(
+      hasStatusWithCode(StatusCode.OK),
+      hasKind(SpanKind.CLIENT),
+      buildConnectionAttributesMatcher(conn),
+      buildTableAttributesMatcher(TableName.META_TABLE_NAME),
+      hasAttributes(
+        containsEntryWithStringValuesOf("db.hbase.regions", containsInAnyOrder(expectedRegions)))));
   }
 
   @Test
   public void testClearRegionLocationCache() throws IOException {
     conn.getRegionLocator(TableName.META_TABLE_NAME).clearRegionLocationCache();
-    assertTrace(HRegionLocator.class.getSimpleName(), "clearRegionLocationCache",
-      null, TableName.META_TABLE_NAME);
+    SpanData span = waitSpan("HRegionLocator.clearRegionLocationCache");
+    assertThat(span, allOf(
+      hasStatusWithCode(StatusCode.OK),
+      hasKind(SpanKind.CLIENT),
+      buildConnectionAttributesMatcher(conn),
+      buildTableAttributesMatcher(TableName.META_TABLE_NAME)));
   }
 
 }
