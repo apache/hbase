@@ -70,7 +70,7 @@ class ShortCircuitConnectionRegistry implements ConnectionRegistry {
 
   @Override
   public String getConnectionString() {
-    return "localhost";
+    return "short-circuit";
   }
 
   @Override

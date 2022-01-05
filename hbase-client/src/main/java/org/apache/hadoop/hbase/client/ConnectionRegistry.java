@@ -49,7 +49,9 @@ public interface ConnectionRegistry extends Closeable {
   CompletableFuture<ServerName> getActiveMaster();
 
   /**
-   * Return the connection string associated with this registry instance.
+   * Return the connection string associated with this registry instance. This value is
+   * informational, used for annotating traces. Values returned may not be valid for establishing a
+   * working cluster connection.
    */
   String getConnectionString();
 
