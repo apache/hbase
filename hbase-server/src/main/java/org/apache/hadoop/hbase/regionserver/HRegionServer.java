@@ -3542,6 +3542,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   protected void stopChores() {
     shutdownChore(nonceManagerChore);
     shutdownChore(compactionChecker);
+    shutdownChore(compactedFileDischarger);
     shutdownChore(periodicFlusher);
     shutdownChore(healthCheckChore);
     shutdownChore(executorStatusChore);
