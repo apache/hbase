@@ -1837,6 +1837,46 @@ properties file, which may be `hbase-site.xml` or a different properties file.
 </property>
 ----
 
+==== Customizing Destructive ChaosMonkey Actions
+
+The session above shows how to setup custom configurations for the _slowDeterministic_ monkey
+policy. This is a policy that pre-defines a set of destructive actions of varying gravity for a
+running cluster. These actions are grouped into three categories: _light weight_, _mid weight_ and
+_heavy weight_. Although it's possible to define some properties for the different actions
+(such as timeouts, frequency, etc), the actions themselves are not configurable.
+
+For certain deployments, it may be interesting to define its own test strategy, either less or more
+aggressive than the pre-defined set of actions provided by _slowDeterministic_. For such cases,
+the _configurableSlowDeterministic_ policy can be used. It allows for a customizable set of
+_heavy weight_ actions to be defined in the _monkey.properties_ properties file:
+
+[source]
+----
+batch.restart.rs.ratio=0.3f
+heavy.actions=RestartRandomRsAction(500000);MoveRandomRegionOfTableAction(360000,$table_name);SplitAllRegionOfTableAction($table_name)
+----
+
+The above properties file definition instructs chaos monkey to perform a RegionServer crash every 8 minutes,
+a random region move every 6 minutes, and at least one split of all table regions.
+
+To run this policy, just specify _configurableSlowDeterministic_ as the monkey policy to run, together
+with a property file containing the _heavy.actions_ property definition:
+
+[source,bourne]
+----
+$ bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m configurableSlowDeterministic -monkeyProps monkey.properties
+----
+
+When specifying monkey actions, make sure to define all required constructor parameters. For actions
+that require a table name parameter, the _$table_name_ placeholder can be specified, and it will
+automatically resort to the table created by the integration test run.
+
+If _heavy.actions_ property is omitted in the properties file,  _configurableSlowDeterministic_ will
+just run as the _slowDeterministic_ policy
+(it will execute all the heavy weight actions defined by _slowDeterministic_ policy).
+
+
+
 [[developing]]
 == Developer Guidelines
 
