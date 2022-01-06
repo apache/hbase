@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.
-  TRACKER_IMPL;
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -67,7 +66,7 @@ public class TestMergesSplitsAddToTracker {
     HBaseClassTestRule.forClass(TestMergesSplitsAddToTracker.class);
 
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  
+
   private static final String FAMILY_NAME_STR = "info";
 
   private static final byte[] FAMILY_NAME = Bytes.toBytes(FAMILY_NAME_STR);
