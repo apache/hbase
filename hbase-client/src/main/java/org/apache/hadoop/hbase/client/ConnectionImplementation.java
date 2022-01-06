@@ -849,7 +849,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     byte[] metaStopKey =
       RegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW, "", false);
     Scan s = new Scan().withStartRow(metaStartKey).withStopRow(metaStopKey, true)
-      .addFamily(HConstants.CATALOG_FAMILY).setReversed(true).setCaching(5)
+      .addFamily(HConstants.CATALOG_FAMILY).setReversed(true).setCaching(1)
       .setReadType(ReadType.PREAD);
     if (this.useMetaReplicas) {
       s.setConsistency(Consistency.TIMELINE);
