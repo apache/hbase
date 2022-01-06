@@ -109,8 +109,8 @@ public class OAuthBearerSignedJwtValidatorCallbackHandler implements Authenticat
       } else if (callback instanceof OAuthBearerExtensionsValidatorCallback) {
         OAuthBearerExtensionsValidatorCallback extensionsCallback =
           (OAuthBearerExtensionsValidatorCallback) callback;
-        extensionsCallback.inputExtensions().map().forEach((extensionName, v) ->
-          extensionsCallback.valid(extensionName));
+        extensionsCallback.getInputExtensions().getExtensions().forEach((extensionName, v) ->
+          extensionsCallback.storeAsValid(extensionName));
       } else {
         throw new UnsupportedCallbackException(callback);
       }

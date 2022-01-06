@@ -89,6 +89,7 @@ public class OAuthBearerSaslClientCallbackHandlerTest {
       privateCredentials.clear();
       for (int num = 1; num <= maxTokens; ++num) {
         privateCredentials.add(createTokenWithLifetimeMillis(num));
+        privateCredentials.add(createTokenWithLifetimeMillis(-num));
         OAuthBearerTokenCallback callback = new OAuthBearerTokenCallback();
         handler.handle(new Callback[] {callback});
         assertEquals(num, callback.token().lifetimeMs());

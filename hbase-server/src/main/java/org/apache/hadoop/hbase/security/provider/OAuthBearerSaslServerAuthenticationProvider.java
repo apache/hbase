@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.provider;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 import javax.security.sasl.Sasl;
@@ -82,7 +83,7 @@ public class OAuthBearerSaslServerAuthenticationProvider
       });
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw new RuntimeException("Failed to construct OAUTHBEARER SASL server");
+      throw new InterruptedIOException("Failed to construct OAUTHBEARER SASL server");
     }
   }
 

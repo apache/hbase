@@ -25,7 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 /*
  * Callback handler for SASL-based authentication
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public interface AuthenticateCallbackHandler extends CallbackHandler {
 
   /**

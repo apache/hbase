@@ -25,7 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Optional callback used for SASL mechanisms if any extensions need to be set
  * in the SASL exchange.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class SaslExtensionsCallback implements Callback {
   private SaslExtensions extensions = SaslExtensions.NO_SASL_EXTENSIONS;
 

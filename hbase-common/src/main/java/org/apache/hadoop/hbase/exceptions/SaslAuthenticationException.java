@@ -44,9 +44,4 @@ public class SaslAuthenticationException extends RuntimeException {
   public SaslAuthenticationException(String message) {
     super(message);
   }
-
-  public SaslAuthenticationException(String message, Throwable cause) {
-    super(message, cause);
-  }
-
 }

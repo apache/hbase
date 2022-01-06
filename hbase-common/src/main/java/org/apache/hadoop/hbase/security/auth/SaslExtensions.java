@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class SaslExtensions {
   /**
    * An "empty" instance indicating no SASL extensions
@@ -38,7 +38,7 @@ public class SaslExtensions {
   /**
    * Returns an <strong>immutable</strong> map of the extension names and their values
    */
-  public Map<String, String> map() {
+  public Map<String, String> getExtensions() {
     return extensionsMap;
   }
 

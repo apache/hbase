@@ -36,7 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * update the {@code InterfaceStability} annotation and this notice once the API
  * is considered stable.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class OAuthBearerTokenCallback implements Callback {
   private OAuthBearerToken token = null;
   private String errorCode = null;

@@ -21,8 +21,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This exception indicates unexpected requests prior to SASL authentication.
- * This could be due to misconfigured security, e.g. if PLAINTEXT protocol
- * is used to connect to a SASL endpoint.
+ * This could be due to misconfigured security.
  */
 @InterfaceAudience.Public
 public class IllegalSaslStateException extends IllegalStateException {
@@ -33,7 +32,4 @@ public class IllegalSaslStateException extends IllegalStateException {
     super(message);
   }
 
-  public IllegalSaslStateException(String message, Throwable cause) {
-    super(message, cause);
-  }
 }

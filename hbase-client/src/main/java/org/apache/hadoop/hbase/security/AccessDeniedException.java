@@ -33,7 +33,7 @@ public class AccessDeniedException extends DoNotRetryIOException {
   }
 
   public AccessDeniedException(Class<?> clazz, String s) {
-    super( "AccessDenied [" + clazz.getName() + "]: " + s);
+    super("AccessDenied [" + clazz.getName() + "]: " + s);
   }
 
   public AccessDeniedException(String s) {

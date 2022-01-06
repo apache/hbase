@@ -25,7 +25,10 @@ import java.util.regex.Pattern;
 import javax.security.sasl.SaslException;
 import org.apache.hadoop.hbase.security.auth.SaslExtensions;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerStringUtils;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * OAuthBearer SASL client's initial message to the server.
@@ -34,6 +37,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class OAuthBearerClientInitialResponse {
+  private static final Logger LOG = LoggerFactory.getLogger(OAuthBearerClientInitialResponse.class);
   static final String SEPARATOR = "\u0001";
 
   private static final String SASLNAME = "(?:[\\x01-\\x7F&&[^=,]]|=2C|=3D)+";
@@ -56,11 +60,13 @@ public class OAuthBearerClientInitialResponse {
   public static final Pattern EXTENSION_VALUE_PATTERN = Pattern.compile(VALUE);
 
   public OAuthBearerClientInitialResponse(byte[] response) throws SaslException {
+    LOG.trace("Client initial response parsing started");
     String responseMsg = new String(response, StandardCharsets.UTF_8);
     Matcher matcher = CLIENT_INITIAL_RESPONSE_PATTERN.matcher(responseMsg);
     if (!matcher.matches()) {
       throw new SaslException("Invalid OAUTHBEARER client first message");
     }
+    LOG.trace("Client initial response matches pattern");
     String authzid = matcher.group("authzid");
     this.authorizationId = authzid == null ? "" : authzid;
     String kvPairs = matcher.group("kvpairs");
@@ -69,21 +75,25 @@ public class OAuthBearerClientInitialResponse {
     if (auth == null) {
       throw new SaslException("Invalid OAUTHBEARER client first message: 'auth' not specified");
     }
+    LOG.trace("Auth key found in client initial response");
     properties.remove(AUTH_KEY);
     SaslExtensions extensions = new SaslExtensions(properties);
     validateExtensions(extensions);
     this.saslExtensions = extensions;
+    LOG.trace("Sasl extensions have been validated successfully");
 
     Matcher authMatcher = AUTH_PATTERN.matcher(auth);
     if (!authMatcher.matches()) {
       throw new SaslException("Invalid OAUTHBEARER client first message: invalid 'auth' format");
     }
+    LOG.trace("Client initial response auth matches pattern");
     if (!"bearer".equalsIgnoreCase(authMatcher.group("scheme"))) {
       String msg = String.format("Invalid scheme in OAUTHBEARER client first message: %s",
         matcher.group("scheme"));
       throw new SaslException(msg);
     }
     this.tokenValue = authMatcher.group("token");
+    LOG.trace("Client initial response parsing finished");
   }
 
   /**
@@ -144,7 +154,7 @@ public class OAuthBearerClientInitialResponse {
     String message = String.format("n,%s,%sauth=Bearer %s%s%s%s", authzid,
       SEPARATOR, tokenValue, extensions, SEPARATOR, SEPARATOR);
 
-    return message.getBytes(StandardCharsets.UTF_8);
+    return Bytes.toBytes(message);
   }
 
   /**
@@ -184,12 +194,12 @@ public class OAuthBearerClientInitialResponse {
     if (extensions == null) {
       return;
     }
-    if (extensions.map().containsKey(OAuthBearerClientInitialResponse.AUTH_KEY)) {
+    if (extensions.getExtensions().containsKey(OAuthBearerClientInitialResponse.AUTH_KEY)) {
       throw new SaslException("Extension name " +
         OAuthBearerClientInitialResponse.AUTH_KEY + " is invalid");
     }
 
-    for (Map.Entry<String, String> entry : extensions.map().entrySet()) {
+    for (Map.Entry<String, String> entry : extensions.getExtensions().entrySet()) {
       String extensionName = entry.getKey();
       String extensionValue = entry.getValue();
 
@@ -207,6 +217,6 @@ public class OAuthBearerClientInitialResponse {
    * Converts the SASLExtensions to an OAuth protocol-friendly string
    */
   private String extensionsMessage() {
-    return OAuthBearerStringUtils.mkString(saslExtensions.map(), "", "", "=", SEPARATOR);
+    return OAuthBearerStringUtils.mkString(saslExtensions.getExtensions(), "", "", "=", SEPARATOR);
   }
 }

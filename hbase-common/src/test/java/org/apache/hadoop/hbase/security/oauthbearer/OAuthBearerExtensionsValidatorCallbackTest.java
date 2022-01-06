@@ -47,12 +47,12 @@ public class OAuthBearerExtensionsValidatorCallbackTest {
     OAuthBearerExtensionsValidatorCallback callback =
       new OAuthBearerExtensionsValidatorCallback(TOKEN, new SaslExtensions(extensions));
 
-    assertTrue(callback.validatedExtensions().isEmpty());
-    assertTrue(callback.invalidExtensions().isEmpty());
-    callback.valid("hello");
-    assertFalse(callback.validatedExtensions().isEmpty());
-    assertEquals("bye", callback.validatedExtensions().get("hello"));
-    assertTrue(callback.invalidExtensions().isEmpty());
+    assertTrue(callback.getValidatedExtensions().isEmpty());
+    assertTrue(callback.getInvalidExtensions().isEmpty());
+    callback.storeAsValid("hello");
+    assertFalse(callback.getValidatedExtensions().isEmpty());
+    assertEquals("bye", callback.getValidatedExtensions().get("hello"));
+    assertTrue(callback.getInvalidExtensions().isEmpty());
   }
 
   @Test
@@ -63,12 +63,12 @@ public class OAuthBearerExtensionsValidatorCallbackTest {
     OAuthBearerExtensionsValidatorCallback callback =
       new OAuthBearerExtensionsValidatorCallback(TOKEN, new SaslExtensions(extensions));
 
-    assertTrue(callback.validatedExtensions().isEmpty());
-    assertTrue(callback.invalidExtensions().isEmpty());
-    callback.error("hello", "error");
-    assertFalse(callback.invalidExtensions().isEmpty());
-    assertEquals("error", callback.invalidExtensions().get("hello"));
-    assertTrue(callback.validatedExtensions().isEmpty());
+    assertTrue(callback.getValidatedExtensions().isEmpty());
+    assertTrue(callback.getInvalidExtensions().isEmpty());
+    callback.storeAsError("hello", "error");
+    assertFalse(callback.getInvalidExtensions().isEmpty());
+    assertEquals("error", callback.getInvalidExtensions().get("hello"));
+    assertTrue(callback.getValidatedExtensions().isEmpty());
   }
 
   /**
@@ -83,12 +83,12 @@ public class OAuthBearerExtensionsValidatorCallbackTest {
 
     OAuthBearerExtensionsValidatorCallback callback =
       new OAuthBearerExtensionsValidatorCallback(TOKEN, new SaslExtensions(extensions));
-    callback.error("error", "error");
-    callback.valid("valid");
+    callback.storeAsError("error", "error");
+    callback.storeAsValid("valid");
 
-    assertFalse(callback.validatedExtensions().containsKey("nothing"));
-    assertFalse(callback.invalidExtensions().containsKey("nothing"));
-    assertEquals("nothing", callback.ignoredExtensions().get("nothing"));
+    assertFalse(callback.getValidatedExtensions().containsKey("nothing"));
+    assertFalse(callback.getInvalidExtensions().containsKey("nothing"));
+    assertEquals("nothing", callback.getIgnoredExtensions().get("nothing"));
   }
 
   @Test
@@ -99,6 +99,6 @@ public class OAuthBearerExtensionsValidatorCallbackTest {
     OAuthBearerExtensionsValidatorCallback callback =
       new OAuthBearerExtensionsValidatorCallback(TOKEN, new SaslExtensions(extensions));
 
-    assertThrows(IllegalArgumentException.class, () -> callback.valid("???"));
+    assertThrows(IllegalArgumentException.class, () -> callback.storeAsValid("???"));
   }
 }

@@ -136,7 +136,7 @@ public class OAuthBearerSaslServer implements SaslServer {
     if (CREDENTIAL_LIFETIME_MS_SASL_NEGOTIATED_PROPERTY_KEY.equals(propName)) {
       return tokenForNegotiatedProperty.lifetimeMs();
     }
-    return extensions.map().get(propName);
+    return extensions.getExtensions().get(propName);
   }
 
   @Override
@@ -213,16 +213,16 @@ public class OAuthBearerSaslServer implements SaslServer {
     } catch (IOException e) {
       handleCallbackError(e);
     }
-    if (!extensionsCallback.invalidExtensions().isEmpty()) {
+    if (!extensionsCallback.getInvalidExtensions().isEmpty()) {
       String errorMessage = String.format("Authentication failed: %d extensions are invalid! "
-          + "They are: %s", extensionsCallback.invalidExtensions().size(),
-        OAuthBearerStringUtils.mkString(extensionsCallback.invalidExtensions(),
+          + "They are: %s", extensionsCallback.getInvalidExtensions().size(),
+        OAuthBearerStringUtils.mkString(extensionsCallback.getInvalidExtensions(),
           "", "", ": ", "; "));
       LOG.debug(errorMessage);
       throw new SaslAuthenticationException(errorMessage);
     }
 
-    return extensionsCallback.validatedExtensions();
+    return extensionsCallback.getValidatedExtensions();
   }
 
   private static String jsonErrorResponse(String errorStatus, String errorScope,

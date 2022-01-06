@@ -101,8 +101,8 @@ public class OAuthBearerClientInitialResponseTest {
       new OAuthBearerClientInitialResponse(message.getBytes(StandardCharsets.UTF_8));
     assertEquals("567", response.tokenValue());
     assertEquals("", response.authorizationId());
-    assertEquals("valueA1, valueA2", response.extensions().map().get("propA"));
-    assertEquals("valueB", response.extensions().map().get("propB"));
+    assertEquals("valueA1, valueA2", response.extensions().getExtensions().get("propA"));
+    assertEquals("valueB", response.extensions().getExtensions().get("propB"));
   }
 
   // The example in the RFC uses `vF9dft4qmTc2Nvb3RlckBhbHRhdmlzdGEuY29tCg==` as the token
@@ -115,8 +115,8 @@ public class OAuthBearerClientInitialResponseTest {
       new OAuthBearerClientInitialResponse(message.getBytes(StandardCharsets.UTF_8));
     assertEquals("vF9dft4qmTc2Nvb3RlckBhbHRhdmlzdGEuY29tCg", response.tokenValue());
     assertEquals("user@example.com", response.authorizationId());
-    assertEquals("server.example.com", response.extensions().map().get("host"));
-    assertEquals("143", response.extensions().map().get("port"));
+    assertEquals("server.example.com", response.extensions().getExtensions().get("host"));
+    assertEquals("143", response.extensions().getExtensions().get("port"));
   }
 
   @Test
@@ -127,14 +127,14 @@ public class OAuthBearerClientInitialResponseTest {
       new OAuthBearerClientInitialResponse(message.getBytes(StandardCharsets.UTF_8));
     assertEquals("vF9dft4qmTc2Nvb3RlckBhbHRhdmlzdGEuY29tCg", response.tokenValue());
     assertEquals("user@example.com", response.authorizationId());
-    assertTrue(response.extensions().map().isEmpty());
+    assertTrue(response.extensions().getExtensions().isEmpty());
   }
 
   @Test
   public void testNoExtensionsFromTokenAndNullExtensions() throws Exception {
     OAuthBearerClientInitialResponse response =
       new OAuthBearerClientInitialResponse("token", null);
-    assertTrue(response.extensions().map().isEmpty());
+    assertTrue(response.extensions().getExtensions().isEmpty());
   }
 
   @Test

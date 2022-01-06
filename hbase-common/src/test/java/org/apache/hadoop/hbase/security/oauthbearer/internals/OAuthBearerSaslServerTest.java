@@ -73,8 +73,8 @@ public class OAuthBearerSaslServerTest {
           } else if (callback instanceof OAuthBearerExtensionsValidatorCallback) {
             OAuthBearerExtensionsValidatorCallback extensionsCallback =
               (OAuthBearerExtensionsValidatorCallback) callback;
-            extensionsCallback.valid("firstKey");
-            extensionsCallback.valid("secondKey");
+            extensionsCallback.storeAsValid("firstKey");
+            extensionsCallback.storeAsValid("secondKey");
           } else {
             throw new UnsupportedCallbackException(callback);
           }
@@ -174,8 +174,8 @@ public class OAuthBearerSaslServerTest {
           } else if (callback instanceof OAuthBearerExtensionsValidatorCallback) {
             OAuthBearerExtensionsValidatorCallback extensionsCallback =
               (OAuthBearerExtensionsValidatorCallback) callback;
-            extensionsCallback.error("firstKey", "is not valid");
-            extensionsCallback.error("secondKey", "is not valid either");
+            extensionsCallback.storeAsError("firstKey", "is not valid");
+            extensionsCallback.storeAsError("secondKey", "is not valid either");
           } else {
             throw new UnsupportedCallbackException(callback);
           }
