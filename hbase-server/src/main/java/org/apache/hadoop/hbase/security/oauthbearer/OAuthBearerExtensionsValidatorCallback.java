@@ -94,7 +94,8 @@ public class OAuthBearerExtensionsValidatorCallback implements Callback {
    */
   public Map<String, String> getIgnoredExtensions() {
     return Collections.unmodifiableMap(
-      subtractMap(subtractMap(inputExtensions.getExtensions(), invalidExtensions), validatedExtensions));
+      subtractMap(subtractMap(inputExtensions.getExtensions(), invalidExtensions),
+        validatedExtensions));
   }
 
   /**

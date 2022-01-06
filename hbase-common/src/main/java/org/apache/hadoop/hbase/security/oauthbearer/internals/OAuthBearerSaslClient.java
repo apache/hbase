@@ -26,6 +26,7 @@ import java.util.Objects;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslClientFactory;
 import javax.security.sasl.SaslException;
@@ -180,6 +181,12 @@ public class OAuthBearerSaslClient implements SaslClient {
     return extensionsCallback.extensions();
   }
 
+  public static String[] mechanismNamesCompatibleWithPolicy(Map<String, ?> props) {
+    return props != null && "true".equals(String.valueOf(props.get(Sasl.POLICY_NOPLAINTEXT)))
+      ? new String[] {}
+      : new String[] { OAUTHBEARER_MECHANISM};
+  }
+
   public static class OAuthBearerSaslClientFactory implements SaslClientFactory {
     @Override
     public SaslClient createSaslClient(String[] mechanisms, String authorizationId, String protocol,
@@ -203,7 +210,7 @@ public class OAuthBearerSaslClient implements SaslClient {
 
     @Override
     public String[] getMechanismNames(Map<String, ?> props) {
-      return OAuthBearerSaslServer.mechanismNamesCompatibleWithPolicy(props);
+      return OAuthBearerSaslClient.mechanismNamesCompatibleWithPolicy(props);
     }
   }
 }
