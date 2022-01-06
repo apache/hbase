@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -127,7 +128,8 @@ public class FSTableDescriptors implements TableDescriptors {
       return getTableDescriptorFromFs(fs, rootdir, TableName.META_TABLE_NAME);
     } catch (TableInfoMissingException e) {
       TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
-      TableDescriptor td = builder.build();
+      TableDescriptor td = StoreFileTrackerFactory.
+        updateWithTrackerConfigs(conf, builder.build());
       LOG.info("Creating new hbase:meta table descriptor {}", td);
       TableName tableName = td.getTableName();
       Path tableDir = CommonFSUtils.getTableDir(rootdir, tableName);
