@@ -32,7 +32,6 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.client.AsyncConnectionImpl;
 import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.ConnectionImplementation;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 

@@ -43,6 +43,7 @@ public final class TraceTestUtil {
   }
 
   /**
+   * All {@link Span}s involving {@code conn} should include these attributes.
    * @see #buildConnectionAttributesMatcher(AsyncConnectionImpl)
    */
   public static Matcher<SpanData> buildConnectionAttributesMatcher(ConnectionImplementation conn) {

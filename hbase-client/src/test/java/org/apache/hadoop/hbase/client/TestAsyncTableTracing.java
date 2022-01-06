@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntry;
-import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasAttributes;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEnded;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasKind;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
@@ -35,7 +33,6 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
