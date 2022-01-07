@@ -31,28 +31,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
-import javax.security.auth.login.AppConfigurationEntry;
-import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.CreateAndFailSilent;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.DeleteNodeFailSilent;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.SetData;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
@@ -60,22 +51,14 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.Op;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.client.ZooKeeperSaslClient;
-import org.apache.zookeeper.data.ACL;
-import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.CreateRequest;
 import org.apache.zookeeper.proto.DeleteRequest;
 import org.apache.zookeeper.proto.SetDataRequest;
-import org.apache.zookeeper.server.ZooKeeperSaslServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 
@@ -140,175 +123,6 @@ public final class ZKUtil {
     int multiMaxSize = conf.getInt("zookeeper.multi.max.size", 1024*1024);
     return new RecoverableZooKeeper(ensemble, timeout, watcher,
         retry, retryIntervalMillis, maxSleepTime, identifier, multiMaxSize);
-  }
-
-  /**
-   * Log in the current zookeeper server process using the given configuration
-   * keys for the credential file and login principal.
-   *
-   * <p><strong>This is only applicable when running on secure hbase</strong>
-   * On regular HBase (without security features), this will safely be ignored.
-   * </p>
-   *
-   * @param conf The configuration data to use
-   * @param keytabFileKey Property key used to configure the path to the credential file
-   * @param userNameKey Property key used to configure the login principal
-   * @param hostname Current hostname to use in any credentials
-   * @throws IOException underlying exception from SecurityUtil.login() call
-   */
-  public static void loginServer(Configuration conf, String keytabFileKey,
-      String userNameKey, String hostname) throws IOException {
-    login(conf, keytabFileKey, userNameKey, hostname,
-          ZooKeeperSaslServer.LOGIN_CONTEXT_NAME_KEY,
-          JaasConfiguration.SERVER_KEYTAB_KERBEROS_CONFIG_NAME);
-  }
-
-  /**
-   * Log in the current zookeeper client using the given configuration
-   * keys for the credential file and login principal.
-   *
-   * <p><strong>This is only applicable when running on secure hbase</strong>
-   * On regular HBase (without security features), this will safely be ignored.
-   * </p>
-   *
-   * @param conf The configuration data to use
-   * @param keytabFileKey Property key used to configure the path to the credential file
-   * @param userNameKey Property key used to configure the login principal
-   * @param hostname Current hostname to use in any credentials
-   * @throws IOException underlying exception from SecurityUtil.login() call
-   */
-  public static void loginClient(Configuration conf, String keytabFileKey,
-      String userNameKey, String hostname) throws IOException {
-    login(conf, keytabFileKey, userNameKey, hostname,
-          ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY,
-          JaasConfiguration.CLIENT_KEYTAB_KERBEROS_CONFIG_NAME);
-  }
-
-  /**
-   * Log in the current process using the given configuration keys for the
-   * credential file and login principal.
-   *
-   * <p><strong>This is only applicable when running on secure hbase</strong>
-   * On regular HBase (without security features), this will safely be ignored.
-   * </p>
-   *
-   * @param conf The configuration data to use
-   * @param keytabFileKey Property key used to configure the path to the credential file
-   * @param userNameKey Property key used to configure the login principal
-   * @param hostname Current hostname to use in any credentials
-   * @param loginContextProperty property name to expose the entry name
-   * @param loginContextName jaas entry name
-   * @throws IOException underlying exception from SecurityUtil.login() call
-   */
-  private static void login(Configuration conf, String keytabFileKey,
-      String userNameKey, String hostname,
-      String loginContextProperty, String loginContextName)
-      throws IOException {
-    if (!isSecureZooKeeper(conf)) {
-      return;
-    }
-
-    // User has specified a jaas.conf, keep this one as the good one.
-    // HBASE_OPTS="-Djava.security.auth.login.config=jaas.conf"
-    if (System.getProperty("java.security.auth.login.config") != null) {
-      return;
-    }
-
-    // No keytab specified, no auth
-    String keytabFilename = conf.get(keytabFileKey);
-    if (keytabFilename == null) {
-      LOG.warn("no keytab specified for: {}", keytabFileKey);
-      return;
-    }
-
-    String principalConfig = conf.get(userNameKey, System.getProperty("user.name"));
-    String principalName = SecurityUtil.getServerPrincipal(principalConfig, hostname);
-
-    // Initialize the "jaas.conf" for keyTab/principal,
-    // If keyTab is not specified use the Ticket Cache.
-    // and set the zookeeper login context name.
-    JaasConfiguration jaasConf = new JaasConfiguration(loginContextName,
-        principalName, keytabFilename);
-    javax.security.auth.login.Configuration.setConfiguration(jaasConf);
-    System.setProperty(loginContextProperty, loginContextName);
-  }
-
-  /**
-   * A JAAS configuration that defines the login modules that we want to use for login.
-   */
-  private static class JaasConfiguration extends javax.security.auth.login.Configuration {
-    private static final String SERVER_KEYTAB_KERBEROS_CONFIG_NAME =
-      "zookeeper-server-keytab-kerberos";
-    private static final String CLIENT_KEYTAB_KERBEROS_CONFIG_NAME =
-      "zookeeper-client-keytab-kerberos";
-
-    private static final Map<String, String> BASIC_JAAS_OPTIONS = new HashMap<>();
-    static {
-      String jaasEnvVar = System.getenv("HBASE_JAAS_DEBUG");
-      if ("true".equalsIgnoreCase(jaasEnvVar)) {
-        BASIC_JAAS_OPTIONS.put("debug", "true");
-      }
-    }
-
-    private static final Map<String,String> KEYTAB_KERBEROS_OPTIONS = new HashMap<>();
-    static {
-      KEYTAB_KERBEROS_OPTIONS.put("doNotPrompt", "true");
-      KEYTAB_KERBEROS_OPTIONS.put("storeKey", "true");
-      KEYTAB_KERBEROS_OPTIONS.put("refreshKrb5Config", "true");
-      KEYTAB_KERBEROS_OPTIONS.putAll(BASIC_JAAS_OPTIONS);
-    }
-
-    private static final AppConfigurationEntry KEYTAB_KERBEROS_LOGIN =
-      new AppConfigurationEntry(KerberosUtil.getKrb5LoginModuleName(),
-                                LoginModuleControlFlag.REQUIRED,
-                                KEYTAB_KERBEROS_OPTIONS);
-
-    private static final AppConfigurationEntry[] KEYTAB_KERBEROS_CONF =
-      new AppConfigurationEntry[]{KEYTAB_KERBEROS_LOGIN};
-
-    private javax.security.auth.login.Configuration baseConfig;
-    private final String loginContextName;
-    private final boolean useTicketCache;
-    private final String keytabFile;
-    private final String principal;
-
-    public JaasConfiguration(String loginContextName, String principal, String keytabFile) {
-      this(loginContextName, principal, keytabFile, keytabFile == null || keytabFile.length() == 0);
-    }
-
-    private JaasConfiguration(String loginContextName, String principal,
-                             String keytabFile, boolean useTicketCache) {
-      try {
-        this.baseConfig = javax.security.auth.login.Configuration.getConfiguration();
-      } catch (SecurityException e) {
-        this.baseConfig = null;
-      }
-      this.loginContextName = loginContextName;
-      this.useTicketCache = useTicketCache;
-      this.keytabFile = keytabFile;
-      this.principal = principal;
-      LOG.info("JaasConfiguration loginContextName={} principal={} useTicketCache={} keytabFile={}",
-        loginContextName, principal, useTicketCache, keytabFile);
-    }
-
-    @Override
-    public AppConfigurationEntry[] getAppConfigurationEntry(String appName) {
-      if (loginContextName.equals(appName)) {
-        if (!useTicketCache) {
-          KEYTAB_KERBEROS_OPTIONS.put("keyTab", keytabFile);
-          KEYTAB_KERBEROS_OPTIONS.put("useKeyTab", "true");
-        }
-        KEYTAB_KERBEROS_OPTIONS.put("principal", principal);
-        KEYTAB_KERBEROS_OPTIONS.put("useTicketCache", useTicketCache ? "true" : "false");
-        return KEYTAB_KERBEROS_CONF;
-      }
-
-      if (baseConfig != null) {
-        return baseConfig.getAppConfigurationEntry(appName);
-      }
-
-      return(null);
-    }
   }
 
   //
@@ -901,86 +715,6 @@ public final class ZKUtil {
     setData(zkw, sd.getPath(), sd.getData(), sd.getVersion());
   }
 
-  /**
-   * Returns whether or not secure authentication is enabled
-   * (whether <code>hbase.security.authentication</code> is set to
-   * <code>kerberos</code>.
-   */
-  public static boolean isSecureZooKeeper(Configuration conf) {
-    // Detection for embedded HBase client with jaas configuration
-    // defined for third party programs.
-    try {
-      javax.security.auth.login.Configuration testConfig =
-          javax.security.auth.login.Configuration.getConfiguration();
-      if (testConfig.getAppConfigurationEntry("Client") == null
-          && testConfig.getAppConfigurationEntry(
-            JaasConfiguration.CLIENT_KEYTAB_KERBEROS_CONFIG_NAME) == null
-          && testConfig.getAppConfigurationEntry(
-              JaasConfiguration.SERVER_KEYTAB_KERBEROS_CONFIG_NAME) == null
-          && conf.get(HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL) == null
-          && conf.get(HConstants.ZK_SERVER_KERBEROS_PRINCIPAL) == null) {
-
-        return false;
-      }
-    } catch(Exception e) {
-      // No Jaas configuration defined.
-      return false;
-    }
-
-    // Master & RSs uses hbase.zookeeper.client.*
-    return "kerberos".equalsIgnoreCase(conf.get("hbase.security.authentication"));
-  }
-
-  private static ArrayList<ACL> createACL(ZKWatcher zkw, String node) {
-    return createACL(zkw, node, isSecureZooKeeper(zkw.getConfiguration()));
-  }
-
-  public static ArrayList<ACL> createACL(ZKWatcher zkw, String node,
-                                         boolean isSecureZooKeeper) {
-    if (!node.startsWith(zkw.getZNodePaths().baseZNode)) {
-      return Ids.OPEN_ACL_UNSAFE;
-    }
-    if (isSecureZooKeeper) {
-      ArrayList<ACL> acls = new ArrayList<>();
-      // add permission to hbase supper user
-      String[] superUsers = zkw.getConfiguration().getStrings(Superusers.SUPERUSER_CONF_KEY);
-      String hbaseUser = null;
-      try {
-        hbaseUser = UserGroupInformation.getCurrentUser().getShortUserName();
-      } catch (IOException e) {
-        LOG.debug("Could not acquire current User.", e);
-      }
-      if (superUsers != null) {
-        List<String> groups = new ArrayList<>();
-        for (String user : superUsers) {
-          if (AuthUtil.isGroupPrincipal(user)) {
-            // TODO: Set node ACL for groups when ZK supports this feature
-            groups.add(user);
-          } else {
-            if(!user.equals(hbaseUser)) {
-              acls.add(new ACL(Perms.ALL, new Id("sasl", user)));
-            }
-          }
-        }
-        if (!groups.isEmpty()) {
-          LOG.warn("Znode ACL setting for group {} is skipped, ZooKeeper doesn't support this " +
-            "feature presently.", groups);
-        }
-      }
-      // Certain znodes are accessed directly by the client,
-      // so they must be readable by non-authenticated clients
-      if (zkw.getZNodePaths().isClientReadable(node)) {
-        acls.addAll(Ids.CREATOR_ALL_ACL);
-        acls.addAll(Ids.READ_ACL_UNSAFE);
-      } else {
-        acls.addAll(Ids.CREATOR_ALL_ACL);
-      }
-      return acls;
-    } else {
-      return Ids.OPEN_ACL_UNSAFE;
-    }
-  }
-
   //
   // Node creation
   //
@@ -1003,12 +737,11 @@ public final class ZKUtil {
    * @return true if node created, false if not, watch set in both cases
    * @throws KeeperException if unexpected zookeeper exception
    */
-  public static boolean createEphemeralNodeAndWatch(ZKWatcher zkw,
-      String znode, byte [] data)
+  public static boolean createEphemeralNodeAndWatch(ZKWatcher zkw, String znode, byte [] data)
     throws KeeperException {
     boolean ret = true;
     try {
-      zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
+      zkw.getRecoverableZooKeeper().create(znode, data, zkw.createACL(znode),
           CreateMode.EPHEMERAL);
     } catch (KeeperException.NodeExistsException nee) {
       ret = false;
@@ -1048,7 +781,7 @@ public final class ZKUtil {
     throws KeeperException {
     boolean ret = true;
     try {
-      zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
+      zkw.getRecoverableZooKeeper().create(znode, data, zkw.createACL(znode),
           CreateMode.PERSISTENT);
     } catch (KeeperException.NodeExistsException nee) {
       ret = false;
@@ -1081,17 +814,14 @@ public final class ZKUtil {
    */
   public static String createNodeIfNotExistsNoWatch(ZKWatcher zkw, String znode, byte[] data,
       CreateMode createMode) throws KeeperException {
-    String createdZNode = null;
     try {
-      createdZNode = zkw.getRecoverableZooKeeper().create(znode, data,
-          createACL(zkw, znode), createMode);
+      return zkw.getRecoverableZooKeeper().create(znode, data, zkw.createACL(znode), createMode);
     } catch (KeeperException.NodeExistsException nee) {
       return znode;
     } catch (InterruptedException e) {
       zkw.interruptedException(e);
       return null;
     }
-    return createdZNode;
   }
 
   /**
@@ -1114,8 +844,8 @@ public final class ZKUtil {
       String znode, byte [] data)
     throws KeeperException, KeeperException.NodeExistsException {
     try {
-      zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
-          CreateMode.PERSISTENT);
+      zkw.getRecoverableZooKeeper().create(znode, data, zkw.createACL(znode),
+        CreateMode.PERSISTENT);
       Stat stat = zkw.getRecoverableZooKeeper().exists(znode, zkw);
       if (stat == null){
         // Likely a race condition. Someone deleted the znode.
@@ -1147,7 +877,7 @@ public final class ZKUtil {
       String znode, byte [] data, final AsyncCallback.StringCallback cb,
       final Object ctx) {
     zkw.getRecoverableZooKeeper().getZooKeeper().create(znode, data,
-        createACL(zkw, znode), CreateMode.PERSISTENT, cb, ctx);
+        zkw.createACL(znode), CreateMode.PERSISTENT, cb, ctx);
   }
 
   /**
@@ -1192,8 +922,9 @@ public final class ZKUtil {
       if (zk.exists(znode, false) == null) {
         zk.create(znode, create.getData(), create.getAcl(), CreateMode.fromFlag(create.getFlags()));
       }
-    } catch(KeeperException.NodeExistsException nee) {
-    } catch(KeeperException.NoAuthException nee){
+    } catch (KeeperException.NodeExistsException nee) {
+      // pass
+    } catch (KeeperException.NoAuthException nee) {
       try {
         if (null == zkw.getRecoverableZooKeeper().exists(znode, false)) {
           // If we failed to create the file and it does not already exist.
@@ -1202,7 +933,7 @@ public final class ZKUtil {
       } catch (InterruptedException ie) {
         zkw.interruptedException(ie);
       }
-    } catch(InterruptedException ie) {
+    } catch (InterruptedException ie) {
       zkw.interruptedException(ie);
     }
   }
@@ -1242,7 +973,7 @@ public final class ZKUtil {
       if(znode == null) {
         return;
       }
-      zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
+      zkw.getRecoverableZooKeeper().create(znode, data, zkw.createACL(znode),
           CreateMode.PERSISTENT);
     } catch(KeeperException.NodeExistsException nee) {
       return;
@@ -1745,7 +1476,7 @@ public final class ZKUtil {
 
     if (op instanceof CreateAndFailSilent) {
       CreateAndFailSilent cafs = (CreateAndFailSilent)op;
-      return Op.create(cafs.getPath(), cafs.getData(), createACL(zkw, cafs.getPath()),
+      return Op.create(cafs.getPath(), cafs.getData(), zkw.createACL(cafs.getPath()),
         CreateMode.PERSISTENT);
     } else if (op instanceof DeleteNodeFailSilent) {
       DeleteNodeFailSilent dnfs = (DeleteNodeFailSilent)op;
