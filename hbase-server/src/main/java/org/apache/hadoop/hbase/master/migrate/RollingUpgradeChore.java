@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.regionserver.storefiletracker.MigrateStoreFileTrackerProcedure;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.InitializeStoreFileTrackerProcedure;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -60,7 +60,7 @@ public class RollingUpgradeChore extends ScheduledChore {
   private final static Logger LOG = LoggerFactory.getLogger(RollingUpgradeChore.class);
   ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
   private TableDescriptors tableDescriptors;
-  private List<MigrateStoreFileTrackerProcedure> processingProcs = new ArrayList<>();
+  private List<InitializeStoreFileTrackerProcedure> processingProcs = new ArrayList<>();
 
   public RollingUpgradeChore(MasterServices masterServices) {
     this(masterServices.getConfiguration(), masterServices.getMasterProcedureExecutor(),
@@ -89,9 +89,9 @@ public class RollingUpgradeChore extends ScheduledChore {
   }
 
   private boolean isCompletelyMigrateSFT(int concurrentCount){
-    Iterator<MigrateStoreFileTrackerProcedure> iter = processingProcs.iterator();
+    Iterator<InitializeStoreFileTrackerProcedure> iter = processingProcs.iterator();
     while(iter.hasNext()){
-      MigrateStoreFileTrackerProcedure proc = iter.next();
+      InitializeStoreFileTrackerProcedure proc = iter.next();
       if(procedureExecutor.isFinished(proc.getProcId())){
         iter.remove();
       }
@@ -120,8 +120,8 @@ public class RollingUpgradeChore extends ScheduledChore {
 
     for (Map.Entry<String, TableDescriptor> entry : migrateSFTTables.entrySet()) {
       TableDescriptor tableDescriptor = entry.getValue();
-      MigrateStoreFileTrackerProcedure proc =
-        new MigrateStoreFileTrackerProcedure(procedureExecutor.getEnvironment(), tableDescriptor);
+      InitializeStoreFileTrackerProcedure proc = new InitializeStoreFileTrackerProcedure(
+        procedureExecutor.getEnvironment(), tableDescriptor);
       procedureExecutor.submitProcedure(proc);
       processingProcs.add(proc);
     }
