@@ -24,8 +24,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -59,7 +59,7 @@ public class TestCreateTableNoRegionServer {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCreateTableNoRegionServer.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName TABLE_NAME = TableName.valueOf("test");
   
@@ -112,7 +112,7 @@ public class TestCreateTableNoRegionServer {
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(
-      StartMiniClusterOption.builder().masterClass(HMasterForTest.class).build());
+      StartTestingClusterOption.builder().masterClass(HMasterForTest.class).build());
     // this may cause dead lock if there is no live region server and want to start a new server.
     // In JmxCacheBuster we will reinitialize the metrics system so it will get some metrics which
     // will need to access meta, since there is no region server, the request will hang there for a
