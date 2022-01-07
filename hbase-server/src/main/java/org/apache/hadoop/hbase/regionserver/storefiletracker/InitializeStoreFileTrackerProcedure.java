@@ -19,28 +19,32 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
 import java.util.Optional;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableDescriptorProcedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Procedure for migrating StoreFileTracker information to table descriptor.
+ * Procedure for setting StoreFileTracker information to table descriptor.
  */
 @InterfaceAudience.Private
-public class MigrateStoreFileTrackerProcedure extends ModifyTableDescriptorProcedure {
+public class InitializeStoreFileTrackerProcedure extends ModifyTableDescriptorProcedure {
 
-  public MigrateStoreFileTrackerProcedure(){}
+  public InitializeStoreFileTrackerProcedure(){}
 
-  public MigrateStoreFileTrackerProcedure(MasterProcedureEnv env, TableDescriptor unmodified) {
+  public InitializeStoreFileTrackerProcedure(MasterProcedureEnv env, TableDescriptor unmodified) {
     super(env, unmodified);
   }
 
   @Override
   protected Optional<TableDescriptor> modify(MasterProcedureEnv env, TableDescriptor current) {
     if (StringUtils.isEmpty(current.getValue(StoreFileTrackerFactory.TRACKER_IMPL))) {
+      // no tracker impl means it is a table created in previous version, the tracker impl can only
+      // be default.
       TableDescriptor td =
-        StoreFileTrackerFactory.updateWithTrackerConfigs(env.getMasterConfiguration(), current);
+        TableDescriptorBuilder.newBuilder(current).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.DEFAULT.name()).build();
       return Optional.of(td);
     }
     return Optional.empty();
