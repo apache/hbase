@@ -292,7 +292,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     int numServers = servers == null ? 0 : servers.size();
     if (numServers == 0) {
       LOG.warn("Wanted to do round robin assignment but no servers to assign to");
-      return Collections.emptyMap();
+      return Collections.singletonMap(BOGUS_SERVER_NAME, new ArrayList<>(regions));
     }
 
     // TODO: instead of retainAssignment() and roundRobinAssignment(), we should just run the
@@ -432,7 +432,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     int numServers = servers == null ? 0 : servers.size();
     if (numServers == 0) {
       LOG.warn("Wanted to do retain assignment but no servers to assign to");
-      return Collections.emptyMap();
+      return Collections.singletonMap(BOGUS_SERVER_NAME, new ArrayList<>(regions.keySet()));
     }
     if (numServers == 1) { // Only one server, nothing fancy we can do here
       ServerName server = servers.get(0);
