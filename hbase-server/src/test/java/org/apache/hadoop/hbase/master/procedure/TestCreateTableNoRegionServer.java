@@ -19,15 +19,15 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.StartTestingClusterOption;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.AsyncAdmin;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -59,7 +59,11 @@ public class TestCreateTableNoRegionServer {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCreateTableNoRegionServer.class);
 
-  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
+  private static TableName TABLE_NAME = TableName.valueOf("test");
+  
+  private static byte[] FAMILY = Bytes.toBytes("f1");
 
   private static CountDownLatch ARRIVE;
 
@@ -77,8 +81,9 @@ public class TestCreateTableNoRegionServer {
           if (e.getClassName().equals(CreateTableProcedure.class.getName()) &&
             e.getMethodName().equals("executeFromState")) {
             for (Procedure<?> proc : getProcedures()) {
-              if (proc instanceof CreateTableProcedure && ((CreateTableProcedure) proc)
-                .getCurrentStateId() == CreateTableState.CREATE_TABLE_ASSIGN_REGIONS_VALUE) {
+              if (proc instanceof CreateTableProcedure && !proc.isFinished() &&
+                ((CreateTableProcedure) proc)
+                  .getCurrentStateId() == CreateTableState.CREATE_TABLE_ASSIGN_REGIONS_VALUE) {
                 return true;
               }
             }
@@ -107,7 +112,7 @@ public class TestCreateTableNoRegionServer {
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(
-      StartTestingClusterOption.builder().masterClass(HMasterForTest.class).build());
+      StartMiniClusterOption.builder().masterClass(HMasterForTest.class).build());
     // this may cause dead lock if there is no live region server and want to start a new server.
     // In JmxCacheBuster we will reinitialize the metrics system so it will get some metrics which
     // will need to access meta, since there is no region server, the request will hang there for a
@@ -124,12 +129,12 @@ public class TestCreateTableNoRegionServer {
 
   @Test
   public void testCreate() throws Exception {
-    TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("test"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1")).build();
-    AsyncAdmin admin = UTIL.getAsyncConnection().getAdmin();
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+    Admin admin = UTIL.getAdmin();
     ARRIVE = new CountDownLatch(1);
     RESUME = new CountDownLatch(1);
-    CompletableFuture<Void> future = admin.createTable(td);
+    Future<Void> future = admin.createTableAsync(td);
     ARRIVE.await();
 
     UTIL.getMiniHBaseCluster().stopRegionServer(0).join();
@@ -153,9 +158,9 @@ public class TestCreateTableNoRegionServer {
     // the creation should finally be done
     future.get(30, TimeUnit.SECONDS);
     // make sure we could put to the table
-    try (Table table = UTIL.getConnection().getTableBuilder(td.getTableName(), null)
+    try (Table table = UTIL.getConnection().getTableBuilder(TABLE_NAME, null)
       .setOperationTimeout(5000).build()) {
-      table.put(new Put(Bytes.toBytes(0)).addColumn(td.getColumnFamilies()[0].getName(),
+      table.put(new Put(Bytes.toBytes(0)).addColumn(FAMILY,
         Bytes.toBytes("q"), Bytes.toBytes(0)));
     }
   }
