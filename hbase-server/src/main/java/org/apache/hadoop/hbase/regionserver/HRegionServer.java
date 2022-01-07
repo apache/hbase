@@ -181,6 +181,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKAuthentication;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -639,7 +640,7 @@ public class HRegionServer extends Thread implements
       rpcRetryingCallerFactory = RpcRetryingCallerFactory.instantiate(this.conf);
 
       // login the zookeeper client principal (if using security)
-      ZKUtil.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
+      ZKAuthentication.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
           HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL, hostName);
       // login the server principal (if using secure Hadoop)
       login(userProvider, hostName);
