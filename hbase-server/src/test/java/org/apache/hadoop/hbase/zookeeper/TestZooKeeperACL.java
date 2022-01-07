@@ -275,7 +275,7 @@ public class TestZooKeeperACL {
   @Test
   public void testIsZooKeeperSecure() throws Exception {
     boolean testJaasConfig =
-        ZKUtil.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
+        ZKAuthentication.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
     assertEquals(testJaasConfig, secureZKAvailable);
     // Define Jaas configuration without ZooKeeper Jaas config
     File saslConfFile = File.createTempFile("tmp", "fakeJaas.conf");
@@ -286,7 +286,8 @@ public class TestZooKeeperACL {
     System.setProperty("java.security.auth.login.config",
         saslConfFile.getAbsolutePath());
 
-    testJaasConfig = ZKUtil.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
+    testJaasConfig = ZKAuthentication.isSecureZooKeeper(
+      new Configuration(TEST_UTIL.getConfiguration()));
     assertFalse(testJaasConfig);
     saslConfFile.delete();
   }
@@ -300,13 +301,13 @@ public class TestZooKeeperACL {
     javax.security.auth.login.Configuration.setConfiguration(new DummySecurityConfiguration());
 
     Configuration config = new Configuration(HBaseConfiguration.create());
-    boolean testJaasConfig = ZKUtil.isSecureZooKeeper(config);
+    boolean testJaasConfig = ZKAuthentication.isSecureZooKeeper(config);
     assertFalse(testJaasConfig);
 
     // Now set authentication scheme to Kerberos still it should return false
     // because no configuration set
     config.set("hbase.security.authentication", "kerberos");
-    testJaasConfig = ZKUtil.isSecureZooKeeper(config);
+    testJaasConfig = ZKAuthentication.isSecureZooKeeper(config);
     assertFalse(testJaasConfig);
 
     // Now set programmatic options related to security
@@ -314,7 +315,7 @@ public class TestZooKeeperACL {
     config.set(HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL, "dummy");
     config.set(HConstants.ZK_SERVER_KEYTAB_FILE, "/dummy/file");
     config.set(HConstants.ZK_SERVER_KERBEROS_PRINCIPAL, "dummy");
-    testJaasConfig = ZKUtil.isSecureZooKeeper(config);
+    testJaasConfig = ZKAuthentication.isSecureZooKeeper(config);
     assertTrue(testJaasConfig);
   }
 
