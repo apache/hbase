@@ -20,11 +20,13 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.slf4j.Logger;
@@ -33,7 +35,8 @@ import org.slf4j.LoggerFactory;
 public class TestStoreFileTracker extends DefaultStoreFileTracker {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestStoreFileTracker.class);
-  public static Map<String, List<StoreFileInfo>> trackedFiles = new HashMap<>();
+  private static ConcurrentMap<String, BlockingQueue<StoreFileInfo>> trackedFiles =
+    new ConcurrentHashMap<>();
   private String storeId;
 
   public TestStoreFileTracker(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
@@ -41,7 +44,7 @@ public class TestStoreFileTracker extends DefaultStoreFileTracker {
     if (ctx != null && ctx.getRegionFileSystem() != null) {
       this.storeId = ctx.getRegionInfo().getEncodedName() + "-" + ctx.getFamily().getNameAsString();
       LOG.info("created storeId: {}", storeId);
-      trackedFiles.computeIfAbsent(storeId, v -> new ArrayList<>());
+      trackedFiles.computeIfAbsent(storeId, v -> new LinkedBlockingQueue<>());
     } else {
       LOG.info("ctx.getRegionFileSystem() returned null. Leaving storeId null.");
     }
@@ -51,11 +54,19 @@ public class TestStoreFileTracker extends DefaultStoreFileTracker {
   protected void doAddNewStoreFiles(Collection<StoreFileInfo> newFiles) throws IOException {
     LOG.info("adding to storeId: {}", storeId);
     trackedFiles.get(storeId).addAll(newFiles);
-    trackedFiles.putIfAbsent(storeId, (List<StoreFileInfo>)newFiles);
   }
 
   @Override
   public List<StoreFileInfo> load() throws IOException {
-    return trackedFiles.get(storeId);
+    return new ArrayList<>(trackedFiles.get(storeId));
+  }
+
+  public static boolean tracked(String encodedRegionName, String family, Path file) {
+    BlockingQueue<StoreFileInfo> files = trackedFiles.get(encodedRegionName + "-" + family);
+    return files != null && files.stream().anyMatch(s -> s.getPath().equals(file));
+  }
+
+  public static void clear() {
+    trackedFiles.clear();
   }
 }
