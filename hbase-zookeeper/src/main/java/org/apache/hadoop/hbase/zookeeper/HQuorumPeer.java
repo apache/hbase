@@ -76,7 +76,7 @@ public final class HQuorumPeer {
       zkConfig.parseProperties(zkProperties);
 
       // login the zookeeper server principal (if using security)
-      ZKUtil.loginServer(conf, HConstants.ZK_SERVER_KEYTAB_FILE,
+      ZKAuthentication.loginServer(conf, HConstants.ZK_SERVER_KEYTAB_FILE,
         HConstants.ZK_SERVER_KERBEROS_PRINCIPAL,
         zkConfig.getClientPortAddress().getHostName());
 
