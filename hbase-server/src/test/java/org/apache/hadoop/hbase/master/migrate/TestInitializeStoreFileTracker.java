@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.master.migrate;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -30,6 +32,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -39,11 +42,11 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
-public class TestMigrateStoreFileTracker {
+@Category({ MediumTests.class, MasterTests.class })
+public class TestInitializeStoreFileTracker {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMigrateStoreFileTracker.class);
+    HBaseClassTestRule.forClass(TestInitializeStoreFileTracker.class);
   private final static String[] tables = new String[] { "t1", "t2", "t3", "t4", "t5", "t6" };
   private final static String famStr = "f1";
   private final static byte[] fam = Bytes.toBytes(famStr);
@@ -55,9 +58,12 @@ public class TestMigrateStoreFileTracker {
   @Before
   public void setUp() throws Exception {
     conf = HBaseConfiguration.create();
-    //Speed up the launch of RollingUpgradeChore
+    // Speed up the launch of RollingUpgradeChore
     conf.setInt(RollingUpgradeChore.ROLLING_UPGRADE_CHORE_PERIOD_SECONDS_KEY, 1);
     conf.setLong(RollingUpgradeChore.ROLLING_UPGRADE_CHORE_DELAY_SECONDS_KEY, 1);
+    // Set the default implementation to file instead of default, to confirm we will not set SFT to
+    // file
+    conf.set(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.FILE.name());
     HTU = new HBaseTestingUtil(conf);
     HTU.startMiniCluster();
   }
@@ -88,7 +94,7 @@ public class TestMigrateStoreFileTracker {
     HTU.getMiniHBaseCluster().stopMaster(0).join();
     HTU.getMiniHBaseCluster().startMaster();
     HTU.getMiniHBaseCluster().waitForActiveAndReadyMaster(30000);
-    //wait until all tables have been migrated
+    // wait until all tables have been migrated
     TableDescriptors tds = HTU.getMiniHBaseCluster().getMaster().getTableDescriptors();
     HTU.waitFor(30000, () -> {
       try {
@@ -103,5 +109,10 @@ public class TestMigrateStoreFileTracker {
         return false;
       }
     });
+    for (String table : tables) {
+      TableDescriptor td = tds.get(TableName.valueOf(table));
+      assertEquals(StoreFileTrackerFactory.Trackers.DEFAULT.name(),
+        td.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
+    }
   }
 }
