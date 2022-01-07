@@ -120,8 +120,8 @@ public class RollingUpgradeChore extends ScheduledChore {
 
     for (Map.Entry<String, TableDescriptor> entry : migrateSFTTables.entrySet()) {
       TableDescriptor tableDescriptor = entry.getValue();
-      InitializeStoreFileTrackerProcedure proc =
-        new InitializeStoreFileTrackerProcedure(procedureExecutor.getEnvironment(), tableDescriptor);
+      InitializeStoreFileTrackerProcedure proc = new InitializeStoreFileTrackerProcedure(
+        procedureExecutor.getEnvironment(), tableDescriptor);
       procedureExecutor.submitProcedure(proc);
       processingProcs.add(proc);
     }
