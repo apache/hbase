@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -79,6 +80,11 @@ public interface MetricsRegionServerWrapper {
    * Get the size of WAL files of this region server.
    */
   long getWALFileSize();
+
+  /**
+   * Get the excluded datanodes in the cache of this region server.
+   */
+  List<String> getWALExcludeDNs();
 
   /**
    * Get the number of WAL files with slow appends for this region server.
