@@ -33,9 +33,6 @@ import javax.security.sasl.SaslServerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.exceptions.SaslAuthenticationException;
 import org.apache.hadoop.hbase.security.auth.AuthenticateCallbackHandler;
-import org.apache.hadoop.hbase.security.auth.SaslExtensions;
-import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerExtensionsValidatorCallback;
-import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerStringUtils;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerValidatorCallback;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -63,7 +60,6 @@ public class OAuthBearerSaslServer implements SaslServer {
   private boolean complete;
   private OAuthBearerToken tokenForNegotiatedProperty = null;
   private String errorMessage = null;
-  private SaslExtensions extensions;
 
   public OAuthBearerSaslServer(CallbackHandler callbackHandler) {
     if (!(callbackHandler instanceof AuthenticateCallbackHandler)) {
@@ -101,8 +97,7 @@ public class OAuthBearerSaslServer implements SaslServer {
       OAuthBearerClientInitialResponse clientResponse;
       clientResponse = new OAuthBearerClientInitialResponse(response);
 
-      return process(clientResponse.tokenValue(), clientResponse.authorizationId(),
-        clientResponse.extensions());
+      return process(clientResponse.tokenValue(), clientResponse.authorizationId());
     } catch (SaslAuthenticationException e) {
       LOG.error("SASL authentication error", e);
       throw e;
@@ -136,7 +131,7 @@ public class OAuthBearerSaslServer implements SaslServer {
     if (CREDENTIAL_LIFETIME_MS_SASL_NEGOTIATED_PROPERTY_KEY.equals(propName)) {
       return tokenForNegotiatedProperty.lifetimeMs();
     }
-    return extensions.getExtensions().get(propName);
+    throw new IllegalArgumentException("Unknown propName: " + propName);
   }
 
   @Override
@@ -164,10 +159,9 @@ public class OAuthBearerSaslServer implements SaslServer {
   public void dispose() {
     complete = false;
     tokenForNegotiatedProperty = null;
-    extensions = null;
   }
 
-  private byte[] process(String tokenValue, String authorizationId, SaslExtensions extensions)
+  private byte[] process(String tokenValue, String authorizationId)
     throws SaslException {
     OAuthBearerValidatorCallback callback = new OAuthBearerValidatorCallback(tokenValue);
     try {
@@ -193,36 +187,10 @@ public class OAuthBearerSaslServer implements SaslServer {
         authorizationId, token.principalName()));
     }
 
-    Map<String, String> validExtensions = processExtensions(token, extensions);
-
     tokenForNegotiatedProperty = token;
-    this.extensions = new SaslExtensions(validExtensions);
     complete = true;
     LOG.debug("Successfully authenticate User={}", token.principalName());
     return new byte[0];
-  }
-
-  private Map<String, String> processExtensions(OAuthBearerToken token, SaslExtensions extensions)
-    throws SaslException {
-    OAuthBearerExtensionsValidatorCallback
-      extensionsCallback = new OAuthBearerExtensionsValidatorCallback(token, extensions);
-    try {
-      callbackHandler.handle(new Callback[] {extensionsCallback});
-    } catch (UnsupportedCallbackException e) {
-      // backwards compatibility - no extensions will be added
-    } catch (IOException e) {
-      handleCallbackError(e);
-    }
-    if (!extensionsCallback.getInvalidExtensions().isEmpty()) {
-      String errorMessage = String.format("Authentication failed: %d extensions are invalid! "
-          + "They are: %s", extensionsCallback.getInvalidExtensions().size(),
-        OAuthBearerStringUtils.mkString(extensionsCallback.getInvalidExtensions(),
-          "", "", ": ", "; "));
-      LOG.debug(errorMessage);
-      throw new SaslAuthenticationException(errorMessage);
-    }
-
-    return extensionsCallback.getValidatedExtensions();
   }
 
   private static String jsonErrorResponse(String errorStatus, String errorScope,

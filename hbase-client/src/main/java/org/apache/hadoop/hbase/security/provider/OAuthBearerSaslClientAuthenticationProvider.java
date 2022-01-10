@@ -38,8 +38,6 @@ import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.auth.AuthenticateCallbackHandler;
-import org.apache.hadoop.hbase.security.auth.SaslExtensions;
-import org.apache.hadoop.hbase.security.auth.SaslExtensionsCallback;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerTokenCallback;
 import org.apache.hadoop.security.token.Token;
@@ -89,9 +87,6 @@ public class OAuthBearerSaslClientAuthenticationProvider
       for (Callback callback : callbacks) {
         if (callback instanceof OAuthBearerTokenCallback) {
           handleCallback((OAuthBearerTokenCallback) callback);
-        } else if (callback instanceof SaslExtensionsCallback) {
-          handleCallback((SaslExtensionsCallback) callback,
-            Subject.getSubject(AccessController.getContext()));
         } else {
           throw new UnsupportedCallbackException(callback);
         }
@@ -138,17 +133,6 @@ public class OAuthBearerSaslClientAuthenticationProvider
             new Date(sortedByLifetime.last().lifetimeMs()));
         }
         callback.token(sortedByLifetime.last());
-      }
-    }
-
-    /**
-     * Attaches the first {@link SaslExtensions} found in the public credentials of the Subject
-     */
-    private static void handleCallback(SaslExtensionsCallback extensionsCallback, Subject subject) {
-      if (subject != null && !subject.getPublicCredentials(SaslExtensions.class).isEmpty()) {
-        SaslExtensions extensions =
-          subject.getPublicCredentials(SaslExtensions.class).iterator().next();
-        extensionsCallback.extensions(extensions);
       }
     }
   }

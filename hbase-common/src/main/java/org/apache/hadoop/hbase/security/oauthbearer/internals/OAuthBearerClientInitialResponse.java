@@ -23,7 +23,6 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.security.sasl.SaslException;
-import org.apache.hadoop.hbase.security.auth.SaslExtensions;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerStringUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -54,10 +53,6 @@ public class OAuthBearerClientInitialResponse {
 
   private final String tokenValue;
   private final String authorizationId;
-  private final SaslExtensions saslExtensions;
-
-  public static final Pattern EXTENSION_KEY_PATTERN = Pattern.compile(KEY);
-  public static final Pattern EXTENSION_VALUE_PATTERN = Pattern.compile(VALUE);
 
   public OAuthBearerClientInitialResponse(byte[] response) throws SaslException {
     LOG.trace("Client initial response parsing started");
@@ -77,11 +72,6 @@ public class OAuthBearerClientInitialResponse {
     }
     LOG.trace("Auth key found in client initial response");
     properties.remove(AUTH_KEY);
-    SaslExtensions extensions = new SaslExtensions(properties);
-    validateExtensions(extensions);
-    this.saslExtensions = extensions;
-    LOG.trace("Sasl extensions have been validated successfully");
-
     Matcher authMatcher = AUTH_PATTERN.matcher(auth);
     if (!authMatcher.matches()) {
       throw new SaslException("Invalid OAUTHBEARER client first message: invalid 'auth' format");
@@ -101,16 +91,13 @@ public class OAuthBearerClientInitialResponse {
    *
    * @param tokenValue
    *            the mandatory token value
-   * @param extensions
-   *            the optional extensions
    * @throws SaslException
    *             if any extension name or value fails to conform to the required
    *             regular expression as defined by the specification, or if the
    *             reserved {@code auth} appears as a key
    */
-  public OAuthBearerClientInitialResponse(String tokenValue, SaslExtensions extensions)
-    throws SaslException {
-    this(tokenValue, "", extensions);
+  public OAuthBearerClientInitialResponse(String tokenValue) {
+    this(tokenValue, "");
   }
 
   /**
@@ -120,39 +107,21 @@ public class OAuthBearerClientInitialResponse {
    *            the mandatory token value
    * @param authorizationId
    *            the optional authorization ID
-   * @param extensions
-   *            the optional extensions
    * @throws SaslException
    *             if any extension name or value fails to conform to the required
    *             regular expression as defined by the specification, or if the
    *             reserved {@code auth} appears as a key
    */
-  public OAuthBearerClientInitialResponse(String tokenValue, String authorizationId,
-    SaslExtensions extensions) throws SaslException {
+  public OAuthBearerClientInitialResponse(String tokenValue, String authorizationId) {
     this.tokenValue = Objects.requireNonNull(tokenValue, "token value must not be null");
     this.authorizationId = authorizationId == null ? "" : authorizationId;
-    validateExtensions(extensions);
-    this.saslExtensions = extensions != null ? extensions : SaslExtensions.NO_SASL_EXTENSIONS;
-  }
-
-  /**
-   * Return the always non-null extensions
-   *
-   * @return the always non-null extensions
-   */
-  public SaslExtensions extensions() {
-    return saslExtensions;
   }
 
   public byte[] toBytes() {
     String authzid = authorizationId.isEmpty() ? "" : "a=" + authorizationId;
-    String extensions = extensionsMessage();
-    if (extensions.length() > 0) {
-      extensions = SEPARATOR + extensions;
-    }
 
-    String message = String.format("n,%s,%sauth=Bearer %s%s%s%s", authzid,
-      SEPARATOR, tokenValue, extensions, SEPARATOR, SEPARATOR);
+    String message = String.format("n,%s,%sauth=Bearer %s%s%s", authzid,
+      SEPARATOR, tokenValue, SEPARATOR, SEPARATOR);
 
     return Bytes.toBytes(message);
   }
@@ -173,50 +142,5 @@ public class OAuthBearerClientInitialResponse {
    */
   public String authorizationId() {
     return authorizationId;
-  }
-
-  /**
-   * Validates that the given extensions conform to the standard.
-   * They should also not contain the reserve key name
-   * {@link OAuthBearerClientInitialResponse#AUTH_KEY}
-   *
-   * @param extensions
-   *            optional extensions to validate
-   * @throws SaslException
-   *             if any extension name or value fails to conform to the required
-   *             regular expression as defined by the specification, or if the
-   *             reserved {@code auth} appears as a key
-   *
-   * @see <a href="https://tools.ietf.org/html/rfc7628#section-3.1">RFC 7628,
-   *  Section 3.1</a>
-   */
-  public static void validateExtensions(SaslExtensions extensions) throws SaslException {
-    if (extensions == null) {
-      return;
-    }
-    if (extensions.getExtensions().containsKey(OAuthBearerClientInitialResponse.AUTH_KEY)) {
-      throw new SaslException("Extension name " +
-        OAuthBearerClientInitialResponse.AUTH_KEY + " is invalid");
-    }
-
-    for (Map.Entry<String, String> entry : extensions.getExtensions().entrySet()) {
-      String extensionName = entry.getKey();
-      String extensionValue = entry.getValue();
-
-      if (!EXTENSION_KEY_PATTERN.matcher(extensionName).matches()) {
-        throw new SaslException("Extension name " + extensionName + " is invalid");
-      }
-      if (!EXTENSION_VALUE_PATTERN.matcher(extensionValue).matches()) {
-        throw new SaslException("Extension value (" + extensionValue + ") for extension " +
-          extensionName + " is invalid");
-      }
-    }
-  }
-
-  /**
-   * Converts the SASLExtensions to an OAuth protocol-friendly string
-   */
-  private String extensionsMessage() {
-    return OAuthBearerStringUtils.mkString(saslExtensions.getExtensions(), "", "", "=", SEPARATOR);
   }
 }

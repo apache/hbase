@@ -30,7 +30,6 @@ import javax.security.auth.callback.UnsupportedCallbackException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.auth.AuthenticateCallbackHandler;
-import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerExtensionsValidatorCallback;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerValidatorCallback;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -66,9 +65,6 @@ import org.slf4j.LoggerFactory;
  * value if you wish to allow up to some number of positive seconds of
  * clock skew (the default is 0)</li>
  * </ul>
- *
- * It also recognizes {@link OAuthBearerExtensionsValidatorCallback} and validates
- * every extension passed to it.
  *
  * This class is based on Kafka's OAuthBearerUnsecuredValidatorCallbackHandler.
  */
@@ -106,11 +102,6 @@ public class OAuthBearerSignedJwtValidatorCallbackHandler implements Authenticat
           validationCallback.error(failureScope != null ? "insufficient_scope" : "invalid_token",
             failureScope, failureReason.failureOpenIdConfig());
         }
-      } else if (callback instanceof OAuthBearerExtensionsValidatorCallback) {
-        OAuthBearerExtensionsValidatorCallback extensionsCallback =
-          (OAuthBearerExtensionsValidatorCallback) callback;
-        extensionsCallback.getInputExtensions().getExtensions().forEach((extensionName, v) ->
-          extensionsCallback.storeAsValid(extensionName));
       } else {
         throw new UnsupportedCallbackException(callback);
       }
