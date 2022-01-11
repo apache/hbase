@@ -790,10 +790,10 @@ public class HttpServer implements FilterContainer {
       if (Files.notExists(tmpDir)) {
         Files.createDirectories(tmpDir);
       }
-      ServletContextHandler genCtx = new ServletContextHandler(contexts, "/prof-output-hbase");
+      ServletContextHandler genCtx = new ServletContextHandler(contexts, "/prof-output");
       genCtx.addServlet(ProfileOutputServlet.class, "/*");
       genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
-      genCtx.setDisplayName("prof-output-hbase");
+      genCtx.setDisplayName("prof-output");
     } else {
       addUnprivilegedServlet("prof", "/prof", ProfileServlet.DisabledServlet.class);
       LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property " +
