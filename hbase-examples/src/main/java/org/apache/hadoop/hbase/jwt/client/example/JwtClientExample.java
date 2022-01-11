@@ -71,7 +71,7 @@ public class JwtClientExample extends Configured implements Tool {
     UserProvider provider = UserProvider.instantiate(conf);
     User user = provider.getCurrent();
 
-    OAuthBearerTokenUtil.addTokenForUser(user, JWT_TOKEN);
+    OAuthBearerTokenUtil.addTokenForUser(user, JWT_TOKEN, 0);
     LOG.info("JWT token added");
 
     try (final Connection conn = ConnectionFactory.createConnection(conf, user)) {
