@@ -336,6 +336,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     for (Iterator<FSWALEntry> iter = unackedAppends.descendingIterator(); iter.hasNext();) {
       toWriteAppends.addFirst(iter.next());
     }
+    unackedAppends.clear();
     highestUnsyncedTxid = highestSyncedTxid.get();
     if (shouldRequestLogRoll) {
       // request a roll.
@@ -439,7 +440,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         // if highestSyncedTxid >= highestProcessedAppendTxid, then all syncs whose txid are between
         // highestProcessedAppendTxid and lowestUnprocessedAppendTxid can be finished.
         long lowestUnprocessedAppendTxid = toWriteAppends.peek().getTxid();
-        assert lowestUnprocessedAppendTxid > highestProcessedAppendTxid;
+        assert lowestUnprocessedAppendTxid > highestSyncedTxid.get();
         long doneTxid = lowestUnprocessedAppendTxid - 1;
         highestSyncedTxid.set(doneTxid);
         return finishSyncLowerThanTxid(doneTxid);
@@ -486,16 +487,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
           unackedAppends.addLast(entry);
           addedToUnackedAppends = true;
         }
-        // See HBASE-25905, here we need to make sure that, we will always write all the entries in
-        // unackedAppends out. As the code in the consume method will assume that, the entries in
-        // unackedAppends have all been sent out so if there is roll request and unackedAppends is
-        // not empty, we could just return as later there will be a syncCompleted call to clear the
-        // unackedAppends, or a syncFailed to lead us to another state.
-        // There could be other ways to fix, such as changing the logic in the consume method, but
-        // it will break the assumption and then (may) lead to a big refactoring. So here let's use
-        // this way to fix first, can optimize later.
-        if (writer.getLength() - fileLengthAtLastSync >= batchSize &&
-          (addedToUnackedAppends || entry.getTxid() >= getLastTxid(unackedAppends))) {
+
+        if (writer.getLength() - fileLengthAtLastSync >= batchSize) {
           break;
         }
       }
