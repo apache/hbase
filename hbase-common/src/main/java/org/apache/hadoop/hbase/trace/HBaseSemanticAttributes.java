@@ -34,7 +34,6 @@ public final class HBaseSemanticAttributes {
     SemanticAttributes.DB_CONNECTION_STRING;
   public static final AttributeKey<String> DB_USER = SemanticAttributes.DB_USER;
   public static final AttributeKey<String> DB_NAME = SemanticAttributes.DB_NAME;
-  public static final AttributeKey<String> NAMESPACE_KEY = SemanticAttributes.DB_HBASE_NAMESPACE;
   public static final AttributeKey<String> DB_OPERATION = SemanticAttributes.DB_OPERATION;
   public static final AttributeKey<String> TABLE_KEY = AttributeKey.stringKey("db.hbase.table");
   public static final AttributeKey<List<String>> REGION_NAMES_KEY =

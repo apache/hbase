@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.client.trace;
 
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DB_NAME;
-import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.NAMESPACE_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.TABLE_KEY;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
@@ -92,7 +91,6 @@ public class TableSpanBuilder implements Supplier<Span> {
     final Map<AttributeKey<?>, Object> attributes,
     final TableName tableName
   ) {
-    attributes.put(NAMESPACE_KEY, tableName.getNamespaceAsString());
     attributes.put(DB_NAME, tableName.getNamespaceAsString());
     attributes.put(TABLE_KEY, tableName.getNameAsString());
   }

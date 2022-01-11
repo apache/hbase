@@ -59,7 +59,6 @@ public final class TraceTestUtil {
   public static Matcher<SpanData> buildTableAttributesMatcher(TableName tableName) {
     return hasAttributes(allOf(
       containsEntry("db.name", tableName.getNamespaceAsString()),
-      containsEntry("db.hbase.namespace", tableName.getNamespaceAsString()),
       containsEntry("db.hbase.table", tableName.getNameAsString())));
   }
 }
