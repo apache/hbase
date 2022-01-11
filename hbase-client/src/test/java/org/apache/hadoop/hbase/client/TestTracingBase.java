@@ -89,7 +89,7 @@ public class TestTracingBase {
 
     if (tableName != null) {
       assertEquals(tableName.getNamespaceAsString(),
-        data.getAttributes().get(HBaseSemanticAttributes.NAMESPACE_KEY));
+        data.getAttributes().get(HBaseSemanticAttributes.DB_NAME));
       assertEquals(tableName.getNameAsString(),
         data.getAttributes().get(HBaseSemanticAttributes.TABLE_KEY));
     }
