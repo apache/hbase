@@ -50,7 +50,7 @@ public final class OAuthBearerTokenUtil {
    * Add token to user's subject private credentials and a hint to provider selector
    * to correctly select OAuthBearer SASL provider.
    */
-  public static void addTokenForUser(User user, String encodedToken) {
+  public static void addTokenForUser(User user, String encodedToken, long lifetimeMs) {
     user.addToken(new Token<>(null, null, new Text(TOKEN_KIND), null));
     user.runAs(new PrivilegedAction<Object>() {
       @Override public Object run() {
@@ -61,11 +61,11 @@ public final class OAuthBearerTokenUtil {
           }
 
           @Override public long lifetimeMs() {
-            return 0;
+            return lifetimeMs;
           }
 
           @Override public String principalName() {
-            return null;
+            return user.getName();
           }
         };
         subject.getPrivateCredentials().add(jwt);

@@ -101,12 +101,17 @@ public class OAuthBearerSaslClientAuthenticationProvider
       Set<OAuthBearerToken> privateCredentials = subject != null
         ? subject.getPrivateCredentials(OAuthBearerToken.class)
         : Collections.emptySet();
+      callback.token(choosePrivateCredential(privateCredentials));
+    }
+
+    private OAuthBearerToken choosePrivateCredential(Set<OAuthBearerToken> privateCredentials)
+      throws IOException {
       if (privateCredentials.size() == 0) {
         throw new IOException("No OAuth Bearer tokens in Subject's private credentials");
       }
       if (privateCredentials.size() == 1) {
         LOG.debug("Found 1 OAuthBearer token");
-        callback.token(privateCredentials.iterator().next());
+        return privateCredentials.iterator().next();
       } else {
         /*
          * There a very small window of time upon token refresh (on the order of milliseconds)
@@ -132,7 +137,7 @@ public class OAuthBearerSaslClientAuthenticationProvider
             sortedByLifetime.size(), new Date(sortedByLifetime.first().lifetimeMs()),
             new Date(sortedByLifetime.last().lifetimeMs()));
         }
-        callback.token(sortedByLifetime.last());
+        return sortedByLifetime.last();
       }
     }
   }

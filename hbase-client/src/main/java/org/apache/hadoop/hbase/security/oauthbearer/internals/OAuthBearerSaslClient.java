@@ -147,6 +147,9 @@ public class OAuthBearerSaslClient implements SaslClient {
     if (!isComplete()) {
       throw new IllegalStateException("Authentication exchange has not completed");
     }
+    if (Sasl.QOP.equals(propName)) {
+      return "auth";
+    }
     return null;
   }
 

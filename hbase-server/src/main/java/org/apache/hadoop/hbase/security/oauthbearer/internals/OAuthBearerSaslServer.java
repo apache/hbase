@@ -131,7 +131,10 @@ public class OAuthBearerSaslServer implements SaslServer {
     if (CREDENTIAL_LIFETIME_MS_SASL_NEGOTIATED_PROPERTY_KEY.equals(propName)) {
       return tokenForNegotiatedProperty.lifetimeMs();
     }
-    throw new IllegalArgumentException("Unknown propName: " + propName);
+    if (Sasl.QOP.equals(propName)) {
+      return "auth";
+    }
+    return null;
   }
 
   @Override
