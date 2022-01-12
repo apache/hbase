@@ -167,6 +167,10 @@ public class TestRpcBasedRegistryHedgedReads {
       protected CompletableFuture<Set<ServerName>> fetchEndpoints() {
         return CompletableFuture.completedFuture(BOOTSTRAP_NODES);
       }
+
+      @Override public String getConnectionString() {
+        return "unimplemented";
+      }
     };
   }
 
