@@ -25,10 +25,12 @@ import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -97,12 +99,28 @@ public class HRegionLocator implements RegionLocator {
     final Supplier<Span> supplier = new TableSpanBuilder(connection)
       .setName("HRegionLocator.getAllRegionLocations")
       .setTableName(tableName);
-    final RegionLocations locs = tracedLocationFuture(() -> {
-      final RegionLocations rlocs = listRegionLocations();
-      connection.cacheLocation(tableName, rlocs);
-      return rlocs;
-    }, AsyncRegionLocator::getRegionNames, supplier);
-    return Arrays.asList(locs.getRegionLocations());
+    return tracedLocationFuture(() -> {
+      ArrayList<HRegionLocation> regions = new ArrayList<>();
+      for (RegionLocations locations : listRegionLocations()) {
+        for (HRegionLocation location : locations.getRegionLocations()) {
+          regions.add(location);
+        }
+        connection.cacheLocation(tableName, locations);
+      }
+      return regions;
+    }, HRegionLocator::getRegionNames, supplier);
+  }
+
+  private static List<String> getRegionNames(List<HRegionLocation> locations) {
+    if (CollectionUtils.isEmpty(locations)) {
+      return Collections.emptyList();
+    }
+    return locations.stream()
+      .filter(Objects::nonNull)
+      .map(AsyncRegionLocator::getRegionNames)
+      .filter(Objects::nonNull)
+      .flatMap(List::stream)
+      .collect(Collectors.toList());
   }
 
   @Override
@@ -118,9 +136,10 @@ public class HRegionLocator implements RegionLocator {
     return this.tableName;
   }
 
-  private RegionLocations listRegionLocations() throws IOException {
+  private List<RegionLocations> listRegionLocations() throws IOException {
     if (TableName.isMetaTableName(tableName)) {
-      return connection.locateRegion(tableName, HConstants.EMPTY_START_ROW, false, true);
+      return Collections
+        .singletonList(connection.locateRegion(tableName, HConstants.EMPTY_START_ROW, false, true));
     }
     final List<RegionLocations> regions = new ArrayList<>();
     MetaTableAccessor.Visitor visitor = new MetaTableAccessor.TableVisitorBase(tableName) {
@@ -135,16 +154,7 @@ public class HRegionLocator implements RegionLocator {
       }
     };
     MetaTableAccessor.scanMetaForTableRegions(connection, visitor, tableName);
-    return consolidate(regions);
-  }
-
-  private static RegionLocations consolidate(final List<RegionLocations> locations) {
-    final HRegionLocation[] consolidated = locations.stream()
-      .filter(Objects::nonNull)
-      .flatMap(locs -> Arrays.stream(locs.getRegionLocations()))
-      .filter(Objects::nonNull)
-      .toArray(HRegionLocation[]::new);
-    return new RegionLocations(consolidated);
+    return regions;
   }
 
   private <T> T tracedLocationFuture(
