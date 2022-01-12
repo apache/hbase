@@ -337,7 +337,7 @@ public interface ClusterConnection extends Connection {
   List<ServerName> getAllBootstrapNodes(ServerName regionServer) throws IOException;
 
   /**
-   * Get the {@link User} associated with this connection. Maybe be {@code null}.
+   * Get the {@link User} associated with this connection. May be {@code null}.
    */
   User getUser();
 
