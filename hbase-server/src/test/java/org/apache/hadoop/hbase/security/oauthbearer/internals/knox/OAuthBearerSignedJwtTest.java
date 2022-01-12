@@ -40,6 +40,7 @@ public class OAuthBearerSignedJwtTest {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(OAuthBearerSignedJwtTest.class);
   private final static ZoneId ZONE_ID = ZoneId.of("America/Los_Angeles");
+  private final static int EXP_DAYS = 10;
 
   private JWKSet JWK_SET;
   private RSAKey RSA_KEY;
@@ -55,7 +56,7 @@ public class OAuthBearerSignedJwtTest {
     String subject = "foo";
 
     LocalDate issuedAt = LocalDate.now(ZONE_ID);
-    LocalDate expirationTime = issuedAt.plusDays(1);
+    LocalDate expirationTime = issuedAt.plusDays(EXP_DAYS);
     String validCompactSerialization =
       compactSerialization(subject, issuedAt, expirationTime);
     OAuthBearerSignedJwt jws = new OAuthBearerSignedJwt(validCompactSerialization, JWK_SET)
@@ -74,7 +75,7 @@ public class OAuthBearerSignedJwtTest {
   public void missingPrincipal() throws JOSEException {
     String subject = null;
     LocalDate issuedAt = LocalDate.now(ZONE_ID);
-    LocalDate expirationTime = issuedAt.plusDays(1);
+    LocalDate expirationTime = issuedAt.plusDays(EXP_DAYS);
     String validCompactSerialization =
       compactSerialization(subject, issuedAt, expirationTime);
     assertThrows(OAuthBearerIllegalTokenException.class,
@@ -85,7 +86,7 @@ public class OAuthBearerSignedJwtTest {
   public void blankPrincipalName() throws JOSEException {
     String subject = "   ";
     LocalDate issuedAt = LocalDate.now(ZONE_ID);
-    LocalDate expirationTime = issuedAt.plusDays(1);
+    LocalDate expirationTime = issuedAt.plusDays(EXP_DAYS);
     String validCompactSerialization =
       compactSerialization(subject, issuedAt, expirationTime);
     assertThrows(OAuthBearerIllegalTokenException.class,
