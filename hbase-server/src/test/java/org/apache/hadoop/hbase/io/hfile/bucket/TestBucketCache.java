@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.IndexStatistics;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.After;
@@ -686,7 +687,8 @@ public class TestBucketCache {
 
     Assert.assertEquals(0, allocator.getUsedSize());
     try {
-      re.writeToCache(ioEngine, allocator, null, null);
+      re.writeToCache(ioEngine, allocator, null, null,
+        ByteBuffer.allocate(HFileBlock.BLOCK_METADATA_SPACE));
       Assert.fail();
     } catch (Exception e) {
     }
