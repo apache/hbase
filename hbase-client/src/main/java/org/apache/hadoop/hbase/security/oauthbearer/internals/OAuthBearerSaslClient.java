@@ -31,6 +31,7 @@ import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslClientFactory;
 import javax.security.sasl.SaslException;
 import org.apache.hadoop.hbase.exceptions.IllegalSaslStateException;
+import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.auth.AuthenticateCallbackHandler;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerTokenCallback;
@@ -148,7 +149,7 @@ public class OAuthBearerSaslClient implements SaslClient {
       throw new IllegalStateException("Authentication exchange has not completed");
     }
     if (Sasl.QOP.equals(propName)) {
-      return "auth";
+      return SaslUtil.QualityOfProtection.AUTHENTICATION.getSaslQop();
     }
     return null;
   }

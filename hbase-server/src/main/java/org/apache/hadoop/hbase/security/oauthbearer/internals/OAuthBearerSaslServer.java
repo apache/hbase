@@ -32,6 +32,7 @@ import javax.security.sasl.SaslServer;
 import javax.security.sasl.SaslServerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.exceptions.SaslAuthenticationException;
+import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.auth.AuthenticateCallbackHandler;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerValidatorCallback;
@@ -132,7 +133,7 @@ public class OAuthBearerSaslServer implements SaslServer {
       return tokenForNegotiatedProperty.lifetimeMs();
     }
     if (Sasl.QOP.equals(propName)) {
-      return "auth";
+      return SaslUtil.QualityOfProtection.AUTHENTICATION.getSaslQop();
     }
     return null;
   }
