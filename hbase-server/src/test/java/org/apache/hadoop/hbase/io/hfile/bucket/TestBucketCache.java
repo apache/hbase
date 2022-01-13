@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.IndexStatistics;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
-import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.After;
