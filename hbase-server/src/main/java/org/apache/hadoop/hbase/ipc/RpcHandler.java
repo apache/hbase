@@ -52,8 +52,8 @@ public class RpcHandler extends Thread {
   private boolean running;
 
   RpcHandler(final String name, final double handlerFailureThreshhold, final int handlerCount,
-    final BlockingQueue<CallRunner> q, final AtomicInteger activeHandlerCount,
-    final AtomicInteger failedHandlerCount, final Abortable abortable) {
+      final BlockingQueue<CallRunner> q, final AtomicInteger activeHandlerCount,
+      final AtomicInteger failedHandlerCount, final Abortable abortable) {
     super(name);
     setDaemon(true);
     this.q = q;
