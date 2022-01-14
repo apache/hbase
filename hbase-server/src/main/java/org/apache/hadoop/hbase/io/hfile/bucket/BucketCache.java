@@ -1527,6 +1527,10 @@ public class BucketCache implements BlockCache, HeapSize {
           ioEngine.write(sliceBuf, offset);
           ioEngine.write(metaBuff, offset + len - metaBuff.limit());
           // Reset the position for reuse.
+          // The data in metaBuff should be guaranteed that has been transferred to the ioEngine
+          // safely. Otherwise, this reuse is problematic. Fortunately, the data is already
+          // transferred with our current IOEngines. Should take care, when we have new types of
+          // IOEngine in the future.
           metaBuff.clear();
         } else {
           // Only used for testing.
