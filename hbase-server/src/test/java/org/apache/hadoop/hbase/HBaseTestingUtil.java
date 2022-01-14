@@ -830,9 +830,6 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       if(option.getExternalDFS().get("fs.defaultFS") == null) {
         throw new IllegalArgumentException("fs.defaultFS can not be null.");
       }
-      if (System.getProperty("HADOOP_USER_NAME") == null) {
-        System.setProperty("HADOOP_USER_NAME", "hdfs");
-      }
 
       addPropertiesToConf(option.getExternalDFS());
 
