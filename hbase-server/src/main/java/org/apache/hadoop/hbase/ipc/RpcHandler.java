@@ -66,7 +66,7 @@ public class RpcHandler extends Thread {
 
   /**
    * @return A {@link CallRunner}
-   * @throws InterruptedException
+   * @throws InterruptedException Throws by {@link BlockingQueue#take()}
    */
   protected CallRunner getCallRunner() throws InterruptedException {
     return this.q.take();
