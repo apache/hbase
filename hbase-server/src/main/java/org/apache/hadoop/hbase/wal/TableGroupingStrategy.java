@@ -36,7 +36,7 @@ public class TableGroupingStrategy implements RegionGroupingStrategy {
       TableName tableName = region.getTable();
       return new StringBuilder(providerId).append(GROUP_NAME_DELIMITER)
           .append(tableName.getNamespaceAsString()).append(GROUP_NAME_DELIMITER)
-          .append(tableName.getNameAsString()).toString();
+          .append(tableName.getQualifierAsString()).toString();
   }
 
   @Override
