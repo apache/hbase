@@ -116,6 +116,15 @@ public abstract class ModifyTableDescriptorProcedure
   }
 
   @Override
+  protected boolean holdLock(MasterProcedureEnv env) {
+    // here we want to make sure that our modification result will not be overwrite by other MTPs,
+    // so we set holdLock to true. Since we do not need to schedule any sub procedures, especially
+    // no remote procedures, so it is OK for us a hold the lock all the time, it will not hurt the
+    // availability too much.
+    return true;
+  }
+
+  @Override
   protected void rollbackState(MasterProcedureEnv env, ModifyTableDescriptorState state)
     throws IOException, InterruptedException {
     if (state == ModifyTableDescriptorState.MODIFY_TABLE_DESCRIPTOR_PREPARE) {
