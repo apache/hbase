@@ -655,6 +655,6 @@ enum ModifyTableDescriptorState {
 }
 
 message ModifyTableDescriptorStateData {
-  required TableSchema unmodified_table_schema = 1;
+  required TableName table_name = 1;
   optional TableSchema modified_table_schema = 2;
 }

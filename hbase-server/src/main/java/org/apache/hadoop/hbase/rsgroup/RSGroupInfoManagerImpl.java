@@ -528,7 +528,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         // master first and then region server, so after all the region servers has been reopened,
         // the new TableDescriptor will be loaded.
         MigrateRSGroupProcedure proc =
-          new MigrateRSGroupProcedure(procExec.getEnvironment(), oldTd);
+          new MigrateRSGroupProcedure(procExec.getEnvironment(), tableName);
         procExec.submitProcedure(proc);
         procs.add(proc);
       }
