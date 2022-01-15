@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.ipc;
 import java.util.Deque;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
@@ -41,7 +40,7 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
   /*
    * Stack of Handlers waiting for work.
    */
-  private final Deque<FastPathHandler> fastPathHandlerStack = new ConcurrentLinkedDeque<>();
+  private final Deque<FastPathRpcHandler> fastPathHandlerStack = new ConcurrentLinkedDeque<>();
 
   public FastPathBalancedQueueRpcExecutor(final String name, final int handlerCount,
       final int maxQueueLength, final PriorityFunction priority, final Configuration conf,
@@ -56,10 +55,12 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
   }
 
   @Override
-  protected Handler getHandler(String name, double handlerFailureThreshhold,
-      BlockingQueue<CallRunner> q, AtomicInteger activeHandlerCount) {
-    return new FastPathHandler(name, handlerFailureThreshhold, q, activeHandlerCount,
-        fastPathHandlerStack);
+  protected RpcHandler getHandler(final String name, final double handlerFailureThreshhold,
+      final int handlerCount, final BlockingQueue<CallRunner> q,
+      final AtomicInteger activeHandlerCount, final AtomicInteger failedHandlerCount,
+      final Abortable abortable) {
+    return new FastPathRpcHandler(name, handlerFailureThreshhold, handlerCount, q,
+      activeHandlerCount, failedHandlerCount, abortable, fastPathHandlerStack);
   }
 
   @Override
@@ -69,62 +70,14 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
     if (currentQueueLimit == 0){
       return false;
     }
-    FastPathHandler handler = popReadyHandler();
+    FastPathRpcHandler handler = popReadyHandler();
     return handler != null? handler.loadCallRunner(callTask): super.dispatch(callTask);
   }
 
   /**
    * @return Pop a Handler instance if one available ready-to-go or else return null.
    */
-  private FastPathHandler popReadyHandler() {
+  private FastPathRpcHandler popReadyHandler() {
     return this.fastPathHandlerStack.poll();
-  }
-
-  class FastPathHandler extends Handler {
-    // Below are for fast-path support. Push this Handler on to the fastPathHandlerStack Deque
-    // if an empty queue of CallRunners so we are available for direct handoff when one comes in.
-    final Deque<FastPathHandler> fastPathHandlerStack;
-    // Semaphore to coordinate loading of fastpathed loadedTask and our running it.
-    // UNFAIR synchronization.
-    private Semaphore semaphore = new Semaphore(0);
-    // The task we get when fast-pathing.
-    private CallRunner loadedCallRunner;
-
-    FastPathHandler(String name, double handlerFailureThreshhold, BlockingQueue<CallRunner> q,
-        final AtomicInteger activeHandlerCount,
-        final Deque<FastPathHandler> fastPathHandlerStack) {
-      super(name, handlerFailureThreshhold, q, activeHandlerCount);
-      this.fastPathHandlerStack = fastPathHandlerStack;
-    }
-
-    @Override
-    protected CallRunner getCallRunner() throws InterruptedException {
-      // Get a callrunner if one in the Q.
-      CallRunner cr = this.q.poll();
-      if (cr == null) {
-        // Else, if a fastPathHandlerStack present and no callrunner in Q, register ourselves for
-        // the fastpath handoff done via fastPathHandlerStack.
-        if (this.fastPathHandlerStack != null) {
-          this.fastPathHandlerStack.push(this);
-          this.semaphore.acquire();
-          cr = this.loadedCallRunner;
-          this.loadedCallRunner = null;
-        } else {
-          // No fastpath available. Block until a task comes available.
-          cr = super.getCallRunner();
-        }
-      }
-      return cr;
-    }
-
-    /**
-     * @param cr Task gotten via fastpath.
-     * @return True if we successfully loaded our task
-     */
-    boolean loadCallRunner(final CallRunner cr) {
-      this.loadedCallRunner = cr;
-      this.semaphore.release();
-      return true;
-    }
   }
 }
