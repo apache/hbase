@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
 import java.util.Optional;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -33,8 +34,8 @@ public class InitializeStoreFileTrackerProcedure extends ModifyTableDescriptorPr
 
   public InitializeStoreFileTrackerProcedure(){}
 
-  public InitializeStoreFileTrackerProcedure(MasterProcedureEnv env, TableDescriptor unmodified) {
-    super(env, unmodified);
+  public InitializeStoreFileTrackerProcedure(MasterProcedureEnv env, TableName tableName) {
+    super(env, tableName);
   }
 
   @Override
