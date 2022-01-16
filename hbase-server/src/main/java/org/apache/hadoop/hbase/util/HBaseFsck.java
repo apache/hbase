@@ -3588,7 +3588,7 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("");
     out.println(" Replication options");
     out.println("   -fixReplication   Deletes replication queues for removed peers");
-    out.println("   -cleanReplicationBrarier [tableName] clean the replication barriers " +
+    out.println("   -cleanReplicationBarrier [tableName] clean the replication barriers " +
         "of a specified table, tableName is required");
     out.flush();
     errors.reportError(ERROR_CODE.WRONG_USAGE, sw.toString());
