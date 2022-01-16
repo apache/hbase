@@ -122,7 +122,7 @@ public class RpcHandler extends Thread {
           LOG.warn("Handler errors " + StringUtils.stringifyException(e));
         }
       } else {
-        LOG.warn("Handler  exception " + StringUtils.stringifyException(e));
+        LOG.warn("Handler exception " + StringUtils.stringifyException(e));
       }
     } finally {
       this.activeHandlerCount.decrementAndGet();
