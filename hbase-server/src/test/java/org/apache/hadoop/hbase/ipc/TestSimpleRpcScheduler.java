@@ -498,8 +498,10 @@ public class TestSimpleRpcScheduler {
     CallRunner task = mock(CallRunner.class);
     assertFalse(executor.dispatch(task));
     //make sure we never internally get a handler, which would skip the queue validation
+
     Mockito.verify(executor, Mockito.never()).getHandler(Mockito.anyString(), Mockito.anyDouble(),
-      (BlockingQueue<CallRunner>) Mockito.any(), (AtomicInteger) Mockito.any());
+      Mockito.anyInt(), (BlockingQueue<CallRunner>) Mockito.any(), (AtomicInteger) Mockito.any(),
+      (AtomicInteger) Mockito.any(), (Abortable) Mockito.any());
   }
 
   // Get mocked call that has the CallRunner sleep for a while so that the fast

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -251,16 +251,22 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   @Override
   public boolean dispatch(final CallRunner callTask) throws InterruptedException {
     RpcServer.Call call = callTask.getCall();
+    return dispatchTo(isWriteRequest(call.getHeader(), call.param),
+      shouldDispatchToScanQueue(callTask), callTask);
+  }
+
+  protected boolean dispatchTo(boolean toWriteQueue, boolean toScanQueue,
+      final CallRunner callTask) {
     int queueIndex;
-    if (isWriteRequest(call.getHeader(), call.param)) {
+    if (toWriteQueue) {
       queueIndex = writeBalancer.getNextQueue();
-    } else if (numScanQueues > 0 && isScanRequest(call.getHeader(), call.param)) {
+    } else if (toScanQueue) {
       queueIndex = numWriteQueues + numReadQueues + scanBalancer.getNextQueue();
     } else {
       queueIndex = numWriteQueues + readBalancer.getNextQueue();
     }
 
-    BlockingQueue<CallRunner> queue = queues.get(queueIndex);
+    Queue<CallRunner> queue = queues.get(queueIndex);
     if (queue.size() >= currentQueueLimit) {
       return false;
     }
@@ -316,7 +322,7 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     return activeScanHandlerCount.get();
   }
 
-  private boolean isWriteRequest(final RequestHeader header, final Message param) {
+  protected boolean isWriteRequest(final RequestHeader header, final Message param) {
     // TODO: Is there a better way to do this?
     if (param instanceof MultiRequest) {
       MultiRequest multi = (MultiRequest)param;
@@ -353,6 +359,18 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     return param instanceof ScanRequest;
   }
 
+  protected boolean shouldDispatchToScanQueue(final CallRunner task) {
+    RpcServer.Call call = task.getCall();
+    return numScanQueues > 0 && isScanRequest(call.getHeader(), call.param);
+  }
+
+  protected float getReadShare(final Configuration conf) {
+    return conf.getFloat(CALL_QUEUE_READ_SHARE_CONF_KEY, 0);
+  }
+
+  protected float getScanShare(final Configuration conf) {
+    return conf.getFloat(CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0);
+  }
   /*
    * Calculate the number of writers based on the "total count" and the read share.
    * You'll get at least one writer.
