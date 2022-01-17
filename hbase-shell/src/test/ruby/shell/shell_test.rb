@@ -113,25 +113,6 @@ class ShellTest < Test::Unit::TestCase
 
   #-----------------------------------------------------------------------------
 
-  define_test 'Shell::Shell#eval_io should evaluate IO' do
-    StringIO.include HBaseIOExtensions
-    # check that at least one of the commands is present while evaluating
-    io = StringIO.new <<~EOF
-      puts (respond_to? :list)
-    EOF
-    output = capture_stdout { @shell.eval_io(io) }
-    assert_match(/true/, output)
-
-    # check that at least one of the HBase constants is present while evaluating
-    io = StringIO.new <<~EOF
-      ROWPREFIXFILTER.dump
-    EOF
-    output = capture_stdout { @shell.eval_io(io) }
-    assert_match(/"ROWPREFIXFILTER"/, output)
-  end
-
-  #-----------------------------------------------------------------------------
-
   define_test 'Shell::Shell#exception_handler should hide traceback' do
     class TestException < RuntimeError; end
     # When hide_traceback is true, exception_handler should replace exceptions
