@@ -564,9 +564,9 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     Class<? extends FanOutOneBlockAsyncDFSOutput> dfsOutputClass =
         conf.getClass(ASYNC_DFS_OUTPUT_CLASS_NAME, FanOutOneBlockAsyncDFSOutput.class,
           FanOutOneBlockAsyncDFSOutput.class);
-    return ReflectionUtils.newInstance(dfsOutputClass, new Object[] { conf, dfs, client, namenode,
-        clientName, src, fileId, locatedBlock, encryptor, datanodeInfoMap, summer, alloc,
-        streamSlowMonitor });
+    return ReflectionUtils.newInstance(dfsOutputClass,
+      new Object[] { conf, dfs, client, namenode, clientName, src, fileId, locatedBlock, encryptor,
+          datanodeInfoMap, summer, alloc, streamSlowMonitor });
 
   }
 

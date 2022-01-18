@@ -318,13 +318,20 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
       try {
         future.get();
         fail();
-      } catch (Throwable e) {
+      } catch (ExecutionException e) {
+        assertTrue(e != null);
         LOG.info("expected exception caught when get future", e);
       }
       /**
        * Make sure all the data node channel are closed.
        */
-      out.datanodeInfoMap.keySet().forEach(ch -> ch.closeFuture().awaitUninterruptibly());
+      out.datanodeInfoMap.keySet().forEach(ch -> {
+        try {
+          ch.closeFuture().get();
+        } catch (InterruptedException | ExecutionException e) {
+          throw new RuntimeException(e);
+        }
+      });
     } finally {
       conf.unset(FanOutOneBlockAsyncDFSOutputHelper.ASYNC_DFS_OUTPUT_CLASS_NAME);
       if (firstDataNodeProperties != null) {
