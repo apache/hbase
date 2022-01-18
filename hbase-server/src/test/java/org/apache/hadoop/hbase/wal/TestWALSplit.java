@@ -1177,6 +1177,17 @@ public class TestWALSplit {
     }
   }
 
+  @Test
+  public void testRecoveredEditsStoragePolicy() throws IOException {
+    conf.set(HConstants.WAL_STORAGE_POLICY, "ALL_SSD");
+    try {
+      Path path = createRecoveredEditsPathForRegion();
+      assertEquals("ALL_SSD", fs.getStoragePolicy(path.getParent()).getName());
+    } finally {
+      conf.unset(HConstants.WAL_STORAGE_POLICY);
+    }
+  }
+
   private Writer generateWALs(int leaveOpen) throws IOException {
     return generateWALs(NUM_WRITERS, ENTRIES, leaveOpen, 0);
   }
@@ -1424,5 +1435,15 @@ public class TestWALSplit {
     in1.close();
     in2.close();
     return true;
+  }
+
+  private Path createRecoveredEditsPathForRegion() throws IOException {
+    byte[] encoded = HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
+    long now = EnvironmentEdgeManager.currentTime();
+    Entry entry = new Entry(
+      new WALKey(encoded, TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
+      new WALEdit());
+    return WALSplitter
+      .getRegionSplitEditsPath(entry, FILENAME_BEING_SPLIT, TMPDIRNAME, conf);
   }
 }
