@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -124,6 +125,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
   public static final String ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES = "hbase.fs.async.create.retries";
 
   public static final int DEFAULT_ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES = 10;
+
+  public static final String ASYNC_DFS_OUTPUT_CLASS_NAME = "hbase.fs.async.output.class";
   // use pooled allocator for performance.
   private static final ByteBufAllocator ALLOC = PooledByteBufAllocator.DEFAULT;
 
@@ -505,7 +508,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         }
         Encryptor encryptor = createEncryptor(conf, stat, client);
         FanOutOneBlockAsyncDFSOutput output =
-          new FanOutOneBlockAsyncDFSOutput(conf, dfs, client, namenode, clientName, src,
+            doCreateFanOutOneBlockAsyncDFSOutput(conf, dfs, client, namenode, clientName, src,
             stat.getFileId(), locatedBlock, encryptor, datanodes, summer, ALLOC, monitor);
         succ = true;
         return output;
@@ -549,6 +552,22 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         }
       }
     }
+  }
+
+  private static FanOutOneBlockAsyncDFSOutput doCreateFanOutOneBlockAsyncDFSOutput(
+      Configuration conf, DistributedFileSystem dfs, DFSClient client, ClientProtocol namenode,
+      String clientName,
+      String src, long fileId, LocatedBlock locatedBlock, Encryptor encryptor,
+      Map<Channel, DatanodeInfo> datanodeInfoMap, DataChecksum summer, ByteBufAllocator alloc,
+      StreamSlowMonitor streamSlowMonitor) {
+
+    Class<? extends FanOutOneBlockAsyncDFSOutput> dfsOutputClass =
+        conf.getClass(ASYNC_DFS_OUTPUT_CLASS_NAME, FanOutOneBlockAsyncDFSOutput.class,
+          FanOutOneBlockAsyncDFSOutput.class);
+    return ReflectionUtils.newInstance(dfsOutputClass, new Object[] { conf, dfs, client, namenode,
+        clientName, src, fileId, locatedBlock, encryptor, datanodeInfoMap, summer, alloc,
+        streamSlowMonitor });
+
   }
 
   /**

@@ -22,6 +22,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
@@ -31,10 +32,16 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.Encryptor;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,10 +51,15 @@ import org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.DataChecksum;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -57,7 +69,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocator;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
@@ -272,4 +284,118 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     }
     assertArrayEquals(b, actual);
   }
+
+  /**
+   * This test is for HBASE-26679.
+   */
+  @Test
+  public void testFlushStuckWhenOneDataNodeShutdown() throws Exception {
+    Path f = new Path("/" + name.getMethodName());
+    EventLoop eventLoop = EVENT_LOOP_GROUP.next();
+
+    Configuration conf = FS.getConf();
+    conf.set(FanOutOneBlockAsyncDFSOutputHelper.ASYNC_DFS_OUTPUT_CLASS_NAME,
+      MyFanOutOneBlockAsyncDFSOutput.class.getName());
+
+    DataNodeProperties firstDataNodeProperties = null;
+    try {
+      MyFanOutOneBlockAsyncDFSOutput out =
+          (MyFanOutOneBlockAsyncDFSOutput) FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f,
+            true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR);
+
+      byte[] b = new byte[10];
+      ThreadLocalRandom.current().nextBytes(b);
+      out.write(b, 0, b.length);
+      CompletableFuture<Long> future = out.flush(false);
+      /**
+       * First ack is received from dataNode1,we could stop dataNode1 now.
+       */
+      out.stopCyclicBarrier.await();
+      Channel firstDataNodeChannel = out.alreadyNotifiedChannelRef.get();
+      assertTrue(firstDataNodeChannel != null);
+      firstDataNodeProperties = findAndKillFirstDataNode(out.datanodeInfoMap, firstDataNodeChannel);
+      assertTrue(firstDataNodeProperties != null);
+      try {
+        future.get();
+        fail();
+      } catch (Throwable e) {
+        LOG.info("expected exception caught when get future", e);
+      }
+      /**
+       * Make sure all the data node channel are closed.
+       */
+      out.datanodeInfoMap.keySet().forEach(ch -> ch.closeFuture().awaitUninterruptibly());
+    } finally {
+      conf.unset(FanOutOneBlockAsyncDFSOutputHelper.ASYNC_DFS_OUTPUT_CLASS_NAME);
+      if (firstDataNodeProperties != null) {
+        CLUSTER.restartDataNode(firstDataNodeProperties);
+      }
+    }
+
+  }
+
+  private static DataNodeProperties findAndKillFirstDataNode(
+      Map<Channel, DatanodeInfo> datanodeInfoMap,
+      Channel firstChannel) {
+    DatanodeInfo firstDatanodeInfo = datanodeInfoMap.get(firstChannel);
+    assertTrue(firstDatanodeInfo != null);
+    ArrayList<DataNode> dataNodes = CLUSTER.getDataNodes();
+    ArrayList<Integer> foundIndexes = new ArrayList<Integer>();
+    int index = 0;
+    for (DataNode dataNode : dataNodes) {
+      if (firstDatanodeInfo.getXferAddr().equals(dataNode.getDatanodeId().getXferAddr())) {
+        foundIndexes.add(index);
+      }
+      index++;
+    }
+    assertTrue(foundIndexes.size() == 1);
+
+    return CLUSTER.stopDataNode(foundIndexes.get(0));
+  }
+
+  static class MyFanOutOneBlockAsyncDFSOutput extends FanOutOneBlockAsyncDFSOutput {
+
+    private final AtomicReference<Channel> alreadyNotifiedChannelRef =
+        new AtomicReference<Channel>(null);
+    private final CyclicBarrier stopCyclicBarrier = new CyclicBarrier(2);
+    private final Map<Channel, DatanodeInfo> datanodeInfoMap;
+
+    @Override
+    protected void completed(Channel channel) {
+      /**
+       * Here it is hard to simulate slow response from datanode because I can not modify the code
+       * of HDFS, so here because this method is only invoked by
+       * {@link FanOutOneBlockAsyncDFSOutput.AckHandler#channelRead0}, we simulate slow response
+       * from datanode by just permit the acks from the first responding data node to forward,and
+       * discard the acks from other slow data nodes.
+       */
+      boolean success = this.alreadyNotifiedChannelRef.compareAndSet(null, channel);
+      if (channel.equals(this.alreadyNotifiedChannelRef.get())) {
+        super.completed(channel);
+      }
+
+      if (success) {
+        /**
+         * Here we tell the test method we could stop the data node now which send the first ack.
+         */
+        try {
+          stopCyclicBarrier.await();
+        } catch (Throwable e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
+
+    MyFanOutOneBlockAsyncDFSOutput(Configuration conf, DistributedFileSystem dfs,
+        DFSClient client, ClientProtocol namenode, String clientName, String src, long fileId,
+        LocatedBlock locatedBlock, Encryptor encryptor, Map<Channel, DatanodeInfo> datanodeInfoMap,
+        DataChecksum summer, ByteBufAllocator alloc, StreamSlowMonitor streamSlowMonitor) {
+      super(conf, dfs, client, namenode, clientName, src, fileId, locatedBlock, encryptor,
+          datanodeInfoMap, summer, alloc, streamSlowMonitor);
+      this.datanodeInfoMap = datanodeInfoMap;
+
+    }
+
+  }
+
 }

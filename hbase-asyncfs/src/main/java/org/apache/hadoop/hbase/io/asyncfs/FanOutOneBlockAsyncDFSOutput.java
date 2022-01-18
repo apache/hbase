@@ -187,7 +187,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   private final StreamSlowMonitor streamSlowMonitor;
 
   // all lock-free to make it run faster
-  private void completed(Channel channel) {
+  protected void completed(Channel channel) {
     for (Iterator<Callback> iter = waitingAckQueue.iterator(); iter.hasNext();) {
       Callback c = iter.next();
       // if the current unfinished replicas does not contain us then it means that we have already
@@ -231,7 +231,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   // so that the implementation will not burn up our brain as there are multiple state changes and
   // checks.
   private synchronized void failed(Channel channel, Supplier<Throwable> errorSupplier) {
-    if (state == State.BROKEN || state == State.CLOSED) {
+    if (state == State.CLOSED) {
+      return;
+    }
+    if (state == State.BROKEN) {
+      failWaitingAckQueue(channel, errorSupplier);
       return;
     }
     if (state == State.CLOSING) {
@@ -243,6 +247,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
     // disable further write, and fail all pending ack.
     state = State.BROKEN;
+    failWaitingAckQueue(channel, errorSupplier);
+    datanodeInfoMap.keySet().forEach(ChannelOutboundInvoker::close);
+  }
+
+  private void failWaitingAckQueue(Channel channel, Supplier<Throwable> errorSupplier) {
     Throwable error = errorSupplier.get();
     for (Iterator<Callback> iter = waitingAckQueue.iterator(); iter.hasNext();) {
       Callback c = iter.next();
@@ -259,7 +268,6 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       }
       break;
     }
-    datanodeInfoMap.keySet().forEach(ChannelOutboundInvoker::close);
   }
 
   @Sharable
