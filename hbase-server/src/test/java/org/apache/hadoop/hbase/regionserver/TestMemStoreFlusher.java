@@ -33,7 +33,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestMemStoreFlusher {
-  public MemStoreFlusher msf;
+  private MemStoreFlusher msf;
 
   @Before
   public void setUp() throws Exception {
