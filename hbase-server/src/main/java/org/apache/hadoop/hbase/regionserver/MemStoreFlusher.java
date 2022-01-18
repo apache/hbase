@@ -81,7 +81,7 @@ class MemStoreFlusher implements FlushRequester {
   // a corresponding entry in the other.
   private final BlockingQueue<FlushQueueEntry> flushQueue =
     new DelayQueue<FlushQueueEntry>();
-  private final Map<Region, FlushRegionEntry> regionsInQueue =
+  protected final Map<Region, FlushRegionEntry> regionsInQueue =
     new HashMap<Region, FlushRegionEntry>();
   private AtomicBoolean wakeupPending = new AtomicBoolean();
 
@@ -363,16 +363,28 @@ class MemStoreFlusher implements FlushRequester {
   @Override
   public boolean requestFlush(Region r, boolean forceFlushAllStores) {
     synchronized (regionsInQueue) {
-      if (!regionsInQueue.containsKey(r)) {
-        // This entry has no delay so it will be added at the top of the flush
-        // queue.  It'll come out near immediately.
-        FlushRegionEntry fqe = new FlushRegionEntry(r, forceFlushAllStores);
-        this.regionsInQueue.put(r, fqe);
-        this.flushQueue.add(fqe);
-        ((HRegion)r).incrementFlushesQueuedCount();
-        return true;
+      FlushRegionEntry existFqe = regionsInQueue.get(r);
+      if (existFqe != null) {
+        // if a delayed one exists and not reach the time to execute, just remove it
+        if (existFqe.isDelay() && existFqe.whenToExpire > EnvironmentEdgeManager.currentTime()) {
+          LOG.info("Remove the existing delayed flush entry for " + r + ", "
+            + "because we need to flush it immediately");
+          this.regionsInQueue.remove(r);
+          this.flushQueue.remove(existFqe);
+          ((HRegion)r).decrementFlushesQueuedCount();
+        } else {
+          LOG.info("Flush already requested on " + r);
+          return false;
+        }
       }
-      return false;
+
+      // This entry has no delay so it will be added at the top of the flush
+      // queue. It'll come out near immediately.
+      FlushRegionEntry fqe = new FlushRegionEntry(r, forceFlushAllStores);
+      this.regionsInQueue.put(r, fqe);
+      this.flushQueue.add(fqe);
+      ((HRegion)r).incrementFlushesQueuedCount();
+      return true;
     }
   }
 
@@ -750,6 +762,13 @@ class MemStoreFlusher implements FlushRequester {
      */
     public boolean isMaximumWait(final long maximumWait) {
       return (EnvironmentEdgeManager.currentTime() - this.createTime) > maximumWait;
+    }
+
+    /**
+     * @return True if the entry is a delay flush task
+     */
+    protected boolean isDelay() {
+      return this.whenToExpire > this.createTime;
     }
 
     /**

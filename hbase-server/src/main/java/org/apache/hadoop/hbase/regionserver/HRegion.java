@@ -9227,6 +9227,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     flushesQueued.incrementAndGet();
   }
 
+  protected void decrementFlushesQueuedCount() {
+    flushesQueued.decrementAndGet();
+  }
+
   /**
    * Do not change this sequence id.
    * @return sequenceId
