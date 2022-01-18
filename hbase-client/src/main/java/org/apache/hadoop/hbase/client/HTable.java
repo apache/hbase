@@ -29,6 +29,7 @@ import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.client.trace.TableOperationSpanBuilder;
+import org.apache.hadoop.hbase.client.trace.TableSpanBuilder;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -359,7 +361,7 @@ public class HTable implements Table {
 
   @Override
   public Result get(final Get get) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(get);
     return TraceUtil.trace(() -> get(get, get.isCheckExistenceOnly()), supplier);
@@ -402,7 +404,7 @@ public class HTable implements Table {
 
   @Override
   public Result[] get(List<Get> gets) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH);
     return TraceUtil.trace(() -> {
@@ -429,7 +431,7 @@ public class HTable implements Table {
   @Override
   public void batch(final List<? extends Row> actions, final Object[] results)
       throws InterruptedException, IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH);
     TraceUtil.traceWithIOException(() -> {
@@ -468,7 +470,7 @@ public class HTable implements Table {
             .setOperationTimeout(operationTimeoutMs)
             .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
             .build();
-    final Span span = new TableOperationSpanBuilder()
+    final Span span = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH)
       .build();
@@ -507,7 +509,7 @@ public class HTable implements Table {
             .setRpcTimeout(writeTimeout)
             .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
             .build();
-    final Span span = new TableOperationSpanBuilder()
+    final Span span = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH)
       .build();
@@ -525,7 +527,7 @@ public class HTable implements Table {
 
   @Override
   public void delete(final Delete delete) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(delete);
     TraceUtil.traceWithIOException(() -> {
@@ -547,7 +549,7 @@ public class HTable implements Table {
 
   @Override
   public void delete(final List<Delete> deletes) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH);
     TraceUtil.traceWithIOException(() -> {
@@ -573,7 +575,7 @@ public class HTable implements Table {
 
   @Override
   public void put(final Put put) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(put);
     TraceUtil.traceWithIOException(() -> {
@@ -596,7 +598,7 @@ public class HTable implements Table {
 
   @Override
   public void put(final List<Put> puts) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH);
     TraceUtil.traceWithIOException(() -> {
@@ -614,7 +616,7 @@ public class HTable implements Table {
 
   @Override
   public Result mutateRow(final RowMutations rm) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH);
     return TraceUtil.trace(() -> {
@@ -670,7 +672,7 @@ public class HTable implements Table {
 
   @Override
   public Result append(final Append append) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(append);
     return TraceUtil.trace(() -> {
@@ -697,7 +699,7 @@ public class HTable implements Table {
 
   @Override
   public Result increment(final Increment increment) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(increment);
     return TraceUtil.trace(() -> {
@@ -731,7 +733,7 @@ public class HTable implements Table {
   public long incrementColumnValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final long amount, final Durability durability)
   throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.INCREMENT);
     return TraceUtil.trace(() -> {
@@ -769,7 +771,7 @@ public class HTable implements Table {
   @Deprecated
   public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
       final byte [] value, final Put put) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
@@ -782,7 +784,7 @@ public class HTable implements Table {
   @Deprecated
   public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final byte [] value, final Put put) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
@@ -795,7 +797,7 @@ public class HTable implements Table {
   @Deprecated
   public boolean checkAndPut(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOperator op, final byte [] value, final Put put) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
@@ -807,7 +809,7 @@ public class HTable implements Table {
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
     final byte[] value, final Delete delete) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
@@ -820,7 +822,7 @@ public class HTable implements Table {
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
     final CompareOp compareOp, final byte[] value, final Delete delete) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
@@ -833,7 +835,7 @@ public class HTable implements Table {
   @Deprecated
   public boolean checkAndDelete(final byte[] row, final byte[] family, final byte[] qualifier,
     final CompareOperator op, final byte[] value, final Delete delete) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
@@ -910,7 +912,7 @@ public class HTable implements Table {
   @Deprecated
   public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
     final CompareOp compareOp, final byte [] value, final RowMutations rm) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
@@ -923,7 +925,7 @@ public class HTable implements Table {
   @Deprecated
   public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOperator op, final byte [] value, final RowMutations rm) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
     return TraceUtil.trace(
@@ -933,7 +935,7 @@ public class HTable implements Table {
 
   @Override
   public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(checkAndMutate);
     return TraceUtil.trace(() -> {
@@ -982,7 +984,7 @@ public class HTable implements Table {
   @Override
   public List<CheckAndMutateResult> checkAndMutate(List<CheckAndMutate> checkAndMutates)
     throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH);
     return TraceUtil.trace(() -> {
@@ -1040,7 +1042,7 @@ public class HTable implements Table {
 
   @Override
   public boolean exists(final Get get) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(get);
     return TraceUtil.trace(() -> {
@@ -1052,7 +1054,7 @@ public class HTable implements Table {
 
   @Override
   public boolean[] exists(List<Get> gets) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder()
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH);
     return TraceUtil.trace(() -> {
@@ -1108,6 +1110,10 @@ public class HTable implements Table {
 
   @Override
   public void close() throws IOException {
+    final Supplier<Span> supplier = new TableSpanBuilder(connection)
+      .setName("HTable.close")
+      .setTableName(tableName)
+      .setSpanKind(SpanKind.INTERNAL);
     TraceUtil.traceWithIOException(() -> {
       if (this.closed) {
         return;
@@ -1126,7 +1132,7 @@ public class HTable implements Table {
         }
       }
       this.closed = true;
-    }, () -> TraceUtil.createTableSpan(getClass().getSimpleName() + ".close", tableName));
+    }, supplier);
   }
 
   // validate for well-formedness
@@ -1456,7 +1462,7 @@ public class HTable implements Table {
 
     @Override
     public boolean thenPut(Put put) throws IOException {
-      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
         .setTableName(tableName)
         .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
@@ -1469,7 +1475,7 @@ public class HTable implements Table {
 
     @Override
     public boolean thenDelete(Delete delete) throws IOException {
-      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
         .setTableName(tableName)
         .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
@@ -1481,7 +1487,7 @@ public class HTable implements Table {
 
     @Override
     public boolean thenMutate(RowMutations mutation) throws IOException {
-      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
         .setTableName(tableName)
         .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
@@ -1511,7 +1517,7 @@ public class HTable implements Table {
 
     @Override
     public boolean thenPut(Put put) throws IOException {
-      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
         .setTableName(tableName)
         .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(() -> {
@@ -1523,7 +1529,7 @@ public class HTable implements Table {
 
     @Override
     public boolean thenDelete(Delete delete) throws IOException {
-      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
         .setTableName(tableName)
         .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(
@@ -1533,7 +1539,7 @@ public class HTable implements Table {
 
     @Override
     public boolean thenMutate(RowMutations mutation) throws IOException {
-      final Supplier<Span> supplier = new TableOperationSpanBuilder()
+      final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
         .setTableName(tableName)
         .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
       return TraceUtil.trace(

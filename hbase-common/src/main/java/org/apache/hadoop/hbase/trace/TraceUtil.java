@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.trace;
 
-import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.NAMESPACE_KEY;
-import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.TABLE_KEY;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
@@ -30,7 +28,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Version;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -50,15 +47,6 @@ public final class TraceUtil {
    */
   public static Span createSpan(String name) {
     return createSpan(name, SpanKind.INTERNAL);
-  }
-
-  /**
-   * Create a {@link SpanKind#INTERNAL} span and set table related attributes.
-   */
-  public static Span createTableSpan(String spanName, TableName tableName) {
-    return createSpan(spanName)
-      .setAttribute(NAMESPACE_KEY, tableName.getNamespaceAsString())
-      .setAttribute(TABLE_KEY, tableName.getNameAsString());
   }
 
   /**
