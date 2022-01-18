@@ -85,7 +85,7 @@
         tests (this is needed for upstream projects whose tests need this jar simply for
         compilation) -->
       <plugin>
-        <!--Make it so assembly:single does nothing in here-->
+        <!--Make it to assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
           <skipAssembly>true</skipAssembly>
