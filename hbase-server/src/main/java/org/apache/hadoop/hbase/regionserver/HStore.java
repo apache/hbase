@@ -1455,7 +1455,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
           .getStoreFileComparator());
         }
     } finally {
-      this.storeEngine.readLock();
+      this.storeEngine.readUnlock();
     }
     try {
       // Ready to go. Have list of files to compact.
