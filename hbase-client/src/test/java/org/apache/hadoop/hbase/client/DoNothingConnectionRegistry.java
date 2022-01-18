@@ -48,6 +48,11 @@ class DoNothingConnectionRegistry implements ConnectionRegistry {
   }
 
   @Override
+  public String getConnectionString() {
+    return "nothing";
+  }
+
+  @Override
   public void close() {
   }
 }

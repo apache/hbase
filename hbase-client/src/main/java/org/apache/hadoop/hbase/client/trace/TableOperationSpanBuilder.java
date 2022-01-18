@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.hbase.client.trace;
 
-import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DB_NAME;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DB_OPERATION;
-import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.NAMESPACE_KEY;
-import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.TABLE_KEY;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
@@ -32,7 +29,9 @@ import java.util.Map;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.AsyncConnectionImpl;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -46,8 +45,8 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Construct {@link io.opentelemetry.api.trace.Span} instances originating from
- * "table operations" -- the verbs in our public API that interact with data in tables.
+ * Construct {@link Span} instances originating from "table operations" -- the verbs in our public
+ * API that interact with data in tables.
  */
 @InterfaceAudience.Private
 public class TableOperationSpanBuilder implements Supplier<Span> {
@@ -60,7 +59,16 @@ public class TableOperationSpanBuilder implements Supplier<Span> {
   private TableName tableName;
   private final Map<AttributeKey<?>, Object> attributes = new HashMap<>();
 
-  @Override public Span get() {
+  public TableOperationSpanBuilder(final ClusterConnection conn) {
+    ConnectionSpanBuilder.populateConnectionAttributes(attributes, conn);
+  }
+
+  public TableOperationSpanBuilder(final AsyncConnectionImpl conn) {
+    ConnectionSpanBuilder.populateConnectionAttributes(attributes, conn);
+  }
+
+  @Override
+  public Span get() {
     return build();
   }
 
@@ -84,9 +92,7 @@ public class TableOperationSpanBuilder implements Supplier<Span> {
 
   public TableOperationSpanBuilder setTableName(final TableName tableName) {
     this.tableName = tableName;
-    attributes.put(NAMESPACE_KEY, tableName.getNamespaceAsString());
-    attributes.put(DB_NAME, tableName.getNamespaceAsString());
-    attributes.put(TABLE_KEY, tableName.getNameAsString());
+    TableSpanBuilder.populateTableNameAttributes(attributes, tableName);
     return this;
   }
 
