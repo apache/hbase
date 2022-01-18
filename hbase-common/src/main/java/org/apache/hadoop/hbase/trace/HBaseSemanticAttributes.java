@@ -28,6 +28,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 */
 @InterfaceAudience.Private
 public final class HBaseSemanticAttributes {
+  public static final AttributeKey<String> DB_SYSTEM = SemanticAttributes.DB_SYSTEM;
+  public static final String DB_SYSTEM_VALUE = SemanticAttributes.DbSystemValues.HBASE;
+  public static final AttributeKey<String> DB_CONNECTION_STRING =
+    SemanticAttributes.DB_CONNECTION_STRING;
+  public static final AttributeKey<String> DB_USER = SemanticAttributes.DB_USER;
   public static final AttributeKey<String> DB_NAME = SemanticAttributes.DB_NAME;
   public static final AttributeKey<String> NAMESPACE_KEY = SemanticAttributes.DB_HBASE_NAMESPACE;
   public static final AttributeKey<String> DB_OPERATION = SemanticAttributes.DB_OPERATION;

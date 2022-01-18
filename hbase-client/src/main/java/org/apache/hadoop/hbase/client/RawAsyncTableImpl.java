@@ -261,7 +261,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   }
 
   private TableOperationSpanBuilder newTableOperationSpanBuilder() {
-    return new TableOperationSpanBuilder().setTableName(tableName);
+    return new TableOperationSpanBuilder(conn).setTableName(tableName);
   }
 
   @Override

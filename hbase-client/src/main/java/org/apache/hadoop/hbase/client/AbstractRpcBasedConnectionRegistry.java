@@ -273,6 +273,11 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   }
 
   @Override
+  public String getConnectionString() {
+    return "unimplemented";
+  }
+
+  @Override
   public void close() {
     trace(() -> {
       if (registryEndpointRefresher != null) {

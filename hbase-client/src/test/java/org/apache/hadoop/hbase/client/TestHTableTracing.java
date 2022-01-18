@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.TestAsyncTableTracing.buildBaseAttributesMatcher;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEnded;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasKind;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.TraceTestUtil.buildConnectionAttributesMatcher;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.TraceTestUtil.buildTableAttributesMatcher;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
@@ -238,6 +239,8 @@ public class TestHTableTracing extends TestTracingBase {
   }
 
   private void assertTrace(String tableOperation, Matcher<SpanData> matcher) {
+    // n.b. this method implementation must match the one of the same name found in
+    // TestAsyncTableTracing
     final TableName tableName = table.getName();
     final Matcher<SpanData> spanLocator = allOf(
       hasName(containsString(tableOperation)), hasEnded());
@@ -255,7 +258,8 @@ public class TestHTableTracing extends TestTracingBase {
       hasName(expectedName),
       hasKind(SpanKind.CLIENT),
       hasStatusWithCode(StatusCode.OK),
-      buildBaseAttributesMatcher(tableName),
+      buildConnectionAttributesMatcher(conn),
+      buildTableAttributesMatcher(tableName),
       matcher));
   }
 
