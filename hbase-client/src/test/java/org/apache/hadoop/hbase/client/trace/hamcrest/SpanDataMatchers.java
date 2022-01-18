@@ -112,12 +112,10 @@ public final class SpanDataMatchers {
   }
 
   public static Matcher<SpanData> hasTraceId(Matcher<String> matcher) {
-    return new TypeSafeMatcher<SpanData>() {
-      @Override protected boolean matchesSafely(SpanData item) {
-        return item.getTraceId() != null && matcher.matches(item.getTraceId());
-      }
-      @Override public void describeTo(Description description) {
-        description.appendText("SpanData with a traceId that ").appendDescriptionOf(matcher);
+    return new FeatureMatcher<SpanData, String>(
+      matcher, "SpanData with a traceId that ", "traceId") {
+      @Override protected String featureValueOf(SpanData item) {
+        return item.getTraceId();
       }
     };
   }

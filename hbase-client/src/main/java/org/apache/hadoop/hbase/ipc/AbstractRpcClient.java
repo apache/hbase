@@ -393,18 +393,10 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     }
   }
 
-  private User resolveUser() {
-    try {
-      return userProvider.getCurrent();
-    } catch (IOException e) {
-      return null;
-    }
-  }
-
   private Call callMethod(final Descriptors.MethodDescriptor md, final HBaseRpcController hrc,
     final Message param, Message returnType, final User ticket, final Address addr,
     final RpcCallback<Message> callback) {
-    Span span = new IpcClientSpanBuilder(() -> null, this::resolveUser)
+    Span span = new IpcClientSpanBuilder()
       .setMethodDescriptor(md)
       .setRemoteAddress(addr)
       .build();

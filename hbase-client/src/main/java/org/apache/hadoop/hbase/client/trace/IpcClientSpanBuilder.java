@@ -30,9 +30,7 @@ import io.opentelemetry.api.trace.SpanKind;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
-import org.apache.hadoop.hbase.client.AsyncConnectionImpl;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RpcSystem;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -47,27 +45,14 @@ public class IpcClientSpanBuilder implements Supplier<Span> {
   private String name;
   private final Map<AttributeKey<?>, Object> attributes = new HashMap<>();
 
-  public IpcClientSpanBuilder(
-    final Supplier<String> connectionStringSupplier,
-    final Supplier<User> userSupplier
-  ) {
-    // TODO: this constructor is a hack used by AbstractRpcClient because it does not have access
-    //  to the AsyncConnectionImpl within which it resides. Use this for now, until we come back
-    //  and plumb through the instance.
-    ConnectionSpanBuilder.populateConnectionAttributes(attributes, connectionStringSupplier,
-      userSupplier);
-  }
-
   @Override
   public Span get() {
     return build();
   }
 
   public IpcClientSpanBuilder setMethodDescriptor(final Descriptors.MethodDescriptor md) {
-    // it happens that `getFullName` returns a string in the $package.$service format required by
-    // the otel RPC specification. Use it for now; might have to parse the value in the future.
-    final String packageAndService = md.getService().getFullName();
-    final String method = md.getName();
+    final String packageAndService = getRpcPackageAndService(md);
+    final String method = getRpcName(md);
     this.name = packageAndService + "/" + method;
     populateMethodDescriptorAttributes(attributes, md);
     return this;
@@ -99,12 +84,20 @@ public class IpcClientSpanBuilder implements Supplier<Span> {
     final Map<AttributeKey<?>, Object> attributes,
     final Descriptors.MethodDescriptor md
   ) {
-    // it happens that `getFullName` returns a string in the $package.$service format required by
-    // the otel RPC specification. Use it for now; might have to parse the value in the future.
-    final String packageAndService = md.getService().getFullName();
-    final String method = md.getName();
+    final String packageAndService = getRpcPackageAndService(md);
+    final String method = getRpcName(md);
     attributes.put(RPC_SYSTEM, RpcSystem.HBASE_RPC.name());
     attributes.put(RPC_SERVICE, packageAndService);
     attributes.put(RPC_METHOD, method);
+  }
+
+  private static String getRpcPackageAndService(final Descriptors.MethodDescriptor md) {
+    // it happens that `getFullName` returns a string in the $package.$service format required by
+    // the otel RPC specification. Use it for now; might have to parse the value in the future.
+    return md.getService().getFullName();
+  }
+
+  private static String getRpcName(final Descriptors.MethodDescriptor md) {
+    return md.getName();
   }
 }

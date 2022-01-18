@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
-import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
-import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newStub;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntry;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasAttributes;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasDuration;
@@ -27,6 +24,9 @@ import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.has
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasTraceId;
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newStub;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.everyItem;
@@ -43,7 +43,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
-
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
@@ -68,17 +67,14 @@ import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
 import org.hamcrest.Matcher;
 import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoResponseProto;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EmptyRequestProto;
@@ -465,49 +461,51 @@ public abstract class AbstractTestIPC {
       .orElseThrow(AssertionError::new);
   }
 
-  private static String buildIpcSpanName(Descriptors.MethodDescriptor md) {
-    final String packageAndService = md.getService().getFullName();
-    final String method = md.getName();
-    return packageAndService + "/" + method;
+  private static String buildIpcSpanName(final String packageAndService, final String methodName) {
+    return packageAndService + "/" + methodName;
   }
 
-  private static Matcher<SpanData> buildIpcClientSpanMatcher(Descriptors.MethodDescriptor md) {
+  private static Matcher<SpanData> buildIpcClientSpanMatcher(
+    final String packageAndService,
+    final String methodName
+  ) {
     return allOf(
-      hasName(buildIpcSpanName(md)),
+      hasName(buildIpcSpanName(packageAndService, methodName)),
       hasKind(SpanKind.CLIENT)
     );
   }
 
-  private static Matcher<SpanData> buildIpcServerSpanMatcher(Descriptors.MethodDescriptor md) {
+  private static Matcher<SpanData> buildIpcServerSpanMatcher(
+    final String packageAndService,
+    final String methodName
+  ) {
     return allOf(
-      hasName(buildIpcSpanName(md)),
+      hasName(buildIpcSpanName(packageAndService, methodName)),
       hasKind(SpanKind.SERVER)
     );
   }
 
   private static Matcher<SpanData> buildIpcClientSpanAttributesMatcher(
-    Descriptors.MethodDescriptor md,
-    InetSocketAddress isa
+    final String packageAndService,
+    final String methodName,
+    final InetSocketAddress isa
   ) {
-    final String packageAndService = md.getService().getFullName();
-    final String method = md.getName();
     return hasAttributes(allOf(
       containsEntry("rpc.system", "HBASE_RPC"),
       containsEntry("rpc.service", packageAndService),
-      containsEntry("rpc.method", method),
+      containsEntry("rpc.method", methodName),
       containsEntry("net.peer.name", isa.getHostName()),
       containsEntry(AttributeKey.longKey("net.peer.port"), (long) isa.getPort())));
   }
 
   private static Matcher<SpanData> buildIpcServerSpanAttributesMatcher(
-    Descriptors.MethodDescriptor md
+    final String packageAndService,
+    final String methodName
   ) {
-    final String packageAndService = md.getService().getFullName();
-    final String method = md.getName();
     return hasAttributes(allOf(
       containsEntry("rpc.system", "HBASE_RPC"),
       containsEntry("rpc.service", packageAndService),
-      containsEntry("rpc.method", method)));
+      containsEntry("rpc.method", methodName)));
   }
 
   private void assertRemoteSpan() {
@@ -528,12 +526,14 @@ public abstract class AbstractTestIPC {
       stub.pause(null, PauseRequestProto.newBuilder().setMs(100).build());
       // use the ISA from the running server so that we can get the port selected.
       final InetSocketAddress isa = rpcServer.getListenerAddress();
-      final Descriptors.MethodDescriptor pauseMd =
-        SERVICE.getDescriptorForType().findMethodByName("pause");
-      final SpanData pauseClientSpan = waitSpan(buildIpcClientSpanMatcher(pauseMd));
-      assertThat(pauseClientSpan, buildIpcClientSpanAttributesMatcher(pauseMd, isa));
-      final SpanData pauseServerSpan = waitSpan(buildIpcServerSpanMatcher(pauseMd));
-      assertThat(pauseServerSpan, buildIpcServerSpanAttributesMatcher(pauseMd));
+      final SpanData pauseClientSpan = waitSpan(buildIpcClientSpanMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "pause"));
+      assertThat(pauseClientSpan, buildIpcClientSpanAttributesMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "pause", isa));
+      final SpanData pauseServerSpan = waitSpan(buildIpcServerSpanMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "pause"));
+      assertThat(pauseServerSpan, buildIpcServerSpanAttributesMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "pause"));
       assertRemoteSpan();
       assertFalse("no spans provided", traceRule.getSpans().isEmpty());
       assertThat(traceRule.getSpans(), everyItem(allOf(
@@ -556,12 +556,14 @@ public abstract class AbstractTestIPC {
       assertThrows(ServiceException.class,
         () -> stub.error(null, EmptyRequestProto.getDefaultInstance()));
       final InetSocketAddress isa = rpcServer.getListenerAddress();
-      final Descriptors.MethodDescriptor errorMd =
-        SERVICE.getDescriptorForType().findMethodByName("error");
-      final SpanData errorClientSpan = waitSpan(buildIpcClientSpanMatcher(errorMd));
-      assertThat(errorClientSpan, buildIpcClientSpanAttributesMatcher(errorMd, isa));
-      final SpanData errorServerSpan = waitSpan(buildIpcServerSpanMatcher(errorMd));
-      assertThat(errorServerSpan, buildIpcServerSpanAttributesMatcher(errorMd));
+      final SpanData errorClientSpan = waitSpan(buildIpcClientSpanMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "error"));
+      assertThat(errorClientSpan, buildIpcClientSpanAttributesMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "error", isa));
+      final SpanData errorServerSpan = waitSpan(buildIpcServerSpanMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "error"));
+      assertThat(errorServerSpan, buildIpcServerSpanAttributesMatcher(
+        "hbase.test.pb.TestProtobufRpcProto", "error"));
       assertRemoteSpan();
       assertFalse("no spans provided", traceRule.getSpans().isEmpty());
       assertThat(traceRule.getSpans(), everyItem(allOf(
