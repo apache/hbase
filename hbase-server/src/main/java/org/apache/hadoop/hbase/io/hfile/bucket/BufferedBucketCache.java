@@ -23,18 +23,18 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.RemovalListener;
-import com.google.common.cache.RemovalNotification;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A {@link BucketCache} with RAMBuffer to reduce GC pressure.
@@ -65,7 +65,7 @@ public class BufferedBucketCache extends BucketCache {
     super(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
       persistencePath, ioErrorsTolerationDuration, conf);
 
-    maxBufferSize = (long) ((capacity / blockSize) * conf.getDouble(RAM_BUFFER_SIZE_RATIO,
+    maxBufferSize = (long) ((capacity / (double) blockSize) * conf.getDouble(RAM_BUFFER_SIZE_RATIO,
       RAM_BUFFER_SIZE_RATIO_DEFAULT));
     int timeout = conf.getInt(RAM_BUFFER_TIMEOUT, RAM_BUFFER_TIMEOUT_DEFAULT);
     ramBuffer = CacheBuilder.newBuilder().
