@@ -351,8 +351,7 @@ public abstract class User {
     public static User createUserForTesting(Configuration conf,
         String name, String[] groups) {
       synchronized (UserProvider.class) {
-        if (!(UserProvider.groups instanceof TestingGroups) ||
-            conf.getBoolean(TestingGroups.TEST_CONF, false)) {
+        if (!(UserProvider.groups instanceof TestingGroups)) {
           UserProvider.groups = new TestingGroups(UserProvider.groups);
         }
       }
