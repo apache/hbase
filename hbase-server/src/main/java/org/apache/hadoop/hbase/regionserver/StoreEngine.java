@@ -410,7 +410,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     List<HStoreFile> openedFiles = openStoreFiles(toBeAddedFiles, false);
 
     // propogate the file changes to the underlying store file manager
-    replaceStoreFiles(toBeRemovedStoreFiles, openedFiles); // won't throw an exception
+    replaceStoreFiles(toBeRemovedStoreFiles, openedFiles, () -> {
+    }); // won't throw an exception
   }
 
   /**
@@ -493,12 +494,13 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   }
 
   public void replaceStoreFiles(Collection<HStoreFile> compactedFiles,
-    Collection<HStoreFile> newFiles) throws IOException {
+    Collection<HStoreFile> newFiles, Runnable actionUnderLock) throws IOException {
     storeFileTracker.replace(StoreUtils.toStoreFileInfo(compactedFiles),
       StoreUtils.toStoreFileInfo(newFiles));
     writeLock();
     try {
       storeFileManager.addCompactionResults(compactedFiles, newFiles);
+      actionUnderLock.run();
     } finally {
       writeUnlock();
     }
