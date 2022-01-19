@@ -86,7 +86,7 @@ public class RecoverableZooKeeper {
   private final int maxMultiSize;
 
   /**
-   * @see #connect(Configuration, String, Watcher, String)
+   * See {@link #connect(Configuration, String, Watcher, String)}
    */
   public static RecoverableZooKeeper connect(Configuration conf, Watcher watcher)
     throws IOException {
@@ -95,7 +95,7 @@ public class RecoverableZooKeeper {
   }
 
   /**
-   * @see #connect(Configuration, String, Watcher, String)
+   * See {@link #connect(Configuration, String, Watcher, String)}
    */
   public static RecoverableZooKeeper connect(Configuration conf, String ensemble,
     Watcher watcher)
