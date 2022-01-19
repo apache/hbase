@@ -1229,12 +1229,13 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     allowedOnPath = ".*/(HStore|TestHStore).java")
   void replaceStoreFiles(Collection<HStoreFile> compactedFiles, Collection<HStoreFile> result,
     boolean writeCompactionMarker) throws IOException {
-    storeEngine.replaceStoreFiles(compactedFiles, result);
+    storeEngine.replaceStoreFiles(compactedFiles, result, () -> {
+      synchronized(filesCompacting) {
+        filesCompacting.removeAll(compactedFiles);
+      }
+    });
     if (writeCompactionMarker) {
       writeCompactionWalRecord(compactedFiles, result);
-    }
-    synchronized (filesCompacting) {
-      filesCompacting.removeAll(compactedFiles);
     }
     // These may be null when the RS is shutting down. The space quota Chores will fix the Region
     // sizes later so it's not super-critical if we miss these.
