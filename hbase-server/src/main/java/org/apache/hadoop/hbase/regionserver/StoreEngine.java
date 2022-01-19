@@ -462,6 +462,11 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     return committedFiles;
   }
 
+  @FunctionalInterface
+  public interface IOExceptionRunnable {
+    void run() throws IOException;
+  }
+
   public void addStoreFiles(Collection<HStoreFile> storeFiles) throws IOException {
     storeFileTracker.add(StoreUtils.toStoreFileInfo(storeFiles));
     writeLock();
@@ -486,6 +491,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     writeLock();
     try {
       storeFileManager.addCompactionResults(compactedFiles, newFiles);
+      actionUnderLock.run();
     } finally {
       writeUnlock();
     }
