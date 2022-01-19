@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.oauthbearer.internals;
 
-import static org.apache.hadoop.hbase.security.token.OAuthBearerTokenUtil.OAUTHBEARER_MECHANISM;
+import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.OAUTHBEARER_MECHANISM;
 import java.security.Provider;
 import java.security.Security;
 import org.apache.yetus.audience.InterfaceAudience;

@@ -19,29 +19,23 @@ package org.apache.hadoop.hbase.security.oauthbearer;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
+import javax.security.sasl.Sasl;
 import org.apache.yetus.audience.InterfaceAudience;
 
-@InterfaceAudience.Public
-public final class OAuthBearerStringUtils {
+@InterfaceAudience.Private
+public final class OAuthBearerUtils {
+  public static final String OAUTHBEARER_MECHANISM = "OAUTHBEARER";
+
   /**
-   *  Converts a {@code Map} class into a string, concatenating keys and values
-   *  Example:
-   *      {@code mkString({ key: "hello", keyTwo: "hi" }, "|START|", "|END|", "=", ",")
-   *          => "|START|key=hello,keyTwo=hi|END|"}
+   * Verifies configuration for OAuth Bearer authentication mechanism.
+   * Throws RuntimeException if PlainText is not allowed.
    */
-  public static <K, V> String mkString(Map<K, V> map, String begin, String end,
-    String keyValueSeparator, String elementSeparator) {
-    StringBuilder bld = new StringBuilder();
-    bld.append(begin);
-    String prefix = "";
-    for (Map.Entry<K, V> entry : map.entrySet()) {
-      bld.append(prefix).append(entry.getKey()).
-        append(keyValueSeparator).append(entry.getValue());
-      prefix = elementSeparator;
+  public static String[] mechanismNamesCompatibleWithPolicy(Map<String, ?> props) {
+    if (props != null && "true".equals(String.valueOf(props.get(Sasl.POLICY_NOPLAINTEXT)))) {
+      throw new RuntimeException("OAuth Bearer authentication mech cannot be used if plaintext is "
+        + "disallowed.");
     }
-    bld.append(end);
-    return bld.toString();
+    return new String[] { OAUTHBEARER_MECHANISM };
   }
 
   /**
@@ -66,17 +60,7 @@ public final class OAuthBearerStringUtils {
     return map;
   }
 
-  /**
-   * Given two maps (A, B), returns all the key-value pairs in A whose keys are not contained in B
-   */
-  public static <K, V> Map<K, V> subtractMap(Map<? extends K, ? extends V> minuend,
-    Map<? extends K, ? extends V> subtrahend) {
-    return minuend.entrySet().stream()
-      .filter(entry -> !subtrahend.containsKey(entry.getKey()))
-      .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-  }
-
-  private OAuthBearerStringUtils() {
+  private OAuthBearerUtils() {
     // empty
   }
 }

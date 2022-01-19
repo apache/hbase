@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
+import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.OAUTHBEARER_MECHANISM;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import java.io.IOException;
@@ -31,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerTokenCallback;
-import org.apache.hadoop.hbase.security.token.OAuthBearerTokenUtil;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -102,8 +102,7 @@ public class OAuthBearerSaslClientCallbackHandlerTest {
     createCallbackHandler() {
     OAuthBearerSaslClientAuthenticationProvider.OAuthBearerSaslClientCallbackHandler handler =
       new OAuthBearerSaslClientAuthenticationProvider.OAuthBearerSaslClientCallbackHandler();
-    handler.configure(new Configuration(), OAuthBearerTokenUtil.OAUTHBEARER_MECHANISM,
-      Collections.emptyMap());
+    handler.configure(new Configuration(), OAUTHBEARER_MECHANISM, Collections.emptyMap());
     return handler;
   }
 }

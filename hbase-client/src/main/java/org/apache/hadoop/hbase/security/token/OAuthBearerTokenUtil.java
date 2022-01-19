@@ -36,7 +36,6 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Public
 public final class OAuthBearerTokenUtil {
   private static final Logger LOG = LoggerFactory.getLogger(OAuthBearerTokenUtil.class);
-  public static final String OAUTHBEARER_MECHANISM = "OAUTHBEARER";
   public static final String TOKEN_KIND = "JWT_AUTH_TOKEN";
 
   static {

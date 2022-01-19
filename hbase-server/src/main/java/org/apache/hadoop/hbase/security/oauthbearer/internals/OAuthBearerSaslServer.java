@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.oauthbearer.internals;
 
-import static org.apache.hadoop.hbase.security.token.OAuthBearerTokenUtil.OAUTHBEARER_MECHANISM;
+import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.OAUTHBEARER_MECHANISM;
 import com.nimbusds.jose.shaded.json.JSONObject;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -34,6 +34,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.exceptions.SaslAuthenticationException;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.auth.AuthenticateCallbackHandler;
+import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerValidatorCallback;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -216,12 +217,6 @@ public class OAuthBearerSaslServer implements SaslServer {
     throw new SaslException(msg);
   }
 
-  public static String[] mechanismNamesCompatibleWithPolicy(Map<String, ?> props) {
-    return props != null && "true".equals(String.valueOf(props.get(Sasl.POLICY_NOPLAINTEXT)))
-      ? new String[] {}
-      : new String[] { OAUTHBEARER_MECHANISM};
-  }
-
   public static class OAuthBearerSaslServerFactory implements SaslServerFactory {
     @Override
     public SaslServer createSaslServer(String mechanism, String protocol, String serverName,
@@ -237,7 +232,7 @@ public class OAuthBearerSaslServer implements SaslServer {
 
     @Override
     public String[] getMechanismNames(Map<String, ?> props) {
-      return OAuthBearerSaslServer.mechanismNamesCompatibleWithPolicy(props);
+      return OAuthBearerUtils.mechanismNamesCompatibleWithPolicy(props);
     }
   }
 }

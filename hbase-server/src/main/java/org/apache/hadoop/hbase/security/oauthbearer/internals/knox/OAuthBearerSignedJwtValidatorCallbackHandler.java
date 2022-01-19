@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.oauthbearer.internals.knox;
 
-import static org.apache.hadoop.hbase.security.token.OAuthBearerTokenUtil.OAUTHBEARER_MECHANISM;
+import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.OAUTHBEARER_MECHANISM;
 import com.nimbusds.jose.jwk.JWKSet;
 import java.io.File;
 import java.io.IOException;
