@@ -915,14 +915,17 @@ public class Result implements CellScannable, CellScanner {
   public Cell current() {
     if (isEmpty()
             || cellScannerIndex == INITIAL_CELLSCANNER_INDEX
-            || cellScannerIndex >= cells.length)
+            || cellScannerIndex >= cells.length) {
       return null;
+    }
     return this.cells[cellScannerIndex];
   }
 
   @Override
   public boolean advance() {
-    if (isEmpty()) return false;
+    if (isEmpty()) {
+      return false;
+    }
     cellScannerIndex++;
     if (cellScannerIndex < this.cells.length) {
       return true;
