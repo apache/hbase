@@ -365,7 +365,7 @@ abstract class ServerRpcConnection implements Closeable {
             throw e;
           }
           RpcServer.LOG.debug("Created SASL server with mechanism={}",
-              provider.getSaslAuthMethod().getAuthMethod());
+              provider.getSaslAuthMethod().getSaslMechanism());
         }
         RpcServer.LOG.debug("Read input token of size={} for processing by saslServer." +
             "evaluateResponse()", saslToken.limit());
