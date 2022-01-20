@@ -21,12 +21,14 @@ import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.OAUT
 import java.io.IOException;
 import java.net.InetAddress;
 import java.security.AccessController;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeSet;
 import javax.security.auth.Subject;
 import javax.security.auth.callback.Callback;
@@ -122,7 +124,7 @@ public class OAuthBearerSaslClientAuthenticationProvider
          * exist (e.g. KAFKA-7902), so dealing with the unlikely possibility that occurs
          * during normal operation also allows us to deal more robustly with potential bugs.
          */
-        SortedSet<OAuthBearerToken> sortedByLifetime =
+        NavigableSet<OAuthBearerToken> sortedByLifetime =
           new TreeSet<>(
             new Comparator<OAuthBearerToken>() {
               @Override
@@ -134,8 +136,11 @@ public class OAuthBearerSaslClientAuthenticationProvider
         if (LOG.isWarnEnabled()) {
           LOG.warn("Found {} OAuth Bearer tokens in Subject's private credentials; " +
               "the oldest expires at {}, will use the newest, which expires at {}",
-            sortedByLifetime.size(), new Date(sortedByLifetime.first().lifetimeMs()),
-            new Date(sortedByLifetime.last().lifetimeMs()));
+            sortedByLifetime.size(),
+            LocalDateTime.ofInstant(Instant.ofEpochMilli(sortedByLifetime.first().lifetimeMs()),
+              ZoneId.systemDefault()),
+            LocalDateTime.ofInstant(Instant.ofEpochMilli(sortedByLifetime.last().lifetimeMs()),
+              ZoneId.systemDefault()));
         }
         return sortedByLifetime.last();
       }
