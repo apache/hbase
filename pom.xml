@@ -861,6 +861,7 @@
     <xz.version>1.9</xz.version>
     <zstd-jni.version>1.5.0-4</zstd-jni.version>
     <hbase-thirdparty.version>4.1.1</hbase-thirdparty.version>
+    <nimbusds.version>9.15.2</nimbusds.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -3958,6 +3959,11 @@
             <artifactId>hadoop-hdfs-client</artifactId>
             <version>${hadoop-three.version}</version>
           </dependency>
+         <dependency>
+           <groupId>com.nimbusds</groupId>
+           <artifactId>nimbus-jose-jwt</artifactId>
+           <version>${nimbusds.version}</version>
+         </dependency>
         </dependencies>
       </dependencyManagement>
 

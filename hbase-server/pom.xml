@@ -349,6 +349,10 @@
       <artifactId>bcpkix-jdk15on</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.nimbusds</groupId>
+      <artifactId>nimbus-jose-jwt</artifactId>
+    </dependency>
   </dependencies>
   <build>
     <!-- Make sure resources get added before they are processed by placing this first
