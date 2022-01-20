@@ -529,7 +529,7 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
     });
   }
 
-  @Test // See HBASE-24047 and its sub-issue to reenable.
+  @Test
   public void testNegativeAuthentication() throws Exception {
     // Validate that we can read that record back out as the user with our custom auth'n
     final Configuration clientConf = new Configuration(CONF);
