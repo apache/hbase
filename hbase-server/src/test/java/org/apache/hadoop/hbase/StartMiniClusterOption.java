@@ -260,6 +260,11 @@ public final class StartMiniClusterOption {
       return this;
     }
 
+    public Builder numWorkers(int numWorkers) {
+      return numDataNodes(numWorkers)
+        .numRegionServers(numWorkers);
+    }
+
     public Builder createRootDir(boolean createRootDir) {
       this.createRootDir = createRootDir;
       return this;

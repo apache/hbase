@@ -678,30 +678,26 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<List<Result>> scanAll(Scan scan) {
-    final Supplier<Span> supplier = newTableOperationSpanBuilder()
-      .setOperation(scan);
-    return tracedFuture(() -> {
-      CompletableFuture<List<Result>> future = new CompletableFuture<>();
-      List<Result> scanResults = new ArrayList<>();
-      scan(scan, new AdvancedScanResultConsumer() {
+    CompletableFuture<List<Result>> future = new CompletableFuture<>();
+    List<Result> scanResults = new ArrayList<>();
+    scan(scan, new AdvancedScanResultConsumer() {
 
-        @Override
-        public void onNext(Result[] results, ScanController controller) {
-          scanResults.addAll(Arrays.asList(results));
-        }
+      @Override
+      public void onNext(Result[] results, ScanController controller) {
+        scanResults.addAll(Arrays.asList(results));
+      }
 
-        @Override
-        public void onError(Throwable error) {
-          future.completeExceptionally(error);
-        }
+      @Override
+      public void onError(Throwable error) {
+        future.completeExceptionally(error);
+      }
 
-        @Override
-        public void onComplete() {
-          future.complete(scanResults);
-        }
-      });
-      return future;
-    }, supplier);
+      @Override
+      public void onComplete() {
+        future.complete(scanResults);
+      }
+    });
+    return future;
   }
 
   @Override

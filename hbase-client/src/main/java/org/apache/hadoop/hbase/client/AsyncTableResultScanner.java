@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcEstimatedSize;
-
+import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
@@ -58,6 +58,9 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
 
   private ScanResumer resumer;
 
+  // Used to pass the span instance to the `AsyncTableImpl` from its underlying `rawAsyncTable`.
+  private Span span = null;
+
   public AsyncTableResultScanner(TableName tableName, Scan scan, long maxCacheSize) {
     this.tableName = tableName;
     this.maxCacheSize = maxCacheSize;
@@ -77,6 +80,14 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
         maxCacheSize);
     }
     resumer = controller.suspend();
+  }
+
+  Span getSpan() {
+    return span;
+  }
+
+  void setSpan(final Span span) {
+    this.span = span;
   }
 
   @Override
