@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client.trace.hamcrest;
 
+import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntry;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import io.opentelemetry.api.common.Attributes;
@@ -25,7 +26,9 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.EventData;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
+import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
 import java.time.Duration;
+import java.util.Objects;
 import org.hamcrest.Description;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
@@ -74,6 +77,24 @@ public final class SpanDataMatchers {
       matcher, "SpanData having events that", "events") {
       @Override protected Iterable<? super EventData> featureValueOf(SpanData item) {
         return item.getEvents();
+      }
+    };
+  }
+
+  public static Matcher<SpanData> hasExceptionWithType(Matcher<? super String> matcher) {
+    return hasException(containsEntry(is(SemanticAttributes.EXCEPTION_TYPE), matcher));
+  }
+
+  public static Matcher<SpanData> hasException(Matcher<? super Attributes> matcher) {
+    return new FeatureMatcher<SpanData, Attributes>(matcher,
+      "SpanData having Exception with Attributes that", "exception attributes") {
+      @Override protected Attributes featureValueOf(SpanData actual) {
+        return actual.getEvents()
+          .stream()
+          .filter(e -> Objects.equals(SemanticAttributes.EXCEPTION_EVENT_NAME, e.getName()))
+          .map(EventData::getAttributes)
+          .findFirst()
+          .orElse(null);
       }
     };
   }
