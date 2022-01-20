@@ -1075,7 +1075,12 @@ public class BucketCache implements BlockCache, HeapSize {
         if (ramCache.containsKey(cacheKey)) {
           blocksByHFile.add(cacheKey);
         }
-
+        // Reset the position for reuse.
+        // It should be guaranteed that the data in the metaBuff has been transferred to the
+        // ioEngine safely. Otherwise, this reuse is problematic. Fortunately, the data is already
+        // transferred with our current IOEngines. Should take care, when we have new kinds of
+        // IOEngine in the future.
+        metaBuff.clear();
         BucketEntry bucketEntry = re.writeToCache(ioEngine, bucketAllocator, realCacheSize,
           this::createRecycler, metaBuff);
         // Successfully added. Up index and add bucketEntry. Clear io exceptions.
@@ -1526,12 +1531,6 @@ public class BucketCache implements BlockCache, HeapSize {
           block.getMetaData(metaBuff);
           ioEngine.write(sliceBuf, offset);
           ioEngine.write(metaBuff, offset + len - metaBuff.limit());
-          // Reset the position for reuse.
-          // The data in metaBuff should be guaranteed that has been transferred to the ioEngine
-          // safely. Otherwise, this reuse is problematic. Fortunately, the data is already
-          // transferred with our current IOEngines. Should take care, when we have new types of
-          // IOEngine in the future.
-          metaBuff.clear();
         } else {
           // Only used for testing.
           ByteBuffer bb = ByteBuffer.allocate(len);
