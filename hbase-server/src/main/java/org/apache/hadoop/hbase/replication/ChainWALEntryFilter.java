@@ -21,6 +21,9 @@ package org.apache.hadoop.hbase.replication;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
@@ -33,9 +36,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class ChainWALEntryFilter implements WALEntryFilter {
-
   private final WALEntryFilter[] filters;
   private WALCellFilter[] cellFilters;
+  private Operator operator = Operator.AND;
 
   public ChainWALEntryFilter(WALEntryFilter...filters) {
     this.filters = filters;
@@ -56,6 +59,13 @@ public class ChainWALEntryFilter implements WALEntryFilter {
     initCellFilters();
   }
 
+  public ChainWALEntryFilter(List<WALEntryFilter> filters, String operatorName) {
+    this(filters);
+    if (!StringUtils.isEmpty(operatorName)) {
+      this.operator = Operator.valueOf(operatorName);
+    }
+  }
+
   public void initCellFilters() {
     ArrayList<WALCellFilter> cellFilters = new ArrayList<>(filters.length);
     for (WALEntryFilter filter : filters) {
@@ -68,7 +78,7 @@ public class ChainWALEntryFilter implements WALEntryFilter {
 
   @Override
   public Entry filter(Entry entry) {
-    entry = filterEntry(entry);
+    entry = filterEntry(entry, operator.entryOp);
     if (entry == null) {
       return null;
     }
@@ -77,30 +87,49 @@ public class ChainWALEntryFilter implements WALEntryFilter {
     return entry;
   }
 
-  protected Entry filterEntry(Entry entry) {
+  protected Entry filterEntry(Entry entry, Function<Entry, Boolean> op) {
+    Entry filteredEntry = null;
     for (WALEntryFilter filter : filters) {
-      if (entry == null) {
-        return null;
+      filteredEntry = filter.filter(entry);
+      if(op.apply(filteredEntry)){
+        return filteredEntry;
       }
-      entry = filter.filter(entry);
     }
-    return entry;
+    return filteredEntry;
   }
 
   protected void filterCells(Entry entry) {
     if (entry == null || cellFilters.length == 0) {
       return;
     }
-    WALUtil.filterCells(entry.getEdit(), c -> filterCell(entry, c));
+    WALUtil.filterCells(entry.getEdit(), c -> filterCell(entry, c, operator.cellOp));
   }
 
-  private Cell filterCell(Entry entry, Cell cell) {
+  private Cell filterCell(Entry entry, Cell cell, Function<Cell, Boolean> op) {
+    if (cell == null) {
+      return null;
+    }
+    Cell filteredCell = null;
     for (WALCellFilter filter : cellFilters) {
-      cell = filter.filterCell(entry, cell);
-      if (cell == null) {
-        break;
+      filteredCell = filter.filterCell(entry, cell);
+      if (op.apply(filteredCell)) {
+        return filteredCell;
       }
     }
-    return cell;
+    return filteredCell;
   }
+
+  public enum Operator {
+    AND(e -> e == null, c -> c == null),
+    OR(e -> e != null, c -> c != null);
+
+    Function<Entry,Boolean> entryOp;
+    Function<Cell,Boolean> cellOp;
+
+    Operator(Function<Entry, Boolean> entryOp, Function<Cell, Boolean> cellOp) {
+      this.entryOp = entryOp;
+      this.cellOp = cellOp;
+    }
+  }
+
 }

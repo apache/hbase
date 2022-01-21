@@ -50,6 +50,7 @@ message ReplicationPeer {
   repeated bytes exclude_namespaces = 10;
   optional bool serial = 11;
   optional string remoteWALDir = 12;
+  optional string chain_operator = 13;
 }
 
 /**

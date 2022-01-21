@@ -72,6 +72,7 @@ module HBaseConstants
   NAMESPACES = 'NAMESPACES'.freeze
   NONE = 'NONE'.freeze
   NUMREGIONS = 'NUMREGIONS'.freeze
+  OPERATOR = 'OPERATOR'.freeze
   POLICY = 'POLICY'.freeze
   PRIORITY = 'PRIORITY'.freeze
   PROPERTIES = 'PROPERTIES'.freeze

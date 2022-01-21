@@ -34,11 +34,14 @@ An optional parameter for namespaces identifies which namespace's tables will be
 to the peer cluster.
 An optional parameter for table column families identifies which tables and/or column families
 will be replicated to the peer cluster.
+An optional parameter for the boolean operator to be applied over different WAL Entry filters. If
+omitted, conjunction (AND) is applied.
 An optional parameter for serial flag identifies whether or not the replication peer is a serial
 replication peer. The default serial flag is false.
 
 Note: Set a namespace in the peer config means that all tables in this namespace
-will be replicated to the peer cluster. So if you already have set a namespace in peer config,
+will be replicated to the peer cluster (If the 'OR' operator has been defined).
+So if you already have set a namespace in peer config,
 then you can't set this namespace's tables in the peer config again.
 
 Examples:
@@ -50,6 +53,8 @@ Examples:
     TABLE_CFS => { "table1" => [], "table2" => ["cf1"], "table3" => ["cf1", "cf2"] }
   hbase> add_peer '2', CLUSTER_KEY => "zk1,zk2,zk3:2182:/hbase-prod",
     NAMESPACES => ["ns1", "ns2", "ns3"]
+  hbase> add_peer '2', CLUSTER_KEY => "zk1,zk2,zk3:2182:/hbase-prod",
+    NAMESPACES => ["ns1", "ns2", "ns3"], OPERATOR => "OR"
   hbase> add_peer '2', CLUSTER_KEY => "zk1,zk2,zk3:2182:/hbase-prod",
     NAMESPACES => ["ns1", "ns2"], TABLE_CFS => { "ns3:table1" => [], "ns3:table2" => ["cf1"] }
   hbase> add_peer '3', CLUSTER_KEY => "zk1,zk2,zk3:2182:/hbase-prod",

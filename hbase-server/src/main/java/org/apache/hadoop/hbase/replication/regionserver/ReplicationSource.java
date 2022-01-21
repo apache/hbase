@@ -333,7 +333,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
       filters.add(filterFromEndpoint);
     }
     filters.add(new ClusterMarkingEntryFilter(clusterId, peerClusterId, replicationEndpoint));
-    this.walEntryFilter = new ChainWALEntryFilter(filters);
+    this.walEntryFilter = new ChainWALEntryFilter(filters,
+      getPeer().getPeerConfig().getChainedFiltersOperator());
   }
 
   private void tryStartNewShipper(String walGroupId) {
