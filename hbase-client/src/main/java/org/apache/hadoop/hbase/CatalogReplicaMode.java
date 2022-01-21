@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -33,7 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </ol>
  */
 @InterfaceAudience.Private
-enum CatalogReplicaMode {
+public enum CatalogReplicaMode {
   NONE {
     @Override
     public String toString() {

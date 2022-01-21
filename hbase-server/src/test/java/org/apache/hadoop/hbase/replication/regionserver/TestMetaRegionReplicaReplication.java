@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -385,6 +386,12 @@ public class TestMetaRegionReplicaReplication {
     }
   }
 
+  private void PrimaryIncreaseReplicaIncrease(final long[] before, final long[] after) {
+    for (int i = 0; i < after.length; i++) {
+      assertTrue(after[i] > before[i]);
+    }
+  }
+
   private void primaryIncreaseReplicaNoChange(final long[] before, final long[] after) {
     // There are read requests increase for primary meta replica.
     assertTrue(after[RegionInfo.DEFAULT_REPLICA_ID] > before[RegionInfo.DEFAULT_REPLICA_ID]);
@@ -410,6 +417,7 @@ public class TestMetaRegionReplicaReplication {
     final Region[] metaRegions = getAllRegions(TableName.META_TABLE_NAME, numOfMetaReplica);
     long[] readReqsForMetaReplicas = new long[numOfMetaReplica];
     long[] readReqsForMetaReplicasAfterGet = new long[numOfMetaReplica];
+    long[] readReqsForMetaReplicasAfterGetAllLocations = new long[numOfMetaReplica];
     long[] readReqsForMetaReplicasAfterMove = new long[numOfMetaReplica];
     long[] readReqsForMetaReplicasAfterSecondMove = new long[numOfMetaReplica];
     long[] readReqsForMetaReplicasAfterThirdGet = new long[numOfMetaReplica];
@@ -459,6 +467,16 @@ public class TestMetaRegionReplicaReplication {
       // For rest of meta replicas, there are more reads against them.
       primaryNoChangeReplicaIncrease(readReqsForMetaReplicas, readReqsForMetaReplicasAfterGet);
 
+      RegionLocator locator = tableForGet.getRegionLocator();
+
+      for (int j = 0; j < numOfMetaReplica * 3; j ++) {
+        locator.getAllRegionLocations();
+      }
+
+      getMetaReplicaReadRequests(metaRegions, readReqsForMetaReplicasAfterGetAllLocations);
+      PrimaryIncreaseReplicaIncrease(readReqsForMetaReplicasAfterGet,
+        readReqsForMetaReplicasAfterGetAllLocations);
+
       // move one of regions so it meta cache may be invalid.
       HTU.moveRegionAndWait(userRegion.getRegionInfo(), destRs.getServerName());
 
@@ -468,7 +486,7 @@ public class TestMetaRegionReplicaReplication {
 
       // There are read requests increase for primary meta replica.
       // For rest of meta replicas, there is no change as regionMove will tell the new location
-      primaryIncreaseReplicaNoChange(readReqsForMetaReplicasAfterGet,
+      primaryIncreaseReplicaNoChange(readReqsForMetaReplicasAfterGetAllLocations,
         readReqsForMetaReplicasAfterMove);
       // Move region again.
       HTU.moveRegionAndWait(userRegion.getRegionInfo(), srcRs.getServerName());
