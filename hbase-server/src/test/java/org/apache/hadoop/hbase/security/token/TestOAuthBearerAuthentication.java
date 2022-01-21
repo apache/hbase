@@ -66,6 +66,9 @@ public class TestOAuthBearerAuthentication extends SecureTestCluster {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestOAuthBearerAuthentication.class);
 
+  private static final String AUDIENCE = "valid-hbase-instance";
+  private static final String ISSUER = "authorized-issuer";
+
   private static RSAKey RSA;
   private static File JWKS_FILE;
 
@@ -73,7 +76,6 @@ public class TestOAuthBearerAuthentication extends SecureTestCluster {
   public static void setUp() throws Exception {
     initRSA();
 
-    //TEST_UTIL.getConfiguration().set("hbase.rpc.protection", "privacy");
     TEST_UTIL.getConfiguration().set("hbase.client.sasl.provider.extras",
       "org.apache.hadoop.hbase.security.provider.OAuthBearerSaslClientAuthenticationProvider");
     TEST_UTIL.getConfiguration().set("hbase.server.sasl.provider.extras",
@@ -82,6 +84,8 @@ public class TestOAuthBearerAuthentication extends SecureTestCluster {
       "org.apache.hadoop.hbase.security.provider.OAuthBearerSaslProviderSelector");
     TEST_UTIL.getConfiguration().set("hbase.security.oauth.jwt.jwks.file",
       JWKS_FILE.getAbsolutePath());
+    TEST_UTIL.getConfiguration().set("hbase.security.oauth.jwt.audience", AUDIENCE);
+    TEST_UTIL.getConfiguration().set("hbase.security.oauth.jwt.issuer", ISSUER);
 
     SecureTestCluster.setUp();
   }
@@ -110,7 +114,8 @@ public class TestOAuthBearerAuthentication extends SecureTestCluster {
 
     JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
       .subject(principal)
-      .issuer("https://some.fake.random.url/")
+      .issuer(ISSUER)
+      .audience(AUDIENCE)
       .expirationTime(java.sql.Date.valueOf(now.plusDays(1)))
       .build();
 
