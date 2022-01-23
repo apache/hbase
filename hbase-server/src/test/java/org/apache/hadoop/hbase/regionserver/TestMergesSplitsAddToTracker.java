@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.regionserver.storefiletracker.TestStoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -86,13 +86,13 @@ public class TestMergesSplitsAddToTracker {
 
   @Before
   public void setup(){
-    TestStoreFileTracker.clear();
+    StoreFileTrackerForTest.clear();
   }
 
   private TableName createTable(byte[] splitKey) throws IOException {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(name.getTableName())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME))
-      .setValue(TRACKER_IMPL, TestStoreFileTracker.class.getName()).build();
+      .setValue(TRACKER_IMPL, StoreFileTrackerForTest.class.getName()).build();
     if (splitKey != null) {
       TEST_UTIL.getAdmin().createTable(td, new byte[][] { splitKey });
     } else {
@@ -241,7 +241,7 @@ public class TestMergesSplitsAddToTracker {
 
   private void verifyFilesAreTracked(Path regionDir, FileSystem fs) throws Exception {
     for (FileStatus f : fs.listStatus(new Path(regionDir, FAMILY_NAME_STR))) {
-      assertTrue(TestStoreFileTracker.tracked(regionDir.getName(), FAMILY_NAME_STR, f.getPath()));
+      assertTrue(StoreFileTrackerForTest.tracked(regionDir.getName(), FAMILY_NAME_STR, f.getPath()));
     }
   }
 
