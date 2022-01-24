@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutput.Callback;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -337,9 +336,9 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
       ThreadLocalRandom.current().nextBytes(b);
       out.write(b, 0, b.length);
       CompletableFuture<Long> future = out.flush(false);
-      Deque<Callback> ackQueue = out.getWaitingAckQueue();
+      Deque<FanOutOneBlockAsyncDFSOutput.Callback> ackQueue = out.getWaitingAckQueue();
       assertTrue(ackQueue.size() == 1);
-      Callback callback = ackQueue.getFirst();
+      FanOutOneBlockAsyncDFSOutput.Callback callback = ackQueue.getFirst();
       while (callback.getUnfinishedReplicas().size() != 2) {
         Thread.sleep(1000);
       }
