@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.util.ToolRunner;
@@ -142,7 +141,7 @@ public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
   private void testZNodeACLs() throws IOException, KeeperException, InterruptedException {
 
     ZKWatcher watcher = new ZKWatcher(conf, "IntegrationTestZnodeACLs", null);
-    RecoverableZooKeeper zk = ZKUtil.connect(this.conf, watcher);
+    RecoverableZooKeeper zk = RecoverableZooKeeper.connect(this.conf, watcher);
 
     String baseZNode = watcher.getZNodePaths().baseZNode;
 
