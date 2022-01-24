@@ -137,6 +137,7 @@ public class TestStoreFileListFile {
     assertThrows(IOException.class, () -> storeFileListFile.load());
   }
 
+  @Test
   public void testBigFileLength() throws IOException {
     StoreFileList.Builder builder = StoreFileList.newBuilder();
     storeFileListFile.update(builder);

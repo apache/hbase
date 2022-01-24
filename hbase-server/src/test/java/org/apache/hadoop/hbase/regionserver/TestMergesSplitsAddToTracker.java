@@ -241,7 +241,8 @@ public class TestMergesSplitsAddToTracker {
 
   private void verifyFilesAreTracked(Path regionDir, FileSystem fs) throws Exception {
     for (FileStatus f : fs.listStatus(new Path(regionDir, FAMILY_NAME_STR))) {
-      assertTrue(StoreFileTrackerForTest.tracked(regionDir.getName(), FAMILY_NAME_STR, f.getPath()));
+      assertTrue(
+        StoreFileTrackerForTest.tracked(regionDir.getName(), FAMILY_NAME_STR, f.getPath()));
     }
   }
 
