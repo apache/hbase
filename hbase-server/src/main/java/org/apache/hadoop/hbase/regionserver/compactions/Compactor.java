@@ -94,7 +94,10 @@ public abstract class Compactor<T extends CellSink> {
   private final boolean dropCacheMajor;
   private final boolean dropCacheMinor;
 
-  protected T writer = null;
+  // In compaction process only a single thread will access and write to this field, and
+  // getCompactionTargets is the only place we will access it other than the compaction thread, so
+  // make it volatile.
+  protected volatile T writer = null;
 
   //TODO: depending on Store is not good but, realistically, all compactors currently do.
   Compactor(Configuration conf, HStore store) {
@@ -544,17 +547,16 @@ public abstract class Compactor<T extends CellSink> {
         dropDeletesFromRow, dropDeletesToRow);
   }
 
-  public List<Path> getCompactionTargets(){
-    if (writer == null){
+  public List<Path> getCompactionTargets() {
+    T writer = this.writer;
+    if (writer == null) {
       return Collections.emptyList();
     }
-    synchronized (writer){
-      if (writer instanceof StoreFileWriter){
-        return Arrays.asList(((StoreFileWriter)writer).getPath());
-      }
-      return ((AbstractMultiFileWriter)writer).writers().stream().map(sfw -> sfw.getPath()).collect(
-        Collectors.toList());
+    if (writer instanceof StoreFileWriter) {
+      return Arrays.asList(((StoreFileWriter) writer).getPath());
     }
+    return ((AbstractMultiFileWriter) writer).writers().stream().map(sfw -> sfw.getPath())
+      .collect(Collectors.toList());
   }
 
   /**
