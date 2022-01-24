@@ -153,6 +153,7 @@ public class Result implements CellScannable, CellScanner {
     if (exists != null){
       return new Result(null, exists, stale, mayHaveMoreCellsInRow);
     }
+    cells.sort(CellComparator.getInstance());
     return new Result(cells.toArray(new Cell[cells.size()]), null, stale, mayHaveMoreCellsInRow);
   }
 
@@ -174,6 +175,7 @@ public class Result implements CellScannable, CellScanner {
     if (exists != null) {
       return new Result(null, exists, stale, mayHaveMoreCellsInRow);
     }
+    Arrays.sort(cells, CellComparator.getInstance());
     return new Result(cells, null, stale, mayHaveMoreCellsInRow);
   }
 
