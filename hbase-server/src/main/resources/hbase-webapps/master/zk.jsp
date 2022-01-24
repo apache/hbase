@@ -19,9 +19,9 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
   import="org.apache.commons.lang3.StringEscapeUtils"
-  import="org.apache.hadoop.hbase.zookeeper.ZKUtil"
-  import="org.apache.hadoop.hbase.zookeeper.ZKWatcher"
   import="org.apache.hadoop.hbase.master.HMaster"
+  import="org.apache.hadoop.hbase.zookeeper.ZKDump"
+  import="org.apache.hadoop.hbase.zookeeper.ZKWatcher"
 %>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
@@ -38,7 +38,7 @@
             </div>
             <div class="row">
                 <div class="span12">
-                    <pre><%= StringEscapeUtils.escapeHtml4(ZKUtil.dump(watcher).trim()) %></pre>
+                    <pre><%= StringEscapeUtils.escapeHtml4(ZKDump.dump(watcher).trim()) %></pre>
                 </div>
             </div>
         </div>

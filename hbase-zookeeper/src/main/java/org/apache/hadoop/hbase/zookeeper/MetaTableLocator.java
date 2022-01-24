@@ -58,7 +58,7 @@ public final class MetaTableLocator {
    * @return server name or null if we failed to get the data.
    */
   @RestrictedApi(explanation = "Should only be called in tests or ZKUtil", link = "",
-    allowedOnPath = ".*/src/test/.*|.*/ZKUtil\\.java")
+    allowedOnPath = ".*/src/test/.*|.*/ZKDump\\.java")
   public static ServerName getMetaRegionLocation(final ZKWatcher zkw) {
     try {
       RegionState state = getMetaRegionState(zkw);
@@ -75,7 +75,7 @@ public final class MetaTableLocator {
    * @return server name
    */
   @RestrictedApi(explanation = "Should only be called in self or ZKUtil", link = "",
-    allowedOnPath = ".*(MetaTableLocator|ZKUtil)\\.java")
+    allowedOnPath = ".*(MetaTableLocator|ZKDump)\\.java")
   public static ServerName getMetaRegionLocation(final ZKWatcher zkw, int replicaId) {
     try {
       RegionState state = getMetaRegionState(zkw, replicaId);
