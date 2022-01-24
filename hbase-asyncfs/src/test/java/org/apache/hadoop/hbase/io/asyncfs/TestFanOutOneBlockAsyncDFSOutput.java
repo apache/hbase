@@ -307,28 +307,17 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
        * to dn2 and dn3.
        */
       final Channel spiedDN2Channel = Mockito.spy(dn2Channel);
-      Mockito.doAnswer((invocation) -> {
-        return null;
-      }).when(spiedDN2Channel).write(Mockito.any());
-      Mockito.doAnswer((invocation) -> {
-        return null;
-      }).when(spiedDN2Channel).writeAndFlush(Mockito.any());
+      ignoreWriteMessage(spiedDN2Channel);
 
       assertTrue(iterator.hasNext());
       Map.Entry<Channel, DatanodeInfo> dn3Entry = iterator.next();
       Channel dn3Channel= dn3Entry.getKey();
       DatanodeInfo dn3DatanodeInfo = dn3Entry.getValue();
       final Channel spiedDN3Channel = Mockito.spy(dn3Channel);
-      Mockito.doAnswer((invocation) -> {
-        return null;
-      }).when(spiedDN3Channel).write(Mockito.any());
-      Mockito.doAnswer((invocation) -> {
-        return null;
-      }).when(spiedDN3Channel).writeAndFlush(Mockito.any());
+      ignoreWriteMessage(spiedDN3Channel);
 
       datanodeInfoMap.remove(dn2Channel);
       datanodeInfoMap.remove(dn3Channel);
-
       datanodeInfoMap.put(spiedDN2Channel, dn2DatanodeInfo);
       datanodeInfoMap.put(spiedDN3Channel, dn3DatanodeInfo);
 
@@ -371,6 +360,15 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
       }
     }
 
+  }
+
+  private static void ignoreWriteMessage(Channel spiedChannel) {
+    Mockito.doAnswer((invocation) -> {
+      return null;
+    }).when(spiedChannel).write(Mockito.any());
+    Mockito.doAnswer((invocation) -> {
+      return null;
+    }).when(spiedChannel).writeAndFlush(Mockito.any());
   }
 
   private static DataNodeProperties findAndKillFirstDataNode(
