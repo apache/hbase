@@ -31,6 +31,7 @@ import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -60,6 +61,8 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.PipelineAckProto
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import com.google.errorprone.annotations.RestrictedApi;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
@@ -131,7 +134,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   private final ByteBufAllocator alloc;
 
-  private static final class Callback {
+  protected static final class Callback {
 
     private final CompletableFuture<Long> future;
 
@@ -157,6 +160,13 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
         replicas.stream().map(Channel::id).forEachOrdered(unfinishedReplicas::add);
       }
     }
+
+    @RestrictedApi(explanation = "Should only be called in tests", link = "",
+        allowedOnPath = ".*/src/test/.*")
+    Set<ChannelId> getUnfinishedReplicas() {
+      return this.unfinishedReplicas;
+    }
+
   }
 
   private final ConcurrentLinkedDeque<Callback> waitingAckQueue = new ConcurrentLinkedDeque<>();
@@ -605,5 +615,17 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   @Override
   public long getSyncedLength() {
     return this.ackedBlockLength;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  Map<Channel, DatanodeInfo> getDatanodeInfoMap() {
+    return this.datanodeInfoMap;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  Deque<Callback> getWaitingAckQueue() {
+    return this.waitingAckQueue;
   }
 }
