@@ -48,14 +48,12 @@ public final class SpanDataMatchers {
     };
   }
 
-  public static <T extends Comparable<T> & TemporalAmount> Matcher<SpanData> hasDuration(
-    Matcher<T> matcher
-  ) {
-    return new FeatureMatcher<SpanData, T>(matcher, "SpanData having duration that ", "duration") {
+  public static Matcher<SpanData> hasDuration(Matcher<Duration> matcher) {
+    return new FeatureMatcher<SpanData, Duration>(
+      matcher, "SpanData having duration that ", "duration") {
       @Override
-      @SuppressWarnings("unchecked")
-      protected T featureValueOf(SpanData item) {
-        return (T) Duration.ofNanos(item.getEndEpochNanos() - item.getStartEpochNanos());
+      protected Duration featureValueOf(SpanData item) {
+        return Duration.ofNanos(item.getEndEpochNanos() - item.getStartEpochNanos());
       }
     };
   }
