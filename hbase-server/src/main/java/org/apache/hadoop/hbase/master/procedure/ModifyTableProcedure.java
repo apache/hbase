@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
-import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerValidationUtils;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -326,7 +326,7 @@ public class ModifyTableProcedure
     }
 
     // check for store file tracker configurations
-    StoreFileTrackerFactory.checkForModifyTable(env.getMasterConfiguration(),
+    StoreFileTrackerValidationUtils.checkForModifyTable(env.getMasterConfiguration(),
       unmodifiedTableDescriptor, modifiedTableDescriptor);
   }
 
