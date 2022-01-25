@@ -25,6 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public final class OAuthBearerUtils {
   public static final String OAUTHBEARER_MECHANISM = "OAUTHBEARER";
+  public static final String TOKEN_KIND = "OAUTHBEARER_AUTH_TOKEN";
 
   /**
    * Verifies configuration for OAuth Bearer authentication mechanism.

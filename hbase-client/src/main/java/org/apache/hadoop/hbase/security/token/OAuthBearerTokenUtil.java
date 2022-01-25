@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.security.token;
 
+import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.TOKEN_KIND;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import javax.security.auth.Subject;
@@ -36,7 +37,6 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Public
 public final class OAuthBearerTokenUtil {
   private static final Logger LOG = LoggerFactory.getLogger(OAuthBearerTokenUtil.class);
-  public static final String TOKEN_KIND = "JWT_AUTH_TOKEN";
 
   static {
     OAuthBearerSaslClientProvider.initialize(); // not part of public API
@@ -68,6 +68,8 @@ public final class OAuthBearerTokenUtil {
           }
         };
         subject.getPrivateCredentials().add(jwt);
+        LOG.debug("OAuth Bearer token has been added to user credentials with expiry {}",
+          lifetimeMs);
         return null;
       }
     });

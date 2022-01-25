@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import static org.apache.hadoop.hbase.security.token.OAuthBearerTokenUtil.TOKEN_KIND;
+import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.TOKEN_KIND;
 import java.util.Collection;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -35,8 +35,7 @@ public class OAuthBearerSaslProviderSelector extends BuiltInProviderSelector {
 
   private static final Logger LOG = LoggerFactory.getLogger(OAuthBearerSaslProviderSelector.class);
 
-  private final Text OAUTHBEARER_TOKEN_KIND_TEXT =
-    new Text(TOKEN_KIND);
+  private final Text OAUTHBEARER_TOKEN_KIND_TEXT = new Text(TOKEN_KIND);
   private OAuthBearerSaslClientAuthenticationProvider oauthbearer;
 
   @Override public void configure(Configuration conf,
