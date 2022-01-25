@@ -32,14 +32,14 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TestStoreFileTracker extends DefaultStoreFileTracker {
+public class StoreFileTrackerForTest extends DefaultStoreFileTracker {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestStoreFileTracker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StoreFileTrackerForTest.class);
   private static ConcurrentMap<String, BlockingQueue<StoreFileInfo>> trackedFiles =
     new ConcurrentHashMap<>();
   private String storeId;
 
-  public TestStoreFileTracker(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
+  public StoreFileTrackerForTest(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {
     super(conf, isPrimaryReplica, ctx);
     if (ctx != null && ctx.getRegionFileSystem() != null) {
       this.storeId = ctx.getRegionInfo().getEncodedName() + "-" + ctx.getFamily().getNameAsString();
