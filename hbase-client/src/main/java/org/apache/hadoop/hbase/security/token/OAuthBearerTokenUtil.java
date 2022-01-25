@@ -21,9 +21,15 @@ package org.apache.hadoop.hbase.security.token;
 import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.TOKEN_KIND;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.Optional;
 import javax.security.auth.Subject;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;
+import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils;
 import org.apache.hadoop.hbase.security.oauthbearer.internals.OAuthBearerSaslClientProvider;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
@@ -37,6 +43,9 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Public
 public final class OAuthBearerTokenUtil {
   private static final Logger LOG = LoggerFactory.getLogger(OAuthBearerTokenUtil.class);
+
+  /** Environment variable for OAuth Bearer token */
+  public static final String ENV_OAUTHBEARER_TOKEN = "HADOOP_JWT";
 
   static {
     OAuthBearerSaslClientProvider.initialize(); // not part of public API
@@ -68,10 +77,40 @@ public final class OAuthBearerTokenUtil {
           }
         };
         subject.getPrivateCredentials().add(jwt);
-        LOG.debug("OAuth Bearer token has been added to user credentials with expiry {}",
-          lifetimeMs);
+        LOG.debug("JWT token has been added to user credentials with expiry {}",
+          Instant.ofEpochMilli(lifetimeMs).toString());
         return null;
       }
     });
+  }
+
+  public static void addTokenFromEnvironmentVar(User user) {
+    Optional<Token<?>> oauthBearerToken = user.getTokens().stream()
+      .filter((t) -> new Text(OAuthBearerUtils.TOKEN_KIND).equals(t.getKind()))
+      .findFirst();
+    boolean oauthBearerTokenShouldBeLoaded = System.getenv().containsKey(ENV_OAUTHBEARER_TOKEN) &&
+      !oauthBearerToken.isPresent();
+
+    if (!oauthBearerTokenShouldBeLoaded) {
+      return;
+    }
+
+    String[] tokens = System.getenv(ENV_OAUTHBEARER_TOKEN).split(",");
+    if (StringUtils.isEmpty(tokens[0])) {
+      return;
+    }
+    long lifetimeMs = 0;
+    if (tokens.length > 1) {
+      try {
+        ZonedDateTime lifetime = ZonedDateTime.parse(tokens[1]);
+        lifetimeMs = lifetime.toInstant().toEpochMilli();
+      } catch (DateTimeParseException e) {
+        LOG.warn("Unable to parse JWT expiry: {}", tokens[1]);
+      }
+    } else {
+      LOG.warn("Expiry information of JWT is missing");
+    }
+
+    addTokenForUser(user, tokens[0], lifetimeMs);
   }
 }
