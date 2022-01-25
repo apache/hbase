@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
-import org.apache.hadoop.hbase.regionserver.storefiletracker.TestStoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -96,7 +96,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, F1);
-    String trackerName = TestStoreFileTracker.class.getName();
+    String trackerName = StoreFileTrackerForTest.class.getName();
     htd = TableDescriptorBuilder.newBuilder(htd).setValue(TRACKER_IMPL, trackerName).build();
     RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, null);
     long procId = ProcedureTestingUtility.submitAndWait(procExec,

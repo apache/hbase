@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
+import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.zip.CRC32;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -28,9 +30,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
-import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.StoreFileTrackerProtos.StoreFileList;
 
@@ -42,17 +41,26 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.StoreFileTrackerProtos.
  * other file.
  * <p/>
  * So in this way, we could avoid listing when we want to load the store file list file.
+ * <p/>
+ * To prevent loading partial file, we use the first 4 bytes as file length, and also append a 4
+ * bytes crc32 checksum at the end. This is because the protobuf message parser sometimes can return
+ * without error on partial bytes if you stop at some special points, but the return message will
+ * have incorrect field value. We should try our best to prevent this happens because loading an
+ * incorrect store file list file usually leads to data loss.
  */
 @InterfaceAudience.Private
 class StoreFileListFile {
 
   private static final Logger LOG = LoggerFactory.getLogger(StoreFileListFile.class);
 
-  private static final String TRACK_FILE_DIR = ".filelist";
+  static final String TRACK_FILE_DIR = ".filelist";
 
   private static final String TRACK_FILE = "f1";
 
   private static final String TRACK_FILE_ROTATE = "f2";
+
+  // 16 MB, which is big enough for a tracker file
+  private static final int MAX_FILE_SIZE = 16 * 1024 * 1024;
 
   private final StoreContext ctx;
 
@@ -74,16 +82,26 @@ class StoreFileListFile {
 
   private StoreFileList load(Path path) throws IOException {
     FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
-    byte[] bytes;
+    byte[] data;
+    int expectedChecksum;
     try (FSDataInputStream in = fs.open(path)) {
-      bytes = ByteStreams.toByteArray(in);
+      int length = in.readInt();
+      if (length <= 0 || length > MAX_FILE_SIZE) {
+        throw new IOException("Invalid file length " + length +
+          ", either less than 0 or greater then max allowed size " + MAX_FILE_SIZE);
+      }
+      data = new byte[length];
+      in.readFully(data);
+      expectedChecksum = in.readInt();
     }
-    // Read all the bytes and then parse it, so we will only throw InvalidProtocolBufferException
-    // here. This is very important for upper layer to determine whether this is the normal case,
-    // where the file does not exist or is incomplete. If there is another type of exception, the
-    // upper layer should throw it out instead of just ignoring it, otherwise it will lead to data
-    // loss.
-    return StoreFileList.parseFrom(bytes);
+    CRC32 crc32 = new CRC32();
+    crc32.update(data);
+    int calculatedChecksum = (int) crc32.getValue();
+    if (expectedChecksum != calculatedChecksum) {
+      throw new IOException(
+        "Checksum mismatch, expected " + expectedChecksum + ", actual " + calculatedChecksum);
+    }
+    return StoreFileList.parseFrom(data);
   }
 
   private int select(StoreFileList[] lists) {
@@ -101,11 +119,9 @@ class StoreFileListFile {
     for (int i = 0; i < 2; i++) {
       try {
         lists[i] = load(trackFiles[i]);
-      } catch (FileNotFoundException e) {
+      } catch (FileNotFoundException | EOFException e) {
         // this is normal case, so use info and do not log stacktrace
-        LOG.trace("Failed to load track file {}: {}", trackFiles[i], e);
-      } catch (InvalidProtocolBufferException e) {
-        LOG.warn("Failed to load track file {}: {}", trackFiles[i], e);
+        LOG.info("Failed to load track file {}: {}", trackFiles[i], e.toString());
       }
     }
     int winnerIndex = select(lists);
@@ -126,10 +142,17 @@ class StoreFileListFile {
       // we need to call load first to load the prevTimestamp and also the next file
       load();
     }
-    FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
     long timestamp = Math.max(prevTimestamp + 1, EnvironmentEdgeManager.currentTime());
+    byte[] actualData = builder.setTimestamp(timestamp).build().toByteArray();
+    CRC32 crc32 = new CRC32();
+    crc32.update(actualData);
+    int checksum = (int) crc32.getValue();
+    // 4 bytes length at the beginning, plus 4 bytes checksum
+    FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
     try (FSDataOutputStream out = fs.create(trackFiles[nextTrackFile], true)) {
-      builder.setTimestamp(timestamp).build().writeTo(out);
+      out.writeInt(actualData.length);
+      out.write(actualData);
+      out.writeInt(checksum);
     }
     // record timestamp
     prevTimestamp = timestamp;

@@ -17,18 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.
-  TRACKER_IMPL;
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,12 +34,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.regionserver.storefiletracker.TestStoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerForTest;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -55,7 +56,6 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,14 +70,15 @@ public class TestMergesSplitsAddToTracker {
 
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
+  private static final String FAMILY_NAME_STR = "info";
+
+  private static final byte[] FAMILY_NAME = Bytes.toBytes(FAMILY_NAME_STR);
 
   @Rule
-  public TestName name = new TestName();
+  public TableNameTestRule name = new TableNameTestRule();
 
   @BeforeClass
   public static void setupClass() throws Exception {
-    TEST_UTIL.getConfiguration().set(TRACKER_IMPL, TestStoreFileTracker.class.getName());
     TEST_UTIL.startMiniCluster();
   }
 
@@ -88,7 +89,19 @@ public class TestMergesSplitsAddToTracker {
 
   @Before
   public void setup(){
-    TestStoreFileTracker.trackedFiles = new HashMap<>();
+    StoreFileTrackerForTest.clear();
+  }
+
+  private TableName createTable(byte[] splitKey) throws IOException {
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(name.getTableName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME))
+      .setValue(TRACKER_IMPL, StoreFileTrackerForTest.class.getName()).build();
+    if (splitKey != null) {
+      TEST_UTIL.getAdmin().createTable(td, new byte[][] { splitKey });
+    } else {
+      TEST_UTIL.getAdmin().createTable(td);
+    }
+    return td.getTableName();
   }
 
   void waitForSplit(TableName table, int expectedRegions) {
@@ -101,8 +114,7 @@ public class TestMergesSplitsAddToTracker {
 
   @Test
   public void testCommitDaughterRegion() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
-    TEST_UTIL.createTable(table, FAMILY_NAME);
+    TableName table = createTable(null);
     //first put some data in order to have a store file created
     putThreeRowsAndFlush(table);
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(table).get(0);
@@ -136,12 +148,9 @@ public class TestMergesSplitsAddToTracker {
 
   @Test
   public void testCommitMergedRegion() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
-    TEST_UTIL.createTable(table, FAMILY_NAME);
+    TableName table = createTable(null);
     //splitting the table first
-    TEST_UTIL.getAdmin().split(table, Bytes.toBytes("002"));
-    // Make sure the split finishes
-    waitForSplit(table, 2);
+    split(table, Bytes.toBytes("002"));
     //Add data and flush to create files in the two different regions
     putThreeRowsAndFlush(table);
     List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(table);
@@ -177,8 +186,7 @@ public class TestMergesSplitsAddToTracker {
 
   @Test
   public void testSplitLoadsFromTracker() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
-    TEST_UTIL.createTable(table, FAMILY_NAME);
+    TableName table = createTable(null);
     //Add data and flush to create files in the two different regions
     putThreeRowsAndFlush(table);
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(table).get(0);
@@ -186,9 +194,7 @@ public class TestMergesSplitsAddToTracker {
     StoreFileInfo fileInfo = copyResult.getFirst();
     String copyName = copyResult.getSecond();
     //Now splits the region
-    TEST_UTIL.getAdmin().split(table, Bytes.toBytes("002"));
-    // Make sure the split finishes
-    waitForSplit(table, 2);
+    split(table, Bytes.toBytes("002"));
     List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(table);
     HRegion first = regions.get(0);
     validateDaughterRegionsFiles(first, fileInfo.getActiveFileName(), copyName);
@@ -196,11 +202,15 @@ public class TestMergesSplitsAddToTracker {
     validateDaughterRegionsFiles(second, fileInfo.getActiveFileName(), copyName);
   }
 
+  private void split(TableName table, byte[] splitKey) throws IOException {
+    TEST_UTIL.getAdmin().split(table, splitKey);
+    // wait until split is done
+    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getHBaseCluster().getRegions(table).size() == 2);
+  }
+
   @Test
   public void testMergeLoadsFromTracker() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
-    TEST_UTIL.createTable(table, new byte[][]{FAMILY_NAME},
-      new byte[][]{Bytes.toBytes("002")});
+    TableName table = createTable(Bytes.toBytes("002"));
     //Add data and flush to create files in the two different regions
     putThreeRowsAndFlush(table);
     List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(table);
@@ -248,10 +258,9 @@ public class TestMergesSplitsAddToTracker {
   }
 
   private void verifyFilesAreTracked(Path regionDir, FileSystem fs) throws Exception {
-    String storeId = regionDir.getName() + "-info";
-    for(FileStatus f : fs.listStatus(new Path(regionDir, Bytes.toString(FAMILY_NAME)))){
-      assertTrue(TestStoreFileTracker.trackedFiles.get(storeId).stream().filter(s ->
-        s.getPath().equals(f.getPath())).findFirst().isPresent());
+    for (FileStatus f : fs.listStatus(new Path(regionDir, FAMILY_NAME_STR))) {
+      assertTrue(
+        StoreFileTrackerForTest.tracked(regionDir.getName(), FAMILY_NAME_STR, f.getPath()));
     }
   }
 
