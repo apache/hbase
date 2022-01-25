@@ -44,9 +44,6 @@ import org.slf4j.LoggerFactory;
 public final class OAuthBearerTokenUtil {
   private static final Logger LOG = LoggerFactory.getLogger(OAuthBearerTokenUtil.class);
 
-  /** Environment variable for OAuth Bearer token */
-  public static final String ENV_OAUTHBEARER_TOKEN = "HADOOP_JWT";
-
   static {
     OAuthBearerSaslClientProvider.initialize(); // not part of public API
     LOG.info("OAuthBearer SASL client provider has been initialized");
@@ -77,25 +74,29 @@ public final class OAuthBearerTokenUtil {
           }
         };
         subject.getPrivateCredentials().add(jwt);
-        LOG.debug("JWT token has been added to user credentials with expiry {}",
-          Instant.ofEpochMilli(lifetimeMs).toString());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("JWT token has been added to user credentials with expiry {}",
+            lifetimeMs == 0 ? "0" : Instant.ofEpochMilli(lifetimeMs).toString());
+        }
         return null;
       }
     });
   }
 
-  public static void addTokenFromEnvironmentVar(User user) {
+  /**
+   * Check whether an OAuth Beaerer token is provided in environment variable HADOOP_JWT.
+   * Parse and add it to user private credentials, but only if another token is not already present.
+   */
+  public static void addTokenFromEnvironmentVar(User user, String token) {
     Optional<Token<?>> oauthBearerToken = user.getTokens().stream()
       .filter((t) -> new Text(OAuthBearerUtils.TOKEN_KIND).equals(t.getKind()))
       .findFirst();
-    boolean oauthBearerTokenShouldBeLoaded = System.getenv().containsKey(ENV_OAUTHBEARER_TOKEN) &&
-      !oauthBearerToken.isPresent();
 
-    if (!oauthBearerTokenShouldBeLoaded) {
+    if (oauthBearerToken.isPresent()) {
       return;
     }
 
-    String[] tokens = System.getenv(ENV_OAUTHBEARER_TOKEN).split(",");
+    String[] tokens = token.split(",");
     if (StringUtils.isEmpty(tokens[0])) {
       return;
     }

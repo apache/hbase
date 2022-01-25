@@ -73,6 +73,9 @@ public class ConnectionFactory {
   public static final String HBASE_CLIENT_ASYNC_CONNECTION_IMPL =
     "hbase.client.async.connection.impl";
 
+  /** Environment variable for OAuth Bearer token */
+  public static final String ENV_OAUTHBEARER_TOKEN = "HADOOP_JWT";
+
   /** No public c.tors */
   protected ConnectionFactory() {
   }
@@ -216,7 +219,9 @@ public class ConnectionFactory {
   public static Connection createConnection(Configuration conf, ExecutorService pool,
       final User user) throws IOException {
 
-    OAuthBearerTokenUtil.addTokenFromEnvironmentVar(user);
+    if (System.getenv().containsKey(ENV_OAUTHBEARER_TOKEN)) {
+      OAuthBearerTokenUtil.addTokenFromEnvironmentVar(user, System.getenv(ENV_OAUTHBEARER_TOKEN));
+    }
 
     Class<?> clazz = conf.getClass(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL,
       ConnectionOverAsyncConnection.class, Connection.class);
@@ -298,7 +303,9 @@ public class ConnectionFactory {
           return;
         }
 
-        OAuthBearerTokenUtil.addTokenFromEnvironmentVar(user);
+        if (System.getenv().containsKey(ENV_OAUTHBEARER_TOKEN)) {
+          OAuthBearerTokenUtil.addTokenFromEnvironmentVar(user, System.getenv(ENV_OAUTHBEARER_TOKEN));
+        }
 
         Class<? extends AsyncConnection> clazz = conf.getClass(HBASE_CLIENT_ASYNC_CONNECTION_IMPL,
           AsyncConnectionImpl.class, AsyncConnection.class);
