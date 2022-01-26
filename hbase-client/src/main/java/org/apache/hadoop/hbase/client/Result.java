@@ -913,19 +913,16 @@ public class Result implements CellScannable, CellScanner {
 
   @Override
   public Cell current() {
-    if (isEmpty()
+    if (cells == null
             || cellScannerIndex == INITIAL_CELLSCANNER_INDEX
-            || cellScannerIndex >= cells.length) {
+            || cellScannerIndex >= cells.length)
       return null;
-    }
     return this.cells[cellScannerIndex];
   }
 
   @Override
   public boolean advance() {
-    if (isEmpty()) {
-      return false;
-    }
+    if (cells == null) return false;
     cellScannerIndex++;
     if (cellScannerIndex < this.cells.length) {
       return true;
