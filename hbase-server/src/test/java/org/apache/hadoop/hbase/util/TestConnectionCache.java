@@ -17,35 +17,47 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, MediumTests.class})
-public class TestConnectionCache extends TestCase {
+@Category({ MiscTests.class, MediumTests.class })
+public class TestConnectionCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestConnectionCache.class);
+    HBaseClassTestRule.forClass(TestConnectionCache.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
+
+  @BeforeClass
+  public static void setUp() throws Exception {
+    UTIL.startMiniCluster();
+  }
+
+  @AfterClass
+  public static void tearDown() throws IOException {
+    UTIL.shutdownMiniCluster();
+  }
 
   /**
    * test for ConnectionCache cleaning expired Connection
    */
   @Test
   public void testConnectionChore() throws Exception {
-    UTIL.startMiniCluster();
-
-    //1s for clean interval & 5s for maxIdleTime
+    // 1s for clean interval & 5s for maxIdleTime
     ConnectionCache cache = new ConnectionCache(UTIL.getConfiguration(),
-        UserProvider.instantiate(UTIL.getConfiguration()), 1000, 5000);
+      UserProvider.instantiate(UTIL.getConfiguration()), 1000, 5000);
     ConnectionCache.ConnectionInfo info = cache.getCurrentConnection();
 
     assertEquals(false, info.connection.isClosed());
@@ -53,8 +65,5 @@ public class TestConnectionCache extends TestCase {
     Thread.sleep(7000);
 
     assertEquals(true, info.connection.isClosed());
-    UTIL.shutdownMiniCluster();
   }
-
 }
-

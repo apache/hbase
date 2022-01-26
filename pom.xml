@@ -1475,6 +1475,14 @@
                     <bannedImport>com.fasterxml.jackson.jaxrs.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>Use junit4 instead</reason>
+                  <bannedImports>
+                    <bannedImport>junit.framework.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
               </rules>
             </configuration>
           </execution>
