@@ -133,7 +133,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   private final ByteBufAllocator alloc;
 
-  protected static final class Callback {
+  private static final class Callback {
 
     private final CompletableFuture<Long> future;
 
@@ -159,13 +159,6 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
         replicas.stream().map(Channel::id).forEachOrdered(unfinishedReplicas::add);
       }
     }
-
-    @RestrictedApi(explanation = "Should only be called in tests", link = "",
-        allowedOnPath = ".*/src/test/.*")
-    Set<ChannelId> getUnfinishedReplicas() {
-      return this.unfinishedReplicas;
-    }
-
   }
 
   private final ConcurrentLinkedDeque<Callback> waitingAckQueue = new ConcurrentLinkedDeque<>();
@@ -196,7 +189,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   private final StreamSlowMonitor streamSlowMonitor;
 
   // all lock-free to make it run faster
-  protected void completed(Channel channel) {
+  private void completed(Channel channel) {
     for (Iterator<Callback> iter = waitingAckQueue.iterator(); iter.hasNext();) {
       Callback c = iter.next();
       // if the current unfinished replicas does not contain us then it means that we have already

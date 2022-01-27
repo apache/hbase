@@ -31,12 +31,12 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -319,11 +319,28 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
       FanOutOneBlockAsyncDFSOutput out =
           FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f,
             true, false, (short) 2, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR);
+      final CyclicBarrier dn1AckReceivedCyclicBarrier = new CyclicBarrier(2);
       Map<Channel,DatanodeInfo> datanodeInfoMap = out.getDatanodeInfoMap();
       Iterator<Map.Entry<Channel,DatanodeInfo>> iterator = datanodeInfoMap.entrySet().iterator();
       assertTrue(iterator.hasNext());
       Map.Entry<Channel,DatanodeInfo> dn1Entry= iterator.next();
+      Channel dn1Channel = dn1Entry.getKey();
       DatanodeInfo dn1DatanodeInfo = dn1Entry.getValue();
+      List<String> protobufDecoderNames = new ArrayList<String>();
+      dn1Channel.pipeline().forEach((entry) -> {
+        if (ProtobufDecoder.class.isInstance(entry.getValue())) {
+          protobufDecoderNames.add(entry.getKey());
+        }
+      });
+      assertTrue(protobufDecoderNames.size() == 1);
+      dn1Channel.pipeline().addAfter(protobufDecoderNames.get(0), "dn1AckReceivedHandler",
+        new ChannelInboundHandlerAdapter() {
+        @Override
+          public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            super.channelRead(ctx, msg);
+            dn1AckReceivedCyclicBarrier.await();
+        }
+      });
 
       assertTrue(iterator.hasNext());
       Map.Entry<Channel,DatanodeInfo> dn2Entry= iterator.next();
@@ -350,13 +367,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
       /**
        * Wait for ack from dn1.
        */
-      Deque<FanOutOneBlockAsyncDFSOutput.Callback> ackQueue = out.getWaitingAckQueue();
-      assertTrue(ackQueue.size() == 1);
-      FanOutOneBlockAsyncDFSOutput.Callback callback = ackQueue.getFirst();
-      while (callback.getUnfinishedReplicas().size() != 1) {
-        Thread.sleep(1000);
-      }
-
+      dn1AckReceivedCyclicBarrier.await();
       /**
        * First ack is received from dn1,we could stop dn1 now.
        */
