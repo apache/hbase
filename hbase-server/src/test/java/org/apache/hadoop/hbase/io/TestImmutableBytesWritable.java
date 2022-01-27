@@ -17,24 +17,29 @@
  */
 package org.apache.hadoop.hbase.io;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import junit.framework.TestCase;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({IOTests.class, SmallTests.class})
-public class TestImmutableBytesWritable extends TestCase {
+@Category({ IOTests.class, SmallTests.class })
+public class TestImmutableBytesWritable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestImmutableBytesWritable.class);
 
+  @Test
   public void testHash() throws Exception {
     assertEquals(
       new ImmutableBytesWritable(Bytes.toBytes("xxabc"), 2, 3).hashCode(),
@@ -47,6 +52,7 @@ public class TestImmutableBytesWritable extends TestCase {
       new ImmutableBytesWritable(Bytes.toBytes("xxabc"), 2, 2).hashCode());
   }
 
+  @Test
   public void testSpecificCompare() {
     ImmutableBytesWritable ibw1 = new ImmutableBytesWritable(new byte[]{0x0f});
     ImmutableBytesWritable ibw2 = new ImmutableBytesWritable(new byte[]{0x00, 0x00});
@@ -54,6 +60,7 @@ public class TestImmutableBytesWritable extends TestCase {
     assertFalse("ibw1 < ibw2", c.compare( ibw1, ibw2 ) < 0 );
   }
 
+  @Test
   public void testComparison() throws Exception {
     runTests("aa", "b", -1);
     runTests("aa", "aa", 0);

@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.http.conf;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.HashSet;
@@ -24,7 +28,6 @@ import java.util.Map;
 import java.util.Set;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -44,8 +47,8 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ajax.JSON;
  * Basic test case that the ConfServlet can write configuration
  * to its output in XML and JSON format.
  */
-@Category({MiscTests.class, SmallTests.class})
-public class TestConfServlet extends TestCase {
+@Category({ MiscTests.class, SmallTests.class })
+public class TestConfServlet {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
