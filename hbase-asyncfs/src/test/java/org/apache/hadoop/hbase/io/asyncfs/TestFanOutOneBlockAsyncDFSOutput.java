@@ -60,15 +60,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelInboundHandlerAdapter;
 
 @Category({ MiscTests.class, MediumTests.class })
 public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
@@ -280,7 +281,33 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
   }
 
   /**
-   * This test is for HBASE-26679.
+   * <pre>
+   * This test is for HBASE-26679. Consider there are two dataNodes: dn1 and dn2,dn2 is a slow DN.
+   * The threads sequence before HBASE-26679 is:
+   * 1.We write some data to {@link FanOutOneBlockAsyncDFSOutput} and then flush it, there are one
+   *   {@link FanOutOneBlockAsyncDFSOutput.Callback} in
+   *   {@link FanOutOneBlockAsyncDFSOutput#waitingAckQueue}.
+   * 2.The ack from dn1 arrives firstly and triggers Netty to invoke
+   *   {@link FanOutOneBlockAsyncDFSOutput#completed} with dn1's channel, then in
+   *   {@link FanOutOneBlockAsyncDFSOutput#completed}, dn1's channel is removed from
+   *   {@link FanOutOneBlockAsyncDFSOutput.Callback#unfinishedReplicas}.
+   * 3.But dn2 responds slowly, before dn2 sending ack,dn1 is shut down or have a exception,
+   *   so {@link FanOutOneBlockAsyncDFSOutput#failed} is triggered by Netty with dn1's channel,
+   *   and because the {@link FanOutOneBlockAsyncDFSOutput.Callback#unfinishedReplicas} does not
+   *   contain dn1's channel,the {@link FanOutOneBlockAsyncDFSOutput.Callback} is skipped in
+   *   {@link FanOutOneBlockAsyncDFSOutput#failed} method,and
+   *   {@link FanOutOneBlockAsyncDFSOutput#state} is set to
+   *   {@link FanOutOneBlockAsyncDFSOutput.State#BROKEN},and dn1,dn2 are all closed at the end of
+   *   {@link FanOutOneBlockAsyncDFSOutput#failed}.
+   * 4.{@link FanOutOneBlockAsyncDFSOutput#failed} is triggered again by dn2 because it is closed,
+   *   but because {@link FanOutOneBlockAsyncDFSOutput#state} is already
+   *   {@link FanOutOneBlockAsyncDFSOutput.State#BROKEN},the whole
+   *   {@link FanOutOneBlockAsyncDFSOutput#failed} is skipped. So wait on the future
+   *   returned by {@link FanOutOneBlockAsyncDFSOutput#flush} would be stuck for ever.
+   * After HBASE-26679, for above step 4,even if the {@link FanOutOneBlockAsyncDFSOutput#state}
+   * is already {@link FanOutOneBlockAsyncDFSOutput.State#BROKEN}, we would still try to trigger
+   * {@link FanOutOneBlockAsyncDFSOutput.Callback#future}.
+   * </pre>
    */
   @Test
   public void testFlushStuckWhenOneDataNodeShutdown() throws Exception {
@@ -291,7 +318,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     try {
       FanOutOneBlockAsyncDFSOutput out =
           FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f,
-            true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR);
+            true, false, (short) 2, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR);
       Map<Channel,DatanodeInfo> datanodeInfoMap = out.getDatanodeInfoMap();
       Iterator<Map.Entry<Channel,DatanodeInfo>> iterator = datanodeInfoMap.entrySet().iterator();
       assertTrue(iterator.hasNext());
@@ -301,34 +328,32 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
       assertTrue(iterator.hasNext());
       Map.Entry<Channel,DatanodeInfo> dn2Entry= iterator.next();
       Channel dn2Channel= dn2Entry.getKey();
-      DatanodeInfo dn2DatanodeInfo = dn2Entry.getValue();
+
       /**
-       * Here we simulate slow response from dn2 and dn3 by just discard the message when flushing
-       * to dn2 and dn3.
+       * Here we add a {@link ChannelInboundHandlerAdapter} to eat all the responses to simulate a
+       * slow dn2.
        */
-      final Channel spiedDN2Channel = Mockito.spy(dn2Channel);
-      ignoreWriteMessage(spiedDN2Channel);
+      dn2Channel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
 
-      assertTrue(iterator.hasNext());
-      Map.Entry<Channel, DatanodeInfo> dn3Entry = iterator.next();
-      Channel dn3Channel= dn3Entry.getKey();
-      DatanodeInfo dn3DatanodeInfo = dn3Entry.getValue();
-      final Channel spiedDN3Channel = Mockito.spy(dn3Channel);
-      ignoreWriteMessage(spiedDN3Channel);
-
-      datanodeInfoMap.remove(dn2Channel);
-      datanodeInfoMap.remove(dn3Channel);
-      datanodeInfoMap.put(spiedDN2Channel, dn2DatanodeInfo);
-      datanodeInfoMap.put(spiedDN3Channel, dn3DatanodeInfo);
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+          if (!(msg instanceof ByteBuf)) {
+            ctx.fireChannelRead(msg);
+          }
+        }
+      });
 
       byte[] b = new byte[10];
       ThreadLocalRandom.current().nextBytes(b);
       out.write(b, 0, b.length);
       CompletableFuture<Long> future = out.flush(false);
+      /**
+       * Wait for ack from dn1.
+       */
       Deque<FanOutOneBlockAsyncDFSOutput.Callback> ackQueue = out.getWaitingAckQueue();
       assertTrue(ackQueue.size() == 1);
       FanOutOneBlockAsyncDFSOutput.Callback callback = ackQueue.getFirst();
-      while (callback.getUnfinishedReplicas().size() != 2) {
+      while (callback.getUnfinishedReplicas().size() != 1) {
         Thread.sleep(1000);
       }
 
@@ -338,6 +363,10 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
       firstDataNodeProperties = findAndKillFirstDataNode(dn1DatanodeInfo);
       assertTrue(firstDataNodeProperties != null);
       try {
+        /**
+         * Before HBASE-26679,here we should be stuck, after HBASE-26679,we would fail soon with
+         * {@link ExecutionException}.
+         */
         future.get();
         fail();
       } catch (ExecutionException e) {
@@ -362,15 +391,6 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   }
 
-  private static void ignoreWriteMessage(Channel spiedChannel) {
-    Mockito.doAnswer((invocation) -> {
-      return null;
-    }).when(spiedChannel).write(Mockito.any());
-    Mockito.doAnswer((invocation) -> {
-      return null;
-    }).when(spiedChannel).writeAndFlush(Mockito.any());
-  }
-
   private static DataNodeProperties findAndKillFirstDataNode(
       DatanodeInfo firstDatanodeInfo) {
     assertTrue(firstDatanodeInfo != null);
@@ -384,7 +404,6 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
       index++;
     }
     assertTrue(foundIndexes.size() == 1);
-
     return CLUSTER.stopDataNode(foundIndexes.get(0));
   }
 
