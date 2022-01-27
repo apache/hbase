@@ -29,6 +29,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -42,8 +43,10 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -251,11 +254,12 @@ public class TestHTableTracing extends TestTracingBase {
     Waiter.waitFor(conf, 1000, new MatcherPredicate<>(
       "waiting for span to emit",
       () -> TRACE_RULE.getSpans(), hasItem(spanLocator)));
-    SpanData data = TRACE_RULE.getSpans()
+    List<SpanData> candidateSpans = TRACE_RULE.getSpans()
       .stream()
       .filter(spanLocator::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
+      .collect(Collectors.toList());
+    assertThat(candidateSpans, hasSize(1));
+    SpanData data = candidateSpans.iterator().next();
     assertThat(data, allOf(
       hasName(expectedName),
       hasKind(SpanKind.CLIENT),
