@@ -327,7 +327,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
       Map.Entry<Channel,DatanodeInfo> dn1Entry= iterator.next();
       Channel dn1Channel = dn1Entry.getKey();
       DatanodeInfo dn1DatanodeInfo = dn1Entry.getValue();
-      List<String> protobufDecoderNames = new ArrayList<String>();
+      final List<String> protobufDecoderNames = new ArrayList<String>();
       dn1Channel.pipeline().forEach((entry) -> {
         if (ProtobufDecoder.class.isInstance(entry.getValue())) {
           protobufDecoderNames.add(entry.getKey());
@@ -400,7 +400,6 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
         CLUSTER.restartDataNode(firstDataNodeProperties);
       }
     }
-
   }
 
   private static DataNodeProperties findAndKillFirstDataNode(

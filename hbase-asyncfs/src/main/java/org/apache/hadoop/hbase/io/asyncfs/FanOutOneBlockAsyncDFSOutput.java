@@ -32,7 +32,6 @@ import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -613,11 +612,5 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       allowedOnPath = ".*/src/test/.*")
   Map<Channel, DatanodeInfo> getDatanodeInfoMap() {
     return this.datanodeInfoMap;
-  }
-
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
-  Deque<Callback> getWaitingAckQueue() {
-    return this.waitingAckQueue;
   }
 }
