@@ -310,7 +310,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
    * </pre>
    */
   @Test
-  public void testFlushStuckWhenOneDataNodeShutdown() throws Exception {
+  public void testFlushStuckWhenOneDataNodeFailedBeforeOtherDataNodeAck() throws Exception {
     Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
 
