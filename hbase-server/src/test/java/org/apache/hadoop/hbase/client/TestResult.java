@@ -115,17 +115,6 @@ public class TestResult extends TestCase {
     assertNull(r.current());
   }
 
-  public void testAdvanceTwiceOnEmptyCell() throws IOException {
-    Result r = Result.create(new Cell[0]);
-    assertFalse(r.advance());
-    try {
-      r.advance();
-      fail("NoSuchElementException should have been thrown!");
-    } catch (NoSuchElementException ex) {
-      LOG.debug("As expected: " + ex.getMessage());
-    }
-  }
-
   public void testMultiVersionGetColumn() throws Exception {
     KeyValue [] kvs1 = genKVs(row, family, value, 1, 100);
     KeyValue [] kvs2 = genKVs(row, family, value, 200, 100);
