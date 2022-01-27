@@ -336,12 +336,12 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
       assertTrue(protobufDecoderNames.size() == 1);
       dn1Channel.pipeline().addAfter(protobufDecoderNames.get(0), "dn1AckReceivedHandler",
         new ChannelInboundHandlerAdapter() {
-        @Override
+          @Override
           public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             super.channelRead(ctx, msg);
             dn1AckReceivedCyclicBarrier.await();
-        }
-      });
+          }
+        });
 
       assertTrue(iterator.hasNext());
       Map.Entry<Channel,DatanodeInfo> dn2Entry= iterator.next();
