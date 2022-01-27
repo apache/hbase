@@ -433,33 +433,27 @@ public class HTable implements Table {
   @Override
   public void batch(final List<? extends Row> actions, final Object[] results)
       throws InterruptedException, IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-      .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH)
-      .setContainerOperations(actions);
-    TraceUtil.traceWithIOException(() -> {
-      int rpcTimeout = writeRpcTimeoutMs;
-      boolean hasRead = false;
-      boolean hasWrite = false;
-      for (Row action : actions) {
-        if (action instanceof Mutation) {
-          hasWrite = true;
-        } else {
-          hasRead = true;
-        }
-        if (hasRead && hasWrite) {
-          break;
-        }
+    int rpcTimeout = writeRpcTimeoutMs;
+    boolean hasRead = false;
+    boolean hasWrite = false;
+    for (Row action : actions) {
+      if (action instanceof Mutation) {
+        hasWrite = true;
+      } else {
+        hasRead = true;
       }
-      if (hasRead && !hasWrite) {
-        rpcTimeout = readRpcTimeoutMs;
+      if (hasRead && hasWrite) {
+        break;
       }
-      try {
-        batch(actions, results, rpcTimeout);
-      } catch (InterruptedException e) {
-        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-      }
-    }, supplier);
+    }
+    if (hasRead && !hasWrite) {
+      rpcTimeout = readRpcTimeoutMs;
+    }
+    try {
+      batch(actions, results, rpcTimeout);
+    } catch (InterruptedException e) {
+      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+    }
   }
 
   public void batch(final List<? extends Row> actions, final Object[] results, int rpcTimeout)
@@ -555,29 +549,23 @@ public class HTable implements Table {
 
   @Override
   public void delete(final List<Delete> deletes) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-      .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH)
-      .setContainerOperations(deletes);
-    TraceUtil.traceWithIOException(() -> {
-      Object[] results = new Object[deletes.size()];
-      try {
-        batch(deletes, results, writeRpcTimeoutMs);
-      } catch (InterruptedException e) {
-        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-      } finally {
-        // TODO: to be consistent with batch put(), do not modify input list
-        // mutate list so that it is empty for complete success, or contains only failed records
-        // results are returned in the same order as the requests in list walk the list backwards,
-        // so we can remove from list without impacting the indexes of earlier members
-        for (int i = results.length - 1; i >= 0; i--) {
-          // if result is not null, it succeeded
-          if (results[i] instanceof Result) {
-            deletes.remove(i);
-          }
+    Object[] results = new Object[deletes.size()];
+    try {
+      batch(deletes, results, writeRpcTimeoutMs);
+    } catch (InterruptedException e) {
+      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+    } finally {
+      // TODO: to be consistent with batch put(), do not modify input list
+      // mutate list so that it is empty for complete success, or contains only failed records
+      // results are returned in the same order as the requests in list walk the list backwards,
+      // so we can remove from list without impacting the indexes of earlier members
+      for (int i = results.length - 1; i >= 0; i--) {
+        // if result is not null, it succeeded
+        if (results[i] instanceof Result) {
+          deletes.remove(i);
         }
       }
-    }, supplier);
+    }
   }
 
   @Override
@@ -605,21 +593,15 @@ public class HTable implements Table {
 
   @Override
   public void put(final List<Put> puts) throws IOException {
-    final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
-      .setTableName(tableName)
-      .setOperation(HBaseSemanticAttributes.Operation.BATCH)
-      .setContainerOperations(puts);
-    TraceUtil.traceWithIOException(() -> {
-      for (Put put : puts) {
-        validatePut(put);
-      }
-      Object[] results = new Object[puts.size()];
-      try {
-        batch(puts, results, writeRpcTimeoutMs);
-      } catch (InterruptedException e) {
-        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-      }
-    }, supplier);
+    for (Put put : puts) {
+      validatePut(put);
+    }
+    Object[] results = new Object[puts.size()];
+    try {
+      batch(puts, results, writeRpcTimeoutMs);
+    } catch (InterruptedException e) {
+      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+    }
   }
 
   @Override
