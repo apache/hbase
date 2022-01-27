@@ -191,7 +191,7 @@ public class CompactionTool extends Configured implements Tool {
   }
 
   private static boolean isTableDir(final FileSystem fs, final Path path) throws IOException {
-    return FSTableDescriptors.getTableInfoPath(fs, path) != null;
+    return FSTableDescriptors.isTableDir(fs, path);
   }
 
   private static boolean isFamilyDir(final FileSystem fs, final Path path) throws IOException {
