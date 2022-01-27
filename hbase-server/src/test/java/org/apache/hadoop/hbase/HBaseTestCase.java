@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.NavigableMap;
-import junit.framework.AssertionFailedError;
-import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,7 +49,7 @@ import org.slf4j.LoggerFactory;
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-11912">HBASE-11912</a>
  */
 @Deprecated
-public abstract class HBaseTestCase extends TestCase {
+public abstract class HBaseTestCase extends junit.framework.TestCase {
   private static final Logger LOG = LoggerFactory.getLogger(HBaseTestCase.class);
 
   protected final static byte [] fam1 = Bytes.toBytes("colfamily11");
@@ -432,21 +430,17 @@ public abstract class HBaseTestCase extends TestCase {
     HBaseTestingUtility.closeRegionAndWAL(meta);
   }
 
-  public static void assertByteEquals(byte[] expected,
-                               byte[] actual) {
+  public static void assertByteEquals(byte[] expected, byte[] actual) {
     if (Bytes.compareTo(expected, actual) != 0) {
-      throw new AssertionFailedError("expected:<" +
-      Bytes.toString(expected) + "> but was:<" +
-      Bytes.toString(actual) + ">");
+      throw new junit.framework.AssertionFailedError(
+        "expected:<" + Bytes.toString(expected) + "> but was:<" + Bytes.toString(actual) + ">");
     }
   }
 
-  public static void assertEquals(byte[] expected,
-                               byte[] actual) {
+  public static void assertEquals(byte[] expected, byte[] actual) {
     if (Bytes.compareTo(expected, actual) != 0) {
-      throw new AssertionFailedError("expected:<" +
-      Bytes.toStringBinary(expected) + "> but was:<" +
-      Bytes.toStringBinary(actual) + ">");
+      throw new junit.framework.AssertionFailedError("expected:<" + Bytes.toStringBinary(expected) +
+        "> but was:<" + Bytes.toStringBinary(actual) + ">");
     }
   }
 }

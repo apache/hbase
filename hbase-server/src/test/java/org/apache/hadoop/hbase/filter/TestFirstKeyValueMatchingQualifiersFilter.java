@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Set;
 import java.util.TreeSet;
-import junit.framework.TestCase;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
@@ -30,7 +31,7 @@ import org.junit.experimental.categories.Category;
 
 @SuppressWarnings("deprecation")
 @Category({FilterTests.class, SmallTests.class})
-public class TestFirstKeyValueMatchingQualifiersFilter extends TestCase {
+public class TestFirstKeyValueMatchingQualifiersFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -46,8 +47,6 @@ public class TestFirstKeyValueMatchingQualifiersFilter extends TestCase {
   /**
    * Test the functionality of
    * {@link FirstKeyValueMatchingQualifiersFilter#filterCell(org.apache.hadoop.hbase.Cell)}
-   *
-   * @throws Exception
    */
   public void testFirstKeyMatchingQualifierFilter() throws Exception {
     Set<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);

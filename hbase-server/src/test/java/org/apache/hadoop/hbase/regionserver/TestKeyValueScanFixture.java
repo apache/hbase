@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
-import junit.framework.TestCase;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -29,16 +31,17 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
-public class TestKeyValueScanFixture extends TestCase {
+@Category({ RegionServerTests.class, SmallTests.class })
+public class TestKeyValueScanFixture {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestKeyValueScanFixture.class);
 
-
+  @Test
   public void testKeyValueScanFixture() throws IOException {
     KeyValue kvs[] = new KeyValue[]{
         KeyValueTestUtil.create("RowA", "family", "qf1",
