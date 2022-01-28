@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -76,6 +77,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.apache.hadoop.hbase.client.RegionLocator.LOCATOR_META_REPLICAS_MODE;
 
 /**
  * <p>
@@ -357,7 +359,7 @@ public class MetaTableAccessor {
       String regionEncodedName) throws IOException {
     RowFilter rowFilter = new RowFilter(CompareOperator.EQUAL,
       new SubstringComparator(regionEncodedName));
-    Scan scan = getMetaScan(connection.getConfiguration(), 1);
+    Scan scan = getMetaScan(connection, connection.getConfiguration(), 1);
     scan.setFilter(rowFilter);
     try (Table table = getMetaHTable(connection);
         ResultScanner resultScanner = table.getScanner(scan)) {
@@ -567,19 +569,55 @@ public class MetaTableAccessor {
     // Stop key appends the smallest possible char to the table name
     byte[] stopKey = getTableStopRowForMeta(tableName, QueryType.REGION);
 
-    Scan scan = getMetaScan(conf, -1);
+    Scan scan = getMetaScan(null, conf, -1);
     scan.setStartRow(startKey);
     scan.setStopRow(stopKey);
     return scan;
   }
 
-  private static Scan getMetaScan(Configuration conf, int rowUpperLimit) {
+  private static Scan getMetaScan(Connection conn, Configuration conf, int rowUpperLimit) {
     Scan scan = new Scan();
     int scannerCaching = conf.getInt(HConstants.HBASE_META_SCANNER_CACHING,
       HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
-    if (conf.getBoolean(HConstants.USE_META_REPLICAS, HConstants.DEFAULT_USE_META_REPLICAS)) {
-      scan.setConsistency(Consistency.TIMELINE);
+
+    // Get the region locator's meta replica mode.
+    CatalogReplicaMode metaReplicaMode = CatalogReplicaMode.fromString(
+      conf.get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
+
+    switch (metaReplicaMode) {
+      case LOAD_BALANCE:
+        int numOfReplicas = 1;
+        if (conn != null) {
+          try {
+            try (Table metaTable = getMetaHTable(conn)) {
+              numOfReplicas = metaTable.getDescriptor().getRegionReplication();
+            }
+          } catch (IOException ioe) {
+            LOG.warn("Failed to get region replication for meta table");
+          }
+        }
+
+        if (numOfReplicas > 1) {
+          int replicaId = ThreadLocalRandom.current().nextInt(numOfReplicas);
+
+          // When the replicaId is 0, do not set to Consistency.TIMELINE
+          if (replicaId > 0) {
+            scan.setReplicaId(replicaId);
+            scan.setConsistency(Consistency.TIMELINE);
+          }
+        }
+        break;
+      case NONE:
+        // If user does not configure LOCATOR_META_REPLICAS_MODE, let's check the legacy config.
+        if (conf.getBoolean(HConstants.USE_META_REPLICAS, HConstants.DEFAULT_USE_META_REPLICAS)) {
+          scan.setConsistency(Consistency.TIMELINE);
+        }
+        break;
+
+      default:
+        // Do nothing
     }
+
     if (rowUpperLimit > 0) {
       scan.setLimit(rowUpperLimit);
       scan.setReadType(Scan.ReadType.PREAD);
@@ -771,7 +809,7 @@ public class MetaTableAccessor {
       @Nullable final byte[] stopRow, QueryType type, @Nullable Filter filter, int maxRows,
       final Visitor visitor) throws IOException {
     int rowUpperLimit = maxRows > 0 ? maxRows : Integer.MAX_VALUE;
-    Scan scan = getMetaScan(connection.getConfiguration(), rowUpperLimit);
+    Scan scan = getMetaScan(connection, connection.getConfiguration(), rowUpperLimit);
 
     for (byte[] family : type.getFamilies()) {
       scan.addFamily(family);
@@ -821,7 +859,7 @@ public class MetaTableAccessor {
   private static RegionInfo getClosestRegionInfo(Connection connection,
       @NonNull final TableName tableName, @NonNull final byte[] row) throws IOException {
     byte[] searchRow = RegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
-    Scan scan = getMetaScan(connection.getConfiguration(), 1);
+    Scan scan = getMetaScan(connection, connection.getConfiguration(), 1);
     scan.setReversed(true);
     scan.withStartRow(searchRow);
     try (ResultScanner resultScanner = getMetaHTable(connection).getScanner(scan)) {

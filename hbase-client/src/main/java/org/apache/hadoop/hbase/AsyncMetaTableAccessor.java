@@ -29,6 +29,7 @@ import java.util.NavigableMap;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -52,6 +53,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.hbase.client.RegionLocator.LOCATOR_META_REPLICAS_MODE;
 
 /**
  * The asynchronous meta table accessor. Used to read/write region and assignment information store
@@ -366,10 +369,40 @@ public class AsyncMetaTableAccessor {
     Scan scan = new Scan();
     int scannerCaching = metaTable.getConfiguration().getInt(HConstants.HBASE_META_SCANNER_CACHING,
       HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
-    if (metaTable.getConfiguration().getBoolean(HConstants.USE_META_REPLICAS,
-      HConstants.DEFAULT_USE_META_REPLICAS)) {
-      scan.setConsistency(Consistency.TIMELINE);
+
+    // Get the region locator's meta replica mode.
+    CatalogReplicaMode metaReplicaMode = CatalogReplicaMode.fromString(metaTable.getConfiguration()
+      .get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
+
+    switch (metaReplicaMode) {
+      case LOAD_BALANCE:
+        int numOfReplicas = 1;
+        try {
+          numOfReplicas = metaTable.getDescriptor().get().getRegionReplication();
+        } catch (Exception e) {
+          LOG.warn("Failed to get region replication for meta table");
+        }
+        if (numOfReplicas > 1) {
+          int replicaId = ThreadLocalRandom.current().nextInt(numOfReplicas);
+
+          // When the replicaId is 0, do not set to Consistency.TIMELINE
+          if (replicaId > 0) {
+            scan.setReplicaId(replicaId);
+            scan.setConsistency(Consistency.TIMELINE);
+          }
+        }
+        break;
+      case NONE:
+        // If user does not configure LOCATOR_META_REPLICAS_MODE, let's check the legacy config.
+        if (metaTable.getConfiguration().getBoolean(HConstants.USE_META_REPLICAS, HConstants.DEFAULT_USE_META_REPLICAS)) {
+          scan.setConsistency(Consistency.TIMELINE);
+        }
+        break;
+
+      default:
+        // Do nothing
     }
+
     if (rowUpperLimit <= scannerCaching) {
       scan.setLimit(rowUpperLimit);
     }
