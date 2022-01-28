@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -68,6 +67,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
@@ -132,8 +132,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnStoreFileTrackerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableStoreFileTrackerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionRequest;
@@ -1246,6 +1248,19 @@ public final class RequestConverter {
     return builder.build();
   }
 
+  public static ModifyColumnStoreFileTrackerRequest
+    buildModifyColumnStoreFileTrackerRequest(final TableName tableName, final byte[] family,
+      final String dstSFT, final long nonceGroup, final long nonce) {
+    ModifyColumnStoreFileTrackerRequest.Builder builder =
+      ModifyColumnStoreFileTrackerRequest.newBuilder();
+    builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
+    builder.setFamily(ByteString.copyFrom(family));
+    builder.setDstSft(dstSFT);
+    builder.setNonceGroup(nonceGroup);
+    builder.setNonce(nonce);
+    return builder.build();
+  }
+
   /**
    * Create a protocol buffer MoveRegionRequest
    * @param encodedRegionName
@@ -1439,6 +1454,17 @@ public final class RequestConverter {
     ModifyTableRequest.Builder builder = ModifyTableRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
     builder.setTableSchema(ProtobufUtil.toTableSchema(tableDesc));
+    builder.setNonceGroup(nonceGroup);
+    builder.setNonce(nonce);
+    return builder.build();
+  }
+
+  public static ModifyTableStoreFileTrackerRequest buildModifyTableStoreFileTrackerRequest(
+    final TableName tableName, final String dstSFT, final long nonceGroup, final long nonce) {
+    ModifyTableStoreFileTrackerRequest.Builder builder =
+      ModifyTableStoreFileTrackerRequest.newBuilder();
+    builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
+    builder.setDstSft(dstSFT);
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     return builder.build();

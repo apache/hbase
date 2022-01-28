@@ -126,10 +126,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTable
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnStoreFileTrackerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnStoreFileTrackerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableStoreFileTrackerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableStoreFileTrackerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeRequest;
@@ -728,5 +732,17 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   public HasUserPermissionsResponse hasUserPermissions(RpcController controller,
       HasUserPermissionsRequest request) throws ServiceException {
     return stub.hasUserPermissions(controller, request);
+  }
+
+  @Override
+  public ModifyTableStoreFileTrackerResponse modifyTableStoreFileTracker(RpcController controller,
+    ModifyTableStoreFileTrackerRequest request) throws ServiceException {
+     return stub.modifyTableStoreFileTracker(controller, request);
+  }
+
+  @Override
+  public ModifyColumnStoreFileTrackerResponse modifyColumnStoreFileTracker(RpcController controller,
+    ModifyColumnStoreFileTrackerRequest request) throws ServiceException {
+    return stub.modifyColumnStoreFileTracker(controller, request);
   }
 }

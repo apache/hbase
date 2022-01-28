@@ -192,6 +192,8 @@ import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.ModifyColumnFamilyStoreFileTrackerProcedure;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.ModifyTableStoreFileTrackerProcedure;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -2428,6 +2430,33 @@ public class HMaster extends HRegionServer implements MasterServices {
     }, nonceGroup, nonce, true);
   }
 
+
+  @Override
+  public long modifyColumnStoreFileTracker(TableName tableName, byte[] family, String dstSFT,
+    long nonceGroup, long nonce) throws IOException {
+    checkInitialized();
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+
+        @Override
+        protected void run() throws IOException {
+          String sft = getMaster().getMasterCoprocessorHost()
+            .preModifyColumnFamilyStoreFileTracker(tableName, family, dstSFT);
+          LOG.info("{} modify column {} store file tracker of table {} to {}",
+            getClientIdAuditPrefix(), Bytes.toStringBinary(family), tableName, sft);
+          submitProcedure(new ModifyColumnFamilyStoreFileTrackerProcedure(
+            procedureExecutor.getEnvironment(), tableName, family, sft));
+          getMaster().getMasterCoprocessorHost().postModifyColumnFamilyStoreFileTracker(tableName,
+            family, dstSFT);
+        }
+
+        @Override
+        protected String getDescription() {
+          return "ModifyColumnFamilyStoreFileTrackerProcedure";
+        }
+      });
+  }
+
   @Override
   public long deleteColumn(final TableName tableName, final byte[] columnName,
       final long nonceGroup, final long nonce) throws IOException {
@@ -2591,6 +2620,31 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
     }, nonceGroup, nonce, false);
 
+  }
+
+  @Override
+  public long modifyTableStoreFileTracker(TableName tableName, String dstSFT, long nonceGroup,
+    long nonce) throws IOException {
+    checkInitialized();
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+
+        @Override
+        protected void run() throws IOException {
+          String sft = getMaster().getMasterCoprocessorHost()
+            .preModifyTableStoreFileTracker(tableName, dstSFT);
+          LOG.info("{} modify table store file tracker of table {} to {}", getClientIdAuditPrefix(),
+            tableName, sft);
+          submitProcedure(new ModifyTableStoreFileTrackerProcedure(
+            procedureExecutor.getEnvironment(), tableName, sft));
+          getMaster().getMasterCoprocessorHost().postModifyTableStoreFileTracker(tableName, sft);
+        }
+
+        @Override
+        protected String getDescription() {
+          return "ModifyTableStoreFileTrackerProcedure";
+        }
+      });
   }
 
   public long restoreSnapshot(final SnapshotDescription snapshotDesc, final long nonceGroup,

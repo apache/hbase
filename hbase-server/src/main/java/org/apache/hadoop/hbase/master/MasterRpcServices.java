@@ -260,10 +260,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTable
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnStoreFileTrackerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnStoreFileTrackerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableStoreFileTrackerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableStoreFileTrackerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeRequest;
@@ -1406,6 +1410,20 @@ public class MasterRpcServices extends RSRpcServices implements
   }
 
   @Override
+  public ModifyColumnStoreFileTrackerResponse modifyColumnStoreFileTracker(
+    RpcController controller, ModifyColumnStoreFileTrackerRequest req)
+    throws ServiceException {
+    try {
+      long procId =
+        master.modifyColumnStoreFileTracker(ProtobufUtil.toTableName(req.getTableName()),
+          req.getFamily().toByteArray(), req.getDstSft(), req.getNonceGroup(), req.getNonce());
+      return ModifyColumnStoreFileTrackerResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
   public ModifyNamespaceResponse modifyNamespace(RpcController controller,
       ModifyNamespaceRequest request) throws ServiceException {
     try {
@@ -1429,6 +1447,18 @@ public class MasterRpcServices extends RSRpcServices implements
         req.getNonceGroup(),
         req.getNonce());
       return ModifyTableResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public ModifyTableStoreFileTrackerResponse modifyTableStoreFileTracker(RpcController controller,
+    ModifyTableStoreFileTrackerRequest req) throws ServiceException {
+    try {
+      long procId = master.modifyTableStoreFileTracker(ProtobufUtil.toTableName(req.getTableName()),
+        req.getDstSft(), req.getNonceGroup(), req.getNonce());
+      return ModifyTableStoreFileTrackerResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
