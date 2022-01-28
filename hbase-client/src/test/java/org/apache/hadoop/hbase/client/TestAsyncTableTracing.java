@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntryWithStringValuesOf;
-import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasAttributes;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEnded;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasKind;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
@@ -335,9 +333,7 @@ public class TestAsyncTableTracing {
         .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
         .build(new Delete(Bytes.toBytes(0))))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH", hasAttributes(
-      containsEntryWithStringValuesOf(
-        "db.hbase.container_operations", "CHECK_AND_MUTATE", "DELETE")));
+    assertTrace("BATCH");
   }
 
   @Test
@@ -345,9 +341,7 @@ public class TestAsyncTableTracing {
     table.checkAndMutateAll(Arrays.asList(CheckAndMutate.newBuilder(Bytes.toBytes(0))
       .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
       .build(new Delete(Bytes.toBytes(0))))).join();
-    assertTrace("BATCH", hasAttributes(
-      containsEntryWithStringValuesOf(
-        "db.hbase.container_operations", "CHECK_AND_MUTATE", "DELETE")));
+    assertTrace("BATCH");
   }
 
   private void testCheckAndMutateBuilder(Row op) {
@@ -433,13 +427,8 @@ public class TestAsyncTableTracing {
 
   @Test
   public void testMutateRow() throws IOException {
-    final RowMutations mutations = new RowMutations(Bytes.toBytes(0))
-      .add(new Put(Bytes.toBytes(0))
-        .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v")))
-      .add(new Delete(Bytes.toBytes(0)));
-    table.mutateRow(mutations).join();
-    assertTrace("BATCH", hasAttributes(
-      containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE", "PUT")));
+    table.mutateRow(new RowMutations(Bytes.toBytes(0)).add(new Delete(Bytes.toBytes(0))));
+    assertTrace("BATCH");
   }
 
   @Test
@@ -454,15 +443,13 @@ public class TestAsyncTableTracing {
       .allOf(
         table.exists(Arrays.asList(new Get(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH", hasAttributes(
-      containsEntryWithStringValuesOf("db.hbase.container_operations", "GET")));
+    assertTrace("BATCH");
   }
 
   @Test
   public void testExistsAll() {
     table.existsAll(Arrays.asList(new Get(Bytes.toBytes(0)))).join();
-    assertTrace("BATCH", hasAttributes(
-      containsEntryWithStringValuesOf("db.hbase.container_operations", "GET")));
+    assertTrace("BATCH");
   }
 
   @Test
@@ -470,15 +457,13 @@ public class TestAsyncTableTracing {
     CompletableFuture
       .allOf(table.get(Arrays.asList(new Get(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH", hasAttributes(
-      containsEntryWithStringValuesOf("db.hbase.container_operations", "GET")));
+    assertTrace("BATCH");
   }
 
   @Test
   public void testGetAll() {
     table.getAll(Arrays.asList(new Get(Bytes.toBytes(0)))).join();
-    assertTrace("BATCH", hasAttributes(
-      containsEntryWithStringValuesOf("db.hbase.container_operations", "GET")));
+    assertTrace("BATCH");
   }
 
   @Test
@@ -487,16 +472,14 @@ public class TestAsyncTableTracing {
       .allOf(table.put(Arrays.asList(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"),
         Bytes.toBytes("cq"), Bytes.toBytes("v")))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH", hasAttributes(
-      containsEntryWithStringValuesOf("db.hbase.container_operations", "PUT")));
+    assertTrace("BATCH");
   }
 
   @Test
   public void testPutAll() {
     table.putAll(Arrays.asList(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"),
       Bytes.toBytes("cq"), Bytes.toBytes("v")))).join();
-    assertTrace("BATCH", hasAttributes(
-      containsEntryWithStringValuesOf("db.hbase.container_operations", "PUT")));
+    assertTrace("BATCH");
   }
 
   @Test
@@ -505,15 +488,13 @@ public class TestAsyncTableTracing {
       .allOf(
         table.delete(Arrays.asList(new Delete(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH", hasAttributes(
-      containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
+    assertTrace("BATCH");
   }
 
   @Test
   public void testDeleteAll() {
     table.deleteAll(Arrays.asList(new Delete(Bytes.toBytes(0)))).join();
-    assertTrace("BATCH", hasAttributes(
-      containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
+    assertTrace("BATCH");
   }
 
   @Test
@@ -522,14 +503,12 @@ public class TestAsyncTableTracing {
       .allOf(
         table.batch(Arrays.asList(new Delete(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH", hasAttributes(
-      containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
+    assertTrace("BATCH");
   }
 
   @Test
   public void testBatchAll() {
     table.batchAll(Arrays.asList(new Delete(Bytes.toBytes(0)))).join();
-    assertTrace("BATCH", hasAttributes(
-      containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
+    assertTrace("BATCH");
   }
 }
