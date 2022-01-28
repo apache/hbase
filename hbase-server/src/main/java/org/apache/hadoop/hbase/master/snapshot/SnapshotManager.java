@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -184,7 +185,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   private Map<TableName, Long> restoreTableToProcIdMap = new HashMap<>();
 
   // SnapshotDescription -> SnapshotProcId
-  private final Map<SnapshotDescription, Long> snapshotToProcIdMap = new HashMap<>();
+  private final ConcurrentHashMap<SnapshotDescription, Long>
+    snapshotToProcIdMap = new ConcurrentHashMap<>();
 
   private Path rootDir;
   private ExecutorService executorService;
@@ -681,7 +683,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
           sanityCheckBeforeSnapshot(snapshot, false);
 
           long procId = submitProcedure(new SnapshotProcedure(
-            master.getMasterProcedureExecutor().getEnvironment(), snapshot));
+            getMaster().getMasterProcedureExecutor().getEnvironment(), snapshot));
 
           getMaster().getSnapshotManager().registerSnapshotProcedure(snapshot, procId);
         }
@@ -701,7 +703,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     org.apache.hadoop.hbase.client.SnapshotDescription snapshotPOJO = null;
     if (cpHost != null) {
       snapshotPOJO = ProtobufUtil.createSnapshotDesc(snapshot);
-      cpHost.preSnapshot(snapshotPOJO, desc);
+      cpHost.preSnapshot(snapshotPOJO, desc, RpcServer.getRequestUser().orElse(null));
     }
 
     // if the table is enabled, then have the RS run actually the snapshot work
@@ -739,7 +741,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     // call post coproc hook
     if (cpHost != null) {
-      cpHost.postSnapshot(snapshotPOJO, desc);
+      cpHost.postSnapshot(snapshotPOJO, desc, RpcServer.getRequestUser().orElse(null));
     }
   }
 
@@ -1406,9 +1408,15 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     return builder.build();
   }
 
-  public synchronized void registerSnapshotProcedure(SnapshotDescription snapshot, long procId) {
+  public void registerSnapshotProcedure(SnapshotDescription snapshot, long procId) {
     snapshotToProcIdMap.put(snapshot, procId);
     LOG.debug("register snapshot={}, snapshot procedure id = {}",
+      ClientSnapshotDescriptionUtils.toString(snapshot), procId);
+  }
+
+  public void unregisterSnapshotProcedure(SnapshotDescription snapshot, long procId) {
+    snapshotToProcIdMap.remove(snapshot, procId);
+    LOG.debug("unregister snapshot={}, snapshot procedure id = {}",
       ClientSnapshotDescriptionUtils.toString(snapshot), procId);
   }
 }

@@ -17,9 +17,11 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +38,7 @@ import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure;
 import org.apache.hadoop.hbase.master.snapshot.MasterSnapshotVerifier;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -74,6 +77,7 @@ public class SnapshotProcedure
   private Path snapshotDir;
   private Path workingDir;
   private FileSystem workingDirFS;
+  private FileSystem rootFs;
   private TableName snapshotTable;
   private MonitoredTask status;
   private SnapshotManifest snapshotManifest;
@@ -144,23 +148,23 @@ public class SnapshotProcedure
           if (tableState.isEnabled()) {
             setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_ONLINE_REGIONS);
           } else if (tableState.isDisabled()) {
-            setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_OFFLINE_REGIONS);
+            setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_CLOSED_REGIONS);
           }
           return Flow.HAS_MORE_STATE;
         case SNAPSHOT_SNAPSHOT_ONLINE_REGIONS:
           addChildProcedure(createRemoteSnapshotProcedures(env));
-          setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_OFFLINE_REGIONS);
+          setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_SPLIT_REGIONS);
           return Flow.HAS_MORE_STATE;
-        case SNAPSHOT_SNAPSHOT_OFFLINE_REGIONS:
-          snapshotOfflineRegions(env);
-          if (MobUtils.hasMobColumns(htd)) {
-            setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_MOB_REGION);
-          } else {
-            setNextState(SnapshotState.SNAPSHOT_CONSOLIDATE_SNAPSHOT);
-          }
+        case SNAPSHOT_SNAPSHOT_SPLIT_REGIONS:
+          snapshotSplitRegions(env);
+          setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_MOB_REGION);
+          return Flow.HAS_MORE_STATE;
+        case SNAPSHOT_SNAPSHOT_CLOSED_REGIONS:
+          snapshotClosedRegions(env);
+          setNextState(SnapshotState.SNAPSHOT_SNAPSHOT_MOB_REGION);
           return Flow.HAS_MORE_STATE;
         case SNAPSHOT_SNAPSHOT_MOB_REGION:
-          snapshotMobRegion();
+          snapshotMobRegion(env);
           setNextState(SnapshotState.SNAPSHOT_CONSOLIDATE_SNAPSHOT);
           return Flow.HAS_MORE_STATE;
         case SNAPSHOT_CONSOLIDATE_SNAPSHOT:
@@ -248,6 +252,7 @@ public class SnapshotProcedure
     this.conf = env.getMasterConfiguration();
     this.snapshotTable = TableName.valueOf(snapshot.getTable());
     this.htd = loadTableDescriptorSnapshot(env);
+    this.rootFs = env.getMasterFileSystem().getFileSystem();
     this.rootDir = CommonFSUtils.getRootDir(conf);
     this.snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
     this.workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir, conf);
@@ -256,7 +261,7 @@ public class SnapshotProcedure
       .createStatus("Taking " + snapshot.getType() + " snapshot on table: " + snapshotTable);
     ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(snapshot.getName());
     this.snapshotManifest = SnapshotManifest.create(conf,
-      workingDirFS, workingDir, snapshot, monitor, status);
+      rootFs, workingDir, snapshot, monitor, status);
     this.snapshotManifest.addTableDescriptor(htd);
   }
 
@@ -293,14 +298,19 @@ public class SnapshotProcedure
 
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      cpHost.preSnapshot(ProtobufUtil.createSnapshotDesc(snapshot), htd);
+      cpHost.preSnapshot(ProtobufUtil.createSnapshotDesc(snapshot), htd, getUser());
     }
   }
 
   private void postSnapshot(MasterProcedureEnv env) throws IOException {
+    SnapshotManager sm = env.getMasterServices().getSnapshotManager();
+    if (sm != null) {
+      sm.unregisterSnapshotProcedure(snapshot, getProcId());
+    }
+
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      cpHost.postSnapshot(ProtobufUtil.createSnapshotDesc(snapshot), htd);
+      cpHost.postSnapshot(ProtobufUtil.createSnapshotDesc(snapshot), htd, getUser());
     }
   }
 
@@ -333,30 +343,58 @@ public class SnapshotProcedure
     status.markComplete("Snapshot " + snapshot.getName() + "  completed");
   }
 
-  private void snapshotOfflineRegions(MasterProcedureEnv env) throws IOException {
-    List<RegionInfo> regions = env.getAssignmentManager()
-      .getTableRegions(snapshotTable, false).stream()
-      .filter(r -> RegionReplicaUtil.isDefaultReplica(r))
+  private void snapshotSplitRegions(MasterProcedureEnv env) throws IOException {
+    List<RegionInfo> regions = getDefaultRegionReplica(env)
       .filter(RegionInfo::isSplit).collect(Collectors.toList());
+    snapshotSplitOrClosedRegions(env, regions, "SplitRegionsSnapshotPool");
+  }
 
+  private void snapshotClosedRegions(MasterProcedureEnv env) throws IOException {
+    List<RegionInfo> regions = getDefaultRegionReplica(env).collect(Collectors.toList());
+    snapshotSplitOrClosedRegions(env, regions, "ClosedRegionsSnapshotPool");
+  }
+
+  private Stream<RegionInfo> getDefaultRegionReplica(MasterProcedureEnv env) {
+    return env.getAssignmentManager().getTableRegions(snapshotTable, false)
+      .stream().filter(r -> RegionReplicaUtil.isDefaultReplica(r));
+  }
+
+  private void snapshotSplitOrClosedRegions(MasterProcedureEnv env,
+      List<RegionInfo> regions, String threadPoolName) throws IOException {
     ThreadPoolExecutor exec = SnapshotManifest
-      .createExecutor(env.getMasterConfiguration(), "OfflineRegionsSnapshotPool");
+      .createExecutor(env.getMasterConfiguration(), threadPoolName);
     try {
       ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
         @Override
-        public void editRegion(final RegionInfo regionInfo) throws IOException {
-          snapshotManifest.addRegion(CommonFSUtils.getTableDir(rootDir, snapshotTable), regionInfo);
+        public void editRegion(final RegionInfo region) throws IOException {
+          snapshotManifest.addRegion(CommonFSUtils.getTableDir(rootDir, snapshotTable), region);
+          LOG.info("take snapshot region={}, table={}", region, snapshotTable);
         }
       });
     } finally {
       exec.shutdown();
     }
-    status.setStatus("Completed referencing offline regions of table: " + snapshotTable);
+    status.setStatus("Completed referencing closed/split regions of table: " + snapshotTable);
   }
 
-  private void snapshotMobRegion() throws IOException {
+  private void snapshotMobRegion(MasterProcedureEnv env) throws IOException {
+    if (!MobUtils.hasMobColumns(htd)) {
+      return;
+    }
+    ThreadPoolExecutor exec = SnapshotManifest
+      .createExecutor(env.getMasterConfiguration(), "MobRegionSnapshotPool");
     RegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(htd.getTableName());
-    snapshotManifest.addMobRegion(mobRegionInfo);
+    try {
+      ModifyRegionUtils.editRegions(exec, Collections.singleton(mobRegionInfo),
+          new ModifyRegionUtils.RegionEditTask() {
+        @Override
+        public void editRegion(final RegionInfo region) throws IOException {
+          snapshotManifest.addRegion(CommonFSUtils.getTableDir(rootDir, snapshotTable), region);
+        }
+      });
+    } finally {
+      exec.shutdown();
+    }
     status.setStatus("Completed referencing HFiles for the mob region of table: " + snapshotTable);
   }
 
