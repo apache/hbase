@@ -22,10 +22,11 @@ import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHel
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.completeFile;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.endFileLease;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.getStatus;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.READER_IDLE;
 import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.WRITER_IDLE;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
@@ -40,7 +41,6 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.Encryptor;
 import org.apache.hadoop.fs.Path;
@@ -218,7 +218,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   // so that the implementation will not burn up our brain as there are multiple state changes and
   // checks.
   private synchronized void failed(Channel channel, Supplier<Throwable> errorSupplier) {
-    if (state == State.BROKEN || state == State.CLOSED) {
+    if (state == State.CLOSED) {
+      return;
+    }
+    if (state == State.BROKEN) {
+      failWaitingAckQueue(channel, errorSupplier);
       return;
     }
     if (state == State.CLOSING) {
@@ -230,6 +234,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
     // disable further write, and fail all pending ack.
     state = State.BROKEN;
+    failWaitingAckQueue(channel, errorSupplier);
+    datanodeList.forEach(ch -> ch.close());
+  }
+
+  private void failWaitingAckQueue(Channel channel, Supplier<Throwable> errorSupplier) {
     Throwable error = errorSupplier.get();
     for (Iterator<Callback> iter = waitingAckQueue.iterator(); iter.hasNext();) {
       Callback c = iter.next();
@@ -246,7 +255,6 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       }
       break;
     }
-    datanodeList.forEach(ch -> ch.close());
   }
 
   @Sharable
@@ -578,5 +586,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   @Override
   public long getSyncedLength() {
     return this.ackedBlockLength;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  List<Channel> getDatanodeList() {
+    return this.datanodeList;
   }
 }
