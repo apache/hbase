@@ -63,7 +63,6 @@ public class TestTracingBase {
     conf = HBaseConfiguration.create();
     conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
       RegistryForTracingTest.class.getName());
-    TRACE_RULE.clearSpans();
   }
 
   protected void assertTrace(String className, String methodName, ServerName serverName,
