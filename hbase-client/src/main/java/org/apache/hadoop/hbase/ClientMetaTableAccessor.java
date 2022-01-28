@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.apache.hadoop.hbase.client.RegionLocator.LOCATOR_META_REPLICAS_MODE;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.Closeable;
@@ -26,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer;
 import org.apache.hadoop.hbase.client.AsyncTable;
@@ -416,10 +418,40 @@ public final class ClientMetaTableAccessor {
     Scan scan = new Scan();
     int scannerCaching = metaTable.getConfiguration().getInt(HConstants.HBASE_META_SCANNER_CACHING,
       HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
-    if (metaTable.getConfiguration().getBoolean(HConstants.USE_META_REPLICAS,
-      HConstants.DEFAULT_USE_META_REPLICAS)) {
-      scan.setConsistency(Consistency.TIMELINE);
+    // Get the region locator's meta replica mode.
+    CatalogReplicaMode metaReplicaMode = CatalogReplicaMode.fromString(metaTable.getConfiguration()
+      .get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
+
+    switch (metaReplicaMode) {
+      case LOAD_BALANCE:
+        int numOfReplicas = 1;
+        try {
+          numOfReplicas = metaTable.getDescriptor().get().getRegionReplication();
+        } catch (Exception e) {
+          LOG.warn("Failed to get region replication for meta table");
+        }
+        if (numOfReplicas > 1) {
+          int replicaId = ThreadLocalRandom.current().nextInt(numOfReplicas);
+
+          // When the replicaId is 0, do not set to Consistency.TIMELINE
+          if (replicaId > 0) {
+            scan.setReplicaId(replicaId);
+            scan.setConsistency(Consistency.TIMELINE);
+          }
+        }
+        break;
+      case NONE:
+        // If user does not configure LOCATOR_META_REPLICAS_MODE, let's check the legacy config.
+        if (metaTable.getConfiguration().getBoolean(HConstants.USE_META_REPLICAS,
+          HConstants.DEFAULT_USE_META_REPLICAS)) {
+          scan.setConsistency(Consistency.TIMELINE);
+        }
+        break;
+
+      default:
+        // Do nothing
     }
+
     if (rowUpperLimit <= scannerCaching) {
       scan.setLimit(rowUpperLimit);
     }
