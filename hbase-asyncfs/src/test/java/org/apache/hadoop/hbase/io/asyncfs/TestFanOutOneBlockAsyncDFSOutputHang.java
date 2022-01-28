@@ -21,15 +21,12 @@ package org.apache.hadoop.hbase.io.asyncfs;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -97,12 +94,12 @@ public class TestFanOutOneBlockAsyncDFSOutputHang extends AsyncFSTestBase {
   }
 
   @AfterClass
-  public static void tearDown() throws IOException, InterruptedException {
+  public static void tearDown() throws Exception {
     if (OUT != null) {
       OUT.recoverAndClose(null);
     }
     if (EVENT_LOOP_GROUP != null) {
-      EVENT_LOOP_GROUP.shutdownGracefully().sync();
+      EVENT_LOOP_GROUP.shutdownGracefully().sync().get();
     }
     shutdownMiniDFSCluster();
   }
@@ -138,74 +135,73 @@ public class TestFanOutOneBlockAsyncDFSOutputHang extends AsyncFSTestBase {
    */
   @Test
   public void testFlushHangWhenOneDataNodeFailedBeforeOtherDataNodeAck() throws Exception {
-      final CyclicBarrier dn1AckReceivedCyclicBarrier = new CyclicBarrier(2);
-      List<Channel> channels = OUT.getDatanodeList();
-      Channel dn1Channel = channels.get(0);
-      final List<String> protobufDecoderNames = new ArrayList<String>();
-      dn1Channel.pipeline().forEach((entry) -> {
-        if (ProtobufDecoder.class.isInstance(entry.getValue())) {
-          protobufDecoderNames.add(entry.getKey());
-        }
-      });
-      assertTrue(protobufDecoderNames.size() == 1);
-      dn1Channel.pipeline().addAfter(protobufDecoderNames.get(0), "dn1AckReceivedHandler",
-        new ChannelInboundHandlerAdapter() {
-          @Override
-          public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            super.channelRead(ctx, msg);
-            dn1AckReceivedCyclicBarrier.await();
-          }
-        });
-
-      Channel dn2Channel = channels.get(1);
-      /**
-       * Here we add a {@link ChannelInboundHandlerAdapter} to eat all the responses to simulate a
-       * slow dn2.
-       */
-      dn2Channel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
-
+    final CyclicBarrier dn1AckReceivedCyclicBarrier = new CyclicBarrier(2);
+    List<Channel> channels = OUT.getDatanodeList();
+    Channel dn1Channel = channels.get(0);
+    final List<String> protobufDecoderNames = new ArrayList<String>();
+    dn1Channel.pipeline().forEach((entry) -> {
+      if (ProtobufDecoder.class.isInstance(entry.getValue())) {
+        protobufDecoderNames.add(entry.getKey());
+      }
+    });
+    assertTrue(protobufDecoderNames.size() == 1);
+    dn1Channel.pipeline().addAfter(protobufDecoderNames.get(0), "dn1AckReceivedHandler",
+      new ChannelInboundHandlerAdapter() {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-          if (!(msg instanceof ByteBuf)) {
-            ctx.fireChannelRead(msg);
-          }
+          super.channelRead(ctx, msg);
+          dn1AckReceivedCyclicBarrier.await();
         }
       });
 
-      byte[] b = new byte[10];
-      ThreadLocalRandom.current().nextBytes(b);
-      OUT.write(b, 0, b.length);
-      CompletableFuture<Long> future = OUT.flush(false);
-      /**
-       * Wait for ack from dn1.
-       */
-      dn1AckReceivedCyclicBarrier.await();
-      /**
-       * First ack is received from dn1,close dn1Channel to simulate dn1 shut down or have a
-       * exception.
-       */
-      dn1Channel.close();
-      try {
-        /**
-         * Before HBASE-26679,here we should be stuck, after HBASE-26679,we would fail soon with
-         * {@link ExecutionException}.
-         */
-        future.get();
-        fail();
-      } catch (ExecutionException e) {
-        assertTrue(e != null);
-        LOG.info("expected exception caught when get future", e);
+    Channel dn2Channel = channels.get(1);
+    /**
+     * Here we add a {@link ChannelInboundHandlerAdapter} to eat all the responses to simulate a
+     * slow dn2.
+     */
+    dn2Channel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+
+      @Override
+      public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (!(msg instanceof ByteBuf)) {
+          ctx.fireChannelRead(msg);
+        }
       }
-      /**
-       * Make sure all the data node channel are closed.
-       */
-      channels.forEach(ch -> {
-        try {
-          ch.closeFuture().get();
-        } catch (InterruptedException | ExecutionException e) {
-          throw new RuntimeException(e);
-        }
-      });
-  }
+    });
 
+    byte[] b = new byte[10];
+    ThreadLocalRandom.current().nextBytes(b);
+    OUT.write(b, 0, b.length);
+    CompletableFuture<Long> future = OUT.flush(false);
+    /**
+     * Wait for ack from dn1.
+     */
+    dn1AckReceivedCyclicBarrier.await();
+    /**
+     * First ack is received from dn1,close dn1Channel to simulate dn1 shut down or have a
+     * exception.
+     */
+    dn1Channel.close().get();
+    try {
+      /**
+       * Before HBASE-26679,here we should be stuck, after HBASE-26679,we would fail soon with
+       * {@link ExecutionException}.
+       */
+      future.get();
+      fail();
+    } catch (ExecutionException e) {
+      assertTrue(e != null);
+      LOG.info("expected exception caught when get future", e);
+    }
+    /**
+     * Make sure all the data node channel are closed.
+     */
+    channels.forEach(ch -> {
+      try {
+        ch.closeFuture().get();
+      } catch (InterruptedException | ExecutionException e) {
+        throw new RuntimeException(e);
+      }
+    });
+  }
 }
