@@ -252,6 +252,58 @@ public interface MasterObserver {
     throws IOException {}
 
   /**
+   * Called prior to modifying a table's store file tracker. Called as part of modify
+   * table store file tracker RPC call.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param dstSFT the store file tracker
+   * @return the store file tracker
+   */
+  default String preModifyTableStoreFileTracker(
+    final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName,
+    String dstSFT) throws IOException {
+    return dstSFT;
+  }
+
+  /**
+   * Called after modifying a table's store file tracker. Called as part of modify
+   * table store file tracker RPC call.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param dstSFT the store file tracker
+   */
+  default void postModifyTableStoreFileTracker(
+    final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName,
+    String dstSFT) throws IOException {}
+
+  /**
+   * Called prior to modifying a family's store file tracker. Called as part of modify family store
+   * file tracker RPC call.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param family the column family
+   * @param dstSFT the store file tracker
+   * @return the store file tracker
+   */
+  default String preModifyColumnFamilyStoreFileTracker(
+    final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName,
+    final byte[] family, String dstSFT) throws IOException {
+    return dstSFT;
+  }
+
+  /**
+   * Called after modifying a family store file tracker. Called as part of modify family store
+   * file tracker RPC call.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param family the column family
+   * @param dstSFT the store file tracker
+   */
+  default void postModifyColumnFamilyStoreFileTracker(
+    final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName,
+    final byte[] family, String dstSFT) throws IOException {}
+
+  /**
    * Called prior to modifying a table's properties.  Called as part of modify
    * table procedure and it is async to the modify table RPC call.
    *

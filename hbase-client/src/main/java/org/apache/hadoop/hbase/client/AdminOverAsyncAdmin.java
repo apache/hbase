@@ -230,8 +230,14 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Future<Void> modifyColumnFamilyAsync(TableName tableName,
-      ColumnFamilyDescriptor columnFamily) throws IOException {
+    ColumnFamilyDescriptor columnFamily) throws IOException {
     return admin.modifyColumnFamily(tableName, columnFamily);
+  }
+
+  @Override
+  public Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
+    String dstSFT) throws IOException {
+    return admin.modifyColumnFamilyStoreFileTracker(tableName, family, dstSFT);
   }
 
   @Override
@@ -473,6 +479,12 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
     return admin.modifyTable(td);
+  }
+
+  @Override
+  public Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
+    throws IOException {
+    return admin.modifyTableStoreFileTracker(tableName, dstSFT);
   }
 
   @Override
