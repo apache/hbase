@@ -505,8 +505,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         }
         Encryptor encryptor = createEncryptor(conf, stat, client);
         FanOutOneBlockAsyncDFSOutput output =
-            new FanOutOneBlockAsyncDFSOutput(conf, dfs, client, namenode, clientName, src,
-                stat.getFileId(), locatedBlock, encryptor, datanodes, summer, ALLOC, monitor);
+          new FanOutOneBlockAsyncDFSOutput(conf, dfs, client, namenode, clientName, src,
+            stat.getFileId(), locatedBlock, encryptor, datanodes, summer, ALLOC, monitor);
         succ = true;
         return output;
       } catch (RemoteException e) {
