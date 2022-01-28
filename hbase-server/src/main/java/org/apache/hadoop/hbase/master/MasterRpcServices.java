@@ -1743,9 +1743,11 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
 
       SnapshotResponse.Builder builder = SnapshotResponse.newBuilder().setExpectedTimeout(waitTime);
 
-      // just to pass the unit tests for all 3.x versions,
-      // the minimum version maybe needs to be modified later
-      if (VersionInfoUtil.currentClientHasMinimumVersion(2, 10)) {
+      // If there is nonce group and nonce in the snapshot request, then the client can
+      // handle snapshot procedure procId. And if enable the snapshot procedure, we
+      // will do the snapshot work with proc-v2, otherwise we will fall back to zk proc.
+      if (request.hasNonceGroup() && request.hasNonce() &&
+          server.snapshotManager.snapshotProcedureEnabled()) {
         long nonceGroup = request.getNonceGroup();
         long nonce = request.getNonce();
         long procId = server.snapshotManager.takeSnapshot(snapshot, nonceGroup, nonce);

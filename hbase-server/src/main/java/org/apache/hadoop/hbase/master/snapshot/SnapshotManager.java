@@ -158,6 +158,11 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   public static final String SNAPSHOT_MAX_FILE_SIZE_PRESERVE =
     "hbase.snapshot.max.filesize.preserve";
 
+  /** Enable or disable snapshot procedure */
+  private static final String SNAPSHOT_PROCEDURE_ENABLED = "hbase.snapshot.procedure.enabled";
+
+  private static final boolean SNAPSHOT_PROCEDURE_ENABLED_DEFAULT = true;
+
   private boolean stopped;
   private MasterServices master;  // Needed by TableEventHandlers
   private ProcedureCoordinator coordinator;
@@ -1418,5 +1423,10 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     snapshotToProcIdMap.remove(snapshot, procId);
     LOG.debug("unregister snapshot={}, snapshot procedure id = {}",
       ClientSnapshotDescriptionUtils.toString(snapshot), procId);
+  }
+
+  public boolean snapshotProcedureEnabled() {
+    return master.getConfiguration()
+      .getBoolean(SNAPSHOT_PROCEDURE_ENABLED, SNAPSHOT_PROCEDURE_ENABLED_DEFAULT);
   }
 }
