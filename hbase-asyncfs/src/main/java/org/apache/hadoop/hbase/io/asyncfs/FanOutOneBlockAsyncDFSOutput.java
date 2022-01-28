@@ -60,6 +60,8 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import com.google.errorprone.annotations.RestrictedApi;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
@@ -218,7 +220,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   // so that the implementation will not burn up our brain as there are multiple state changes and
   // checks.
   private synchronized void failed(Channel channel, Supplier<Throwable> errorSupplier) {
-    if (state == State.BROKEN || state == State.CLOSED) {
+    if (state == State.CLOSED) {
+      return;
+    }
+    if (state == State.BROKEN) {
+      failWaitingAckQueue(channel, errorSupplier);
       return;
     }
     if (state == State.CLOSING) {
@@ -230,6 +236,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
     // disable further write, and fail all pending ack.
     state = State.BROKEN;
+    failWaitingAckQueue(channel, errorSupplier);
+    datanodeList.forEach(ch -> ch.close());
+  }
+
+  private void failWaitingAckQueue(Channel channel, Supplier<Throwable> errorSupplier) {
     Throwable error = errorSupplier.get();
     for (Iterator<Callback> iter = waitingAckQueue.iterator(); iter.hasNext();) {
       Callback c = iter.next();
@@ -246,7 +257,6 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       }
       break;
     }
-    datanodeList.forEach(ch -> ch.close());
   }
 
   @Sharable
@@ -578,5 +588,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   @Override
   public long getSyncedLength() {
     return this.ackedBlockLength;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  List<Channel> getDatanodeList() {
+    return this.datanodeList;
   }
 }
