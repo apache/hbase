@@ -23,9 +23,7 @@ import static org.apache.hadoop.hbase.master.MasterWalManager.NON_META_FILTER;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
@@ -73,7 +71,7 @@ public class SplitWALManager {
   private static final Logger LOG = LoggerFactory.getLogger(SplitWALManager.class);
 
   private final MasterServices master;
-  private final SplitWorkerAssigner splitWorkerAssigner;
+  private final WorkerAssigner splitWorkerAssigner;
   private final Path rootDir;
   private final FileSystem fs;
   private final Configuration conf;
@@ -82,8 +80,9 @@ public class SplitWALManager {
   public SplitWALManager(MasterServices master) throws IOException {
     this.master = master;
     this.conf = master.getConfiguration();
-    this.splitWorkerAssigner = new SplitWorkerAssigner(this.master,
-        conf.getInt(HBASE_SPLIT_WAL_MAX_SPLITTER, DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER));
+    this.splitWorkerAssigner = new WorkerAssigner(this.master,
+        conf.getInt(HBASE_SPLIT_WAL_MAX_SPLITTER, DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER),
+        new ProcedureEvent<>("split-WAL-worker-assigning"));
     this.rootDir = master.getMasterFileSystem().getWALRootDir();
     this.fs = master.getMasterFileSystem().getWALFileSystem();
     this.walArchiveDir = new Path(this.rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
@@ -188,68 +187,5 @@ public class SplitWALManager {
    */
   public void addUsedSplitWALWorker(ServerName worker){
     splitWorkerAssigner.addUsedWorker(worker);
-  }
-
-  /**
-   * help assign and release a worker for each WAL splitting task
-   * For each worker, concurrent running splitting task should be no more than maxSplitTasks
-   * If a task failed to acquire a worker, it will suspend and wait for workers available
-   *
-   */
-  private static final class SplitWorkerAssigner implements ServerListener {
-    private int maxSplitTasks;
-    private final ProcedureEvent<?> event;
-    private Map<ServerName, Integer> currentWorkers = new HashMap<>();
-    private MasterServices master;
-
-    public SplitWorkerAssigner(MasterServices master, int maxSplitTasks) {
-      this.maxSplitTasks = maxSplitTasks;
-      this.master = master;
-      this.event = new ProcedureEvent<>("split-WAL-worker-assigning");
-      // ServerManager might be null in a test context where we are mocking; allow for this
-      ServerManager sm = this.master.getServerManager();
-      if (sm != null) {
-        sm.registerListener(this);
-      }
-    }
-
-    public synchronized Optional<ServerName> acquire() {
-      List<ServerName> serverList = master.getServerManager().getOnlineServersList();
-      Collections.shuffle(serverList);
-      Optional<ServerName> worker = serverList.stream().filter(
-        serverName -> !currentWorkers.containsKey(serverName) || currentWorkers.get(serverName) > 0)
-          .findAny();
-      if (worker.isPresent()) {
-        currentWorkers.compute(worker.get(), (serverName,
-            availableWorker) -> availableWorker == null ? maxSplitTasks - 1 : availableWorker - 1);
-      }
-      return worker;
-    }
-
-    public synchronized void release(ServerName serverName) {
-      currentWorkers.compute(serverName, (k, v) -> v == null ? null : v + 1);
-    }
-
-    public void suspend(Procedure<?> proc) {
-      event.suspend();
-      event.suspendIfNotReady(proc);
-    }
-
-    public void wake(MasterProcedureScheduler scheduler) {
-      if (!event.isReady()) {
-        event.wake(scheduler);
-      }
-    }
-
-    @Override
-    public void serverAdded(ServerName worker) {
-      this.wake(master.getMasterProcedureExecutor().getEnvironment().getProcedureScheduler());
-    }
-
-    public synchronized void addUsedWorker(ServerName worker) {
-      // load used worker when master restart
-      currentWorkers.compute(worker, (serverName,
-          availableWorker) -> availableWorker == null ? maxSplitTasks - 1 : availableWorker - 1);
-    }
   }
 }
