@@ -122,29 +122,12 @@ public class TestProtobufUtil {
    */
   @Test
   public void testAppend() throws IOException {
-    long timeStamp = 111111;
-    MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
-    mutateBuilder.setRow(ByteString.copyFromUtf8("row"));
-    mutateBuilder.setMutateType(MutationType.APPEND);
-    mutateBuilder.setTimestamp(timeStamp);
-    ColumnValue.Builder valueBuilder = ColumnValue.newBuilder();
-    valueBuilder.setFamily(ByteString.copyFromUtf8("f1"));
-    QualifierValue.Builder qualifierBuilder = QualifierValue.newBuilder();
-    qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c1"));
-    qualifierBuilder.setValue(ByteString.copyFromUtf8("v1"));
-    qualifierBuilder.setTimestamp(timeStamp);
-    valueBuilder.addQualifierValue(qualifierBuilder.build());
-    qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c2"));
-    qualifierBuilder.setValue(ByteString.copyFromUtf8("v2"));
-    valueBuilder.addQualifierValue(qualifierBuilder.build());
-    mutateBuilder.addColumnValue(valueBuilder.build());
-
-    MutationProto proto = mutateBuilder.build();
+    MutationProto proto = getAppendMutation(111111L);
     // default fields
     assertEquals(MutationProto.Durability.USE_DEFAULT, proto.getDurability());
 
     // set the default value for equal comparison
-    mutateBuilder = MutationProto.newBuilder(proto);
+    MutationProto.Builder mutateBuilder = MutationProto.newBuilder(proto);
     mutateBuilder.setDurability(MutationProto.Durability.USE_DEFAULT);
 
     Append append = ProtobufUtil.toAppend(proto, null);
@@ -154,6 +137,42 @@ public class TestProtobufUtil {
     mutateBuilder.setTimestamp(append.getTimestamp());
     mutateBuilder.setTimeRange(ProtobufUtil.toTimeRange(append.getTimeRange()));
     assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.APPEND, append));
+  }
+
+  /**
+   * Older clients may not send along a timestamp in the MutationProto. Check that we
+   * default correctly.
+   */
+  @Test
+  public void testAppendNoTimestamp() throws IOException {
+    MutationProto mutation = getAppendMutation(null);
+    Append append = ProtobufUtil.toAppend(mutation, null);
+    assertEquals(HConstants.LATEST_TIMESTAMP, append.getTimestamp());
+    append.getFamilyCellMap().values().forEach(cells -> cells.forEach(cell -> assertEquals(HConstants.LATEST_TIMESTAMP, cell.getTimestamp())));
+  }
+
+  private MutationProto getAppendMutation(Long timestamp) {
+    MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
+    mutateBuilder.setRow(ByteString.copyFromUtf8("row"));
+    mutateBuilder.setMutateType(MutationType.APPEND);
+    if (timestamp != null) {
+      mutateBuilder.setTimestamp(timestamp);
+    }
+    ColumnValue.Builder valueBuilder = ColumnValue.newBuilder();
+    valueBuilder.setFamily(ByteString.copyFromUtf8("f1"));
+    QualifierValue.Builder qualifierBuilder = QualifierValue.newBuilder();
+    qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c1"));
+    qualifierBuilder.setValue(ByteString.copyFromUtf8("v1"));
+    if (timestamp != null) {
+      qualifierBuilder.setTimestamp(timestamp);
+    }
+    valueBuilder.addQualifierValue(qualifierBuilder.build());
+    qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c2"));
+    qualifierBuilder.setValue(ByteString.copyFromUtf8("v2"));
+    valueBuilder.addQualifierValue(qualifierBuilder.build());
+    mutateBuilder.addColumnValue(valueBuilder.build());
+
+    return mutateBuilder.build();
   }
 
   /**
@@ -210,7 +229,36 @@ public class TestProtobufUtil {
    */
   @Test
   public void testIncrement() throws IOException {
-    long timeStamp = 111111;
+    MutationProto proto = getIncrementMutation(111111L);
+    // default fields
+    assertEquals(MutationProto.Durability.USE_DEFAULT, proto.getDurability());
+
+    // set the default value for equal comparison
+    MutationProto.Builder mutateBuilder = MutationProto.newBuilder(proto);
+    mutateBuilder.setDurability(MutationProto.Durability.USE_DEFAULT);
+
+    Increment increment = ProtobufUtil.toIncrement(proto, null);
+    mutateBuilder.setTimestamp(increment.getTimestamp());
+    mutateBuilder.setTimeRange(ProtobufUtil.toTimeRange(increment.getTimeRange()));
+    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.INCREMENT, increment));
+  }
+
+  /**
+   * Older clients may not send along a timestamp in the MutationProto. Check that we
+   * default correctly.
+   */
+  @Test
+  public void testIncrementNoTimestamp() throws IOException {
+    MutationProto mutation = getIncrementMutation(null);
+    Increment increment = ProtobufUtil.toIncrement(mutation, null);
+    assertEquals(HConstants.LATEST_TIMESTAMP, increment.getTimestamp());
+    increment.getFamilyCellMap().values()
+      .forEach(cells ->
+        cells.forEach(cell ->
+          assertEquals(HConstants.LATEST_TIMESTAMP, cell.getTimestamp())));
+  }
+
+  private MutationProto getIncrementMutation(Long timestamp) {
     MutationProto.Builder mutateBuilder = MutationProto.newBuilder();
     mutateBuilder.setRow(ByteString.copyFromUtf8("row"));
     mutateBuilder.setMutateType(MutationType.INCREMENT);
@@ -219,25 +267,16 @@ public class TestProtobufUtil {
     QualifierValue.Builder qualifierBuilder = QualifierValue.newBuilder();
     qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c1"));
     qualifierBuilder.setValue(ByteString.copyFrom(Bytes.toBytes(11L)));
-    qualifierBuilder.setTimestamp(timeStamp);
+    if (timestamp != null) {
+      qualifierBuilder.setTimestamp(timestamp);
+    }
     valueBuilder.addQualifierValue(qualifierBuilder.build());
     qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c2"));
     qualifierBuilder.setValue(ByteString.copyFrom(Bytes.toBytes(22L)));
     valueBuilder.addQualifierValue(qualifierBuilder.build());
     mutateBuilder.addColumnValue(valueBuilder.build());
 
-    MutationProto proto = mutateBuilder.build();
-    // default fields
-    assertEquals(MutationProto.Durability.USE_DEFAULT, proto.getDurability());
-
-    // set the default value for equal comparison
-    mutateBuilder = MutationProto.newBuilder(proto);
-    mutateBuilder.setDurability(MutationProto.Durability.USE_DEFAULT);
-
-    Increment increment = ProtobufUtil.toIncrement(proto, null);
-    mutateBuilder.setTimestamp(increment.getTimestamp());
-    mutateBuilder.setTimeRange(ProtobufUtil.toTimeRange(increment.getTimeRange()));
-    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.INCREMENT, increment));
+    return mutateBuilder.build();
   }
 
   /**

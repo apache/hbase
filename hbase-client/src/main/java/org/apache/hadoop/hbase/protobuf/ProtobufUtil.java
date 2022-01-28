@@ -625,10 +625,7 @@ public final class ProtobufUtil {
           if (qv.hasQualifier()) {
             qualifier = qv.getQualifier().toByteArray();
           }
-          long ts = HConstants.LATEST_TIMESTAMP;
-          if (qv.hasTimestamp()) {
-            ts = qv.getTimestamp();
-          }
+          long ts = cellTimestampOrLatest(qv);
           if (deleteType == DeleteType.DELETE_ONE_VERSION) {
             delete.addColumn(family, qualifier, ts);
           } else if (deleteType == DeleteType.DELETE_MULTIPLE_VERSIONS) {
@@ -692,7 +689,7 @@ public final class ProtobufUtil {
           if (qv.hasTags()) {
             tags = qv.getTags().toByteArray();
           }
-          consumer.accept(mutation, CellUtil.createCell(mutation.getRow(), family, qualifier, qv.getTimestamp(),
+          consumer.accept(mutation, CellUtil.createCell(mutation.getRow(), family, qualifier, cellTimestampOrLatest(qv),
                   KeyValue.Type.Put, value, tags));
         }
       }
@@ -702,6 +699,14 @@ public final class ProtobufUtil {
       mutation.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
     return mutation;
+  }
+
+  private static long cellTimestampOrLatest(QualifierValue cell) {
+    if (cell.hasTimestamp()) {
+      return cell.getTimestamp();
+    } else {
+      return HConstants.LATEST_TIMESTAMP;
+    }
   }
 
   /**
