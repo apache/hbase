@@ -26,6 +26,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY
 import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.READER_IDLE;
 import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.WRITER_IDLE;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
@@ -231,7 +232,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   // so that the implementation will not burn up our brain as there are multiple state changes and
   // checks.
   private synchronized void failed(Channel channel, Supplier<Throwable> errorSupplier) {
-    if (state == State.BROKEN || state == State.CLOSED) {
+    if (state == State.CLOSED) {
+      return;
+    }
+    if (state == State.BROKEN) {
+      failWaitingAckQueue(channel, errorSupplier);
       return;
     }
     if (state == State.CLOSING) {
@@ -243,6 +248,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
     // disable further write, and fail all pending ack.
     state = State.BROKEN;
+    failWaitingAckQueue(channel, errorSupplier);
+    datanodeInfoMap.keySet().forEach(ChannelOutboundInvoker::close);
+  }
+
+  private void failWaitingAckQueue(Channel channel, Supplier<Throwable> errorSupplier) {
     Throwable error = errorSupplier.get();
     for (Iterator<Callback> iter = waitingAckQueue.iterator(); iter.hasNext();) {
       Callback c = iter.next();
@@ -259,7 +269,6 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       }
       break;
     }
-    datanodeInfoMap.keySet().forEach(ChannelOutboundInvoker::close);
   }
 
   @Sharable
@@ -597,5 +606,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   @Override
   public long getSyncedLength() {
     return this.ackedBlockLength;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  Map<Channel, DatanodeInfo> getDatanodeInfoMap() {
+    return this.datanodeInfoMap;
   }
 }
