@@ -737,7 +737,7 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   @Override
   public ModifyTableStoreFileTrackerResponse modifyTableStoreFileTracker(RpcController controller,
     ModifyTableStoreFileTrackerRequest request) throws ServiceException {
-     return stub.modifyTableStoreFileTracker(controller, request);
+    return stub.modifyTableStoreFileTracker(controller, request);
   }
 
   @Override
