@@ -132,7 +132,11 @@ public class TableOperationSpanBuilder implements Supplier<Span> {
     }
     if (row instanceof RowMutations) {
       final RowMutations mutations = (RowMutations) row;
-      ops.addAll(unpackRowOperations(mutations));
+      final List<Operation> operations = mutations.getMutations()
+        .stream()
+        .map(TableOperationSpanBuilder::valueFrom)
+        .collect(Collectors.toList());
+      ops.addAll(operations);
     }
     return ops;
   }
