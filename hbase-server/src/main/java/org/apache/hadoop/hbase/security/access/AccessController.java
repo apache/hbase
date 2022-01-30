@@ -37,7 +37,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
@@ -125,7 +124,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -141,6 +139,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 
 /**
  * Provides basic authorization checks for data access and administrative
@@ -919,6 +919,22 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         return null;
       }
     });
+  }
+
+  public String preModifyTableStoreFileTracker(ObserverContext<MasterCoprocessorEnvironment> c,
+    TableName tableName, String dstSFT) throws IOException {
+    requirePermission(c, "modifyTableStoreFileTracker", tableName, null, null, Action.ADMIN,
+      Action.CREATE);
+    return dstSFT;
+  }
+
+  @Override
+  public String preModifyColumnFamilyStoreFileTracker(
+    ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName, byte[] family,
+    String dstSFT) throws IOException {
+    requirePermission(c, "modifyColumnFamilyStoreFileTracker", tableName, family, null,
+      Action.ADMIN, Action.CREATE);
+    return dstSFT;
   }
 
   @Override

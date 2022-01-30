@@ -179,6 +179,13 @@ public interface AsyncAdmin {
   CompletableFuture<Void> modifyTable(TableDescriptor desc);
 
   /**
+   * Change the store file tracker of the given table.
+   * @param tableName the table you want to change
+   * @param dstSFT the destination store file tracker
+   */
+  CompletableFuture<Void> modifyTableStoreFileTracker(TableName tableName, String dstSFT);
+
+  /**
    * Deletes a table.
    * @param tableName name of table to delete
    */
@@ -258,6 +265,15 @@ public interface AsyncAdmin {
    */
   CompletableFuture<Void> modifyColumnFamily(TableName tableName,
       ColumnFamilyDescriptor columnFamily);
+
+  /**
+   * Change the store file tracker of the given table's given family.
+   * @param tableName the table you want to change
+   * @param family the family you want to change
+   * @param dstSFT the destination store file tracker
+   */
+  CompletableFuture<Void> modifyColumnFamilyStoreFileTracker(TableName tableName, byte[] family,
+    String dstSFT);
 
   /**
    * Create a new namespace.
