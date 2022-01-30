@@ -143,6 +143,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> modifyTableStoreFileTracker(TableName tableName, String dstSFT) {
+    return wrap(rawAdmin.modifyTableStoreFileTracker(tableName, dstSFT));
+  }
+
+  @Override
   public CompletableFuture<Void> deleteTable(TableName tableName) {
     return wrap(rawAdmin.deleteTable(tableName));
   }
@@ -197,6 +202,12 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<Void> modifyColumnFamily(TableName tableName,
       ColumnFamilyDescriptor columnFamily) {
     return wrap(rawAdmin.modifyColumnFamily(tableName, columnFamily));
+  }
+
+  @Override
+  public CompletableFuture<Void> modifyColumnFamilyStoreFileTracker(TableName tableName,
+    byte[] family, String dstSFT) {
+    return wrap(rawAdmin.modifyColumnFamilyStoreFileTracker(tableName, family, dstSFT));
   }
 
   @Override

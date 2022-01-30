@@ -491,6 +491,55 @@ public class MasterCoprocessorHost
     });
   }
 
+  public String preModifyTableStoreFileTracker(final TableName tableName, final String dstSFT)
+    throws IOException {
+    if (coprocEnvironments.isEmpty()) {
+      return dstSFT;
+    }
+    return execOperationWithResult(
+      new ObserverOperationWithResult<MasterObserver, String>(masterObserverGetter, dstSFT) {
+        @Override
+        protected String call(MasterObserver observer) throws IOException {
+          return observer.preModifyTableStoreFileTracker(this, tableName, getResult());
+        }
+      });
+  }
+
+  public void postModifyTableStoreFileTracker(final TableName tableName, final String dstSFT)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postModifyTableStoreFileTracker(this, tableName, dstSFT);
+      }
+    });
+  }
+
+  public String preModifyColumnFamilyStoreFileTracker(final TableName tableName,
+    final byte[] family, final String dstSFT) throws IOException {
+    if (coprocEnvironments.isEmpty()) {
+      return dstSFT;
+    }
+    return execOperationWithResult(
+      new ObserverOperationWithResult<MasterObserver, String>(masterObserverGetter, dstSFT) {
+        @Override
+        protected String call(MasterObserver observer) throws IOException {
+          return observer.preModifyColumnFamilyStoreFileTracker(this, tableName, family,
+            getResult());
+        }
+      });
+  }
+
+  public void postModifyColumnFamilyStoreFileTracker(final TableName tableName, final byte[] family,
+    final String dstSFT) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postModifyColumnFamilyStoreFileTracker(this, tableName, family, dstSFT);
+      }
+    });
+  }
+
   public void preModifyTableAction(final TableName tableName,
     final TableDescriptor currentDescriptor, final TableDescriptor newDescriptor, final User user)
     throws IOException {

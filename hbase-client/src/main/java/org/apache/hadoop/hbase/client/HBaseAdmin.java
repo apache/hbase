@@ -199,10 +199,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTable
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnStoreFileTrackerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnStoreFileTrackerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableStoreFileTrackerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableStoreFileTrackerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
@@ -388,17 +392,52 @@ public class HBaseAdmin implements Admin {
   public Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
     ModifyTableResponse response = executeCallable(
       new MasterCallable<ModifyTableResponse>(getConnection(), getRpcControllerFactory()) {
-        Long nonceGroup = ng.getNonceGroup();
-        Long nonce = ng.newNonce();
+        long nonceGroup = ng.getNonceGroup();
+        long nonce = ng.newNonce();
+
         @Override
         protected ModifyTableResponse rpcCall() throws Exception {
           setPriority(td.getTableName());
-          ModifyTableRequest request = RequestConverter.buildModifyTableRequest(
-            td.getTableName(), td, nonceGroup, nonce);
+          ModifyTableRequest request =
+            RequestConverter.buildModifyTableRequest(td.getTableName(), td, nonceGroup, nonce);
           return master.modifyTable(getRpcController(), request);
         }
       });
     return new ModifyTableFuture(this, td.getTableName(), response);
+  }
+
+
+  @Override
+  public Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
+    throws IOException {
+    ModifyTableStoreFileTrackerResponse response =
+      executeCallable(new MasterCallable<ModifyTableStoreFileTrackerResponse>(getConnection(),
+        getRpcControllerFactory()) {
+        long nonceGroup = ng.getNonceGroup();
+        long nonce = ng.newNonce();
+
+        @Override
+        protected ModifyTableStoreFileTrackerResponse rpcCall() throws Exception {
+          setPriority(tableName);
+          ModifyTableStoreFileTrackerRequest request = RequestConverter
+            .buildModifyTableStoreFileTrackerRequest(tableName, dstSFT, nonceGroup, nonce);
+          return master.modifyTableStoreFileTracker(getRpcController(), request);
+        }
+      });
+    return new ModifyTablerStoreFileTrackerFuture(this, tableName, response);
+  }
+
+  private static class ModifyTablerStoreFileTrackerFuture extends ModifyTableFuture {
+    public ModifyTablerStoreFileTrackerFuture(HBaseAdmin admin, TableName tableName,
+      ModifyTableStoreFileTrackerResponse response) {
+      super(admin, tableName,
+        (response != null && response.hasProcId()) ? response.getProcId() : null);
+    }
+
+    @Override
+    public String getOperationType() {
+      return "MODIFY_TABLE_STORE_FILE_TRACKER";
+    }
   }
 
   @Override
@@ -1097,21 +1136,20 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public Future<Void> modifyColumnFamilyAsync(final TableName tableName,
-      final ColumnFamilyDescriptor columnFamily) throws IOException {
-    ModifyColumnResponse response =
-        executeCallable(new MasterCallable<ModifyColumnResponse>(getConnection(),
-            getRpcControllerFactory()) {
-          Long nonceGroup = ng.getNonceGroup();
-          Long nonce = ng.newNonce();
-          @Override
-          protected ModifyColumnResponse rpcCall() throws Exception {
-            setPriority(tableName);
-            ModifyColumnRequest req =
-                RequestConverter.buildModifyColumnRequest(tableName, columnFamily,
-                  nonceGroup, nonce);
-            return master.modifyColumn(getRpcController(), req);
-          }
-        });
+    final ColumnFamilyDescriptor columnFamily) throws IOException {
+    ModifyColumnResponse response = executeCallable(
+      new MasterCallable<ModifyColumnResponse>(getConnection(), getRpcControllerFactory()) {
+        long nonceGroup = ng.getNonceGroup();
+        long nonce = ng.newNonce();
+
+        @Override
+        protected ModifyColumnResponse rpcCall() throws Exception {
+          setPriority(tableName);
+          ModifyColumnRequest req =
+            RequestConverter.buildModifyColumnRequest(tableName, columnFamily, nonceGroup, nonce);
+          return master.modifyColumn(getRpcController(), req);
+        }
+      });
     return new ModifyColumnFamilyFuture(this, tableName, response);
   }
 
@@ -1125,6 +1163,39 @@ public class HBaseAdmin implements Admin {
     @Override
     public String getOperationType() {
       return "MODIFY_COLUMN_FAMILY";
+    }
+  }
+
+  @Override
+  public Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
+    String dstSFT) throws IOException {
+    ModifyColumnStoreFileTrackerResponse response =
+      executeCallable(new MasterCallable<ModifyColumnStoreFileTrackerResponse>(getConnection(),
+        getRpcControllerFactory()) {
+        long nonceGroup = ng.getNonceGroup();
+        long nonce = ng.newNonce();
+
+        @Override
+        protected ModifyColumnStoreFileTrackerResponse rpcCall() throws Exception {
+          setPriority(tableName);
+          ModifyColumnStoreFileTrackerRequest req = RequestConverter
+            .buildModifyColumnStoreFileTrackerRequest(tableName, family, dstSFT, nonceGroup, nonce);
+          return master.modifyColumnStoreFileTracker(getRpcController(), req);
+        }
+      });
+    return new ModifyColumnFamilyStoreFileTrackerFuture(this, tableName, response);
+  }
+
+  private static class ModifyColumnFamilyStoreFileTrackerFuture extends ModifyTableFuture {
+    public ModifyColumnFamilyStoreFileTrackerFuture(HBaseAdmin admin, TableName tableName,
+      final ModifyColumnStoreFileTrackerResponse response) {
+      super(admin, tableName,
+        (response != null && response.hasProcId()) ? response.getProcId() : null);
+    }
+
+    @Override
+    public String getOperationType() {
+      return "MODIFY_COLUMN_FAMILY_STORE_FILE_TRACKER";
     }
   }
 

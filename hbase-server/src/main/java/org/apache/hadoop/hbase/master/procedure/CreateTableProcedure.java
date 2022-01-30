@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerValidationUtils;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -259,7 +260,8 @@ public class CreateTableProcedure
     }
 
     // check for store file tracker configurations
-    StoreFileTrackerFactory.checkForCreateTable(env.getMasterConfiguration(), tableDescriptor);
+    StoreFileTrackerValidationUtils.checkForCreateTable(env.getMasterConfiguration(),
+      tableDescriptor);
 
     return true;
   }

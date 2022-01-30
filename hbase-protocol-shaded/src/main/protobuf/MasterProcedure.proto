@@ -574,3 +574,18 @@ message ModifyTableDescriptorStateData {
   required TableSchema unmodified_table_schema = 1;
   optional TableSchema modified_table_schema = 2;
 }
+
+enum ModifyStoreFileTrackerState {
+  MODIFY_STORE_FILE_TRACKER_FINISH_PREVIOUS_MIGRATION = 1;
+  MODIFY_STORE_FILE_TRACKER_START_MIGRATION = 2;
+  MODIFY_STORE_FILE_TRACKER_FINISH_MIGRATION = 3;
+}
+
+message ModifyStoreFileTrackerStateData {
+  required TableName table_name = 1;
+  required string dst_sft = 2;
+}
+
+message ModifyColumnFamilyStoreFileTrackerStateData {
+  required bytes family = 1;
+}

@@ -22,7 +22,6 @@ import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -101,6 +100,20 @@ public final class StoreFileTrackerFactory {
     } catch (IllegalArgumentException e) {
       // Fall back to them specifying a class name
       return conf.getClass(TRACKER_IMPL, Trackers.DEFAULT.clazz, StoreFileTracker.class);
+    }
+  }
+
+  public static Class<? extends StoreFileTracker> getTrackerClass(String trackerNameOrClass) {
+    try {
+      Trackers tracker = Trackers.valueOf(trackerNameOrClass.toUpperCase());
+      return tracker.clazz;
+    } catch (IllegalArgumentException e) {
+      // Fall back to them specifying a class name
+      try {
+        return Class.forName(trackerNameOrClass).asSubclass(StoreFileTracker.class);
+      } catch (ClassNotFoundException e1) {
+        throw new RuntimeException(e1);
+      }
     }
   }
 
