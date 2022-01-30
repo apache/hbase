@@ -124,6 +124,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrot
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnStoreFileTrackerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnStoreFileTrackerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableStoreFileTrackerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableStoreFileTrackerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
@@ -1947,6 +1951,20 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       public HBaseProtos.LogEntry getLogEntries(RpcController controller,
           HBaseProtos.LogRequest request) throws ServiceException {
         return stub.getLogEntries(controller, request);
+      }
+
+      @Override
+      public ModifyTableStoreFileTrackerResponse modifyTableStoreFileTracker(
+        RpcController controller, ModifyTableStoreFileTrackerRequest request)
+        throws ServiceException {
+        return stub.modifyTableStoreFileTracker(controller, request);
+      }
+
+      @Override
+      public ModifyColumnStoreFileTrackerResponse modifyColumnStoreFileTracker(
+        RpcController controller, ModifyColumnStoreFileTrackerRequest request)
+        throws ServiceException {
+        return stub.modifyColumnStoreFileTracker(controller, request);
       }
     };
   }
