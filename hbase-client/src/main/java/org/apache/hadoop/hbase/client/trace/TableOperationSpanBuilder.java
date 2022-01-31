@@ -18,15 +18,22 @@
 
 package org.apache.hadoop.hbase.client.trace;
 
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.CONTAINER_DB_OPERATIONS_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DB_OPERATION;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.SpanKind;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.AsyncConnectionImpl;
@@ -82,6 +89,76 @@ public class TableOperationSpanBuilder implements Supplier<Span> {
 
   public TableOperationSpanBuilder setOperation(final Operation operation) {
     attributes.put(DB_OPERATION, operation.name());
+    return this;
+  }
+
+  // `setContainerOperations` perform a recursive descent expansion of all the operations
+  // contained within the provided "batch" object.
+
+  public TableOperationSpanBuilder setContainerOperations(final RowMutations mutations) {
+    final Operation[] ops = mutations.getMutations()
+      .stream()
+      .flatMap(row -> Stream.concat(Stream.of(valueFrom(row)), unpackRowOperations(row).stream()))
+      .toArray(Operation[]::new);
+    return setContainerOperations(ops);
+  }
+
+  public TableOperationSpanBuilder setContainerOperations(final Row row) {
+    final Operation[] ops =
+      Stream.concat(Stream.of(valueFrom(row)), unpackRowOperations(row).stream())
+      .toArray(Operation[]::new);
+    return setContainerOperations(ops);
+  }
+
+  public TableOperationSpanBuilder setContainerOperations(
+    final Collection<? extends Row> operations
+  ) {
+    final Operation[] ops = operations.stream()
+      .flatMap(row -> Stream.concat(Stream.of(valueFrom(row)), unpackRowOperations(row).stream()))
+      .toArray(Operation[]::new);
+    return setContainerOperations(ops);
+  }
+
+  private static Set<Operation> unpackRowOperations(final Row row) {
+    final Set<Operation> ops = new HashSet<>();
+    if (row instanceof CheckAndMutate) {
+      final CheckAndMutate cam = (CheckAndMutate) row;
+      ops.addAll(unpackRowOperations(cam));
+    }
+    if (row instanceof RowMutations) {
+      final RowMutations mutations = (RowMutations) row;
+      final List<Operation> operations = mutations.getMutations()
+        .stream()
+        .map(TableOperationSpanBuilder::valueFrom)
+        .collect(Collectors.toList());
+      ops.addAll(operations);
+    }
+    return ops;
+  }
+
+  private static Set<Operation> unpackRowOperations(final CheckAndMutate cam) {
+    final Set<Operation> ops = new HashSet<>();
+    final Operation op = valueFrom(cam.getAction());
+    switch (op) {
+      case BATCH:
+      case CHECK_AND_MUTATE:
+        ops.addAll(unpackRowOperations(cam.getAction()));
+        break;
+      default:
+        ops.add(op);
+    }
+    return ops;
+  }
+
+  public TableOperationSpanBuilder setContainerOperations(
+    final Operation... operations
+  ) {
+    final List<String> ops = Arrays.stream(operations)
+      .map(op -> op == null ? unknown : op.name())
+      .sorted()
+      .distinct()
+      .collect(Collectors.toList());
+    attributes.put(CONTAINER_DB_OPERATIONS_KEY, ops);
     return this;
   }
 

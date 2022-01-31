@@ -36,6 +36,12 @@ public final class HBaseSemanticAttributes {
   public static final AttributeKey<String> DB_NAME = SemanticAttributes.DB_NAME;
   public static final AttributeKey<String> DB_OPERATION = SemanticAttributes.DB_OPERATION;
   public static final AttributeKey<String> TABLE_KEY = AttributeKey.stringKey("db.hbase.table");
+  /**
+   * For operations that themselves ship one or more operations, such as
+   * {@link Operation#BATCH} and {@link Operation#CHECK_AND_MUTATE}.
+   */
+  public static final AttributeKey<List<String>> CONTAINER_DB_OPERATIONS_KEY =
+    AttributeKey.stringArrayKey("db.hbase.container_operations");
   public static final AttributeKey<List<String>> REGION_NAMES_KEY =
     AttributeKey.stringArrayKey("db.hbase.regions");
   public static final AttributeKey<String> RPC_SERVICE_KEY =
