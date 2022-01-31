@@ -435,6 +435,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   // Cached clusterId on stand by masters to serve clusterID requests from clients.
   private final CachedClusterId cachedClusterId;
 
+  public static final String WARMUP_BEFORE_MOVE = "hbase.master.warmup.before.move";
+  private static final boolean DEFAULT_WARMUP_BEFORE_MOVE = true;
+
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -2196,11 +2199,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
       TransitRegionStateProcedure proc =
         this.assignmentManager.createMoveRegionProcedure(rp.getRegionInfo(), rp.getDestination());
-      // Warmup the region on the destination before initiating the move.
-      // A region server could reject the close request because it either does not
-      // have the specified region or the region is being split.
-      warmUpRegion(rp.getDestination(), hri);
-
+      if (conf.getBoolean(WARMUP_BEFORE_MOVE, DEFAULT_WARMUP_BEFORE_MOVE)) {
+        // Warmup the region on the destination before initiating the move.
+        // A region server could reject the close request because it either does not
+        // have the specified region or the region is being split.
+        LOG.info(getClientIdAuditPrefix() + " move " + rp + ", warming up region on " +
+          rp.getDestination());
+        warmUpRegion(rp.getDestination(), hri);
+      }
       LOG.info(getClientIdAuditPrefix() + " move " + rp + ", running balancer");
       Future<byte[]> future = ProcedureSyncWait.submitProcedure(this.procedureExecutor, proc);
       try {
