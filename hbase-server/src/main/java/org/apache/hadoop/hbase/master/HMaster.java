@@ -410,6 +410,9 @@ public class HMaster extends HRegionServer implements MasterServices {
   // Cached clusterId on stand by masters to serve clusterID requests from clients.
   private final CachedClusterId cachedClusterId;
 
+  public static final String WARMUP_BEFORE_MOVE = "hbase.master.warmup.before.move";
+  private static final boolean DEFAULT_WARMUP_BEFORE_MOVE = true;
+
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -2163,10 +2166,14 @@ public class HMaster extends HRegionServer implements MasterServices {
 
       TransitRegionStateProcedure proc =
           this.assignmentManager.createMoveRegionProcedure(rp.getRegionInfo(), rp.getDestination());
-      // Warmup the region on the destination before initiating the move. this call
-      // is synchronous and takes some time. doing it before the source region gets
-      // closed
-      serverManager.sendRegionWarmup(rp.getDestination(), hri);
+      if (conf.getBoolean(WARMUP_BEFORE_MOVE, DEFAULT_WARMUP_BEFORE_MOVE)) {
+        // Warmup the region on the destination before initiating the move. this call
+        // is synchronous and takes some time. doing it before the source region gets
+        // closed
+        LOG.info(getClientIdAuditPrefix() + " move " + rp + ", warming up region on " +
+          rp.getDestination());
+        serverManager.sendRegionWarmup(rp.getDestination(), hri);
+      }
       LOG.info(getClientIdAuditPrefix() + " move " + rp + ", running balancer");
       Future<byte[]> future = ProcedureSyncWait.submitProcedure(this.procedureExecutor, proc);
       try {
