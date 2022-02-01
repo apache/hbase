@@ -396,6 +396,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   // Waiting time of non-meta region's moving for meta regions assignment.
   private final long timeoutWaitMetaRegionAssignment;
 
+  public static final String WARMUP_BEFORE_MOVE = "hbase.master.warmup.before.move";
+  private static final boolean DEFAULT_WARMUP_BEFORE_MOVE = true;
+
   public static class RedirectServlet extends HttpServlet {
     private static final long serialVersionUID = 2894774810058302473L;
     private final int regionServerInfoPort;
@@ -1846,10 +1849,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           return;
         }
       }
-      // warmup the region on the destination before initiating the move. this call
-      // is synchronous and takes some time. doing it before the source region gets
-      // closed
-      serverManager.sendRegionWarmup(rp.getDestination(), hri);
+
+      if (conf.getBoolean(WARMUP_BEFORE_MOVE, DEFAULT_WARMUP_BEFORE_MOVE)) {
+        // warmup the region on the destination before initiating the move. this call
+        // is synchronous and takes some time. doing it before the source region gets
+        // closed
+        LOG.info(getClientIdAuditPrefix() + " move " + rp + ", warming up region on " +
+          rp.getDestination());
+        serverManager.sendRegionWarmup(rp.getDestination(), hri);
+      }
 
       // Here wait until all the meta regions are not in transition.
       if (!hri.isMetaRegion() && assignmentManager.getRegionStates().isMetaRegionInTransition()) {
