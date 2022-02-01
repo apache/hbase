@@ -109,6 +109,7 @@ public class CallRunner {
       call.setStartTime(EnvironmentEdgeManager.currentTime());
       if (call.getStartTime() > call.getDeadline()) {
         RpcServer.LOG.warn("Dropping timed out call: " + call);
+        this.rpcServer.getMetrics().callTimedOut();
         return;
       }
       this.status.setStatus("Setting up call");
@@ -222,6 +223,7 @@ public class CallRunner {
       call.setResponse(null, null, CALL_DROPPED_EXCEPTION, "Call dropped, server "
         + (address != null ? address : "(channel closed)") + " is overloaded, please retry.");
       call.sendResponseIfReady();
+      this.rpcServer.getMetrics().exception(CALL_DROPPED_EXCEPTION);
     } catch (ClosedChannelException cce) {
       InetSocketAddress address = rpcServer.getListenerAddress();
       RpcServer.LOG.warn(Thread.currentThread().getName() + ": caught a ClosedChannelException, " +
