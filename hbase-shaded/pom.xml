@@ -144,12 +144,15 @@
                     <!-- exclude J2EE modules that come in for JDK11+ (since
                          hadoop-3.2.0) or modules that come in for JDK8+ but
                          need not be included -->
-                    <exclude>javax.annotation:javax.annotation-api</exclude>
-                    <exclude>javax.activation:javax.activation-api</exclude>
-                    <exclude>jakarta.activation:jakarta.activation-api</exclude> <!-- Hadoop 3.3.1 -->
-                    <exclude>jakarta.ws.rs:jakarta.ws.rs-api</exclude>
+                    <exclude>com.sun.activation:jakarta.activation</exclude>
+                    <exclude>com.sun.xml.bind:jaxb-osgi</exclude>
+                    <exclude>jakarta.activation:jakarta.activation-api</exclude>
                     <exclude>jakarta.annotation:jakarta.annotation-api</exclude>
                     <exclude>jakarta.validation:jakarta.validation-api</exclude>
+                    <exclude>jakarta.ws.rs:jakarta.ws.rs-api</exclude>
+                    <exclude>jakarta.xml.bind:jakarta.xml.bind-api</exclude>
+                    <exclude>javax.activation:javax.activation-api</exclude>
+                    <exclude>javax.annotation:javax.annotation-api</exclude>
                     <exclude>org.glassfish.hk2.external:jakarta.inject</exclude>
                     <!-- default to excluding Hadoop, have module that want
                          to include it redefine the exclude list -->

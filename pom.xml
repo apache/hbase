@@ -1829,6 +1829,9 @@
     <xz.version>1.9</xz.version>
     <zstd-jni.version>1.5.0-4</zstd-jni.version>
     <hbase-thirdparty.version>4.0.1</hbase-thirdparty.version>
+    <!-- jdk11 dependencies for hbase-http -->
+    <jakarta-activation.version>2.0.1</jakarta-activation.version>
+    <jakarta-xml-bind.version>3.0.1</jakarta-xml-bind.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -2619,6 +2622,17 @@
         <groupId>com.github.luben</groupId>
         <artifactId>zstd-jni</artifactId>
         <version>${zstd-jni.version}</version>
+      </dependency>
+      <!-- jdk11 dependencies for hbase-http -->
+      <dependency>
+        <groupId>jakarta.activation</groupId>
+        <artifactId>jakarta.activation-api</artifactId>
+        <version>${jakarta-activation.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>jakarta.xml.bind</groupId>
+        <artifactId>jakarta.xml.bind-api</artifactId>
+        <version>${jakarta-xml-bind.version}</version>
       </dependency>
       <!-- shaded thirdparty -->
       <dependency>
