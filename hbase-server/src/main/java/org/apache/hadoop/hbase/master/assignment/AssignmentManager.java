@@ -829,9 +829,9 @@ public class AssignmentManager {
   public Future<byte[]> balance(RegionPlan regionPlan) throws HBaseIOException {
     ServerName current =
       this.getRegionStates().getRegionAssignments().get(regionPlan.getRegionInfo());
-    if (!current.equals(regionPlan.getSource())) {
+    if (current == null || !current.equals(regionPlan.getSource())) {
       LOG.debug("Skip region plan {}, source server not match, current region location is {}",
-        regionPlan, current);
+        regionPlan, current == null ? "(null)" : current);
       return null;
     }
     return moveAsync(regionPlan);
