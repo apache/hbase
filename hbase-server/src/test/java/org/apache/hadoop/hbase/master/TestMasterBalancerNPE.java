@@ -147,6 +147,9 @@ public class TestMasterBalancerNPE {
          */
         cyclicBarrier.await();
       }
+      /**
+       * Before HBASE-26712,here may throw NPE.
+       */
       return invocation.callRealMethod();
     }).when(spiedAssignmentManager).balance(Mockito.any());
 
@@ -179,7 +182,14 @@ public class TestMasterBalancerNPE {
         synchronized (spiedLoadBalancer) {
           master.setLoadBalancer(spiedLoadBalancer);
           master.setAssignmentManager(spiedAssignmentManager);
+          /**
+           * enable balance
+           */
           TEST_UTIL.getAdmin().balancerSwitch(true, false);
+          /**
+           * Before HBASE-26712,here invokes {@link AssignmentManager#balance(RegionPlan)}
+           * which may throw NPE.
+           */
           master.balance();
         }
       }
