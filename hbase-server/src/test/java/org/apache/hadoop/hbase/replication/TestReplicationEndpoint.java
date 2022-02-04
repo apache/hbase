@@ -497,11 +497,6 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       stoppedCount.incrementAndGet();
       notifyStopped();
     }
-
-    @Override
-    public boolean canReplicateToSameCluster() {
-      return true;
-    }
   }
 
   /**

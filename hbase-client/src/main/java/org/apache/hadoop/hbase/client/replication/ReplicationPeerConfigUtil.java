@@ -60,8 +60,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 public final class ReplicationPeerConfigUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationPeerConfigUtil.class);
-  public static final String HBASE_REPLICATION_PEER_BASE_CONFIG =
-    "hbase.replication.peer.base.config";
 
   private ReplicationPeerConfigUtil() {
   }
@@ -420,44 +418,6 @@ public final class ReplicationPeerConfigUtil {
       builder.setTableCFsMap(mergeTableCFs(preTableCfs, tableCfs));
     }
     return builder.build();
-  }
-
-  /**
-   * Helper method to add/removev base peer configs from Configuration to ReplicationPeerConfig This
-   * merges the user supplied peer configuration
-   * {@link org.apache.hadoop.hbase.replication.ReplicationPeerConfig} with peer configs provided as
-   * property hbase.replication.peer.base.configs in hbase configuration. Expected format for this
-   * hbase configuration is "k1=v1;k2=v2,v2_1;k3=""". If value is empty, it will remove the existing
-   * key-value from peer config.
-   * @param conf Configuration
-   * @return ReplicationPeerConfig containing updated configs.
-   */
-  public static ReplicationPeerConfig updateReplicationBasePeerConfigs(Configuration conf,
-    ReplicationPeerConfig receivedPeerConfig) {
-    ReplicationPeerConfigBuilder copiedPeerConfigBuilder =
-      ReplicationPeerConfig.newBuilder(receivedPeerConfig);
-
-    Map<String, String> receivedPeerConfigMap = receivedPeerConfig.getConfiguration();
-    String basePeerConfigs = conf.get(HBASE_REPLICATION_PEER_BASE_CONFIG, "");
-    if (basePeerConfigs.length() != 0) {
-      Map<String, String> basePeerConfigMap = Splitter.on(';').trimResults().omitEmptyStrings()
-        .withKeyValueSeparator("=").split(basePeerConfigs);
-      for (Map.Entry<String, String> entry : basePeerConfigMap.entrySet()) {
-        String configName = entry.getKey();
-        String configValue = entry.getValue();
-        // If the config is provided with empty value, for eg. k1="",
-        // we remove it from peer config. Providing config with empty value
-        // is required so that it doesn't remove any other config unknowingly.
-        if (Strings.isNullOrEmpty(configValue)) {
-          copiedPeerConfigBuilder.removeConfiguration(configName);
-        } else if (!receivedPeerConfigMap.getOrDefault(configName, "").equals(configValue)) {
-          // update the configuration if exact config and value doesn't exists
-          copiedPeerConfigBuilder.putConfiguration(configName, configValue);
-        }
-      }
-    }
-
-    return copiedPeerConfigBuilder.build();
   }
 
   public static ReplicationPeerConfig appendExcludeTableCFsToReplicationPeerConfig(
