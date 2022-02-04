@@ -213,7 +213,7 @@ public final class ClassLoaderTestHelper {
     LOG.info("Adding jar file to outer jar file completed");
   }
 
-  static String localDirPath(Configuration conf) {
+  public static String localDirPath(Configuration conf) {
     return conf.get(ClassLoaderBase.LOCAL_DIR_KEY)
       + File.separator + "jars" + File.separator;
   }

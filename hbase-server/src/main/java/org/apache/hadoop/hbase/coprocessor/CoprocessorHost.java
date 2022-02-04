@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.SortedList;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
 /**
  * Provides the common setup framework and runtime services for coprocessor
@@ -144,13 +145,21 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
 
     int currentSystemPriority = Coprocessor.PRIORITY_SYSTEM;
     for (String className : defaultCPClasses) {
-      String[] classNameAndPriority = className.split("\\|");
+      // After HBASE-23710 and HBASE-26714 when configuring for system coprocessor, we accept
+      // an optional format of className|priority|path
+      String[] classNameToken = className.split("\\|");
       boolean hasPriorityOverride = false;
-      className = classNameAndPriority[0];
+      boolean hasPath = false;
+      className = classNameToken[0];
       int overridePriority = Coprocessor.PRIORITY_SYSTEM;
-      if (classNameAndPriority.length > 1){
-        overridePriority = Integer.parseInt(classNameAndPriority[1]);
+      Path path = null;
+      if (classNameToken.length > 1 && !Strings.isNullOrEmpty(classNameToken[1])) {
+        overridePriority = Integer.parseInt(classNameToken[1]);
         hasPriorityOverride = true;
+      }
+      if (classNameToken.length > 2 && !Strings.isNullOrEmpty(classNameToken[2])) {
+        path = new Path(classNameToken[2].trim());
+        hasPath = true;
       }
       className = className.trim();
       if (findCoprocessor(className) != null) {
@@ -159,8 +168,13 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
         continue;
       }
       ClassLoader cl = this.getClass().getClassLoader();
-      Thread.currentThread().setContextClassLoader(cl);
       try {
+        // override the class loader if a path for the system coprocessor is provided.
+        if (hasPath) {
+          cl = CoprocessorClassLoader.getClassLoader(path, this.getClass().getClassLoader(),
+            pathPrefix, conf);
+        }
+        Thread.currentThread().setContextClassLoader(cl);
         implClass = cl.loadClass(className);
         int coprocPriority = hasPriorityOverride ? overridePriority : currentSystemPriority;
         // Add coprocessors as we go to guard against case where a coprocessor is specified twice
