@@ -46,7 +46,7 @@ public class ClusterStatusChore extends ScheduledChore {
   @Override
   protected void chore() {
     try {
-      balancer.updateClusterMetrics(master.getClusterMetricsWithoutCoprocessor());
+      balancer.updateClusterMetrics(master.getClusterMetricsInternal());
     } catch (InterruptedIOException e) {
       LOG.warn("Ignoring interruption", e);
     }

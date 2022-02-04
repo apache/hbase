@@ -85,6 +85,8 @@ public final class ServerMetricsBuilder {
       .setReplicationLoadSink(serverLoadPB.hasReplLoadSink()
         ? ProtobufUtil.toReplicationLoadSink(serverLoadPB.getReplLoadSink())
         : null)
+      .setTasks(serverLoadPB.getTasksList().stream()
+          .map(ProtobufUtil::getServerTask).collect(Collectors.toList()))
       .setReportTimestamp(serverLoadPB.getReportEndTime())
       .setLastReportTimestamp(serverLoadPB.getReportStartTime()).setVersionNumber(versionNumber)
       .setVersion(version).build();
@@ -103,19 +105,24 @@ public final class ServerMetricsBuilder {
         .setInfoServerPort(metrics.getInfoServerPort())
         .setMaxHeapMB((int) metrics.getMaxHeapSize().get(Size.Unit.MEGABYTE))
         .setUsedHeapMB((int) metrics.getUsedHeapSize().get(Size.Unit.MEGABYTE))
-        .addAllCoprocessors(toCoprocessor(metrics.getCoprocessorNames())).addAllRegionLoads(
+        .addAllCoprocessors(toCoprocessor(metrics.getCoprocessorNames()))
+        .addAllRegionLoads(
             metrics.getRegionMetrics().values().stream().map(RegionMetricsBuilder::toRegionLoad)
-                .collect(Collectors.toList())).addAllUserLoads(
+                .collect(Collectors.toList()))
+        .addAllUserLoads(
             metrics.getUserMetrics().values().stream().map(UserMetricsBuilder::toUserMetrics)
-                .collect(Collectors.toList())).addAllReplLoadSource(
+                .collect(Collectors.toList()))
+        .addAllReplLoadSource(
             metrics.getReplicationLoadSourceList().stream()
                 .map(ProtobufUtil::toReplicationLoadSource).collect(Collectors.toList()))
+        .addAllTasks(
+            metrics.getTasks().stream().map(ProtobufUtil::toServerTask)
+                .collect(Collectors.toList()))
         .setReportStartTime(metrics.getLastReportTimestamp())
         .setReportEndTime(metrics.getReportTimestamp());
     if (metrics.getReplicationLoadSink() != null) {
       builder.setReplLoadSink(ProtobufUtil.toReplicationLoadSink(metrics.getReplicationLoadSink()));
     }
-
     return builder.build();
   }
 
@@ -139,6 +146,8 @@ public final class ServerMetricsBuilder {
   private final Set<String> coprocessorNames = new TreeSet<>();
   private long reportTimestamp = EnvironmentEdgeManager.currentTime();
   private long lastReportTimestamp = 0;
+  private final List<ServerTask> tasks = new ArrayList<>();
+
   private ServerMetricsBuilder(ServerName serverName) {
     this.serverName = serverName;
   }
@@ -213,6 +222,11 @@ public final class ServerMetricsBuilder {
     return this;
   }
 
+  public ServerMetricsBuilder setTasks(List<ServerTask> tasks) {
+    this.tasks.addAll(tasks);
+    return this;
+  }
+
   public ServerMetrics build() {
     return new ServerMetricsImpl(
         serverName,
@@ -229,7 +243,8 @@ public final class ServerMetricsBuilder {
         coprocessorNames,
         reportTimestamp,
         lastReportTimestamp,
-        userMetrics);
+        userMetrics,
+        tasks);
   }
 
   private static class ServerMetricsImpl implements ServerMetrics {
@@ -249,12 +264,14 @@ public final class ServerMetricsBuilder {
     private final long reportTimestamp;
     private final long lastReportTimestamp;
     private final Map<byte[], UserMetrics> userMetrics;
+    private final List<ServerTask> tasks;
 
     ServerMetricsImpl(ServerName serverName, int versionNumber, String version,
         long requestCountPerSecond, long requestCount, Size usedHeapSize, Size maxHeapSize,
         int infoServerPort, List<ReplicationLoadSource> sources, ReplicationLoadSink sink,
-        Map<byte[], RegionMetrics> regionStatus, Set<String> coprocessorNames, long reportTimestamp,
-        long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics) {
+        Map<byte[], RegionMetrics> regionStatus, Set<String> coprocessorNames,
+        long reportTimestamp, long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics,
+        List<ServerTask> tasks) {
       this.serverName = Preconditions.checkNotNull(serverName);
       this.versionNumber = versionNumber;
       this.version = version;
@@ -270,6 +287,7 @@ public final class ServerMetricsBuilder {
       this.coprocessorNames =Preconditions.checkNotNull(coprocessorNames);
       this.reportTimestamp = reportTimestamp;
       this.lastReportTimestamp = lastReportTimestamp;
+      this.tasks = tasks;
     }
 
     @Override
@@ -354,6 +372,11 @@ public final class ServerMetricsBuilder {
     @Override
     public long getLastReportTimestamp() {
       return lastReportTimestamp;
+    }
+
+    @Override
+    public List<ServerTask> getTasks() {
+      return tasks;
     }
 
     @Override

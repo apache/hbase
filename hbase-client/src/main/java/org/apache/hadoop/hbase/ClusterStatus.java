@@ -357,6 +357,11 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   @Override
+  public List<ServerTask> getMasterTasks() {
+    return metrics.getMasterTasks();
+  }
+
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(1024);
     sb.append("Master: " + metrics.getMasterName());
