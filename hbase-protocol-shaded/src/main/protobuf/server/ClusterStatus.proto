@@ -229,6 +229,21 @@ message ReplicationLoadSource {
   optional uint64 oPsShipped = 12;
 }
 
+message ServerTask {
+  required string description = 1;
+  required string status = 2;
+  required State state = 3;
+  optional uint64 startTime = 4;
+  optional uint64 completionTime = 5;
+
+  enum State {
+    RUNNING = 0;
+    WAITING = 1;
+    COMPLETE = 2;
+    ABORTED = 3;
+  }
+}
+
 message ServerLoad {
   /** Number of requests since last report. */
   optional uint64 number_of_requests = 1;
@@ -295,6 +310,11 @@ message ServerLoad {
    * The metrics for write requests on this region server
    */
   optional uint64 write_requests_count = 14;
+ 
+  /**
+   * The active monitored tasks
+   */
+  repeated ServerTask tasks = 15;
 }
 
 message LiveServerInfo {
@@ -328,6 +348,7 @@ message ClusterStatus {
   optional int32 master_info_port = 10 [default = -1];
   repeated ServerName servers_name = 11;
   repeated TableRegionStatesCount table_region_states_count = 12;
+  repeated ServerTask master_tasks = 13;
 }
 
 enum Option {
@@ -343,4 +364,5 @@ enum Option {
   MASTER_INFO_PORT = 9;
   SERVERS_NAME = 10;
   TABLE_TO_REGIONS_COUNT = 11;
+  TASKS = 12;
 }

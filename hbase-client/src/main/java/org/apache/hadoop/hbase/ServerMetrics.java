@@ -124,4 +124,11 @@ public interface ServerMetrics {
    */
   long getLastReportTimestamp();
 
+  /**
+   * Called directly from clients such as the hbase shell
+   * @return the active monitored tasks
+   */
+  @Nullable
+  List<ServerTask> getTasks();
+
 }

@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ServerTask;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -293,6 +294,11 @@ public class TestRegionsRecoveryChore {
         return null;
       }
 
+      @Override
+      public List<ServerTask> getMasterTasks() {
+        return null;
+      }
+
     };
     return clusterMetrics;
   }
@@ -385,6 +391,11 @@ public class TestRegionsRecoveryChore {
       @Override
       public long getLastReportTimestamp() {
         return 0;
+      }
+
+      @Override
+      public List<ServerTask> getTasks() {
+        return null;
       }
 
     };
