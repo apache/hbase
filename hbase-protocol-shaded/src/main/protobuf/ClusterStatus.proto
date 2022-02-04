@@ -304,7 +304,7 @@ message ServerLoad {
   /**
    * The active monitored tasks
    */
-  repeated ServerTask tasks = 13;
+  repeated ServerTask tasks = 15; /* 15 here to stay in sync with master branch */
 }
 
 message LiveServerInfo {
