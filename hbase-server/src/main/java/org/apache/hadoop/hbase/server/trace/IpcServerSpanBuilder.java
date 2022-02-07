@@ -30,16 +30,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
+import org.apache.hadoop.hbase.client.trace.IpcClientSpanBuilder;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.ServerCall;
 import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RpcSystem;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
-import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
 
 /**
  * Construct {@link Span} instances originating from the server side of an IPC.
+ *
+ * @see <a href="https://github.com/open-telemetry/opentelemetry-specification/blob/3e380e249f60c3a5f68746f5e84d10195ba41a79/specification/trace/semantic_conventions/rpc.md">Semantic conventions for RPC spans</a>
  */
 @InterfaceAudience.Private
 public class IpcServerSpanBuilder implements Supplier<Span> {
@@ -50,16 +52,14 @@ public class IpcServerSpanBuilder implements Supplier<Span> {
 
   public IpcServerSpanBuilder(final RpcCall rpcCall) {
     this.rpcCall = rpcCall;
-    // it happens that `getFullName` returns a string in the $package.$service format required by
-    // the otel RPC specification. Use it for now; might have to parse the value in the future.
     final String packageAndService = Optional.ofNullable(rpcCall.getService())
       .map(BlockingService::getDescriptorForType)
-      .map(Descriptors.ServiceDescriptor::getFullName)
+      .map(IpcClientSpanBuilder::getRpcPackageAndService)
       .orElse("");
     final String method = Optional.ofNullable(rpcCall.getMethod())
-      .map(Descriptors.MethodDescriptor::getName)
+      .map(IpcClientSpanBuilder::getRpcName)
       .orElse("");
-    setName(packageAndService + "/" + method);
+    setName(IpcClientSpanBuilder.buildSpanName(packageAndService, method));
     addAttribute(RPC_SYSTEM, RpcSystem.HBASE_RPC.name());
     addAttribute(RPC_SERVICE, packageAndService);
     addAttribute(RPC_METHOD, method);

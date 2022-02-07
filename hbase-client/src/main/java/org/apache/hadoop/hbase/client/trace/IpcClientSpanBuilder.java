@@ -38,6 +38,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
 
 /**
  * Construct {@link Span} instances originating from the client side of an IPC.
+ *
+ * @see <a href="https://github.com/open-telemetry/opentelemetry-specification/blob/3e380e249f60c3a5f68746f5e84d10195ba41a79/specification/trace/semantic_conventions/rpc.md">Semantic conventions for RPC spans</a>
  */
 @InterfaceAudience.Private
 public class IpcClientSpanBuilder implements Supplier<Span> {
@@ -51,9 +53,9 @@ public class IpcClientSpanBuilder implements Supplier<Span> {
   }
 
   public IpcClientSpanBuilder setMethodDescriptor(final Descriptors.MethodDescriptor md) {
-    final String packageAndService = getRpcPackageAndService(md);
+    final String packageAndService = getRpcPackageAndService(md.getService());
     final String method = getRpcName(md);
-    this.name = packageAndService + "/" + method;
+    this.name = buildSpanName(packageAndService, method);
     populateMethodDescriptorAttributes(attributes, md);
     return this;
   }
@@ -84,20 +86,33 @@ public class IpcClientSpanBuilder implements Supplier<Span> {
     final Map<AttributeKey<?>, Object> attributes,
     final Descriptors.MethodDescriptor md
   ) {
-    final String packageAndService = getRpcPackageAndService(md);
+    final String packageAndService = getRpcPackageAndService(md.getService());
     final String method = getRpcName(md);
     attributes.put(RPC_SYSTEM, RpcSystem.HBASE_RPC.name());
     attributes.put(RPC_SERVICE, packageAndService);
     attributes.put(RPC_METHOD, method);
   }
 
-  private static String getRpcPackageAndService(final Descriptors.MethodDescriptor md) {
+  /**
+   * Retrieve the combined {@code $package.$service} value from {@code sd}.
+   */
+  public static String getRpcPackageAndService(final Descriptors.ServiceDescriptor sd) {
     // it happens that `getFullName` returns a string in the $package.$service format required by
     // the otel RPC specification. Use it for now; might have to parse the value in the future.
-    return md.getService().getFullName();
+    return sd.getFullName();
   }
 
-  private static String getRpcName(final Descriptors.MethodDescriptor md) {
+  /**
+   * Retrieve the {@code $method} value from {@code md}.
+   */
+  public static String getRpcName(final Descriptors.MethodDescriptor md) {
     return md.getName();
+  }
+
+  /**
+   * Construct an RPC span name.
+   */
+  public static String buildSpanName(final String packageAndService, final String method) {
+    return packageAndService + "/" + method;
   }
 }
