@@ -31,7 +31,7 @@ public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkS
   private final MutableFastCounter hfilesCounter;
 
   public MetricsReplicationSinkSourceImpl(MetricsReplicationSourceImpl rms) {
-    ageHist = rms.getMetricsRegistry().getHistogram(SINK_AGE_OF_LAST_APPLIED_OP);
+    ageHist = rms.getMetricsRegistry().newTimeHistogram(SINK_AGE_OF_LAST_APPLIED_OP);
     batchesCounter = rms.getMetricsRegistry().getCounter(SINK_APPLIED_BATCHES, 0L);
     opsCounter = rms.getMetricsRegistry().getCounter(SINK_APPLIED_OPS, 0L);
     hfilesCounter = rms.getMetricsRegistry().getCounter(SINK_APPLIED_HFILES, 0L);
