@@ -1180,7 +1180,7 @@ In 0.94, HLog was the name of the implementation of the WAL.
 You will likely find references to the HLog in documentation tailored to these older versions.
 ====
 
-The WAL resides in HDFS in the _/hbase/WALs/_ directory, with subdirectories per region.
+The WAL resides in HDFS in the _/hbase/WALs/_ directory, with subdirectories per RegionServer.
 
 For more general information about the concept of write ahead logs, see the Wikipedia
 link:http://en.wikipedia.org/wiki/Write-ahead_logging[Write-Ahead Log] article.
