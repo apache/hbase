@@ -520,4 +520,16 @@ public class MockNoopMasterServices implements MasterServices {
   public MetaLocationSyncer getMetaLocationSyncer() {
     return null;
   }
+
+  @Override
+  public long modifyTableStoreFileTracker(TableName tableName, String dstSFT, long nonceGroup,
+    long nonce) throws IOException {
+    return -1;
+  }
+
+  @Override
+  public long modifyColumnStoreFileTracker(TableName tableName, byte[] family, String dstSFT,
+    long nonceGroup, long nonce) throws IOException {
+    return -1;
+  }
 }

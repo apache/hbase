@@ -38,11 +38,9 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
-import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
-import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerValidationUtils;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -328,7 +326,7 @@ public class ModifyTableProcedure
     }
 
     // check for store file tracker configurations
-    StoreFileTrackerFactory.checkForModifyTable(env.getMasterConfiguration(),
+    StoreFileTrackerValidationUtils.checkForModifyTable(env.getMasterConfiguration(),
       unmodifiedTableDescriptor, modifiedTableDescriptor);
   }
 
@@ -418,13 +416,6 @@ public class ModifyTableProcedure
           replicaId -> RegionReplicaUtil.getRegionInfoForReplica(primaryRegion, replicaId)))
         .collect(Collectors.toList());
       addChildProcedure(env.getAssignmentManager().createAssignProcedures(newReplicas));
-    }
-    if (oldReplicaCount <= 1) {
-      try {
-        ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterServices());
-      } catch (ReplicationException e) {
-        throw new HBaseIOException(e);
-      }
     }
   }
 

@@ -899,6 +899,23 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
+  public String preModifyTableStoreFileTracker(ObserverContext<MasterCoprocessorEnvironment> c,
+    TableName tableName, String dstSFT) throws IOException {
+    requirePermission(c, "modifyTableStoreFileTracker", tableName, null, null, Action.ADMIN,
+      Action.CREATE);
+    return dstSFT;
+  }
+
+  @Override
+  public String preModifyColumnFamilyStoreFileTracker(
+    ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName, byte[] family,
+    String dstSFT) throws IOException {
+    requirePermission(c, "modifyColumnFamilyStoreFileTracker", tableName, family, null,
+      Action.ADMIN, Action.CREATE);
+    return dstSFT;
+  }
+
+  @Override
   public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
     TableDescriptor oldDesc, TableDescriptor currentDesc) throws IOException {
     final Configuration conf = c.getEnvironment().getConfiguration();

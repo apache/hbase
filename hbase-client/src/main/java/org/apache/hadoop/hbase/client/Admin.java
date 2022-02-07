@@ -69,7 +69,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * The administrative API for HBase. Obtain an instance from {@link Connection#getAdmin()} and
@@ -499,6 +498,31 @@ public interface Admin extends Abortable, Closeable {
    */
   Future<Void> modifyColumnFamilyAsync(TableName tableName, ColumnFamilyDescriptor columnFamily)
       throws IOException;
+
+  /**
+   * Change the store file tracker of the given table's given family.
+   * @param tableName the table you want to change
+   * @param family the family you want to change
+   * @param dstSFT the destination store file tracker
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void modifyColumnFamilyStoreFileTracker(TableName tableName, byte[] family, String dstSFT)
+    throws IOException {
+    get(modifyColumnFamilyStoreFileTrackerAsync(tableName, family, dstSFT), getSyncWaitTimeout(),
+      TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Change the store file tracker of the given table's given family.
+   * @param tableName the table you want to change
+   * @param family the family you want to change
+   * @param dstSFT the destination store file tracker
+   * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
+    String dstSFT) throws IOException;
 
   /**
    * Get all the online regions on a region server.
@@ -1057,6 +1081,28 @@ public interface Admin extends Abortable, Closeable {
    *         operation to complete
    */
   Future<Void> modifyTableAsync(TableDescriptor td) throws IOException;
+
+  /**
+   * Change the store file tracker of the given table.
+   * @param tableName the table you want to change
+   * @param dstSFT the destination store file tracker
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void modifyTableStoreFileTracker(TableName tableName, String dstSFT) throws IOException {
+    get(modifyTableStoreFileTrackerAsync(tableName, dstSFT), getSyncWaitTimeout(),
+      TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Change the store file tracker of the given table.
+   * @param tableName the table you want to change
+   * @param dstSFT the destination store file tracker
+   * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
+    throws IOException;
 
   /**
    * Shuts down the HBase cluster.

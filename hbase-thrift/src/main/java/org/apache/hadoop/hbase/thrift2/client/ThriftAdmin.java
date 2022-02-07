@@ -1297,4 +1297,18 @@ public class ThriftAdmin implements Admin {
       throws IOException {
     throw new NotImplementedException("getLogEntries not supported in ThriftAdmin");
   }
+
+  @Override
+  public Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
+    String dstSFT) throws IOException {
+    throw new NotImplementedException(
+      "modifyColumnFamilyStoreFileTrackerAsync not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
+    throws IOException {
+    throw new NotImplementedException(
+      "modifyTableStoreFileTrackerAsync not supported in ThriftAdmin");
+  }
 }

@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.StringTokenizer;
-import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,7 +36,10 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RandomDistribution;
 import org.apache.hadoop.io.BytesWritable;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,8 +61,8 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
  * Remove after tfile is committed and use the tfile version of this class
  * instead.</p>
  */
-@Category({IOTests.class, SmallTests.class})
-public class TestHFileSeek extends TestCase {
+@Category({ IOTests.class, SmallTests.class })
+public class TestHFileSeek {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -80,7 +82,7 @@ public class TestHFileSeek extends TestCase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileSeek.class);
 
-  @Override
+  @Before
   public void setUp() throws IOException {
     if (options == null) {
       options = new MyOptions(new String[0]);
@@ -112,7 +114,7 @@ public class TestHFileSeek extends TestCase {
             options.dictSize);
   }
 
-  @Override
+  @After
   public void tearDown() {
     try {
       fs.close();
@@ -217,6 +219,7 @@ public class TestHFileSeek extends TestCase {
 
   }
 
+  @Test
   public void testSeeks() throws IOException {
     if (options.doCreate()) {
       createTFile();

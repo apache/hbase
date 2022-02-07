@@ -17,23 +17,25 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.Assert.assertEquals;
+
 import java.nio.ByteBuffer;
-import junit.framework.TestCase;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({IOTests.class, SmallTests.class})
-public class TestCachedBlockQueue extends TestCase {
+@Category({ IOTests.class, SmallTests.class })
+public class TestCachedBlockQueue {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCachedBlockQueue.class);
 
+  @Test
   public void testQueue() throws Exception {
-
     CachedBlock cb1 = new CachedBlock(1000, "cb1", 1);
     CachedBlock cb2 = new CachedBlock(1500, "cb2", 2);
     CachedBlock cb3 = new CachedBlock(1000, "cb3", 3);
@@ -70,8 +72,8 @@ public class TestCachedBlockQueue extends TestCase {
     }
   }
 
+  @Test
   public void testQueueSmallBlockEdgeCase() throws Exception {
-
     CachedBlock cb1 = new CachedBlock(1000, "cb1", 1);
     CachedBlock cb2 = new CachedBlock(1500, "cb2", 2);
     CachedBlock cb3 = new CachedBlock(1000, "cb3", 3);
@@ -115,39 +117,35 @@ public class TestCachedBlockQueue extends TestCase {
     }
   }
 
-  private static class CachedBlock extends org.apache.hadoop.hbase.io.hfile.LruCachedBlock
-  {
+  private static class CachedBlock extends org.apache.hadoop.hbase.io.hfile.LruCachedBlock {
     public CachedBlock(final long heapSize, String name, long accessTime) {
-      super(new BlockCacheKey(name, 0),
-          new Cacheable() {
-            @Override
-            public long heapSize() {
-              return ((int)(heapSize - CachedBlock.PER_BLOCK_OVERHEAD));
-            }
+      super(new BlockCacheKey(name, 0), new Cacheable() {
+        @Override
+        public long heapSize() {
+          return ((int) (heapSize - CachedBlock.PER_BLOCK_OVERHEAD));
+        }
 
-            @Override
-            public int getSerializedLength() {
-              return 0;
-            }
+        @Override
+        public int getSerializedLength() {
+          return 0;
+        }
 
-            @Override
-            public void serialize(ByteBuffer destination, boolean includeNextBlockMetadata) {
-            }
+        @Override
+        public void serialize(ByteBuffer destination, boolean includeNextBlockMetadata) {
+        }
 
-            @Override
-            public CacheableDeserializer<Cacheable> getDeserializer() {
-              // TODO Auto-generated method stub
-              return null;
-            }
+        @Override
+        public CacheableDeserializer<Cacheable> getDeserializer() {
+          return null;
+        }
 
-            @Override
-            public BlockType getBlockType() {
-              return BlockType.DATA;
-            }
+        @Override
+        public BlockType getBlockType() {
+          return BlockType.DATA;
+        }
 
-          }, accessTime, false);
+      }, accessTime, false);
     }
   }
-
 }
 

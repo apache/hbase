@@ -230,39 +230,14 @@ public interface MasterObserver {
    * table RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param newDescriptor after modify operation, table will have this descriptor
-   * @deprecated Since 2.1. Will be removed in 3.0.
-   */
-  @Deprecated
-  default void preModifyTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-    final TableName tableName, TableDescriptor newDescriptor) throws IOException {}
-
-  /**
-   * Called prior to modifying a table's properties.  Called as part of modify
-   * table RPC call.
-   * @param ctx the environment to interact with the framework and master
-   * @param tableName the name of the table
    * @param currentDescriptor current TableDescriptor of the table
    * @param newDescriptor after modify operation, table will have this descriptor
    */
   default TableDescriptor preModifyTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName, TableDescriptor currentDescriptor, TableDescriptor newDescriptor)
       throws IOException {
-    preModifyTable(ctx, tableName, newDescriptor);
     return newDescriptor;
   }
-
-  /**
-   * Called after the modifyTable operation has been requested.  Called as part
-   * of modify table RPC call.
-   * @param ctx the environment to interact with the framework and master
-   * @param tableName the name of the table
-   * @param currentDescriptor current TableDescriptor of the table
-   * @deprecated Since 2.1. Will be removed in 3.0.
-   */
-  @Deprecated
-  default void postModifyTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-    final TableName tableName, TableDescriptor currentDescriptor) throws IOException {}
 
   /**
    * Called after the modifyTable operation has been requested.  Called as part
@@ -274,24 +249,59 @@ public interface MasterObserver {
    */
   default void postModifyTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName, TableDescriptor oldDescriptor, TableDescriptor currentDescriptor)
-    throws IOException {
-    postModifyTable(ctx, tableName, currentDescriptor);
+    throws IOException {}
+
+  /**
+   * Called prior to modifying a table's store file tracker. Called as part of modify
+   * table store file tracker RPC call.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param dstSFT the store file tracker
+   * @return the store file tracker
+   */
+  default String preModifyTableStoreFileTracker(
+    final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName,
+    String dstSFT) throws IOException {
+    return dstSFT;
   }
 
   /**
-   * Called prior to modifying a table's properties.  Called as part of modify
-   * table procedure and it is async to the modify table RPC call.
-   *
+   * Called after modifying a table's store file tracker. Called as part of modify
+   * table store file tracker RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param newDescriptor after modify operation, table will have this descriptor
-   * @deprecated Since 2.1. Will be removed in 3.0.
+   * @param dstSFT the store file tracker
    */
-  @Deprecated
-  default void preModifyTableAction(
-    final ObserverContext<MasterCoprocessorEnvironment> ctx,
-    final TableName tableName,
-    final TableDescriptor newDescriptor) throws IOException {}
+  default void postModifyTableStoreFileTracker(
+    final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName,
+    String dstSFT) throws IOException {}
+
+  /**
+   * Called prior to modifying a family's store file tracker. Called as part of modify family store
+   * file tracker RPC call.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param family the column family
+   * @param dstSFT the store file tracker
+   * @return the store file tracker
+   */
+  default String preModifyColumnFamilyStoreFileTracker(
+    final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName,
+    final byte[] family, String dstSFT) throws IOException {
+    return dstSFT;
+  }
+
+  /**
+   * Called after modifying a family store file tracker. Called as part of modify family store
+   * file tracker RPC call.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param family the column family
+   * @param dstSFT the store file tracker
+   */
+  default void postModifyColumnFamilyStoreFileTracker(
+    final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName,
+    final byte[] family, String dstSFT) throws IOException {}
 
   /**
    * Called prior to modifying a table's properties.  Called as part of modify
@@ -306,24 +316,7 @@ public interface MasterObserver {
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName,
       final TableDescriptor currentDescriptor,
-      final TableDescriptor newDescriptor) throws IOException {
-    preModifyTableAction(ctx, tableName, newDescriptor);
-  }
-
-  /**
-   * Called after to modifying a table's properties.  Called as part of modify
-   * table procedure and it is async to the modify table RPC call.
-   *
-   * @param ctx the environment to interact with the framework and master
-   * @param tableName the name of the table
-   * @param currentDescriptor current TableDescriptor of the table
-   * @deprecated Since 2.1. Will be removed in 3.0.
-   */
-  @Deprecated
-  default void postCompletedModifyTableAction(
-    final ObserverContext<MasterCoprocessorEnvironment> ctx,
-    final TableName tableName,
-    final TableDescriptor currentDescriptor) throws IOException {}
+      final TableDescriptor newDescriptor) throws IOException {}
 
   /**
    * Called after to modifying a table's properties.  Called as part of modify
@@ -338,9 +331,7 @@ public interface MasterObserver {
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName,
       final TableDescriptor oldDescriptor,
-      final TableDescriptor currentDescriptor) throws IOException {
-    postCompletedModifyTableAction(ctx, tableName, currentDescriptor);
-  }
+      final TableDescriptor currentDescriptor) throws IOException {}
 
   /**
    * Called prior to enabling a table.  Called as part of enable table RPC call.
@@ -919,34 +910,12 @@ public interface MasterObserver {
   /**
    * Called prior to modifying a namespace's properties.
    * @param ctx the environment to interact with the framework and master
-   * @param newNsDescriptor after modify operation, namespace will have this descriptor
-   * @deprecated Since 2.1. Will be removed in 3.0.
-   */
-  @Deprecated
-  default void preModifyNamespace(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-    NamespaceDescriptor newNsDescriptor) throws IOException {}
-
-  /**
-   * Called prior to modifying a namespace's properties.
-   * @param ctx the environment to interact with the framework and master
    * @param currentNsDescriptor current NamespaceDescriptor of the namespace
    * @param newNsDescriptor after modify operation, namespace will have this descriptor
    */
   default void preModifyNamespace(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       NamespaceDescriptor currentNsDescriptor, NamespaceDescriptor newNsDescriptor)
-    throws IOException {
-    preModifyNamespace(ctx, newNsDescriptor);
-  }
-
-  /**
-   * Called after the modifyNamespace operation has been requested.
-   * @param ctx the environment to interact with the framework and master
-   * @param currentNsDescriptor current NamespaceDescriptor of the namespace
-   * @deprecated Since 2.1. Will be removed in 3.0.
-   */
-  @Deprecated
-  default void postModifyNamespace(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-    NamespaceDescriptor currentNsDescriptor) throws IOException {}
+    throws IOException {}
 
   /**
    * Called after the modifyNamespace operation has been requested.
@@ -956,9 +925,7 @@ public interface MasterObserver {
    */
   default void postModifyNamespace(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       NamespaceDescriptor oldNsDescriptor, NamespaceDescriptor currentNsDescriptor)
-    throws IOException {
-    postModifyNamespace(ctx, currentNsDescriptor);
-  }
+    throws IOException {}
 
   /**
    * Called before a getNamespaceDescriptor request has been processed.

@@ -221,6 +221,15 @@ public interface MasterServices extends Server {
       throws IOException;
 
   /**
+   * Modify the store file tracker of an existing table
+   */
+  long modifyTableStoreFileTracker(
+    final TableName tableName,
+    final String dstSFT,
+    final long nonceGroup,
+    final long nonce) throws IOException;
+
+  /**
    * Enable an existing table
    * @param tableName The table name
    * @param nonceGroup
@@ -274,6 +283,16 @@ public interface MasterServices extends Server {
       final long nonceGroup,
       final long nonce)
       throws IOException;
+
+  /**
+   * Modify the store file tracker of an existing column in an existing table
+   */
+  long modifyColumnStoreFileTracker(
+    final TableName tableName,
+    final byte[] family,
+    final String dstSFT,
+    final long nonceGroup,
+    final long nonce) throws IOException;
 
   /**
    * Delete a column from an existing table

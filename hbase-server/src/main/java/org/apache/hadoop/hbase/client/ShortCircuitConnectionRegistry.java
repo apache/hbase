@@ -69,6 +69,11 @@ class ShortCircuitConnectionRegistry implements ConnectionRegistry {
   }
 
   @Override
+  public String getConnectionString() {
+    return "short-circuit";
+  }
+
+  @Override
   public void close() {
     // nothing
   }

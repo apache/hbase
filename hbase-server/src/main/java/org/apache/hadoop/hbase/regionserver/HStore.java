@@ -1222,19 +1222,21 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     // Does this method belong in Region altogether given it is making so many references up there?
     // Could be Region#writeCompactionMarker(compactionDescriptor);
     WALUtil.writeCompactionMarker(this.region.getWAL(), this.region.getReplicationScope(),
-        this.region.getRegionInfo(), compactionDescriptor, this.region.getMVCC());
+      this.region.getRegionInfo(), compactionDescriptor, this.region.getMVCC(),
+      region.getRegionReplicationSink().orElse(null));
   }
 
   @RestrictedApi(explanation = "Should only be called in TestHStore", link = "",
     allowedOnPath = ".*/(HStore|TestHStore).java")
   void replaceStoreFiles(Collection<HStoreFile> compactedFiles, Collection<HStoreFile> result,
     boolean writeCompactionMarker) throws IOException {
-    storeEngine.replaceStoreFiles(compactedFiles, result);
+    storeEngine.replaceStoreFiles(compactedFiles, result, () -> {
+      synchronized(filesCompacting) {
+        filesCompacting.removeAll(compactedFiles);
+      }
+    });
     if (writeCompactionMarker) {
       writeCompactionWalRecord(compactedFiles, result);
-    }
-    synchronized (filesCompacting) {
-      filesCompacting.removeAll(compactedFiles);
     }
     // These may be null when the RS is shutting down. The space quota Chores will fix the Region
     // sizes later so it's not super-critical if we miss these.
@@ -1566,7 +1568,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     finishCompactionRequest(compaction.getRequest());
   }
 
-  protected void finishCompactionRequest(CompactionRequestImpl cr) {
+  private void finishCompactionRequest(CompactionRequestImpl cr) {
     this.region.reportCompactionRequestEnd(cr.isMajor(), cr.getFiles().size(), cr.getSize());
     if (cr.isOffPeak()) {
       offPeakCompactionTracker.set(false);

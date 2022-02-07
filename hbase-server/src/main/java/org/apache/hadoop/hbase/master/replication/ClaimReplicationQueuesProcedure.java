@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -29,8 +30,10 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.RetryCounter;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,13 +83,26 @@ public class ClaimReplicationQueuesProcedure extends Procedure<MasterProcedureEn
     ReplicationQueueStorage storage = env.getReplicationPeerManager().getQueueStorage();
     try {
       List<String> queues = storage.getAllQueues(crashedServer);
+      // this is for upgrading to the new region replication framework, where we will delete the
+      // legacy region_replica_replication peer directly, without deleting the replication queues,
+      // as it may still be used by region servers which have not been upgraded yet.
+      for (Iterator<String> iter = queues.iterator(); iter.hasNext();) {
+        ReplicationQueueInfo queue = new ReplicationQueueInfo(iter.next());
+        if (queue.getPeerId().equals(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER)) {
+          LOG.info("Found replication queue {} for legacy region replication peer, " +
+            "skipping claiming and removing...", queue.getQueueId());
+          iter.remove();
+          storage.removeQueue(crashedServer, queue.getQueueId());
+        }
+      }
       if (queues.isEmpty()) {
         LOG.debug("Finish claiming replication queues for {}", crashedServer);
         storage.removeReplicatorIfQueueIsEmpty(crashedServer);
         // we are done
         return null;
       }
-      LOG.debug("There are {} replication queues need to be claimed for {}", queues.size(),
+      LOG.debug(
+        "There are {} replication queues need to be claimed for {}", queues.size(),
         crashedServer);
       List<ServerName> targetServers =
         env.getMasterServices().getServerManager().getOnlineServersList();

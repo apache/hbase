@@ -236,6 +236,13 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   }
 
   @Override
+  public String getConnectionString() {
+    final String serverList = zk.getConnectString();
+    final String baseZNode = znodePaths.baseZNode;
+    return serverList + ":" + baseZNode;
+  }
+
+  @Override
   public void close() {
     zk.close();
   }

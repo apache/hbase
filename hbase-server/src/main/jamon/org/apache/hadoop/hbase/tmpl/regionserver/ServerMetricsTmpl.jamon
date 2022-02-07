@@ -149,11 +149,17 @@ MetricsRegionServerWrapper mWrap;
     <tr>
         <th>Num. WAL Files</th>
         <th>Size. WAL Files</th>
+        <th>WAL exclude DNs</th>
     </tr>
 </tr>
 <tr>
     <td><% mWrap.getNumWALFiles() %></td>
     <td><% TraditionalBinaryPrefix.long2String(mWrap.getWALFileSize(), "B", 1) %></td>
+    <td>
+        <%for String exclude: mWrap.getWALExcludeDNs() %>
+            <% exclude %><br>
+        </%for>
+    </td>
 </tr>
 </table>
 </%def>

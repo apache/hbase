@@ -436,27 +436,27 @@ git checkout branch-1
 mvn -Dhadoop-two.version=2.10.0 ...
 ----
 
-.Example 2, Building HBase 2.3 against Hadoop 3.3.0-SNAPSHOT
+.Example 2, Building HBase 2.3 or 2.4 against Hadoop 3.4.0-SNAPSHOT
 
-This is how a developer might check the compatibility of HBase 2.3 against an unreleased Hadoop
-version (currently 3.3). Both the Hadoop3 profile and version must be specified:
+This is how a developer might check the compatibility of HBase 2.3 or 2.4 against an unreleased
+Hadoop version (currently 3.4). Both the Hadoop3 profile and version must be specified:
 
 [source,bourne]
 ----
-git checkout branch-2.3
-mvn -Dhadoop.profile=3.0 -Dhadoop-three.version=3.3.0-SNAPSHOT ...
+git checkout branch-2.4
+mvn -Dhadoop.profile=3.0 -Dhadoop-three.version=3.4.0-SNAPSHOT ...
 ----
 
-.Example 3, Building HBase 3.0 against Hadoop 3.3.0-SNAPSHOT
+.Example 3, Building HBase 3.0 against Hadoop 3.4.0-SNAPSHOT
 
 The same developer might want also to check the development version of HBase (currently 3.0)
-against the development version of Hadoop (currently 3.3). In this case, the Hadoop3 profile is
+against the development version of Hadoop (currently 3.4). In this case, the Hadoop3 profile is
 active by default, so only `hadoop-three.version` must be specified:
 
 [source,bourne]
 ----
 git checkout master
-mvn -Dhadoop-three.version=3.3.0-SNAPSHOT ...
+mvn -Dhadoop-three.version=3.4.0-SNAPSHOT ...
 ----
 
 [[maven.build.jdk11_hadoop3]]
@@ -472,13 +472,13 @@ For details on Hadoop profile activation by HBase branch, see
 <<maven.build.hadoop,Building against various Hadoop versions>>. See <<java,java>> for a complete
 support matrix of Java version by HBase version.
 
-.Example 1, Building HBase 2.3 with JDK11
+.Example 1, Building HBase 2.3 or 2.4 with JDK11
 
-To build HBase 2.3 with JDK11, the Hadoop3 profile must be activated explicitly.
+To build HBase 2.3 or 2.4 with JDK11, the Hadoop3 profile must be activated explicitly.
 
 [source,bourne]
 ----
-git checkout branch-2.3
+git checkout branch-2.4
 JAVA_HOME=/usr/lib/jvm/java-11 mvn -Dhadoop.profile=3.0 ...
 ----
 
@@ -1836,6 +1836,46 @@ properties file, which may be `hbase-site.xml` or a different properties file.
   <value>zookeeper</value>
 </property>
 ----
+
+==== Customizing Destructive ChaosMonkey Actions
+
+The session above shows how to setup custom configurations for the _slowDeterministic_ monkey
+policy. This is a policy that pre-defines a set of destructive actions of varying gravity for a
+running cluster. These actions are grouped into three categories: _light weight_, _mid weight_ and
+_heavy weight_. Although it's possible to define some properties for the different actions
+(such as timeouts, frequency, etc), the actions themselves are not configurable.
+
+For certain deployments, it may be interesting to define its own test strategy, either less or more
+aggressive than the pre-defined set of actions provided by _slowDeterministic_. For such cases,
+the _configurableSlowDeterministic_ policy can be used. It allows for a customizable set of
+_heavy weight_ actions to be defined in the _monkey.properties_ properties file:
+
+[source]
+----
+batch.restart.rs.ratio=0.3f
+heavy.actions=RestartRandomRsAction(500000);MoveRandomRegionOfTableAction(360000,$table_name);SplitAllRegionOfTableAction($table_name)
+----
+
+The above properties file definition instructs chaos monkey to perform a RegionServer crash every 8 minutes,
+a random region move every 6 minutes, and at least one split of all table regions.
+
+To run this policy, just specify _configurableSlowDeterministic_ as the monkey policy to run, together
+with a property file containing the _heavy.actions_ property definition:
+
+[source,bourne]
+----
+$ bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m configurableSlowDeterministic -monkeyProps monkey.properties
+----
+
+When specifying monkey actions, make sure to define all required constructor parameters. For actions
+that require a table name parameter, the _$table_name_ placeholder can be specified, and it will
+automatically resort to the table created by the integration test run.
+
+If _heavy.actions_ property is omitted in the properties file,  _configurableSlowDeterministic_ will
+just run as the _slowDeterministic_ policy
+(it will execute all the heavy weight actions defined by _slowDeterministic_ policy).
+
+
 
 [[developing]]
 == Developer Guidelines

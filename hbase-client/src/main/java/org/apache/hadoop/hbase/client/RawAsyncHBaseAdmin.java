@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.HIGH_QOS;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.util.FutureUtils.unwrapCompletionException;
+
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -230,10 +231,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTable
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnStoreFileTrackerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnStoreFileTrackerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableStoreFileTrackerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableStoreFileTrackerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeRequest;
@@ -661,6 +666,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> modifyTableStoreFileTracker(TableName tableName, String dstSFT) {
+    return this
+      .<ModifyTableStoreFileTrackerRequest, ModifyTableStoreFileTrackerResponse> procedureCall(
+        tableName,
+        RequestConverter.buildModifyTableStoreFileTrackerRequest(tableName, dstSFT,
+          ng.getNonceGroup(), ng.newNonce()),
+        (s, c, req, done) -> s.modifyTableStoreFileTracker(c, req, done),
+        (resp) -> resp.getProcId(),
+        new ModifyTableStoreFileTrackerProcedureBiConsumer(this, tableName));
+  }
+
+  @Override
   public CompletableFuture<Void> deleteTable(TableName tableName) {
     return this.<DeleteTableRequest, DeleteTableResponse> procedureCall(tableName,
       RequestConverter.buildDeleteTableRequest(tableName, ng.getNonceGroup(), ng.newNonce()),
@@ -806,6 +823,19 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       RequestConverter.buildModifyColumnRequest(tableName, columnFamily, ng.getNonceGroup(),
         ng.newNonce()), (s, c, req, done) -> s.modifyColumn(c, req, done),
       (resp) -> resp.getProcId(), new ModifyColumnFamilyProcedureBiConsumer(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> modifyColumnFamilyStoreFileTracker(TableName tableName,
+    byte[] family, String dstSFT) {
+    return this
+      .<ModifyColumnStoreFileTrackerRequest, ModifyColumnStoreFileTrackerResponse> procedureCall(
+        tableName,
+        RequestConverter.buildModifyColumnStoreFileTrackerRequest(tableName, family, dstSFT,
+          ng.getNonceGroup(), ng.newNonce()),
+        (s, c, req, done) -> s.modifyColumnStoreFileTracker(c, req, done),
+        (resp) -> resp.getProcId(),
+        new ModifyColumnFamilyStoreFileTrackerProcedureBiConsumer(tableName));
   }
 
   @Override
@@ -2590,7 +2620,20 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
     @Override
     String getOperationType() {
-      return "ENABLE";
+      return "MODIFY";
+    }
+  }
+
+  private static class ModifyTableStoreFileTrackerProcedureBiConsumer
+    extends TableProcedureBiConsumer {
+
+    ModifyTableStoreFileTrackerProcedureBiConsumer(AsyncAdmin admin, TableName tableName) {
+      super(tableName);
+    }
+
+    @Override
+    String getOperationType() {
+      return "MODIFY_TABLE_STORE_FILE_TRACKER";
     }
   }
 
@@ -2681,6 +2724,19 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     @Override
     String getOperationType() {
       return "MODIFY_COLUMN_FAMILY";
+    }
+  }
+
+  private static class ModifyColumnFamilyStoreFileTrackerProcedureBiConsumer
+    extends TableProcedureBiConsumer {
+
+    ModifyColumnFamilyStoreFileTrackerProcedureBiConsumer(TableName tableName) {
+      super(tableName);
+    }
+
+    @Override
+    String getOperationType() {
+      return "MODIFY_COLUMN_FAMILY_STORE_FILE_TRACKER";
     }
   }
 
@@ -4282,5 +4338,4 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         return CompletableFuture.completedFuture(Collections.emptyList());
     }
   }
-
 }

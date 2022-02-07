@@ -17,33 +17,36 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntry;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntryWithStringValuesOf;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasAttributes;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEnded;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasKind;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.TraceTestUtil.buildConnectionAttributesMatcher;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.TraceTestUtil.buildTableAttributesMatcher;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Cell.Type;
@@ -58,6 +61,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -100,7 +104,7 @@ public class TestAsyncTableTracing {
 
   private ClientService.Interface stub;
 
-  private AsyncConnection conn;
+  private AsyncConnectionImpl conn;
 
   private AsyncTable<?> table;
 
@@ -197,8 +201,9 @@ public class TestAsyncTableTracing {
         return null;
       }
     }).when(stub).get(any(HBaseRpcController.class), any(GetRequest.class), any());
+    final User user = UserProvider.instantiate(CONF).getCurrent();
     conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF), "test", null,
-      UserProvider.instantiate(CONF).getCurrent()) {
+      user) {
 
       @Override
       AsyncRegionLocator getLocator() {
@@ -236,17 +241,6 @@ public class TestAsyncTableTracing {
     Closeables.close(conn, true);
   }
 
-  /**
-   * All {@link Span}s generated from table data access operations over {@code tableName} should
-   * include these attributes.
-   */
-  private static Matcher<SpanData> buildBaseAttributesMatcher(TableName tableName) {
-    return hasAttributes(allOf(
-      containsEntry("db.name", tableName.getNamespaceAsString()),
-      containsEntry("db.hbase.namespace", tableName.getNamespaceAsString()),
-      containsEntry("db.hbase.table", tableName.getNameAsString())));
-  }
-
   private void assertTrace(String tableOperation) {
     assertTrace(tableOperation, new IsAnything<>());
   }
@@ -260,16 +254,18 @@ public class TestAsyncTableTracing {
     Waiter.waitFor(CONF, 1000, new MatcherPredicate<>(
       "waiting for span to emit",
       () -> traceRule.getSpans(), hasItem(spanLocator)));
-    SpanData data = traceRule.getSpans()
+    List<SpanData> candidateSpans = traceRule.getSpans()
       .stream()
       .filter(spanLocator::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
+      .collect(Collectors.toList());
+    assertThat(candidateSpans, hasSize(1));
+    SpanData data = candidateSpans.iterator().next();
     assertThat(data, allOf(
       hasName(expectedName),
       hasKind(SpanKind.CLIENT),
       hasStatusWithCode(StatusCode.OK),
-      buildBaseAttributesMatcher(tableName),
+      buildConnectionAttributesMatcher(conn),
+      buildTableAttributesMatcher(tableName),
       matcher));
   }
 
@@ -343,7 +339,9 @@ public class TestAsyncTableTracing {
         .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
         .build(new Delete(Bytes.toBytes(0))))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf(
+        "db.hbase.container_operations", "CHECK_AND_MUTATE", "DELETE")));
   }
 
   @Test
@@ -351,7 +349,9 @@ public class TestAsyncTableTracing {
     table.checkAndMutateAll(Arrays.asList(CheckAndMutate.newBuilder(Bytes.toBytes(0))
       .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
       .build(new Delete(Bytes.toBytes(0))))).join();
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf(
+        "db.hbase.container_operations", "CHECK_AND_MUTATE", "DELETE")));
   }
 
   private void testCheckAndMutateBuilder(Row op) {
@@ -437,8 +437,13 @@ public class TestAsyncTableTracing {
 
   @Test
   public void testMutateRow() throws IOException {
-    table.mutateRow(new RowMutations(Bytes.toBytes(0)).add(new Delete(Bytes.toBytes(0))));
-    assertTrace("BATCH");
+    final RowMutations mutations = new RowMutations(Bytes.toBytes(0))
+      .add(new Put(Bytes.toBytes(0))
+        .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v")))
+      .add(new Delete(Bytes.toBytes(0)));
+    table.mutateRow(mutations).join();
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE", "PUT")));
   }
 
   @Test
@@ -453,13 +458,15 @@ public class TestAsyncTableTracing {
       .allOf(
         table.exists(Arrays.asList(new Get(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf("db.hbase.container_operations", "GET")));
   }
 
   @Test
   public void testExistsAll() {
     table.existsAll(Arrays.asList(new Get(Bytes.toBytes(0)))).join();
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf("db.hbase.container_operations", "GET")));
   }
 
   @Test
@@ -467,13 +474,15 @@ public class TestAsyncTableTracing {
     CompletableFuture
       .allOf(table.get(Arrays.asList(new Get(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf("db.hbase.container_operations", "GET")));
   }
 
   @Test
   public void testGetAll() {
     table.getAll(Arrays.asList(new Get(Bytes.toBytes(0)))).join();
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf("db.hbase.container_operations", "GET")));
   }
 
   @Test
@@ -482,14 +491,16 @@ public class TestAsyncTableTracing {
       .allOf(table.put(Arrays.asList(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"),
         Bytes.toBytes("cq"), Bytes.toBytes("v")))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf("db.hbase.container_operations", "PUT")));
   }
 
   @Test
   public void testPutAll() {
     table.putAll(Arrays.asList(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"),
       Bytes.toBytes("cq"), Bytes.toBytes("v")))).join();
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf("db.hbase.container_operations", "PUT")));
   }
 
   @Test
@@ -498,13 +509,15 @@ public class TestAsyncTableTracing {
       .allOf(
         table.delete(Arrays.asList(new Delete(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
   }
 
   @Test
   public void testDeleteAll() {
     table.deleteAll(Arrays.asList(new Delete(Bytes.toBytes(0)))).join();
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
   }
 
   @Test
@@ -513,24 +526,14 @@ public class TestAsyncTableTracing {
       .allOf(
         table.batch(Arrays.asList(new Delete(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH");
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
   }
 
   @Test
   public void testBatchAll() {
     table.batchAll(Arrays.asList(new Delete(Bytes.toBytes(0)))).join();
-    assertTrace("BATCH");
-  }
-
-  @Test
-  public void testConnClose() throws IOException {
-    conn.close();
-    Waiter.waitFor(CONF, 1000,
-      () -> traceRule.getSpans().stream()
-        .anyMatch(span -> span.getName().equals("AsyncConnection.close") &&
-          span.getKind() == SpanKind.INTERNAL && span.hasEnded()));
-    SpanData data = traceRule.getSpans().stream()
-      .filter(s -> s.getName().equals("AsyncConnection.close")).findFirst().get();
-    assertEquals(StatusCode.OK, data.getStatus().getStatusCode());
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
   }
 }

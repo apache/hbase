@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -130,16 +131,21 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   @Override
   public boolean dispatch(final CallRunner callTask) throws InterruptedException {
     RpcCall call = callTask.getRpcCall();
+    return dispatchTo(isWriteRequest(call.getHeader(), call.getParam()),
+      shouldDispatchToScanQueue(callTask), callTask);
+  }
+
+  protected boolean dispatchTo(boolean toWriteQueue, boolean toScanQueue,
+    final CallRunner callTask) {
     int queueIndex;
-    if (isWriteRequest(call.getHeader(), call.getParam())) {
+    if (toWriteQueue) {
       queueIndex = writeBalancer.getNextQueue();
-    } else if (numScanQueues > 0 && isScanRequest(call.getHeader(), call.getParam())) {
+    } else if (toScanQueue) {
       queueIndex = numWriteQueues + numReadQueues + scanBalancer.getNextQueue();
     } else {
       queueIndex = numWriteQueues + readBalancer.getNextQueue();
     }
-
-    BlockingQueue<CallRunner> queue = queues.get(queueIndex);
+    Queue<CallRunner> queue = queues.get(queueIndex);
     if (queue.size() >= currentQueueLimit) {
       return false;
     }
@@ -230,6 +236,11 @@ public class RWQueueRpcExecutor extends RpcExecutor {
 
   private boolean isScanRequest(final RequestHeader header, final Message param) {
     return param instanceof ScanRequest;
+  }
+
+  protected boolean shouldDispatchToScanQueue(final CallRunner task) {
+    RpcCall call = task.getRpcCall();
+    return numScanQueues > 0 && isScanRequest(call.getHeader(), call.getParam());
   }
 
   protected float getReadShare(final Configuration conf) {
