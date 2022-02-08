@@ -56,6 +56,108 @@ module IRB
       # after all output.
       super unless @context.last_value.nil?
     end
+
+    # Copied from irb.rb and overrides the rescue Exception block so the
+    # Shell::exception_handler can deal with the exceptions.
+    def eval_input
+      @scanner.set_prompt do
+      |ltype, indent, continue, line_no|
+        if ltype
+          f = @context.prompt_s
+        elsif continue
+          f = @context.prompt_c
+        elsif indent > 0
+          f = @context.prompt_n
+        else
+          f = @context.prompt_i
+        end
+        f = "" unless f
+        if @context.prompting?
+          @context.io.prompt = p = prompt(f, ltype, indent, line_no)
+        else
+          @context.io.prompt = p = ""
+        end
+        if @context.auto_indent_mode
+          unless ltype
+            ind = prompt(@context.prompt_i, ltype, indent, line_no)[/.*\z/].size +
+              indent * 2 - p.size
+            ind += 2 if continue
+            @context.io.prompt = p + " " * ind if ind > 0
+          end
+        end
+      end
+
+      @scanner.set_input(@context.io) do
+        signal_status(:IN_INPUT) do
+          if l = @context.io.gets
+            print l if @context.verbose?
+          else
+            if @context.ignore_eof? and @context.io.readable_after_eof?
+              l = "\n"
+              if @context.verbose?
+                printf "Use \"exit\" to leave %s\n", @context.ap_name
+              end
+            else
+              print "\n"
+            end
+          end
+          l
+        end
+      end
+
+      @scanner.each_top_level_statement do |line, line_no|
+        signal_status(:IN_EVAL) do
+          begin
+            line.untaint
+            @context.evaluate(line, line_no)
+            output_value if @context.echo?
+            exc = nil
+          rescue Interrupt => exc
+          rescue SystemExit, SignalException
+            raise
+          rescue Exception
+            # Raise exception so Shell::exception_handler can catch it.
+            raise
+          end
+          if exc
+            if exc.backtrace && exc.backtrace[0] =~ /irb(2)?(\/.*|-.*|\.rb)?:/ && exc.class.to_s !~ /^IRB/ &&
+              !(SyntaxError === exc)
+              irb_bug = true
+            else
+              irb_bug = false
+            end
+
+            messages = []
+            lasts = []
+            levels = 0
+            if exc.backtrace
+              count = 0
+              exc.backtrace.each do |m|
+                m = @context.workspace.filter_backtrace(m) or next unless irb_bug
+                m = sprintf("%9d: from %s", (count += 1), m)
+                if messages.size < @context.back_trace_limit
+                  messages.push(m)
+                elsif lasts.size < @context.back_trace_limit
+                  lasts.push(m).shift
+                  levels += 1
+                end
+              end
+            end
+            attr = STDOUT.tty? ? ATTR_TTY : ATTR_PLAIN
+            print "#{attr[1]}Traceback#{attr[]} (most recent call last peter):\n"
+            unless lasts.empty?
+              puts lasts.reverse
+              printf "... %d levels...\n", levels if levels > 0
+            end
+            puts messages.reverse
+            messages = exc.to_s.split(/\n/)
+            print "#{attr[1]}#{exc.class} (#{attr[4]}#{messages.shift}#{attr[0, 1]})#{attr[]}\n"
+            puts messages.map {|s| "#{attr[1]}#{s}#{attr[]}\n"}
+            print "Maybe IRB bug!\n" if irb_bug
+          end
+        end
+      end
+    end
   end
 
   ##
