@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.HBaseTestCase.assertByteEquals;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
+import static org.junit.Assert.assertArrayEquals;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -168,7 +168,7 @@ public class TestResult extends TestCase {
     for (int i = 0; i < 100; ++i) {
       final byte[] qf = Bytes.toBytes(i);
 
-      assertByteEquals(Bytes.add(value, Bytes.toBytes(i)), r.getValue(family, qf));
+      assertArrayEquals(Bytes.add(value, Bytes.toBytes(i)), r.getValue(family, qf));
       assertTrue(r.containsColumn(family, qf));
     }
   }
@@ -187,7 +187,7 @@ public class TestResult extends TestCase {
     for (int i = 0; i < 100; ++i) {
       final byte[] qf = Bytes.toBytes(i);
 
-      assertByteEquals(Bytes.add(value, Bytes.toBytes(i)), r.getValue(family, qf));
+      assertArrayEquals(Bytes.add(value, Bytes.toBytes(i)), r.getValue(family, qf));
       assertTrue(r.containsColumn(family, qf));
     }
   }

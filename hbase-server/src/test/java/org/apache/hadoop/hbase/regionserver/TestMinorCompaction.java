@@ -30,9 +30,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
@@ -195,13 +195,13 @@ public class TestMinorCompaction {
       throws Exception {
     Table loader = new RegionAsTable(r);
     for (int i = 0; i < COMPACTION_THRESHOLD + 1; i++) {
-      HBaseTestCase.addContent(loader, Bytes.toString(fam1), Bytes.toString(COL1), FIRST_ROW_BYTES,
+      HTestConst.addContent(loader, Bytes.toString(fam1), Bytes.toString(COL1), FIRST_ROW_BYTES,
         THIRD_ROW_BYTES, i);
-      HBaseTestCase.addContent(loader, Bytes.toString(fam1), Bytes.toString(COL2), FIRST_ROW_BYTES,
+      HTestConst.addContent(loader, Bytes.toString(fam1), Bytes.toString(COL2), FIRST_ROW_BYTES,
         THIRD_ROW_BYTES, i);
-      HBaseTestCase.addContent(loader, Bytes.toString(fam2), Bytes.toString(COL1), FIRST_ROW_BYTES,
+      HTestConst.addContent(loader, Bytes.toString(fam2), Bytes.toString(COL1), FIRST_ROW_BYTES,
         THIRD_ROW_BYTES, i);
-      HBaseTestCase.addContent(loader, Bytes.toString(fam2), Bytes.toString(COL2), FIRST_ROW_BYTES,
+      HTestConst.addContent(loader, Bytes.toString(fam2), Bytes.toString(COL2), FIRST_ROW_BYTES,
         THIRD_ROW_BYTES, i);
       r.flush(true);
     }

@@ -31,12 +31,12 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Delete;
@@ -132,7 +132,7 @@ public class TestScanner {
     byte [] stoprow = Bytes.toBytes("ccc");
     try {
       this.region = TEST_UTIL.createLocalHRegion(TESTTABLEDESC, null, null);
-      HBaseTestCase.addContent(this.region, HConstants.CATALOG_FAMILY);
+      HTestConst.addContent(this.region, HConstants.CATALOG_FAMILY);
       List<Cell> results = new ArrayList<>();
       // Do simple test of getting one row only first.
       Scan scan = new Scan(Bytes.toBytes("abc"), Bytes.toBytes("abd"));
@@ -205,7 +205,7 @@ public class TestScanner {
   public void testFilters() throws IOException {
     try {
       this.region = TEST_UTIL.createLocalHRegion(TESTTABLEDESC, null, null);
-      HBaseTestCase.addContent(this.region, HConstants.CATALOG_FAMILY);
+      HTestConst.addContent(this.region, HConstants.CATALOG_FAMILY);
       byte [] prefix = Bytes.toBytes("ab");
       Filter newFilter = new PrefixFilter(prefix);
       Scan scan = new Scan();
@@ -231,7 +231,7 @@ public class TestScanner {
   public void testRaceBetweenClientAndTimeout() throws Exception {
     try {
       this.region = TEST_UTIL.createLocalHRegion(TESTTABLEDESC, null, null);
-      HBaseTestCase.addContent(this.region, HConstants.CATALOG_FAMILY);
+      HTestConst.addContent(this.region, HConstants.CATALOG_FAMILY);
       Scan scan = new Scan();
       InternalScanner s = region.getScanner(scan);
       List<Cell> results = new ArrayList<>();
@@ -463,7 +463,7 @@ public class TestScanner {
     Table hri = new RegionAsTable(region);
     try {
       LOG.info("Added: " +
-        HBaseTestCase.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
+        HTestConst.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
           Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
       int count = count(hri, -1, false);
       assertEquals(count, count(hri, 100, false)); // do a sync flush.
@@ -485,7 +485,7 @@ public class TestScanner {
     Table hri = new RegionAsTable(region);
     try {
       LOG.info("Added: " +
-        HBaseTestCase.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
+        HTestConst.addContent(hri, Bytes.toString(HConstants.CATALOG_FAMILY),
           Bytes.toString(HConstants.REGIONINFO_QUALIFIER)));
       int count = count(hri, -1, false);
       assertEquals(count, count(hri, 100, true)); // do a true concurrent background thread flush
@@ -509,9 +509,9 @@ public class TestScanner {
     Table hri = new RegionAsTable(region);
 
     try {
-      HBaseTestCase.addContent(hri, Bytes.toString(fam1), Bytes.toString(col1),
+      HTestConst.addContent(hri, Bytes.toString(fam1), Bytes.toString(col1),
           firstRowBytes, secondRowBytes);
-      HBaseTestCase.addContent(hri, Bytes.toString(fam2), Bytes.toString(col1),
+      HTestConst.addContent(hri, Bytes.toString(fam2), Bytes.toString(col1),
           firstRowBytes, secondRowBytes);
 
       Delete dc = new Delete(firstRowBytes);
@@ -520,9 +520,9 @@ public class TestScanner {
       region.delete(dc);
       region.flush(true);
 
-      HBaseTestCase.addContent(hri, Bytes.toString(fam1), Bytes.toString(col1),
+      HTestConst.addContent(hri, Bytes.toString(fam1), Bytes.toString(col1),
           secondRowBytes, thirdRowBytes);
-      HBaseTestCase.addContent(hri, Bytes.toString(fam2), Bytes.toString(col1),
+      HTestConst.addContent(hri, Bytes.toString(fam2), Bytes.toString(col1),
           secondRowBytes, thirdRowBytes);
       region.flush(true);
 
