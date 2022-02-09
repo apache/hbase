@@ -146,7 +146,7 @@ module IRB
               end
             end
             attr = STDOUT.tty? ? ATTR_TTY : ATTR_PLAIN
-            print "#{attr[1]}Traceback#{attr[]} (most recent call last peter):\n"
+            print "#{attr[1]}Traceback#{attr[]} (most recent call last):\n"
             unless lasts.empty?
               puts lasts.reverse
               printf "... %d levels...\n", levels if levels > 0
