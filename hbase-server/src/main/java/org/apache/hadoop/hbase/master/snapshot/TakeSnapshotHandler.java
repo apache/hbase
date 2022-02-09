@@ -127,7 +127,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
         this.getClass().getName() + ": take snapshot " + snapshot.getName());
 
     // prepare the verify
-    this.verifier = new MasterSnapshotVerifier(masterServices, snapshot);
+    this.verifier = new MasterSnapshotVerifier(masterServices, snapshot, workingDirFs);
     // update the running tasks
     this.status = TaskMonitor.get().createStatus(
       "Taking " + snapshot.getType() + " snapshot on table: " + snapshotTable);
@@ -207,7 +207,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
 
       // verify the snapshot is valid
       status.setStatus("Verifying snapshot: " + snapshot.getName());
-      verifier.verifySnapshot();
+      verifier.verifySnapshot(workingDir, true);
 
       // complete the snapshot, atomically moving from tmp to .snapshot dir.
       SnapshotDescriptionUtils.completeSnapshot(this.snapshotDir, this.workingDir, this.rootFs,

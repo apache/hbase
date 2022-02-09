@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
+import org.apache.hadoop.hbase.master.WorkerAssigner;
 import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.assignment.SplitTableRegionProcedure;
 import org.apache.hadoop.hbase.master.snapshot.MasterSnapshotVerifier;
@@ -43,11 +45,13 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -82,6 +86,7 @@ public class SnapshotProcedure
   private MonitoredTask status;
   private SnapshotManifest snapshotManifest;
   private TableDescriptor htd;
+  private WorkerAssigner verifyWorkerAssigner;
 
   private RetryCounter retryCounter;
 
@@ -179,6 +184,9 @@ public class SnapshotProcedure
           setNextState(SnapshotState.SNAPSHOT_COMPLETE_SNAPSHOT);
           return Flow.HAS_MORE_STATE;
         case SNAPSHOT_COMPLETE_SNAPSHOT:
+          if (isSnapshotCorrupted()) {
+            throw new CorruptedSnapshotException(snapshot.getName());
+          }
           completeSnapshot(env);
           setNextState(SnapshotState.SNAPSHOT_POST_OPERATION);
           return Flow.HAS_MORE_STATE;
@@ -263,6 +271,9 @@ public class SnapshotProcedure
     this.snapshotManifest = SnapshotManifest.create(conf,
       rootFs, workingDir, snapshot, monitor, status);
     this.snapshotManifest.addTableDescriptor(htd);
+    this.verifyWorkerAssigner = new WorkerAssigner(env.getMasterServices(),
+      conf.getInt("hbase.snapshot.verify.task.max", 3),
+      new ProcedureEvent<>("snapshot-verify-worker-assigning"));
   }
 
   @Override
@@ -317,16 +328,20 @@ public class SnapshotProcedure
   private void verifySnapshot(MasterProcedureEnv env) throws IOException {
     int verifyThreshold = env.getMasterConfiguration()
       .getInt("hbase.snapshot.remote.verify.threshold", 10000);
-    int numRegions = (int) env.getAssignmentManager()
+    List<RegionInfo> regions = env.getAssignmentManager()
       .getTableRegions(snapshotTable, false)
-      .stream().filter(r -> RegionReplicaUtil.isDefaultReplica(r)).count();
+      .stream().filter(r -> RegionReplicaUtil.isDefaultReplica(r)).collect(Collectors.toList());
+    int numRegions = regions.size();
 
+    MasterSnapshotVerifier verifier =
+      new MasterSnapshotVerifier(env.getMasterServices(), snapshot, workingDirFS);
     if (numRegions >= verifyThreshold) {
-      addChildProcedure(createRemoteVerifyProcedures(env));
+      verifier.verifySnapshot(workingDir, false);
+      addChildProcedure(regions.stream()
+        .map(r -> new SnapshotVerifyProcedure(snapshot, r))
+        .toArray(SnapshotVerifyProcedure[]::new));
     } else {
-      MasterSnapshotVerifier verifier =
-        new MasterSnapshotVerifier(env.getMasterServices(), snapshot);
-      verifier.verifySnapshot();
+      verifier.verifySnapshot(workingDir, true);
     }
   }
 
@@ -419,20 +434,6 @@ public class SnapshotProcedure
       .toArray(SnapshotRegionProcedure[]::new);
   }
 
-  // here we assign region snapshot manifest verify tasks to all region servers
-  // in cluster with the help of master load balancer.
-  private Procedure<MasterProcedureEnv>[] createRemoteVerifyProcedures(MasterProcedureEnv env)
-    throws IOException {
-    List<RegionInfo> regions = env
-      .getAssignmentManager().getTableRegions(snapshotTable, false);
-    List<ServerName> servers = env
-      .getMasterServices().getServerManager().getOnlineServersList();
-    return env.getMasterServices().getLoadBalancer()
-      .roundRobinAssignment(regions, servers).entrySet().stream()
-      .map(e -> new SnapshotVerifyProcedure(snapshot, e.getValue(), e.getKey(), regions.size()))
-      .toArray(SnapshotVerifyProcedure[]::new);
-  }
-
   @Override
   public void toStringClassDetails(StringBuilder builder) {
     builder.append(getClass().getName())
@@ -456,5 +457,39 @@ public class SnapshotProcedure
 
   public SnapshotDescription getSnapshot() {
     return snapshot;
+  }
+
+  public ServerName acquireSnapshotVerifyWorker(SnapshotVerifyProcedure procedure)
+      throws ProcedureSuspendedException {
+    Optional<ServerName> worker = verifyWorkerAssigner.acquire();
+    if (worker.isPresent()) {
+      LOG.debug("Acquired verify snapshot worker={}", worker.get());
+      return worker.get();
+    }
+    verifyWorkerAssigner.suspend(procedure);
+    throw new ProcedureSuspendedException();
+  }
+
+  public void releaseSnapshotVerifyWorker(ServerName worker, MasterProcedureScheduler scheduler) {
+    LOG.debug("Release verify snapshot worker={}", worker);
+    verifyWorkerAssigner.release(worker);
+    verifyWorkerAssigner.wake(scheduler);
+  }
+
+  public void restoreWorker(final ServerName worker) {
+    verifyWorkerAssigner.addUsedWorker(worker);
+  }
+
+  public synchronized void markSnapshotCorrupted() throws IOException {
+    Path flagFile = SnapshotDescriptionUtils.getCorruptedFlagFileForSnapshot(workingDir);
+    if (!workingDirFS.exists(flagFile)) {
+      workingDirFS.create(flagFile).close();
+      LOG.info("touch corrupted snapshot flag file {} for {}", flagFile, snapshot.getName());
+    }
+  }
+
+  public boolean isSnapshotCorrupted() throws IOException {
+    return workingDirFS.exists(SnapshotDescriptionUtils
+      .getCorruptedFlagFileForSnapshot(workingDir));
   }
 }

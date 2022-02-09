@@ -94,7 +94,6 @@ public class TestSnapshotProcedure {
   public void setup() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     Configuration config = TEST_UTIL.getConfiguration();
-    config.setBoolean("hbase.snapshot.zk.coordinated", false);
     // using SnapshotVerifyProcedure to verify snapshot
     config.setInt("hbase.snapshot.remote.verify.threshold", 1);
     // disable info server. Info server is useful when we run unit tests locally, but it will
@@ -198,7 +197,8 @@ public class TestSnapshotProcedure {
 
     HRegionServer rs = TEST_UTIL.getHBaseCluster().getRegionServer(previousTargetServer);
     TEST_UTIL.getHBaseCluster().killRegionServer(rs.getServerName());
-    TEST_UTIL.waitFor(60000, () -> svp.getServerName() != previousTargetServer);
+    TEST_UTIL.waitFor(60000, () -> svp.getServerName() != null
+      && svp.getServerName().equals(previousTargetServer));
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
     SnapshotTestingUtils.assertOneSnapshotThatMatches(TEST_UTIL.getAdmin(), snapshotProto);

@@ -129,7 +129,7 @@ public final class SnapshotReferenceUtil {
    * @param visitor callback object to get the store files
    * @throws IOException if an error occurred while scanning the directory
    */
-  static void visitRegionStoreFiles(final SnapshotRegionManifest manifest,
+  public static void visitRegionStoreFiles(final SnapshotRegionManifest manifest,
       final StoreFileVisitor visitor) throws IOException {
     RegionInfo regionInfo = ProtobufUtil.toRegionInfo(manifest.getRegionInfo());
     for (SnapshotRegionManifest.FamilyFiles familyFiles: manifest.getFamilyFilesList()) {
@@ -259,7 +259,7 @@ public final class SnapshotReferenceUtil {
    * @throws CorruptedSnapshotException if the snapshot is corrupted
    * @throws IOException if an error occurred while scanning the directory
    */
-  static void verifyStoreFile(final Configuration conf, final FileSystem fs,
+  public static void verifyStoreFile(final Configuration conf, final FileSystem fs,
       final Path snapshotDir, final SnapshotDescription snapshot, final RegionInfo regionInfo,
       final String family, final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
     TableName table = TableName.valueOf(snapshot.getTable());

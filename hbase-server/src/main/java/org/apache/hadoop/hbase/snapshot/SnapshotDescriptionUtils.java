@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
@@ -138,6 +139,8 @@ public final class SnapshotDescriptionUtils {
   /** By default, wait 300 seconds for a snapshot to complete */
   public static final long DEFAULT_MAX_WAIT_TIME = 60000 * 5 ;
 
+  public static final String SNAPSHOT_CORRUPTED_FILE = "_CORRUPTED";
+
   private SnapshotDescriptionUtils() {
     // private constructor for utility class
   }
@@ -228,6 +231,14 @@ public final class SnapshotDescriptionUtils {
     return getSpecifiedSnapshotDir(getWorkingSnapshotDir(rootDir, conf), snapshotName);
   }
 
+  /**
+   * Get the flag file path if the snapshot is corrupted
+   * @param workingDir the directory where we build the specific snapshot
+   * @return {@link Path} snapshot corrupted flag file path
+   */
+  public static Path getCorruptedFlagFileForSnapshot(final Path workingDir) {
+    return new Path(workingDir, SNAPSHOT_CORRUPTED_FILE);
+  }
   /**
    * Get the directory within the given filepath to store the snapshot instance
    * @param snapshotsDir directory to store snapshot directory within

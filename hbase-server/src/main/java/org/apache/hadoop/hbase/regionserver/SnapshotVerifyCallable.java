@@ -16,14 +16,11 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.List;
-import java.util.stream.Collectors;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
-import org.apache.hadoop.hbase.snapshot.SnapshotVerifyUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotVerifyParameter;
@@ -32,23 +29,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 @InterfaceAudience.Private
 public class SnapshotVerifyCallable extends BaseRSProcedureCallable {
   private SnapshotDescription snapshot;
-  private List<RegionInfo> regions;
-  private int expectedNumRegion;
+  private RegionInfo region;
 
   @Override
   protected void doCall() throws Exception {
-    Configuration conf = rs.getConfiguration();
-    TableName tableName = TableName.valueOf(snapshot.getTable());
-    SnapshotVerifyUtil.verifySnapshot(conf, snapshot, tableName, regions, expectedNumRegion);
+    rs.getRsSnapshotVerifier().verifyRegion(snapshot, region);
   }
 
   @Override
   protected void initParameter(byte[] parameter) throws Exception {
     SnapshotVerifyParameter param = SnapshotVerifyParameter.parseFrom(parameter);
     this.snapshot = param.getSnapshot();
-    this.regions = param.getRegionList().stream()
-      .map(ProtobufUtil::toRegionInfo).collect(Collectors.toList());
-    this.expectedNumRegion = param.getExpectedNumRegion();
+    this.region = ProtobufUtil.toRegionInfo(param.getRegion());
   }
 
   @Override
