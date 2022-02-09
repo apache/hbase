@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RPC_METHOD_KEY;
-import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RPC_SERVICE_KEY;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
-import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -32,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.server.trace.IpcServerSpanBuilder;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -90,14 +88,6 @@ public class CallRunner {
     this.rpcServer = null;
   }
 
-  private String getServiceName() {
-    return call.getService() != null ? call.getService().getDescriptorForType().getName() : "";
-  }
-
-  private String getMethodName() {
-    return call.getMethod() != null ? call.getMethod().getName() : "";
-  }
-
   public void run() {
     try {
       if (call.disconnectSince() >= 0) {
@@ -122,12 +112,7 @@ public class CallRunner {
       String error = null;
       Pair<Message, CellScanner> resultPair = null;
       RpcServer.CurCall.set(call);
-      String serviceName = getServiceName();
-      String methodName = getMethodName();
-      Span span = TraceUtil.getGlobalTracer().spanBuilder("RpcServer.callMethod")
-        .setParent(Context.current().with(((ServerCall<?>) call).getSpan())).startSpan()
-        .setAttribute(RPC_SERVICE_KEY, serviceName)
-        .setAttribute(RPC_METHOD_KEY, methodName);
+      Span span = new IpcServerSpanBuilder(call).build();
       try (Scope traceScope = span.makeCurrent()) {
         if (!this.rpcServer.isStarted()) {
           InetSocketAddress address = rpcServer.getListenerAddress();
