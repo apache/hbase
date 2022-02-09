@@ -116,7 +116,9 @@ module IRB
           rescue SystemExit, SignalException
             raise
           rescue Exception
-            # Raise exception so Shell::exception_handler can catch it.
+            # HBASE-26741: Raise exception so Shell::exception_handler can catch it.
+            # This modifies this copied method from JRuby so that the HBase shell can
+            # manage the exception and set a proper exit code on the process.
             raise
           end
           if exc
