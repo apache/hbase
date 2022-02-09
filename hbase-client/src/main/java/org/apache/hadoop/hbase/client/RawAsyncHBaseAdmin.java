@@ -1913,44 +1913,53 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           future.completeExceptionally(err);
           return;
         }
-        if (resp.hasProcId()) {
-          getProcedureResult(resp.getProcId(), future, 0);
-          addListener(future, new SnapshotProcedureBiConsumer(snapshotDesc.getTableName()));
-        } else {
-          long expectedTimeout = resp.getExpectedTimeout();
-          TimerTask pollingTask = new TimerTask() {
-            int tries = 0;
-            long startTime = EnvironmentEdgeManager.currentTime();
-            long endTime = startTime + expectedTimeout;
-            long maxPauseTime = expectedTimeout / maxAttempts;
-
-            @Override
-            public void run(Timeout timeout) throws Exception {
-              if (EnvironmentEdgeManager.currentTime() < endTime) {
-                addListener(isSnapshotFinished(snapshotDesc), (done, err2) -> {
-                  if (err2 != null) {
-                    future.completeExceptionally(err2);
-                  } else if (done) {
-                    future.complete(null);
-                  } else {
-                    // retry again after pauseTime.
-                    long pauseTime = ConnectionUtils
-                      .getPauseTime(TimeUnit.NANOSECONDS.toMillis(pauseNs), ++tries);
-                    pauseTime = Math.min(pauseTime, maxPauseTime);
-                    AsyncConnectionImpl.RETRY_TIMER
-                      .newTimeout(this, pauseTime, TimeUnit.MILLISECONDS);
-                  }
-                });
-              } else {
-                future.completeExceptionally(new SnapshotCreationException(
-                  "Snapshot '" + snapshot.getName() + "' wasn't completed in expectedTime:"
-                    + expectedTimeout + " ms", snapshotDesc));
-              }
-            }
-          };
-          AsyncConnectionImpl.RETRY_TIMER.newTimeout(pollingTask, 1, TimeUnit.MILLISECONDS);
-        }});
+        waitSnapshotFinish(snapshotDesc, future, resp);
+      });
     return future;
+  }
+
+  // This is for keeping compatibility with old implementation.
+  // If there is a procId field in the response, then the snapshot will be operated with a
+  // SnapshotProcedure, otherwise the snapshot will be coordinated by zk.
+  private void waitSnapshotFinish(SnapshotDescription snapshot,
+      CompletableFuture<Void> future, SnapshotResponse resp) {
+    if (resp.hasProcId()) {
+      getProcedureResult(resp.getProcId(), future, 0);
+      addListener(future, new SnapshotProcedureBiConsumer(snapshot.getTableName()));
+    } else {
+      long expectedTimeout = resp.getExpectedTimeout();
+      TimerTask pollingTask = new TimerTask() {
+        int tries = 0;
+        long startTime = EnvironmentEdgeManager.currentTime();
+        long endTime = startTime + expectedTimeout;
+        long maxPauseTime = expectedTimeout / maxAttempts;
+
+        @Override
+        public void run(Timeout timeout) throws Exception {
+          if (EnvironmentEdgeManager.currentTime() < endTime) {
+            addListener(isSnapshotFinished(snapshot), (done, err2) -> {
+              if (err2 != null) {
+                future.completeExceptionally(err2);
+              } else if (done) {
+                future.complete(null);
+              } else {
+                // retry again after pauseTime.
+                long pauseTime = ConnectionUtils
+                  .getPauseTime(TimeUnit.NANOSECONDS.toMillis(pauseNs), ++tries);
+                pauseTime = Math.min(pauseTime, maxPauseTime);
+                AsyncConnectionImpl.RETRY_TIMER
+                  .newTimeout(this, pauseTime, TimeUnit.MILLISECONDS);
+              }
+            });
+          } else {
+            future.completeExceptionally(new SnapshotCreationException(
+              "Snapshot '" + snapshot.getName() + "' wasn't completed in expectedTime:"
+                + expectedTimeout + " ms", snapshot));
+          }
+        }
+      };
+      AsyncConnectionImpl.RETRY_TIMER.newTimeout(pollingTask, 1, TimeUnit.MILLISECONDS);
+    }
   }
 
   @Override
