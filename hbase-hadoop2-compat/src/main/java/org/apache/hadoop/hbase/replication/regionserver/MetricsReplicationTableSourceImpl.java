@@ -45,7 +45,7 @@ public class MetricsReplicationTableSourceImpl implements MetricsReplicationTabl
     this.keyPrefix = "source." + this.tableName + ".";
 
     ageOfLastShippedOpKey = this.keyPrefix + "ageOfLastShippedOp";
-    ageOfLastShippedOpHist = rms.getMetricsRegistry().getHistogram(ageOfLastShippedOpKey);
+    ageOfLastShippedOpHist = rms.getMetricsRegistry().newTimeHistogram(ageOfLastShippedOpKey);
 
     shippedBytesKey = this.keyPrefix + "shippedBytes";
     shippedBytesCounter = rms.getMetricsRegistry().getCounter(shippedBytesKey, 0L);
