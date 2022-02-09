@@ -449,8 +449,13 @@ public class SnapshotProcedure
   protected void afterReplay(MasterProcedureEnv env) {
     try {
       prepareSnapshotEnv(env);
+      boolean snapshotProcedureEnabled = conf.getBoolean(SnapshotManager.SNAPSHOT_PROCEDURE_ENABLED,
+        SnapshotManager.SNAPSHOT_PROCEDURE_ENABLED_DEFAULT);
+      if (!snapshotProcedureEnabled) {
+        throw new IOException("SnapshotProcedure is DISABLED");
+      }
     } catch (IOException e) {
-      LOG.error("Failed replaying {}, mark procedure as failed", this, e);
+      LOG.error("Failed replaying {}, mark procedure as FAILED", this, e);
       setFailure("master-snapshot", e);
     }
   }

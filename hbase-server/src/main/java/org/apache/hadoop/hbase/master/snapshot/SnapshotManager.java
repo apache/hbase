@@ -159,9 +159,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     "hbase.snapshot.max.filesize.preserve";
 
   /** Enable or disable snapshot procedure */
-  private static final String SNAPSHOT_PROCEDURE_ENABLED = "hbase.snapshot.procedure.enabled";
+  public static final String SNAPSHOT_PROCEDURE_ENABLED = "hbase.snapshot.procedure.enabled";
 
-  private static final boolean SNAPSHOT_PROCEDURE_ENABLED_DEFAULT = true;
+  public static final boolean SNAPSHOT_PROCEDURE_ENABLED_DEFAULT = true;
 
   private boolean stopped;
   private MasterServices master;  // Needed by TableEventHandlers
