@@ -2091,6 +2091,13 @@
         <version>${project.version}</version>
       </dependency>
       <dependency>
+        <artifactId>hbase-client</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <artifactId>hbase-metrics-api</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>

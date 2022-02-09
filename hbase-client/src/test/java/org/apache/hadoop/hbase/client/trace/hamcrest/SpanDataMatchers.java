@@ -24,6 +24,7 @@ import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
+import java.time.Duration;
 import org.hamcrest.Description;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
@@ -42,6 +43,16 @@ public final class SpanDataMatchers {
     ) {
       @Override protected Attributes featureValueOf(SpanData item) {
         return item.getAttributes();
+      }
+    };
+  }
+
+  public static Matcher<SpanData> hasDuration(Matcher<Duration> matcher) {
+    return new FeatureMatcher<SpanData, Duration>(
+      matcher, "SpanData having duration that ", "duration") {
+      @Override
+      protected Duration featureValueOf(SpanData item) {
+        return Duration.ofNanos(item.getEndEpochNanos() - item.getStartEpochNanos());
       }
     };
   }
@@ -89,6 +100,19 @@ public final class SpanDataMatchers {
       }
       @Override public void describeTo(Description description) {
         description.appendText("SpanData with StatusCode that ").appendDescriptionOf(matcher);
+      }
+    };
+  }
+
+  public static Matcher<SpanData> hasTraceId(String traceId) {
+    return hasTraceId(is(equalTo(traceId)));
+  }
+
+  public static Matcher<SpanData> hasTraceId(Matcher<String> matcher) {
+    return new FeatureMatcher<SpanData, String>(
+      matcher, "SpanData with a traceId that ", "traceId") {
+      @Override protected String featureValueOf(SpanData item) {
+        return item.getTraceId();
       }
     };
   }

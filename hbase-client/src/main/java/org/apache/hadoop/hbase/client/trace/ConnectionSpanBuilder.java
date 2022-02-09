@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.client.AsyncConnectionImpl;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -76,15 +77,32 @@ public class ConnectionSpanBuilder implements Supplier<Span> {
    * Static utility method that performs the primary logic of this builder. It is visible to other
    * classes in this package so that other builders can use this functionality as a mix-in.
    * @param attributes the attributes map to be populated.
-   * @param conn the source of attribute values.
+   * @param conn the source of connection attribute values.
    */
   static void populateConnectionAttributes(
     final Map<AttributeKey<?>, Object> attributes,
     final AsyncConnectionImpl conn
   ) {
+    final Supplier<String> connStringSupplier = () -> conn.getConnectionRegistry()
+      .getConnectionString();
+    populateConnectionAttributes(attributes, connStringSupplier, conn::getUser);
+  }
+
+  /**
+   * Static utility method that performs the primary logic of this builder. It is visible to other
+   * classes in this package so that other builders can use this functionality as a mix-in.
+   * @param attributes the attributes map to be populated.
+   * @param connectionStringSupplier the source of the {@code db.connection_string} attribute value.
+   * @param userSupplier the source of the {@code db.user} attribute value.
+   */
+  static void populateConnectionAttributes(
+    final Map<AttributeKey<?>, Object> attributes,
+    final Supplier<String> connectionStringSupplier,
+    final Supplier<User> userSupplier
+  ) {
     attributes.put(DB_SYSTEM, DB_SYSTEM_VALUE);
-    attributes.put(DB_CONNECTION_STRING, conn.getConnectionRegistry().getConnectionString());
-    attributes.put(DB_USER, Optional.ofNullable(conn.getUser())
+    attributes.put(DB_CONNECTION_STRING, connectionStringSupplier.get());
+    attributes.put(DB_USER, Optional.ofNullable(userSupplier.get())
       .map(Object::toString)
       .orElse(null));
   }
