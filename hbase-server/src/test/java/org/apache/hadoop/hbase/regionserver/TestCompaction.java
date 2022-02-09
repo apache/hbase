@@ -28,7 +28,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -50,11 +50,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -175,7 +175,7 @@ public class TestCompaction {
         for (int j = 0; j < jmax; j++) {
           p.addColumn(COLUMN_FAMILY, Bytes.toBytes(j), pad);
         }
-        HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY));
+        HTestConst.addContent(loader, Bytes.toString(COLUMN_FAMILY));
         loader.put(p);
         r.flush(true);
       }
@@ -251,7 +251,7 @@ public class TestCompaction {
         for (int j = 0; j < jmax; j++) {
           p.addColumn(COLUMN_FAMILY, Bytes.toBytes(j), pad);
         }
-        HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY));
+        HTestConst.addContent(loader, Bytes.toString(COLUMN_FAMILY));
         loader.put(p);
         r.flush(true);
       }
@@ -330,7 +330,7 @@ public class TestCompaction {
 
   private void createStoreFile(final HRegion region, String family) throws IOException {
     Table loader = new RegionAsTable(region);
-    HBaseTestCase.addContent(loader, family);
+    HTestConst.addContent(loader, family);
     region.flush(true);
   }
 
@@ -494,7 +494,7 @@ public class TestCompaction {
       for (int j = 0; j < jmax; j++) {
         p.addColumn(COLUMN_FAMILY, Bytes.toBytes(j), pad);
       }
-      HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY));
+      HTestConst.addContent(loader, Bytes.toString(COLUMN_FAMILY));
       loader.put(p);
       r.flush(true);
     }
