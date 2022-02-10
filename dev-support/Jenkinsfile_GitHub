@@ -141,14 +141,14 @@ pipeline {
                             if [ -d "${PATCHDIR}/branch-site" ]; then
                               echo "Remove ${PATCHDIR}/branch-site for saving space"
                               rm -rf "${PATCHDIR}/branch-site"
-                              ./${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/branch-site" > "${PATCHDIR}/branch-site.html"
+                              python2 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/branch-site" > "${PATCHDIR}/branch-site.html"
                             else
                               echo "No branch-site, skipping"
                             fi
                             if [ -d "${PATCHDIR}/patch-site" ]; then
                               echo "Remove ${PATCHDIR}/patch-site for saving space"
                               rm -rf "${PATCHDIR}/patch-site"
-                              ./${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/patch-site" > "${PATCHDIR}/patch-site.html"
+                              python2 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/patch-site" > "${PATCHDIR}/patch-site.html"
                             else
                               echo "No patch-site, skipping"
                             fi
@@ -279,7 +279,7 @@ pipeline {
                             if [ -f "${PATCHDIR}/test_logs.zip" ]; then
                               echo "Remove ${PATCHDIR}/test_logs.zip for saving space"
                               rm -rf "${PATCHDIR}/test_logs.zip"
-                              ./${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
+                              python2 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
                             else
                               echo "No test_logs.zip, skipping"
                             fi
@@ -411,7 +411,7 @@ pipeline {
                             if [ -f "${PATCHDIR}/test_logs.zip" ]; then
                               echo "Remove ${PATCHDIR}/test_logs.zip for saving space"
                               rm -rf "${PATCHDIR}/test_logs.zip"
-                              ./${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
+                              python2 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
                             else
                               echo "No test_logs.zip, skipping"
                             fi
