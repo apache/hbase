@@ -1733,7 +1733,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
         List<NormalizationPlan> plans = this.normalizer.computePlansForTable(table);
         if (plans == null || plans.isEmpty()) {
-          return true;
+          continue;
         }
         try (Admin admin = clusterConnection.getAdmin()) {
           for (NormalizationPlan plan : plans) {

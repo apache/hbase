@@ -23,11 +23,14 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -184,36 +187,7 @@ public class TestSimpleRegionNormalizerOnCluster {
     final TableName TABLENAME = TableName.valueOf(name.getMethodName());
 
     // create 5 regions with sizes to trigger merge of small regions
-    try (HTable ht = TEST_UTIL.createMultiRegionTable(TABLENAME, FAMILYNAME, 5)) {
-      // Need to get sorted list of regions here
-      List<HRegion> generatedRegions = TEST_UTIL.getHBaseCluster().getRegions(TABLENAME);
-      Collections.sort(generatedRegions, new Comparator<HRegion>() {
-        @Override
-        public int compare(HRegion o1, HRegion o2) {
-          return o1.getRegionInfo().compareTo(o2.getRegionInfo());
-        }
-      });
-
-      HRegion region = generatedRegions.get(0);
-      generateTestData(region, 1);
-      region.flush(true);
-
-      region = generatedRegions.get(1);
-      generateTestData(region, 1);
-      region.flush(true);
-
-      region = generatedRegions.get(2);
-      generateTestData(region, 3);
-      region.flush(true);
-
-      region = generatedRegions.get(3);
-      generateTestData(region, 3);
-      region.flush(true);
-
-      region = generatedRegions.get(4);
-      generateTestData(region, 5);
-      region.flush(true);
-    }
+    createTable(TABLENAME, Arrays.asList(1, 1, 3, 3, 5));
 
     HTableDescriptor htd = admin.getTableDescriptor(TABLENAME);
     htd.setNormalizationEnabled(true);
@@ -235,6 +209,76 @@ public class TestSimpleRegionNormalizerOnCluster {
 
     assertEquals(4, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), TABLENAME));
     dropIfExists(TABLENAME);
+  }
+
+  @Test
+  public void testMultiTablePlans()
+      throws IOException, InterruptedException, CoordinatedStateException {
+    // create 3 tables with regions to be normalized
+    int numOfTables = 3;
+    String methodName = name.getMethodName();
+    List<TableName> tableNames = new ArrayList<>();
+    // init names
+    for (int i = 0; i < numOfTables; i++) {
+      tableNames.add(TableName.valueOf(methodName + i));
+    }
+    createTable(tableNames.get(0), Arrays.asList(1, 1, 3, 5, 3));
+    createTable(tableNames.get(1), Arrays.asList(1, 1, 1, 1, 1));
+    createTable(tableNames.get(2), Arrays.asList(1, 1, 3, 5, 3));
+
+    // enable region normalizer for all above tables
+    for (int i = 0; i < numOfTables; i++) {
+      HTableDescriptor htd = admin.getTableDescriptor(tableNames.get(i));
+      htd.setNormalizationEnabled(true);
+      admin.modifyTable(tableNames.get(i), htd);
+    }
+    for (int i = 0; i < numOfTables; i++) {
+      // check region has been created properly
+      assertEquals(5,
+        MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableNames.get(i)));
+    }
+    admin.setNormalizerRunning(true);
+    Thread.sleep(5000); // to let region load to update
+    boolean checkStatus = master.normalizeRegions();
+    assertTrue(checkStatus);
+
+    // checking for table 0 to check if normalizer has been triggered or not
+    while (MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableNames.get(0)) > 4) {
+      LOG.info("Waiting for normalization merge to complete");
+      Thread.sleep(100);
+    }
+    while (MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableNames.get(2)) > 4) {
+      LOG.info("Waiting for normalization merge to complete");
+      Thread.sleep(100);
+    }
+
+    Thread.sleep(1000);
+    assertEquals(4, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableNames.get(0)));
+    assertEquals(5, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableNames.get(1)));
+    assertEquals(4, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableNames.get(2)));
+    for (int i = 0; i < numOfTables; i++) {
+      dropIfExists(tableNames.get(i));
+    }
+  }
+
+  private void createTable(TableName TABLENAME, List<Integer> rowsInRespectiveRegions)
+      throws IOException {
+    int numOfRegions = rowsInRespectiveRegions.size();
+    try (HTable ht = TEST_UTIL.createMultiRegionTable(TABLENAME, FAMILYNAME, numOfRegions)) {
+      // Need to get sorted list of regions here
+      List<HRegion> generatedRegions = TEST_UTIL.getHBaseCluster().getRegions(TABLENAME);
+      Collections.sort(generatedRegions, new Comparator<HRegion>() {
+        @Override
+        public int compare(HRegion o1, HRegion o2) {
+          return o1.getRegionInfo().compareTo(o2.getRegionInfo());
+        }
+      });
+      for (int i = 0; i < numOfRegions; i++) {
+        HRegion region = generatedRegions.get(i);
+        generateTestData(region, rowsInRespectiveRegions.get(i));
+        region.flush(true);
+      }
+    }
   }
 
   private static void waitForTableSplit(final TableName tableName, final int targetRegionCount)
