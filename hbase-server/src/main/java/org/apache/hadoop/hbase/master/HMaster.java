@@ -1008,7 +1008,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // initialize load balancer
     this.balancer.setMasterServices(this);
     this.balancer.initialize();
-    this.balancer.updateClusterMetrics(getClusterMetricsInternal());
+    this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
     // start up all service threads.
     status.setStatus("Initializing master service threads");
@@ -1096,7 +1096,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
 
     // set cluster status again after user regions are assigned
-    this.balancer.updateClusterMetrics(getClusterMetricsInternal());
+    this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
     // Start balancer and meta catalog janitor after meta and regions have been assigned.
     status.setStatus("Starting balancer and catalog janitor");
@@ -1918,7 +1918,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       }
 
       //Give the balancer the current cluster state.
-      this.balancer.updateClusterMetrics(getClusterMetricsInternal());
+      this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
       List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
 
@@ -2726,11 +2726,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
   }
 
-  public ClusterMetrics getClusterMetricsInternal() throws InterruptedIOException {
-    return getClusterMetricsInternal(EnumSet.allOf(Option.class));
+  public ClusterMetrics getClusterMetricsWithoutCoprocessor() throws InterruptedIOException {
+    return getClusterMetricsWithoutCoprocessor(EnumSet.allOf(Option.class));
   }
 
-  public ClusterMetrics getClusterMetricsInternal(EnumSet<Option> options)
+  public ClusterMetrics getClusterMetricsWithoutCoprocessor(EnumSet<Option> options)
       throws InterruptedIOException {
     ClusterMetricsBuilder builder = ClusterMetricsBuilder.newBuilder();
     // given that hbase1 can't submit the request with Option,
@@ -2742,7 +2742,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // TASKS and/or LIVE_SERVERS will populate this map, which will be given to the builder if
     // not null after option processing completes.
     Map<ServerName, ServerMetrics> serverMetricsMap = null;
-    boolean processedLiveServers = false;
 
     for (Option opt : options) {
       switch (opt) {
@@ -2763,28 +2762,16 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
             .collect(Collectors.toList()));
           // TASKS is also synonymous with LIVE_SERVERS for now because task information for
           // regionservers is carried in ServerLoad.
-          // Add entries to serverMetricsMap for all live servers
-          if (serverManager != null && !processedLiveServers) {
-            if (serverMetricsMap == null) {
-              serverMetricsMap = new HashMap<>();
-            }
-            final Map<ServerName, ServerMetrics> map = serverMetricsMap;
-            serverManager.getOnlineServers().entrySet()
-              .forEach(e -> map.put(e.getKey(), e.getValue()));
-            processedLiveServers = true;
+          // Add entries to serverMetricsMap for all live servers, if we haven't already done so
+          if (serverMetricsMap == null) {
+            serverMetricsMap = getOnlineServers();
           }
           break;
         }
         case LIVE_SERVERS: {
-          // Add entries to serverMetricsMap for all live servers
-          if (serverManager != null && !processedLiveServers) {
-            if (serverMetricsMap == null) {
-              serverMetricsMap = new HashMap<>();
-            }
-            final Map<ServerName, ServerMetrics> map = serverMetricsMap;
-            serverManager.getOnlineServers().entrySet()
-              .forEach(e -> map.put(e.getKey(), e.getValue()));
-            processedLiveServers = true;
+          // Add entries to serverMetricsMap for all live servers, if we haven't already done so
+          if (serverMetricsMap == null) {
+            serverMetricsMap = getOnlineServers();
           }
           break;
         }
@@ -2854,6 +2841,16 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return builder.build();
   }
 
+  private Map<ServerName, ServerMetrics> getOnlineServers() {
+    if (serverManager != null) {
+      final Map<ServerName, ServerMetrics> map = new HashMap<>();
+      serverManager.getOnlineServers().entrySet()
+        .forEach(e -> map.put(e.getKey(), e.getValue()));
+      return map;
+    }
+    return null;
+  }
+
   /**
    * @return cluster status
    */
@@ -2865,7 +2862,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (cpHost != null) {
       cpHost.preGetClusterMetrics();
     }
-    ClusterMetrics status = getClusterMetricsInternal(options);
+    ClusterMetrics status = getClusterMetricsWithoutCoprocessor(options);
     if (cpHost != null) {
       cpHost.postGetClusterMetrics(status);
     }
