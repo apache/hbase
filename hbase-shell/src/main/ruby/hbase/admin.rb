@@ -853,7 +853,6 @@ module Hbase
         unless master.nil?
           puts(format('active master:  %s:%d %d', master.getHostname, master.getPort, master.getStartcode))
           for task in status.getMasterTasks
-            next unless task.getState.name == 'RUNNING'
             puts(format('    %s', task.toString))
           end
         end
@@ -874,7 +873,6 @@ module Hbase
             puts(format('            %s', region.toString))
           end
           for task in status.getLoad(server).getTasks
-            next unless task.getState.name == 'RUNNING'
             puts(format('        %s', task.toString))
           end
         end
