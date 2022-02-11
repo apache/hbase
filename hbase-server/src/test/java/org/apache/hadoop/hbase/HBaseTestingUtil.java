@@ -49,6 +49,7 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -61,6 +62,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
@@ -1532,6 +1534,16 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(admin.getDescriptor(table))
       .setRegionReplication(replicaCount).build();
     admin.modifyTable(desc);
+  }
+
+  /**
+   * Set the number of Region replicas.
+   */
+  public static void setReplicas(AsyncAdmin admin, TableName table, int replicaCount)
+    throws ExecutionException, IOException, InterruptedException {
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(admin.getDescriptor(table).get())
+      .setRegionReplication(replicaCount).build();
+    admin.modifyTable(desc).get();
   }
 
   /**
