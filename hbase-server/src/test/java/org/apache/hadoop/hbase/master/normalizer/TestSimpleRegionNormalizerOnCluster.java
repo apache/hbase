@@ -211,7 +211,7 @@ public class TestSimpleRegionNormalizerOnCluster {
     dropIfExists(TABLENAME);
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void testMultiTablePlans()
       throws IOException, InterruptedException, CoordinatedStateException {
     // create 3 tables with regions to be normalized
@@ -241,18 +241,13 @@ public class TestSimpleRegionNormalizerOnCluster {
     Thread.sleep(5000); // to let region load to update
     boolean checkStatus = master.normalizeRegions();
     assertTrue(checkStatus);
-
-    // checking for table 0 to check if normalizer has been triggered or not
-    while (MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableNames.get(0)) > 4) {
-      LOG.info("Waiting for normalization merge to complete");
-      Thread.sleep(100);
-    }
-    while (MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableNames.get(2)) > 4) {
-      LOG.info("Waiting for normalization merge to complete");
-      Thread.sleep(100);
-    }
-
-    Thread.sleep(1000);
+    // this sleeps helps in getting accurate result from MetaTableAccessor.getRegionCount
+    Thread.sleep(5000);
+    // something is miss in test. If this test passes that doesnot mean correctness
+    // but this test failing means there is surely an issue. It happens because the order of table
+    // normalization is not fix so there are chances that the second table is finished in the end
+    // which means test will pass even though there is an issue in normalizer.
+    // Culprit is HMaster code where we call Collections.shuffle(allEnabledTables)
     assertEquals(4, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableNames.get(0)));
     assertEquals(5, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableNames.get(1)));
     assertEquals(4, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableNames.get(2)));
