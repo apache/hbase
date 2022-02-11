@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -62,13 +61,15 @@ public class TestMasterBalancerNPE {
 
   @Before
   public void setupConfiguration() {
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_BALANCER_PERIOD, Integer.MAX_VALUE);
+    /**
+     * Make {@link BalancerChore} not run,so does not disrupt the test.
+     */
+    HMaster.setDisableBalancerChoreForTest(true);
   }
 
   @After
   public void shutdown() throws Exception {
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_BALANCER_PERIOD,
-      HConstants.DEFAULT_HBASE_BALANCER_PERIOD);
+    HMaster.setDisableBalancerChoreForTest(false);
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -178,28 +179,24 @@ public class TestMasterBalancerNPE {
       unassignThread.setName("UnassignThread");
       unassignThread.start();
 
-      synchronized (loadBalancer) {
-        synchronized (spiedLoadBalancer) {
-          master.setLoadBalancer(spiedLoadBalancer);
-          master.setAssignmentManager(spiedAssignmentManager);
-          /**
-           * enable balance
-           */
-          TEST_UTIL.getAdmin().balancerSwitch(true, false);
-          /**
-           * Before HBASE-26712,here invokes {@link AssignmentManager#balance(RegionPlan)}
-           * which may throw NPE.
-           */
-          master.balance();
-        }
-      }
+      master.setLoadBalancer(spiedLoadBalancer);
+      master.setAssignmentManager(spiedAssignmentManager);
+      /**
+       * enable balance
+       */
+      TEST_UTIL.getAdmin().balancerSwitch(true, false);
+      /**
+       * Before HBASE-26712,here invokes {@link AssignmentManager#balance(RegionPlan)}
+       * which may throw NPE.
+       */
+      master.balance();
+
       unassignThread.join();
       assertTrue(exceptionRef.get() == null);
     } finally {
       master.setLoadBalancer(loadBalancer);
       master.setAssignmentManager(assignmentManager);
     }
-
   }
 
   private TableName createTable(String table) throws IOException {
