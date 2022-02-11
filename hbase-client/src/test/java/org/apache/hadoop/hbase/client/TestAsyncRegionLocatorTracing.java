@@ -127,7 +127,7 @@ public class TestAsyncRegionLocatorTracing {
   public void testClearCache() {
     conn.getLocator().clearCache();
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
-    assertThat(span, allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.CLIENT),
+    assertThat(span, allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
       buildConnectionAttributesMatcher(conn)));
   }
 
@@ -137,7 +137,7 @@ public class TestAsyncRegionLocatorTracing {
     conn.getLocator().clearCache(sn);
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
     assertThat(span,
-      allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.CLIENT),
+      allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
         buildConnectionAttributesMatcher(conn),
         hasAttributes(containsEntry("db.hbase.server.name", sn.getServerName()))));
   }
@@ -147,7 +147,7 @@ public class TestAsyncRegionLocatorTracing {
     conn.getLocator().clearCache(TableName.META_TABLE_NAME);
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
     assertThat(span,
-      allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.CLIENT),
+      allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
         buildConnectionAttributesMatcher(conn),
         buildTableAttributesMatcher(TableName.META_TABLE_NAME)));
   }
@@ -158,7 +158,7 @@ public class TestAsyncRegionLocatorTracing {
       RegionLocateType.CURRENT, TimeUnit.SECONDS.toNanos(1)).join();
     SpanData span = waitSpan("AsyncRegionLocator.getRegionLocation");
     assertThat(span,
-      allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.CLIENT),
+      allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
         buildConnectionAttributesMatcher(conn),
         buildTableAttributesMatcher(TableName.META_TABLE_NAME),
         hasAttributes(containsEntryWithStringValuesOf("db.hbase.regions",
@@ -173,7 +173,7 @@ public class TestAsyncRegionLocatorTracing {
     String[] expectedRegions =
       Arrays.stream(locs.getRegionLocations()).map(HRegionLocation::getRegion)
         .map(RegionInfo::getRegionNameAsString).toArray(String[]::new);
-    assertThat(span, allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.CLIENT),
+    assertThat(span, allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
       buildConnectionAttributesMatcher(conn),
       buildTableAttributesMatcher(TableName.META_TABLE_NAME), hasAttributes(
         containsEntryWithStringValuesOf("db.hbase.regions", containsInAnyOrder(expectedRegions)))));

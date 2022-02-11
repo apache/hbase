@@ -28,7 +28,6 @@ import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
@@ -1052,8 +1051,8 @@ public class HTable implements Table {
 
   @Override
   public void close() throws IOException {
-    final Supplier<Span> supplier = new TableSpanBuilder(connection).setName("HTable.close")
-      .setTableName(tableName).setSpanKind(SpanKind.INTERNAL);
+    final Supplier<Span> supplier =
+      new TableSpanBuilder(connection).setName("HTable.close").setTableName(tableName);
     TraceUtil.trace(() -> {
       if (this.closed) {
         return;
