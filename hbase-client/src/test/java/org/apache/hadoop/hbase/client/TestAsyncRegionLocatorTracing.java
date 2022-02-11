@@ -132,7 +132,7 @@ public class TestAsyncRegionLocatorTracing {
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
     assertThat(span, allOf(
       hasStatusWithCode(StatusCode.OK),
-      hasKind(SpanKind.CLIENT),
+      hasKind(SpanKind.INTERNAL),
       buildConnectionAttributesMatcher(conn)));
   }
 
@@ -144,7 +144,7 @@ public class TestAsyncRegionLocatorTracing {
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
     assertThat(span, allOf(
       hasStatusWithCode(StatusCode.OK),
-      hasKind(SpanKind.CLIENT),
+      hasKind(SpanKind.INTERNAL),
       buildConnectionAttributesMatcher(conn),
       hasAttributes(containsEntry("db.hbase.server.name", sn.getServerName()))));
   }
@@ -155,7 +155,7 @@ public class TestAsyncRegionLocatorTracing {
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
     assertThat(span, allOf(
       hasStatusWithCode(StatusCode.OK),
-      hasKind(SpanKind.CLIENT),
+      hasKind(SpanKind.INTERNAL),
       buildConnectionAttributesMatcher(conn),
       buildTableAttributesMatcher(TableName.META_TABLE_NAME)));
   }
@@ -167,7 +167,7 @@ public class TestAsyncRegionLocatorTracing {
     SpanData span = waitSpan("AsyncRegionLocator.getRegionLocation");
     assertThat(span, allOf(
       hasStatusWithCode(StatusCode.OK),
-      hasKind(SpanKind.CLIENT),
+      hasKind(SpanKind.INTERNAL),
       buildConnectionAttributesMatcher(conn),
       buildTableAttributesMatcher(TableName.META_TABLE_NAME),
       hasAttributes(
@@ -186,7 +186,7 @@ public class TestAsyncRegionLocatorTracing {
       .toArray(String[]::new);
     assertThat(span, allOf(
       hasStatusWithCode(StatusCode.OK),
-      hasKind(SpanKind.CLIENT),
+      hasKind(SpanKind.INTERNAL),
       buildConnectionAttributesMatcher(conn),
       buildTableAttributesMatcher(TableName.META_TABLE_NAME),
       hasAttributes(

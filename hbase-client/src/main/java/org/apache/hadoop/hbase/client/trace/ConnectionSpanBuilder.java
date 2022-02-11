@@ -67,8 +67,7 @@ public class ConnectionSpanBuilder implements Supplier<Span> {
   public Span build() {
     final SpanBuilder builder = TraceUtil.getGlobalTracer()
       .spanBuilder(name)
-      // TODO: what about clients embedded in Master/RegionServer/Gateways/&c?
-      .setSpanKind(SpanKind.CLIENT);
+      .setSpanKind(SpanKind.INTERNAL);
     attributes.forEach((k, v) -> builder.setAttribute((AttributeKey<? super Object>) k, v));
     return builder.startSpan();
   }
