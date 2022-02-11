@@ -72,7 +72,7 @@ public class TestRegionLocatorTracing extends TestTracingBase {
     conn.getRegionLocator(TableName.META_TABLE_NAME).getRegionLocation(HConstants.EMPTY_START_ROW);
     SpanData span = waitSpan("HRegionLocator.getRegionLocation");
     assertThat(span,
-      allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.CLIENT),
+      allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
         buildConnectionAttributesMatcher(conn),
         buildTableAttributesMatcher(TableName.META_TABLE_NAME),
         hasAttributes(containsEntryWithStringValuesOf("db.hbase.regions",
@@ -87,7 +87,7 @@ public class TestRegionLocatorTracing extends TestTracingBase {
     String[] expectedRegions =
       Arrays.stream(META_REGION_LOCATION.getRegionLocations()).map(HRegionLocation::getRegion)
         .map(RegionInfo::getRegionNameAsString).toArray(String[]::new);
-    assertThat(span, allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.CLIENT),
+    assertThat(span, allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
       buildConnectionAttributesMatcher(conn),
       buildTableAttributesMatcher(TableName.META_TABLE_NAME), hasAttributes(
         containsEntryWithStringValuesOf("db.hbase.regions", containsInAnyOrder(expectedRegions)))));
@@ -101,7 +101,7 @@ public class TestRegionLocatorTracing extends TestTracingBase {
     String[] expectedRegions =
       Arrays.stream(META_REGION_LOCATION.getRegionLocations()).map(HRegionLocation::getRegion)
         .map(RegionInfo::getRegionNameAsString).toArray(String[]::new);
-    assertThat(span, allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.CLIENT),
+    assertThat(span, allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
       buildConnectionAttributesMatcher(conn),
       buildTableAttributesMatcher(TableName.META_TABLE_NAME), hasAttributes(
         containsEntryWithStringValuesOf("db.hbase.regions", containsInAnyOrder(expectedRegions)))));
@@ -112,7 +112,7 @@ public class TestRegionLocatorTracing extends TestTracingBase {
     conn.getRegionLocator(TableName.META_TABLE_NAME).clearRegionLocationCache();
     SpanData span = waitSpan("HRegionLocator.clearRegionLocationCache");
     assertThat(span,
-      allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.CLIENT),
+      allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
         buildConnectionAttributesMatcher(conn),
         buildTableAttributesMatcher(TableName.META_TABLE_NAME)));
   }
