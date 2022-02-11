@@ -40,7 +40,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class TableSpanBuilder implements Supplier<Span> {
 
   private String name;
-  private SpanKind spanKind = SpanKind.CLIENT;
   private final Map<AttributeKey<?>, Object> attributes = new HashMap<>();
 
   public TableSpanBuilder(ClusterConnection conn) {
@@ -61,11 +60,6 @@ public class TableSpanBuilder implements Supplier<Span> {
     return this;
   }
 
-  public TableSpanBuilder setSpanKind(final SpanKind spanKind) {
-    this.spanKind = spanKind;
-    return this;
-  }
-
   public TableSpanBuilder setTableName(final TableName tableName) {
     populateTableNameAttributes(attributes, tableName);
     return this;
@@ -73,9 +67,8 @@ public class TableSpanBuilder implements Supplier<Span> {
 
   @SuppressWarnings("unchecked")
   public Span build() {
-    final SpanBuilder builder = TraceUtil.getGlobalTracer().spanBuilder(name)
-      // TODO: what about clients embedded in Master/RegionServer/Gateways/&c?
-      .setSpanKind(spanKind);
+    final SpanBuilder builder =
+      TraceUtil.getGlobalTracer().spanBuilder(name).setSpanKind(SpanKind.INTERNAL);
     attributes.forEach((k, v) -> builder.setAttribute((AttributeKey<? super Object>) k, v));
     return builder.startSpan();
   }
