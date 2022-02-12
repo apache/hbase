@@ -468,15 +468,16 @@ public class SnapshotProcedure
       throws ProcedureSuspendedException {
     Optional<ServerName> worker = verifyWorkerAssigner.acquire();
     if (worker.isPresent()) {
-      LOG.debug("Acquired verify snapshot worker={}", worker.get());
+      LOG.debug("{} Acquired verify snapshot worker={}", procedure, worker.get());
       return worker.get();
     }
     verifyWorkerAssigner.suspend(procedure);
     throw new ProcedureSuspendedException();
   }
 
-  public void releaseSnapshotVerifyWorker(ServerName worker, MasterProcedureScheduler scheduler) {
-    LOG.debug("Release verify snapshot worker={}", worker);
+  public void releaseSnapshotVerifyWorker(SnapshotVerifyProcedure procedure, ServerName worker,
+      MasterProcedureScheduler scheduler) {
+    LOG.debug("{} Release verify snapshot worker={}", procedure, worker);
     verifyWorkerAssigner.release(worker);
     verifyWorkerAssigner.wake(scheduler);
   }

@@ -74,7 +74,7 @@ public class SnapshotVerifyProcedure
   }
 
   @Override
-  protected void complete(MasterProcedureEnv env, Throwable error) {
+  protected synchronized void complete(MasterProcedureEnv env, Throwable error) {
     SnapshotProcedure parent = env.getMasterServices().getMasterProcedureExecutor()
       .getProcedure(SnapshotProcedure.class, getParentProcId());
     try {
@@ -106,8 +106,7 @@ public class SnapshotVerifyProcedure
       setFailure("verify-snapshot", e);
     } finally {
       // release the worker
-      parent.releaseSnapshotVerifyWorker(targetServer, env.getProcedureScheduler());
-      targetServer = null;
+      parent.releaseSnapshotVerifyWorker(this, targetServer, env.getProcedureScheduler());
     }
   }
 
@@ -131,13 +130,13 @@ public class SnapshotVerifyProcedure
         }
       }
       // acquire a worker
-      if (targetServer == null) {
+      if (!dispatched && targetServer == null) {
         targetServer = parent.acquireSnapshotVerifyWorker(this);
       }
       // send remote request
       Procedure<MasterProcedureEnv>[] res = super.execute(env);
       // retry if necessary
-      if (res == null && !dispatched) {
+      if (!dispatched) {
         // the mostly like thing is that a FailedRemoteDispatchException is thrown.
         // we need to retry on another remote server
         targetServer = null;
@@ -150,7 +149,6 @@ public class SnapshotVerifyProcedure
       // there are some cases we need to retry:
       // 1. we can't get response from hdfs
       // 2. the remote server crashed
-      // 3. the remote server reposts a non-CorruptedSnapshotException
       if (retryCounter == null) {
         retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
       }
