@@ -275,7 +275,7 @@ public class RegionReplicationSink {
     }
     long rpcTimeoutNsToUse;
     long operationTimeoutNsToUse;
-    if (hasMetaEdit) {
+    if (!hasMetaEdit) {
       rpcTimeoutNsToUse = rpcTimeoutNs;
       operationTimeoutNsToUse = operationTimeoutNs;
     } else {
