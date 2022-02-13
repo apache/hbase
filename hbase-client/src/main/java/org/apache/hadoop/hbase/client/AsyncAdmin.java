@@ -841,7 +841,6 @@ public interface AsyncAdmin {
    */
   CompletableFuture<Void> snapshot(SnapshotDescription snapshot);
 
-
   /**
    * Check the current state of the passed snapshot. There are three possible states:
    * <ol>

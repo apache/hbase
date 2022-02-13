@@ -403,7 +403,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       if (master.getMasterProcedureExecutor().isRunning()) {
         return master.getMasterProcedureExecutor().isFinished(procId);
       } else {
-       return false;
+        return false;
       }
     }
 

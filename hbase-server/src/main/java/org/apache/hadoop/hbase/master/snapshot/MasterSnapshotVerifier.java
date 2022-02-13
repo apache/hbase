@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.snapshot;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;

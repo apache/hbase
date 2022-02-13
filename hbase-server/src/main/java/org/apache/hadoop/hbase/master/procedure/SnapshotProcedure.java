@@ -402,10 +402,10 @@ public class SnapshotProcedure
     try {
       ModifyRegionUtils.editRegions(exec, Collections.singleton(mobRegionInfo),
           new ModifyRegionUtils.RegionEditTask() {
-        @Override
-        public void editRegion(final RegionInfo region) throws IOException {
-          snapshotManifest.addRegion(CommonFSUtils.getTableDir(rootDir, snapshotTable), region);
-        }
+          @Override
+          public void editRegion(final RegionInfo region) throws IOException {
+            snapshotManifest.addRegion(CommonFSUtils.getTableDir(rootDir, snapshotTable), region);
+          }
       });
     } finally {
       exec.shutdown();

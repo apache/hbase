@@ -56,7 +56,7 @@ public class WorkerAssigner implements ServerListener {
     List<ServerName> serverList = master.getServerManager().getOnlineServersList();
     Collections.shuffle(serverList);
     Optional<ServerName> worker = serverList.stream().filter(
-        serverName -> !currentWorkers.containsKey(serverName) || currentWorkers.get(serverName) > 0)
+      serverName -> !currentWorkers.containsKey(serverName) || currentWorkers.get(serverName) > 0)
       .findAny();
     worker.ifPresent(name -> currentWorkers.compute(name, (serverName, availableWorker) ->
       availableWorker == null ? maxTasks - 1 : availableWorker - 1));

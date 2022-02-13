@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.Optional;
-import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
