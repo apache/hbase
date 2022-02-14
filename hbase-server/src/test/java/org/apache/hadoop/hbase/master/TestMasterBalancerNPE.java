@@ -189,7 +189,7 @@ public class TestMasterBalancerNPE {
        * Before HBASE-26712,here invokes {@link AssignmentManager#balance(RegionPlan)}
        * which may throw NPE.
        */
-      master.balance();
+      master.balanceOrUpdateMetrics();
 
       unassignThread.join();
       assertTrue(exceptionRef.get() == null);
