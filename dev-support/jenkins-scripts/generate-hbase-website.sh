@@ -175,12 +175,14 @@ echo "Building HBase"
 if mvn \
     --batch-mode \
     -Psite-install-step \
+    --errors \
     --log-file="${working_dir}/hbase-install-log-${CURRENT_HBASE_COMMIT}.txt" \
     clean install \
   && mvn site \
     --batch-mode \
     -Dscala.skip=true \
     -Psite-build-step \
+    --errors \
     --log-file="${working_dir}/hbase-site-log-${CURRENT_HBASE_COMMIT}.txt"; then
   echo "Successfully built site."
 else
@@ -193,6 +195,7 @@ fi
 echo "Staging HBase site"
 mvn \
   --batch-mode \
+  --errors \
   --log-file="${working_dir}/hbase-stage-log-${CURRENT_HBASE_COMMIT}.txt" \
   site:stage
 status=$?
