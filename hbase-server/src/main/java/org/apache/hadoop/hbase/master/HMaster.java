@@ -344,6 +344,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private LoadBalancer balancer;
   private BalancerChore balancerChore;
+  private static boolean disableBalancerChoreForTest = false;
   private RegionNormalizerManager regionNormalizerManager;
   private ClusterStatusChore clusterStatusChore;
   private ClusterStatusPublisher clusterStatusPublisherChore = null;
@@ -1090,7 +1091,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.clusterStatusChore = new ClusterStatusChore(this, balancer);
     getChoreService().scheduleChore(clusterStatusChore);
     this.balancerChore = new BalancerChore(this);
-    getChoreService().scheduleChore(balancerChore);
+    if (!disableBalancerChoreForTest) {
+      getChoreService().scheduleChore(balancerChore);
+    }
     if (regionNormalizerManager != null) {
       getChoreService().scheduleChore(regionNormalizerManager.getRegionNormalizerChore());
     }
@@ -4036,4 +4039,23 @@ public class HMaster extends HRegionServer implements MasterServices {
   public Collection<ServerName> getLiveRegionServers() {
     return regionServerTracker.getRegionServers();
   }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  void setLoadBalancer(LoadBalancer loadBalancer) {
+    this.balancer = loadBalancer;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  void setAssignmentManager(AssignmentManager assignmentManager) {
+    this.assignmentManager = assignmentManager;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  static void setDisableBalancerChoreForTest(boolean disable) {
+    disableBalancerChoreForTest = disable;
+  }
+
 }
