@@ -625,3 +625,11 @@ Shell.load_command_group(
     get_namespace_rsgroup
   ]
 )
+
+Shell.load_command_group(
+  'storefiletracker',
+  full_name: 'StoreFileTracker',
+  commands: %w[
+    change_sft
+  ]
+)
