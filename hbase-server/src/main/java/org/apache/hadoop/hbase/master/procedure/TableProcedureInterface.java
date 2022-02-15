@@ -34,7 +34,7 @@ public interface TableProcedureInterface {
   public static final TableName DUMMY_NAMESPACE_TABLE_NAME = TableName.NAMESPACE_TABLE_NAME;
 
   public enum TableOperationType {
-    CREATE, DELETE, DISABLE, EDIT, ENABLE, READ,
+    CREATE, DELETE, DISABLE, EDIT, ENABLE, READ, SNAPSHOT, REGION_SNAPSHOT,
     REGION_EDIT, REGION_SPLIT, REGION_MERGE, REGION_ASSIGN, REGION_UNASSIGN,
       REGION_GC, MERGED_REGIONS_GC/* region operations */
   }

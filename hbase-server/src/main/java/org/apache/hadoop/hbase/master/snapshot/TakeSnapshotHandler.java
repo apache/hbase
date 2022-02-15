@@ -18,9 +18,7 @@
 package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CancellationException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -201,23 +199,13 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       snapshotRegions(regionsAndLocations);
       monitor.rethrowException();
 
-      // extract each pair to separate lists
-      Set<String> serverNames = new HashSet<>();
-      for (Pair<RegionInfo, ServerName> p : regionsAndLocations) {
-        if (p != null && p.getFirst() != null && p.getSecond() != null) {
-          RegionInfo hri = p.getFirst();
-          if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) continue;
-          serverNames.add(p.getSecond().toString());
-        }
-      }
-
       // flush the in-memory state, and write the single manifest
       status.setStatus("Consolidate snapshot: " + snapshot.getName());
       snapshotManifest.consolidate();
 
       // verify the snapshot is valid
       status.setStatus("Verifying snapshot: " + snapshot.getName());
-      verifier.verifySnapshot(this.workingDir, serverNames);
+      verifier.verifySnapshot(workingDir, true);
 
       // complete the snapshot, atomically moving from tmp to .snapshot dir.
       SnapshotDescriptionUtils.completeSnapshot(this.snapshotDir, this.workingDir, this.rootFs,
