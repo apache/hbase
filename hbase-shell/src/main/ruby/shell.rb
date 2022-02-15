@@ -631,5 +631,6 @@ Shell.load_command_group(
   full_name: 'StoreFileTracker',
   commands: %w[
     change_sft
+    change_sft_all
   ]
 )

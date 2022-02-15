@@ -19,30 +19,38 @@
 
 module Shell
   module Commands
-    class ChangeSft < Command
+    class ChangeSftAll < Command
       def help
         <<-EOF
-Change table's or table column family's sft. Examples:
+Change all of the tables's sft matching the given regex:
 
-  hbase> change_sft 't1','FILE'
-  hbase> change_sft 't2','cf1','FILE'
+  hbase> change_sft_all 't.*','FILE'
+  hbase> change_sft_all 'ns:.*','FILE'
+  hbase> change_sft_all 'ns:t.*','FILE'
 EOF
       end
 
       def command(*args)
         arg_length = args.length
         if arg_length == 2
-          tableName = TableName.valueOf(args[0])
+          tableRegex = args[0]
+          tableList = admin.list(tableRegex)
+          count = tableList.size
           sft = args[1]
-          admin.modify_table_sft(tableName, sft)
-        elsif arg_length == 3
-          tableName = TableName.valueOf(args[0])
-          family = args[1]
-          family_bytes = family.to_java_bytes
-          sft = args[2]
-          admin.modify_table_family_sft(tableName, family_bytes, sft)
+          tableList.each do |table|
+            formatter.row([table])
+          end
+          puts "\nChange the above #{count} tables's sft (y/n)?" unless count == 0
+          answer = 'n'
+          answer = gets.chomp unless count == 0
+          puts "No tables matched the regex #{tableRegex}" if count == 0
+          return unless answer =~ /y.*/i
+          tableList.each do |table|
+            tableName = TableName.valueOf(table)
+            admin.modify_table_sft(tableName, sft)
+          end
         else
-          raise(ArgumentError, 'Argument length should be two or three.')
+          raise(ArgumentError, 'Argument length should be two.')
         end
       end
     end
