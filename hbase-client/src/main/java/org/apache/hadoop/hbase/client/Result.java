@@ -913,7 +913,7 @@ public class Result implements CellScannable, CellScanner {
 
   @Override
   public Cell current() {
-    if (cells == null
+    if (isEmpty()
             || cellScannerIndex == INITIAL_CELLSCANNER_INDEX
             || cellScannerIndex >= cells.length)
       return null;
@@ -922,7 +922,9 @@ public class Result implements CellScannable, CellScanner {
 
   @Override
   public boolean advance() {
-    if (cells == null) return false;
+    if (isEmpty()) {
+      return false;
+    }
     cellScannerIndex++;
     if (cellScannerIndex < this.cells.length) {
       return true;

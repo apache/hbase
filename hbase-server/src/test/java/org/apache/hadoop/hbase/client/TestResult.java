@@ -132,14 +132,12 @@ public class TestResult {
   }
 
   @Test
-  public void testAdvanceTwiceOnEmptyCell() throws IOException {
+  public void testAdvanceMultipleOnEmptyCell() throws IOException {
     Result r = Result.create(new Cell[0]);
-    assertFalse(r.advance());
-    try {
-      r.advance();
-      fail("NoSuchElementException should have been thrown!");
-    } catch (NoSuchElementException ex) {
-      LOG.debug("As expected: " + ex.getMessage());
+    // After HBASE-26688, advance of result with empty cell list will always return false.
+    // Here 10 is an arbitrary number to test the logic.
+    for (int i = 0; i < 10; i++) {
+      assertFalse(r.advance());
     }
   }
 
