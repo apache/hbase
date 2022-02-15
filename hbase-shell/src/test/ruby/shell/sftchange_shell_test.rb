@@ -40,7 +40,25 @@ class SftChangeTest < Test::Unit::TestCase
     @shell.command(:drop, table)
   end
 
-  define_test "Change table family's sft" do
+  define_test "Change ns all table's sft" do
+    table1 = 'default:test_table1'
+    table2 = 'default:test_table2'
+    family = 'f1'
+    change_sft = 'FILE'
+    @shell.command('create', table1, family)
+    @shell.command('create', table2, family)
+    @shell.command('change_sft', 'default:.*', change_sft)
+    table1_sft =  @admin.getDescriptor(TableName.valueOf(table1)).getValue('hbase.store.file-tracker.impl')
+    assert_equal(change_sft, table1_sft)
+    table2_sft =  @admin.getDescriptor(TableName.valueOf(table2)).getValue('hbase.store.file-tracker.impl')
+    assert_equal(change_sft, table2_sft)
+    @shell.command(:disable, table1)
+    @shell.command(:drop, table1)
+    @shell.command(:disable, table2)
+    @shell.command(:drop, table2)
+  end
+
+  define_test "Change table column family's sft" do
     table = 'test_table2'
     family = 'f1'
     change_sft = 'FILE'
