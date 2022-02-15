@@ -129,7 +129,8 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     List<HStoreFile> l0Files = si.getLevel0Files();
 
     // See if we need to make new stripes.
-    boolean shouldCompactL0 = this.config.getLevel0MinFiles() <= l0Files.size();
+    boolean shouldCompactL0 =
+        this.config.getLevel0MinFiles() <= l0Files.size() || allL0FilesExpired(si);
     if (stripeCount == 0) {
       if (!shouldCompactL0) {
         return null; // nothing to do.
@@ -167,7 +168,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     return filesCompacting.isEmpty()
         && (StoreUtils.hasReferences(si.getStorefiles())
           || (si.getLevel0Files().size() >= this.config.getLevel0MinFiles())
-          || needsSingleStripeCompaction(si) || hasExpiredStripes(si));
+          || needsSingleStripeCompaction(si) || hasExpiredStripes(si) || allL0FilesExpired(si));
   }
 
   @Override
@@ -368,7 +369,25 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     return result;
   }
 
-  private boolean isStripeExpired(ImmutableList<HStoreFile> storeFiles) {
+  protected boolean hasExpiredStripes(StripeInformationProvider si) {
+    // Find if exists a stripe where all files have expired, if any.
+    ArrayList<ImmutableList<HStoreFile>> stripes = si.getStripes();
+    for (ImmutableList<HStoreFile> stripe : stripes) {
+      if (allFilesExpired(stripe)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  protected boolean allL0FilesExpired(StripeInformationProvider si) {
+    return allFilesExpired(si.getLevel0Files());
+  }
+
+  private boolean allFilesExpired(final List<HStoreFile> storeFiles) {
+    if (storeFiles == null || storeFiles.isEmpty()) {
+      return false;
+    }
     long cfTtl = this.storeConfigInfo.getStoreFileTtl();
     if (cfTtl == Long.MAX_VALUE) {
       return false; // minversion might be set, cannot delete old files
@@ -382,17 +401,6 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       }
     }
     return true;
-  }
-
-  protected boolean hasExpiredStripes(StripeInformationProvider si) {
-    // Find if exists a stripe where all files have expired, if any.
-    ArrayList<ImmutableList<HStoreFile>> stripes = si.getStripes();
-    for (ImmutableList<HStoreFile> stripe : stripes) {
-      if (isStripeExpired(stripe)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   private static long getTotalKvCount(final Collection<HStoreFile> candidates) {
