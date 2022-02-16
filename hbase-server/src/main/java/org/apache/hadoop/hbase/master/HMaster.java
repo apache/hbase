@@ -365,6 +365,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   private RSGroupBasedLoadBalancer balancer;
   private BalancerChore balancerChore;
+  private static boolean disableBalancerChoreForTest = false;
   private RegionNormalizerManager regionNormalizerManager;
   private ClusterStatusChore clusterStatusChore;
   private ClusterStatusPublisher clusterStatusPublisherChore = null;
@@ -1103,7 +1104,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     this.clusterStatusChore = new ClusterStatusChore(this, balancer);
     getChoreService().scheduleChore(clusterStatusChore);
     this.balancerChore = new BalancerChore(this);
-    getChoreService().scheduleChore(balancerChore);
+    if (!disableBalancerChoreForTest) {
+      getChoreService().scheduleChore(balancerChore);
+    }
     if (regionNormalizerManager != null) {
       getChoreService().scheduleChore(regionNormalizerManager.getRegionNormalizerChore());
     }
@@ -4135,4 +4138,23 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   public Collection<ServerName> getLiveRegionServers() {
     return regionServerTracker.getRegionServers();
   }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  void setLoadBalancer(RSGroupBasedLoadBalancer loadBalancer) {
+    this.balancer = loadBalancer;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  void setAssignmentManager(AssignmentManager assignmentManager) {
+    this.assignmentManager = assignmentManager;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  static void setDisableBalancerChoreForTest(boolean disable) {
+    disableBalancerChoreForTest = disable;
+  }
+
 }
