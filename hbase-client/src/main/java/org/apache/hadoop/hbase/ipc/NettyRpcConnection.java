@@ -30,6 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.ipc.BufferCallBeforeInitHandler.BufferCallEvent;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
 import org.apache.hadoop.hbase.security.NettyHBaseRpcConnectionHeaderHandler;
@@ -56,6 +57,8 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslHandler;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateHandler;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.ReadTimeoutHandler;
 import org.apache.hbase.thirdparty.io.netty.util.ReferenceCountUtil;
@@ -278,24 +281,27 @@ class NettyRpcConnection extends RpcConnection {
       .option(ChannelOption.TCP_NODELAY, rpcClient.isTcpNoDelay())
       .option(ChannelOption.SO_KEEPALIVE, rpcClient.tcpKeepAlive)
       .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, rpcClient.connectTO)
-      .handler(new ChannelInitializer<Channel>() {
-
+      .handler(new ChannelInitializer() {
         @Override
         protected void initChannel(Channel ch) throws Exception {
+          if (conf.getBoolean(X509Util.HBASE_CLIENT_NETTY_TLS_ENABLED, false)) {
+            SslContext sslContext = rpcClient.getSslContext();
+            SslHandler sslHandler = sslContext.newHandler(ch.alloc(),
+              remoteId.address.getHostName(), remoteId.address.getPort());
+            sslHandler.setHandshakeTimeoutMillis(
+              conf.getInt(X509Util.HBASE_CLIENT_NETTY_TLS_HANDSHAKETIMEOUT,
+                X509Util.DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS));
+            ch.pipeline().addFirst(sslHandler);
+            LOG.info("SSL handler added with handshake timeout {} ms",
+              sslHandler.getHandshakeTimeoutMillis());
+          }
           ch.pipeline().addLast(BufferCallBeforeInitHandler.NAME,
             new BufferCallBeforeInitHandler());
         }
       }).localAddress(rpcClient.localAddr).remoteAddress(remoteAddr).connect()
       .addListener(new ChannelFutureListener() {
 
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-          Channel ch = future.channel();
-          if (!future.isSuccess()) {
-            failInit(ch, toIOE(future.cause()));
-            rpcClient.failedServers.addToFailedServers(remoteId.getAddress(), future.cause());
-            return;
-          }
+        private void succeed(Channel ch) throws IOException {
           ch.writeAndFlush(connectionHeaderPreamble.retainedDuplicate());
           if (useSasl) {
             saslNegotiate(ch);
@@ -303,6 +309,32 @@ class NettyRpcConnection extends RpcConnection {
             // send the connection header to server
             ch.write(connectionHeaderWithLength.retainedDuplicate());
             established(ch);
+          }
+        }
+
+        private void fail(Channel ch, Throwable error) {
+          failInit(ch, toIOE(error));
+          rpcClient.failedServers.addToFailedServers(remoteId.getAddress(), error);
+        }
+
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+          Channel ch = future.channel();
+          if (!future.isSuccess()) {
+            fail(ch, future.cause());
+            return;
+          }
+          SslHandler sslHandler = ch.pipeline().get(SslHandler.class);
+          if (sslHandler != null) {
+            NettyFutureUtils.addListener(sslHandler.handshakeFuture(), f -> {
+              if (f.isSuccess()) {
+                succeed(ch);
+              } else {
+                fail(ch, f.cause());
+              }
+            });
+          } else {
+            succeed(ch);
           }
         }
       }).channel();
