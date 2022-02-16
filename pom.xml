@@ -237,6 +237,12 @@
       <timezone>-6</timezone>
     </developer>
     <developer>
+      <id>chenglei</id>
+      <name>Cheng Lei</name>
+      <email>chenglei@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>chenheng</id>
       <name>Heng Chen</name>
       <email>chenheng@apache.org</email>
