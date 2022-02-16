@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.master;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -87,5 +88,11 @@ public class WorkerAssigner implements ServerListener {
     // load used worker when master restart
     currentWorkers.compute(worker, (serverName,
       availableWorker) -> availableWorker == null ? maxTasks - 1 : availableWorker - 1);
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*(/src/test/.*|TestSnapshotVerifyProcedure).java")
+  public Integer getAvailableWorker(ServerName serverName) {
+    return currentWorkers.get(serverName);
   }
 }

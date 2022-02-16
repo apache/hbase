@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -1362,6 +1363,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       conf.getInt("hbase.snapshot.verify.task.max", 3),
       new ProcedureEvent<>("snapshot-verify-worker-assigning"));
     restoreUnfinishedSnapshotProcedure();
+    restoreWorkers();
     resetTempDir();
     snapshotHandlerChoreCleanerTask =
         scheduleThreadPool.scheduleAtFixedRate(this::cleanupSentinels, 10, 10, TimeUnit.SECONDS);
@@ -1459,7 +1461,21 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     verifyWorkerAssigner.wake(scheduler);
   }
 
-  public void restoreWorker(final ServerName worker) {
-    verifyWorkerAssigner.addUsedWorker(worker);
+  private void restoreWorkers() {
+    master.getMasterProcedureExecutor().getActiveProceduresNoCopy().stream()
+      .filter(p -> p instanceof SnapshotVerifyProcedure)
+      .map(p -> (SnapshotVerifyProcedure) p)
+      .filter(p -> !p.isFinished())
+      .filter(p -> p.getServerName() != null)
+      .forEach(p -> {
+        verifyWorkerAssigner.addUsedWorker(p.getServerName());
+        LOG.debug("{} restores used worker {}", p, p.getServerName());
+      });
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*(/src/test/.*|TestSnapshotVerifyProcedure).java")
+  public Integer getAvailableWorker(ServerName serverName) {
+    return verifyWorkerAssigner.getAvailableWorker(serverName);
   }
 }

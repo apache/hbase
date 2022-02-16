@@ -222,12 +222,7 @@ message SnapshotRegionParameter {
 message SnapshotVerifyProcedureStateData {
   required SnapshotDescription snapshot = 1;
   required RegionInfo region = 2;
-}
-
-message SnapshotVerifyRemoteProcedureStateData {
-  required SnapshotDescription snapshot = 1;
-  required RegionInfo region = 2;
-  required ServerName target_server = 3;
+  optional ServerName target_server = 3;
 }
 
 message SnapshotVerifyParameter {

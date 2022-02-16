@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.hadoop.hbase.ServerName;
@@ -75,8 +74,6 @@ public class SnapshotVerifyProcedure
 
   @Override
   protected synchronized void complete(MasterProcedureEnv env, Throwable error) {
-    SnapshotProcedure parent = env.getMasterServices().getMasterProcedureExecutor()
-      .getProcedure(SnapshotProcedure.class, getParentProcId());
     try {
       if (error != null) {
         if (error instanceof RemoteProcedureException) {
@@ -85,7 +82,11 @@ public class SnapshotVerifyProcedure
           if (remoteEx instanceof CorruptedSnapshotException) {
             // snapshot is corrupted, will touch a flag file and finish the procedure
             succ = true;
-            parent.markSnapshotCorrupted();
+            SnapshotProcedure parent = env.getMasterServices().getMasterProcedureExecutor()
+              .getProcedure(SnapshotProcedure.class, getParentProcId());
+            if (parent != null) {
+              parent.markSnapshotCorrupted();
+            }
           } else {
             // unexpected exception in remote server, will retry on other servers
             succ = false;
@@ -120,13 +121,13 @@ public class SnapshotVerifyProcedure
   @Override
   protected synchronized Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
       throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
-    SnapshotProcedure parent = env.getMasterServices().getMasterProcedureExecutor()
-      .getProcedure(SnapshotProcedure.class, getParentProcId());
     try {
       // if we've already known the snapshot is corrupted, then stop scheduling
       // the new procedures and the undispatched procedures
       if (!dispatched) {
-        if (parent.isSnapshotCorrupted()) {
+        SnapshotProcedure parent = env.getMasterServices().getMasterProcedureExecutor()
+          .getProcedure(SnapshotProcedure.class, getParentProcId());
+        if (parent != null && parent.isSnapshotCorrupted()) {
           return null;
         }
       }
@@ -171,18 +172,13 @@ public class SnapshotVerifyProcedure
   }
 
   @Override
-  protected void afterReplay(MasterProcedureEnv env) {
-    if (targetServer != null) {
-      env.getMasterServices().getSnapshotManager().restoreWorker(targetServer);
-      LOG.debug("{} restore worker {}", this, targetServer);
-    }
-  }
-
-  @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     SnapshotVerifyProcedureStateData.Builder builder =
       SnapshotVerifyProcedureStateData.newBuilder();
     builder.setSnapshot(snapshot).setRegion(ProtobufUtil.toRegionInfo(region));
+    if (targetServer != null) {
+      builder.setTargetServer(ProtobufUtil.toServerName(targetServer));
+    }
     serializer.serialize(builder.build());
   }
 
@@ -192,6 +188,9 @@ public class SnapshotVerifyProcedure
       serializer.deserialize(SnapshotVerifyProcedureStateData.class);
     this.snapshot = data.getSnapshot();
     this.region = ProtobufUtil.toRegionInfo(data.getRegion());
+    if (data.hasTargetServer()) {
+      this.targetServer = ProtobufUtil.toServerName(data.getTargetServer());
+    }
   }
 
   @Override
@@ -221,8 +220,6 @@ public class SnapshotVerifyProcedure
     return TableOperationType.SNAPSHOT;
   }
 
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*(/src/test/.*|TestSnapshotProcedure).java")
   public ServerName getServerName() {
     return targetServer;
   }
