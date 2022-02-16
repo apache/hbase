@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
-import com.google.errorprone.annotations.RestrictedApi;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -1473,8 +1472,6 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       });
   }
 
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*(/src/test/.*|TestSnapshotVerifyProcedure).java")
   public Integer getAvailableWorker(ServerName serverName) {
     return verifyWorkerAssigner.getAvailableWorker(serverName);
   }

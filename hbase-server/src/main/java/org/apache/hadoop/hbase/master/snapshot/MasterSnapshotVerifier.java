@@ -185,7 +185,9 @@ public final class MasterSnapshotVerifier {
         if (regionManifest == null) {
           // could happen due to a move or split race.
           String mesg = " No snapshot region directory found for region:" + region;
-          if (errorMsg.isEmpty()) errorMsg = mesg;
+          if (errorMsg.isEmpty()) {
+            errorMsg = mesg;
+          }
           LOG.error(mesg);
           continue;
         }

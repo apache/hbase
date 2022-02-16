@@ -398,7 +398,7 @@ public class SnapshotProcedure
           public void editRegion(final RegionInfo region) throws IOException {
             snapshotManifest.addRegion(CommonFSUtils.getTableDir(rootDir, snapshotTable), region);
           }
-      });
+        });
     } finally {
       exec.shutdown();
     }
