@@ -127,6 +127,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.mob.MobFileCache;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
 import org.apache.hadoop.hbase.net.Address;
@@ -1461,10 +1462,10 @@ public class HRegionServer extends Thread implements
         serverLoad.addUserLoads(createUserLoad(entry.getKey(), entry.getValue()));
       }
     }
+
     // for the replicationLoad purpose. Only need to get from one executorService
     // either source or sink will get the same info
     ReplicationSourceService rsources = getReplicationSourceService();
-
     if (rsources != null) {
       // always refresh first to get the latest value
       ReplicationLoad rLoad = rsources.refreshAndGetReplicationLoad();
@@ -1477,6 +1478,15 @@ public class HRegionServer extends Thread implements
 
       }
     }
+
+    TaskMonitor.get().getTasks().forEach(task ->
+      serverLoad.addTasks(ClusterStatusProtos.ServerTask.newBuilder()
+        .setDescription(task.getDescription())
+        .setStatus(task.getStatus() != null ? task.getStatus() : "")
+        .setState(ClusterStatusProtos.ServerTask.State.valueOf(task.getState().name()))
+        .setStartTime(task.getStartTime())
+        .setCompletionTime(task.getCompletionTimestamp())
+        .build()));
 
     return serverLoad.build();
   }

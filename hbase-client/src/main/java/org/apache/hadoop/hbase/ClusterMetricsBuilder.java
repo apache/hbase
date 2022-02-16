@@ -83,6 +83,10 @@ public final class ClusterMetricsBuilder {
     if (metrics.getMasterName() != null) {
       builder.setMaster(ProtobufUtil.toServerName((metrics.getMasterName())));
     }
+    if (metrics.getMasterTasks() != null) {
+      builder.addAllMasterTasks(metrics.getMasterTasks().stream()
+        .map(t -> ProtobufUtil.toServerTask(t)).collect(Collectors.toList()));
+    }
     if (metrics.getBalancerOn() != null) {
       builder.setBalancerOn(metrics.getBalancerOn());
     }
@@ -122,7 +126,9 @@ public final class ClusterMetricsBuilder {
           proto.getTableRegionStatesCountList().stream()
           .collect(Collectors.toMap(
             e -> ProtobufUtil.toTableName(e.getTableName()),
-            e -> ProtobufUtil.toTableRegionStatesCount(e.getRegionStatesCount()))));
+            e -> ProtobufUtil.toTableRegionStatesCount(e.getRegionStatesCount()))))
+        .setMasterTasks(proto.getMasterTasksList().stream()
+          .map(t -> ProtobufUtil.getServerTask(t)).collect(Collectors.toList()));
     if (proto.hasClusterId()) {
       builder.setClusterId(ClusterId.convert(proto.getClusterId()).toString());
     }
@@ -164,6 +170,7 @@ public final class ClusterMetricsBuilder {
       case SERVERS_NAME: return ClusterMetrics.Option.SERVERS_NAME;
       case MASTER_INFO_PORT: return ClusterMetrics.Option.MASTER_INFO_PORT;
       case TABLE_TO_REGIONS_COUNT: return ClusterMetrics.Option.TABLE_TO_REGIONS_COUNT;
+      case TASKS: return ClusterMetrics.Option.TASKS;
       // should not reach here
       default: throw new IllegalArgumentException("Invalid option: " + option);
     }
@@ -188,6 +195,7 @@ public final class ClusterMetricsBuilder {
       case SERVERS_NAME: return Option.SERVERS_NAME;
       case MASTER_INFO_PORT: return ClusterStatusProtos.Option.MASTER_INFO_PORT;
       case TABLE_TO_REGIONS_COUNT: return ClusterStatusProtos.Option.TABLE_TO_REGIONS_COUNT;
+      case TASKS: return ClusterStatusProtos.Option.TASKS;
       // should not reach here
       default: throw new IllegalArgumentException("Invalid option: " + option);
     }
@@ -231,6 +239,8 @@ public final class ClusterMetricsBuilder {
   private int masterInfoPort;
   private List<ServerName> serversName = Collections.emptyList();
   private Map<TableName, RegionStatesCount> tableRegionStatesCount = Collections.emptyMap();
+  @Nullable
+  private List<ServerTask> masterTasks;
 
   private ClusterMetricsBuilder() {
   }
@@ -280,6 +290,10 @@ public final class ClusterMetricsBuilder {
     this.serversName = serversName;
     return this;
   }
+  public ClusterMetricsBuilder setMasterTasks(List<ServerTask> masterTasks) {
+    this.masterTasks = masterTasks;
+    return this;
+  }
 
   public ClusterMetricsBuilder setTableRegionStatesCount(
       Map<TableName, RegionStatesCount> tableRegionStatesCount) {
@@ -300,7 +314,8 @@ public final class ClusterMetricsBuilder {
         balancerOn,
         masterInfoPort,
         serversName,
-        tableRegionStatesCount
+        tableRegionStatesCount,
+        masterTasks
     );
   }
   private static class ClusterMetricsImpl implements ClusterMetrics {
@@ -320,6 +335,7 @@ public final class ClusterMetricsBuilder {
     private final int masterInfoPort;
     private final List<ServerName> serversName;
     private final Map<TableName, RegionStatesCount> tableRegionStatesCount;
+    private final List<ServerTask> masterTasks;
 
     ClusterMetricsImpl(String hbaseVersion, List<ServerName> deadServerNames,
         Map<ServerName, ServerMetrics> liveServerMetrics,
@@ -331,7 +347,8 @@ public final class ClusterMetricsBuilder {
         Boolean balancerOn,
         int masterInfoPort,
         List<ServerName> serversName,
-        Map<TableName, RegionStatesCount> tableRegionStatesCount) {
+        Map<TableName, RegionStatesCount> tableRegionStatesCount,
+        List<ServerTask> masterTasks) {
       this.hbaseVersion = hbaseVersion;
       this.deadServerNames = Preconditions.checkNotNull(deadServerNames);
       this.liveServerMetrics = Preconditions.checkNotNull(liveServerMetrics);
@@ -344,6 +361,7 @@ public final class ClusterMetricsBuilder {
       this.masterInfoPort = masterInfoPort;
       this.serversName = serversName;
       this.tableRegionStatesCount = Preconditions.checkNotNull(tableRegionStatesCount);
+      this.masterTasks = masterTasks;
     }
 
     @Override
@@ -404,6 +422,11 @@ public final class ClusterMetricsBuilder {
     @Override
     public Map<TableName, RegionStatesCount> getTableRegionStatesCount() {
       return Collections.unmodifiableMap(tableRegionStatesCount);
+    }
+
+    @Override
+    public List<ServerTask> getMasterTasks() {
+      return masterTasks;
     }
 
     @Override

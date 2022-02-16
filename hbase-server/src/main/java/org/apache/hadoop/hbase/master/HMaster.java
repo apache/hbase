@@ -79,6 +79,8 @@ import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ServerTask;
+import org.apache.hadoop.hbase.ServerTaskBuilder;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -2712,16 +2714,39 @@ public class HMaster extends HRegionServer implements MasterServices {
       options = EnumSet.allOf(Option.class);
     }
 
+    // TASKS and/or LIVE_SERVERS will populate this map, which will be given to the builder if
+    // not null after option processing completes.
+    Map<ServerName, ServerMetrics> serverMetricsMap = null;
+
     for (Option opt : options) {
       switch (opt) {
         case HBASE_VERSION: builder.setHBaseVersion(VersionInfo.getVersion()); break;
         case CLUSTER_ID: builder.setClusterId(getClusterId()); break;
         case MASTER: builder.setMasterName(getServerName()); break;
         case BACKUP_MASTERS: builder.setBackerMasterNames(getBackupMasters()); break;
+        case TASKS: {
+          // Master tasks
+          builder.setMasterTasks(TaskMonitor.get().getTasks().stream()
+            .map(task -> ServerTaskBuilder.newBuilder()
+              .setDescription(task.getDescription())
+              .setStatus(task.getStatus())
+              .setState(ServerTask.State.valueOf(task.getState().name()))
+              .setStartTime(task.getStartTime())
+              .setCompletionTime(task.getCompletionTimestamp())
+              .build())
+            .collect(Collectors.toList()));
+          // TASKS is also synonymous with LIVE_SERVERS for now because task information for
+          // regionservers is carried in ServerLoad.
+          // Add entries to serverMetricsMap for all live servers, if we haven't already done so
+          if (serverMetricsMap == null) {
+            serverMetricsMap = getOnlineServers();
+          }
+          break;
+        }
         case LIVE_SERVERS: {
-          if (serverManager != null) {
-            builder.setLiveServerMetrics(serverManager.getOnlineServers().entrySet().stream()
-              .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue())));
+          // Add entries to serverMetricsMap for all live servers, if we haven't already done so
+          if (serverMetricsMap == null) {
+            serverMetricsMap = getOnlineServers();
           }
           break;
         }
@@ -2783,7 +2808,22 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
       }
     }
+
+    if (serverMetricsMap != null) {
+      builder.setLiveServerMetrics(serverMetricsMap);
+    }
+
     return builder.build();
+  }
+
+  private Map<ServerName, ServerMetrics> getOnlineServers() {
+    if (serverManager != null) {
+      final Map<ServerName, ServerMetrics> map = new HashMap<>();
+      serverManager.getOnlineServers().entrySet()
+        .forEach(e -> map.put(e.getKey(), e.getValue()));
+      return map;
+    }
+    return null;
   }
 
   /**

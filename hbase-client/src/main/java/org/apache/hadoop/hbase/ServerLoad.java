@@ -431,6 +431,11 @@ public class ServerLoad implements ServerMetrics {
     return metrics.getLastReportTimestamp();
   }
 
+  @Override
+  public List<ServerTask> getTasks() {
+    return metrics.getTasks();
+  }
+
   /**
    * Originally, this method factored in the effect of requests going to the
    * server as well. However, this does not interact very well with the current
