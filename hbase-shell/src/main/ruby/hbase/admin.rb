@@ -934,7 +934,7 @@ module Hbase
         for server in cluster_metrics.getBackupMasters
           puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
         end
-        master_coprocs = java.util.Arrays.toString(@admin.getMasterCoprocessors)
+        master_coprocs = @admin.getMasterCoprocessorNames.toString
         unless master_coprocs.nil?
           puts(format('master coprocessors: %s', master_coprocs))
         end

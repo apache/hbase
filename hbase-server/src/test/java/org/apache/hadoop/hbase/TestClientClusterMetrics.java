@@ -83,7 +83,7 @@ public class TestClientClusterMetrics {
   private static final byte[] CF = Bytes.toBytes("cf");
 
   // We need to promote the visibility of tryRegionServerReport for this test
-  public static class MyRegionServer 
+  public static class MyRegionServer
       extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
     public MyRegionServer(Configuration conf) throws IOException, InterruptedException {
       super(conf);

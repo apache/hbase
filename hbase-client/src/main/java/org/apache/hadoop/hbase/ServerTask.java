@@ -32,26 +32,31 @@ public interface ServerTask {
   }
 
   /**
+   * Get the task's description.
    * @return the task's description, typically a name
    */
   String getDescription();
 
   /**
+   * Get the current status of the task.
    * @return the task's current status
    */
   String getStatus();
 
   /**
+   * Get the current state of the task.
    * @return the task's current state
    */
   State getState();
 
   /**
+   * Get the task start time.
    * @return the time when the task started, or 0 if it has not started yet
    */
   long getStartTime();
 
   /**
+   * Get the task completion time.
    * @return the time when the task completed, or 0 if it has not completed yet
    */
   long getCompletionTime();

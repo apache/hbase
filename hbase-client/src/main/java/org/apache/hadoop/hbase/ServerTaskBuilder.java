@@ -35,7 +35,7 @@ public final class ServerTaskBuilder {
 
   private ServerTaskBuilder() { }
 
-  private static class ServerTaskImpl implements ServerTask {
+  private static final class ServerTaskImpl implements ServerTask {
 
     private final String description;
     private final String status;
