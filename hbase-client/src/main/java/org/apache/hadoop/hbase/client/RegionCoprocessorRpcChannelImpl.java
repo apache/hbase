@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,8 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.setCoprocessorError;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
-
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -30,13 +31,11 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
@@ -74,6 +73,7 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
   private CompletableFuture<Message> rpcCall(MethodDescriptor method, Message request,
       Message responsePrototype, HBaseRpcController controller, HRegionLocation loc,
       ClientService.Interface stub) {
+    final Context context = Context.current();
     CompletableFuture<Message> future = new CompletableFuture<>();
     if (region != null && !Bytes.equals(loc.getRegion().getRegionName(), region.getRegionName())) {
       future.completeExceptionally(new DoNotRetryIOException("Region name is changed, expected " +
@@ -82,39 +82,43 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
     }
     CoprocessorServiceRequest csr = CoprocessorRpcUtils.getCoprocessorServiceRequest(method,
       request, row, loc.getRegion().getRegionName());
-    stub.execService(controller, csr,
-      new org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback<CoprocessorServiceResponse>() {
-
-        @Override
-        public void run(CoprocessorServiceResponse resp) {
-          if (controller.failed()) {
-            future.completeExceptionally(controller.getFailed());
-          } else {
-            lastRegion = resp.getRegion().getValue().toByteArray();
-            try {
-              future.complete(CoprocessorRpcUtils.getResponse(resp, responsePrototype));
-            } catch (IOException e) {
-              future.completeExceptionally(e);
-            }
+    stub.execService(controller, csr, resp -> {
+      try (Scope ignored = context.makeCurrent()) {
+        if (controller.failed()) {
+          future.completeExceptionally(controller.getFailed());
+        } else {
+          lastRegion = resp.getRegion().getValue().toByteArray();
+          try {
+            future.complete(CoprocessorRpcUtils.getResponse(resp, responsePrototype));
+          } catch (IOException e) {
+            future.completeExceptionally(e);
           }
         }
-      });
+      }
+    });
     return future;
   }
 
   @Override
   public void callMethod(MethodDescriptor method, RpcController controller, Message request,
       Message responsePrototype, RpcCallback<Message> done) {
+    final Context context = Context.current();
     addListener(
       conn.callerFactory.<Message> single().table(tableName).row(row)
         .locateType(RegionLocateType.CURRENT).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
         .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
-        .action((c, l, s) -> rpcCall(method, request, responsePrototype, c, l, s)).call(),
+        .action((c, l, s) -> {
+          try (Scope ignored = context.makeCurrent()) {
+            return rpcCall(method, request, responsePrototype, c, l, s);
+          }
+        }).call(),
       (r, e) -> {
-        if (e != null) {
-          setCoprocessorError(controller, e);
+        try (Scope ignored = context.makeCurrent()) {
+          if (e != null) {
+            setCoprocessorError(controller, e);
+          }
+          done.run(r);
         }
-        done.run(r);
       });
   }
 

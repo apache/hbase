@@ -18,14 +18,15 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.setCoprocessorError;
-
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -34,6 +35,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -46,9 +48,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException.ThrowableWithExtraContext;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Call;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.client.trace.TableOperationSpanBuilder;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcurrentMapUtils.IOExceptionSupplier;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -57,7 +62,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.primitives.Booleans;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
@@ -65,7 +69,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -458,25 +461,22 @@ class TableOverAsyncTable implements Table {
     R call(RegionCoprocessorRpcChannel channel) throws Exception;
   }
 
-  private <R> void coprocssorService(String serviceName, byte[] startKey, byte[] endKey,
+  private <R> void coprocessorService(String serviceName, byte[] startKey, byte[] endKey,
       Callback<R> callback, StubCall<R> call) throws Throwable {
     // get regions covered by the row range
-    ExecutorService pool = this.poolSupplier.get();
+    ExecutorService pool = Context.current().wrap(this.poolSupplier.get());
     List<byte[]> keys = getStartKeysInRange(startKey, endKey);
     Map<byte[], Future<R>> futures = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     try {
       for (byte[] r : keys) {
         RegionCoprocessorRpcChannel channel = coprocessorService(r);
-        Future<R> future = pool.submit(new Callable<R>() {
-          @Override
-          public R call() throws Exception {
-            R result = call.call(channel);
-            byte[] region = channel.getLastRegion();
-            if (callback != null) {
-              callback.update(region, r, result);
-            }
-            return result;
+        Future<R> future = pool.submit(() -> {
+          R result = call.call(channel);
+          byte[] region = channel.getLastRegion();
+          if (callback != null) {
+            callback.update(region, r, result);
           }
+          return result;
         });
         futures.put(r, future);
       }
@@ -492,7 +492,7 @@ class TableOverAsyncTable implements Table {
       try {
         e.getValue().get();
       } catch (ExecutionException ee) {
-        LOG.warn("Error calling coprocessor service " + serviceName + " for row " +
+        LOG.warn("Error calling coprocessor service {} for row {}", serviceName,
           Bytes.toStringBinary(e.getKey()), ee);
         throw ee.getCause();
       } catch (InterruptedException ie) {
@@ -505,10 +505,18 @@ class TableOverAsyncTable implements Table {
   @Override
   public <T extends Service, R> void coprocessorService(Class<T> service, byte[] startKey,
       byte[] endKey, Call<T, R> callable, Callback<R> callback) throws ServiceException, Throwable {
-    coprocssorService(service.getName(), startKey, endKey, callback, channel -> {
-      T instance = ProtobufUtil.newServiceStub(service, channel);
-      return callable.call(instance);
-    });
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(conn)
+      .setTableName(table.getName())
+      .setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
+    TraceUtil.trace(() -> {
+      final Context context = Context.current();
+      coprocessorService(service.getName(), startKey, endKey, callback, channel -> {
+        try (Scope ignored = context.makeCurrent()) {
+          T instance = ProtobufUtil.newServiceStub(service, channel);
+          return callable.call(instance);
+        }
+      });
+    }, supplier);
   }
 
   @SuppressWarnings("unchecked")
@@ -516,9 +524,18 @@ class TableOverAsyncTable implements Table {
   public <R extends Message> void batchCoprocessorService(MethodDescriptor methodDescriptor,
       Message request, byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
       throws ServiceException, Throwable {
-    coprocssorService(methodDescriptor.getFullName(), startKey, endKey, callback, channel -> {
-      return (R) channel.callBlockingMethod(methodDescriptor, null, request, responsePrototype);
-    });
+    final Supplier<Span> supplier = new TableOperationSpanBuilder(conn)
+      .setTableName(table.getName())
+      .setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
+    TraceUtil.trace(() -> {
+      final Context context = Context.current();
+      coprocessorService(methodDescriptor.getFullName(), startKey, endKey, callback, channel -> {
+        try (Scope ignored = context.makeCurrent()) {
+          return (R) channel.callBlockingMethod(
+            methodDescriptor, null, request, responsePrototype);
+        }
+      });
+    }, supplier);
   }
 
   @Override
