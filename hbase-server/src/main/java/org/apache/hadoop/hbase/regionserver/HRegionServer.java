@@ -105,6 +105,7 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.mob.MobFileCache;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
 import org.apache.hadoop.hbase.net.Address;
@@ -1194,6 +1195,15 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         }
       }
     }
+
+    TaskMonitor.get().getTasks().forEach(task ->
+      serverLoad.addTasks(ClusterStatusProtos.ServerTask.newBuilder()
+        .setDescription(task.getDescription())
+        .setStatus(task.getStatus() != null ? task.getStatus() : "")
+        .setState(ClusterStatusProtos.ServerTask.State.valueOf(task.getState().name()))
+        .setStartTime(task.getStartTime())
+        .setCompletionTime(task.getCompletionTimestamp())
+        .build()));
 
     return serverLoad.build();
   }
