@@ -850,12 +850,16 @@ module Hbase
           puts(format('    %s', v))
         end
         master = status.getMaster
-        puts(format('active master:  %s:%d %d', master.getHostname, master.getPort, master.getStartcode))
+        unless master.nil?
+          puts(format('active master:  %s:%d %d', master.getHostname, master.getPort, master.getStartcode))
+          for task in status.getMasterTasks
+            puts(format('    %s', task.toString))
+          end
+        end
         puts(format('%d backup masters', status.getBackupMastersSize))
         for server in status.getBackupMasters
           puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
         end
-
         master_coprocs = java.util.Arrays.toString(@admin.getMasterCoprocessors)
         unless master_coprocs.nil?
           puts(format('master coprocessors: %s', master_coprocs))
@@ -867,6 +871,9 @@ module Hbase
           for name, region in status.getLoad(server).getRegionsLoad
             puts(format('        %s', region.getNameAsString.dump))
             puts(format('            %s', region.toString))
+          end
+          for task in status.getLoad(server).getTasks
+            puts(format('        %s', task.toString))
           end
         end
         puts(format('%d dead servers', status.getDeadServersSize))
@@ -904,6 +911,33 @@ module Hbase
           else
             puts(format('%<source>s', source: r_source_string))
             puts(format('%<sink>s', sink: r_sink_string))
+          end
+        end
+      elsif format == 'tasks'
+        master = status.getMaster
+        unless master.nil?
+          puts(format('active master:  %s:%d %d', master.getHostname, master.getPort, master.getStartcode))
+          printed = false
+          for task in status.getMasterTasks
+            next unless task.getState.name == 'RUNNING'
+            puts(format('    %s', task.toString))
+            printed = true
+          end
+          if !printed
+            puts('    no active tasks')
+          end
+        end
+        puts(format('%d live servers', status.getServersSize))
+        for server in status.getServers
+          puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
+          printed = false
+          for task in status.getLoad(server).getTasks
+            next unless task.getState.name == 'RUNNING'
+            puts(format('        %s', task.toString))
+            printed = true
+          end
+          if !printed
+            puts('        no active tasks')
           end
         end
       elsif format == 'simple'

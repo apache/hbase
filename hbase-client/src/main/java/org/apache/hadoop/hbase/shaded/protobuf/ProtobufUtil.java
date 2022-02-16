@@ -66,6 +66,8 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ServerTask;
+import org.apache.hadoop.hbase.ServerTaskBuilder;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.BalanceResponse;
@@ -3789,6 +3791,26 @@ public final class ProtobufUtil {
       .setBalancerRan(response.hasBalancerRan() && response.getBalancerRan())
       .setMovesCalculated(response.hasMovesCalculated() ? response.getMovesExecuted() : 0)
       .setMovesExecuted(response.hasMovesExecuted() ? response.getMovesExecuted() : 0)
+      .build();
+  }
+
+  public static ServerTask getServerTask(ClusterStatusProtos.ServerTask task) {
+    return ServerTaskBuilder.newBuilder()
+      .setDescription(task.getDescription())
+      .setStatus(task.getStatus())
+      .setState(ServerTask.State.valueOf(task.getState().name()))
+      .setStartTime(task.getStartTime())
+      .setCompletionTime(task.getCompletionTime())
+      .build();
+  }
+
+  public static ClusterStatusProtos.ServerTask toServerTask(ServerTask task) {
+    return ClusterStatusProtos.ServerTask.newBuilder()
+      .setDescription(task.getDescription())
+      .setStatus(task.getStatus())
+      .setState(ClusterStatusProtos.ServerTask.State.valueOf(task.getState().name()))
+      .setStartTime(task.getStartTime())
+      .setCompletionTime(task.getCompletionTime())
       .build();
   }
 
