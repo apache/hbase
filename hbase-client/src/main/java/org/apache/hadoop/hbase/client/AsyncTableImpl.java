@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static java.util.stream.Collectors.toList;
-
+import io.opentelemetry.context.Context;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 
 /**
@@ -280,26 +279,27 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
       Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
       CoprocessorCallback<R> callback) {
+    final Context context = Context.current();
     CoprocessorCallback<R> wrappedCallback = new CoprocessorCallback<R>() {
 
       @Override
       public void onRegionComplete(RegionInfo region, R resp) {
-        pool.execute(() -> callback.onRegionComplete(region, resp));
+        pool.execute(context.wrap(() -> callback.onRegionComplete(region, resp)));
       }
 
       @Override
       public void onRegionError(RegionInfo region, Throwable error) {
-        pool.execute(() -> callback.onRegionError(region, error));
+        pool.execute(context.wrap(() -> callback.onRegionError(region, error)));
       }
 
       @Override
       public void onComplete() {
-        pool.execute(() -> callback.onComplete());
+        pool.execute(context.wrap(callback::onComplete));
       }
 
       @Override
       public void onError(Throwable error) {
-        pool.execute(() -> callback.onError(error));
+        pool.execute(context.wrap(() -> callback.onError(error)));
       }
     };
     CoprocessorServiceBuilder<S, R> builder =
