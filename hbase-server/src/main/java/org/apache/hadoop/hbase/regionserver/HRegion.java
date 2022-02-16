@@ -4888,11 +4888,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             boolean valueIsNull =
               comparator.getValue() == null || comparator.getValue().length == 0;
             if (result.isEmpty() && valueIsNull) {
-              matches = true;
-            } else if (result.size() > 0 && result.get(0).getValueLength() == 0 && valueIsNull) {
-              matches = true;
+              matches = op != CompareOperator.NOT_EQUAL;
+            } else if (result.size() > 0 && valueIsNull) {
+              matches = (result.get(0).getValueLength() == 0) == (op != CompareOperator.NOT_EQUAL);
               cellTs = result.get(0).getTimestamp();
-            } else if (result.size() == 1 && !valueIsNull) {
+            } else if (result.size() == 1) {
               Cell kv = result.get(0);
               cellTs = kv.getTimestamp();
               int compareResult = PrivateCellUtil.compareValue(kv, comparator);
