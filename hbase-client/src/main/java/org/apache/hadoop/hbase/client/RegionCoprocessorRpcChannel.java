@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HConstants;
@@ -76,15 +78,18 @@ class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
     if (row == null) {
       throw new NullPointerException("Can't be null!");
     }
+    final Context context = Context.current();
     ClientServiceCallable<CoprocessorServiceResponse> callable =
-      new ClientServiceCallable<CoprocessorServiceResponse>(this.conn,
-              this.table, this.row, this.conn.getRpcControllerFactory().newController(), HConstants.PRIORITY_UNSET) {
+      new ClientServiceCallable<CoprocessorServiceResponse>(this.conn, this.table, this.row,
+        this.conn.getRpcControllerFactory().newController(), HConstants.PRIORITY_UNSET) {
       @Override
       protected CoprocessorServiceResponse rpcCall() throws Exception {
-        byte [] regionName = getLocation().getRegionInfo().getRegionName();
-        CoprocessorServiceRequest csr =
+        try (Scope ignored = context.makeCurrent()) {
+          byte[] regionName = getLocation().getRegionInfo().getRegionName();
+          CoprocessorServiceRequest csr =
             CoprocessorRpcUtils.getCoprocessorServiceRequest(method, request, row, regionName);
-        return getStub().execService(getRpcController(), csr);
+          return getStub().execService(getRpcController(), csr);
+        }
       }
     };
     CoprocessorServiceResponse result =
