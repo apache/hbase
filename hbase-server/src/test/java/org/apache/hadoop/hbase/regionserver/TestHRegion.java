@@ -7047,7 +7047,8 @@ public class TestHRegion {
     assertNull(r.getValue(fam1, q1));
   }
 
-  @Test public void testTTLsUsingSmallHeartBeatCells() throws IOException {
+  @Test
+  public void testTTLsUsingSmallHeartBeatCells() throws IOException {
     IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(edge);
 
@@ -7072,7 +7073,7 @@ public class TestHRegion {
     // using small heart beat cells
     conf.setLong(StoreScanner.HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK, 2);
 
-    region = HBaseTestingUtility
+    region = HBaseTestingUtil
       .createRegionAndWAL(RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build(),
         TEST_UTIL.getDataTestDir(), conf, tableDescriptor);
     assertNotNull(region);
