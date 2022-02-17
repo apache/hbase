@@ -192,12 +192,13 @@ public class TestSnapshotProcedure {
 
     SnapshotVerifyProcedure svp = waitProcedureRunnableAndGetFirst(
       SnapshotVerifyProcedure.class, 60000);
+    TEST_UTIL.waitFor(10000, () -> svp.getServerName() != null);
     ServerName previousTargetServer = svp.getServerName();
 
     HRegionServer rs = TEST_UTIL.getHBaseCluster().getRegionServer(previousTargetServer);
     TEST_UTIL.getHBaseCluster().killRegionServer(rs.getServerName());
     TEST_UTIL.waitFor(60000, () -> svp.getServerName() != null
-      && svp.getServerName().equals(previousTargetServer));
+      && !svp.getServerName().equals(previousTargetServer));
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
     SnapshotTestingUtils.assertOneSnapshotThatMatches(TEST_UTIL.getAdmin(), snapshotProto);
