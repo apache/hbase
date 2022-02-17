@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -341,7 +342,8 @@ public class SecureBulkLoadManager {
     return user;
   }
 
-  private static class SecureBulkLoadListener implements BulkLoadListener {
+  //package-private for test purpose only
+  static class SecureBulkLoadListener implements BulkLoadListener {
     // Target filesystem
     private final FileSystem fs;
     private final String stagingDir;
@@ -349,19 +351,28 @@ public class SecureBulkLoadManager {
     // Source filesystem
     private FileSystem srcFs = null;
     private Map<String, FsPermission> origPermissions = null;
+    private Map<String, String> origSources = null;
 
     public SecureBulkLoadListener(FileSystem fs, String stagingDir, Configuration conf) {
       this.fs = fs;
       this.stagingDir = stagingDir;
       this.conf = conf;
       this.origPermissions = new HashMap<>();
+      this.origSources = new HashMap<>();
     }
 
     @Override
-    public String prepareBulkLoad(final byte[] family, final String srcPath, boolean copyFile)
-        throws IOException {
+    public String prepareBulkLoad(final byte[] family, final String srcPath, boolean copyFile,
+      String customStaging ) throws IOException {
       Path p = new Path(srcPath);
-      Path stageP = new Path(stagingDir, new Path(Bytes.toString(family), p.getName()));
+
+      //store customStaging for failedBulkLoad
+      String currentStaging = stagingDir;
+      if(StringUtils.isNotEmpty(customStaging)){
+        currentStaging = customStaging;
+      }
+
+      Path stageP = new Path(currentStaging, new Path(Bytes.toString(family), p.getName()));
 
       // In case of Replication for bulk load files, hfiles are already copied in staging directory
       if (p.equals(stageP)) {
@@ -390,11 +401,16 @@ public class SecureBulkLoadManager {
         LOG.debug("Moving " + p + " to " + stageP);
         FileStatus origFileStatus = fs.getFileStatus(p);
         origPermissions.put(srcPath, origFileStatus.getPermission());
+        origSources.put(stageP.toString(), srcPath);
         if(!fs.rename(p, stageP)) {
           throw new IOException("Failed to move HFile: " + p + " to " + stageP);
         }
       }
-      fs.setPermission(stageP, PERM_ALL_ACCESS);
+
+      if(StringUtils.isNotEmpty(customStaging)) {
+        fs.setPermission(stageP, PERM_ALL_ACCESS);
+      }
+
       return stageP.toString();
     }
 
@@ -412,35 +428,37 @@ public class SecureBulkLoadManager {
     }
 
     @Override
-    public void failedBulkLoad(final byte[] family, final String srcPath) throws IOException {
+    public void failedBulkLoad(final byte[] family, final String stagedPath) throws IOException {
       try {
-        Path p = new Path(srcPath);
-        if (srcFs == null) {
-          srcFs = FileSystem.newInstance(p.toUri(), conf);
-        }
-        if (!FSUtils.isSameHdfs(conf, srcFs, fs)) {
-          // files are copied so no need to move them back
-          return;
-        }
-        Path stageP = new Path(stagingDir, new Path(Bytes.toString(family), p.getName()));
-
-        // In case of Replication for bulk load files, hfiles are not renamed by end point during
-        // prepare stage, so no need of rename here again
-        if (p.equals(stageP)) {
-          LOG.debug(p.getName() + " is already available in source directory. Skipping rename.");
+        String src = origSources.get(stagedPath);
+        if(StringUtils.isEmpty(src)){
+          LOG.debug(stagedPath + " was not moved to staging. No need to move back");
           return;
         }
 
-        LOG.debug("Moving " + stageP + " back to " + p);
-        if (!fs.rename(stageP, p)) {
-          throw new IOException("Failed to move HFile: " + stageP + " to " + p);
+        Path stageP = new Path(stagedPath);
+        if (!fs.exists(stageP)) {
+          throw new IOException(
+            "Missing HFile: " + stageP + ", can't be moved back to it's original place");
+        }
+
+        //we should not move back files if the original exists
+        Path srcPath = new Path(src);
+        if(srcFs.exists(srcPath)) {
+          LOG.debug(src + " is already at it's original place. No need to move.");
+          return;
+        }
+
+        LOG.debug("Moving " + stageP + " back to " + srcPath);
+        if (!fs.rename(stageP, srcPath)) {
+          throw new IOException("Failed to move HFile: " + stageP + " to " + srcPath);
         }
 
         // restore original permission
-        if (origPermissions.containsKey(srcPath)) {
-          fs.setPermission(p, origPermissions.get(srcPath));
+        if (origPermissions.containsKey(stagedPath)) {
+          fs.setPermission(srcPath, origPermissions.get(src));
         } else {
-          LOG.warn("Can't find previous permission for path=" + srcPath);
+          LOG.warn("Can't find previous permission for path=" + stagedPath);
         }
       } finally {
         closeSrcFs();
