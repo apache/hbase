@@ -60,8 +60,16 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
 
   protected static final String WAL_ROLL_PERIOD_KEY = "hbase.regionserver.logroll.period";
 
+  /**
+   * Configure for the timeout of log rolling retry.
+   */
   protected static final String WAL_ROLL_WAIT_TIMEOUT = "hbase.regionserver.logroll.wait.timeout.ms";
 
+  /**
+   * Configure for the max count of log rolling retry.
+   * The real retry count is also limited by the timeout of log rolling
+   * via {@link #WAL_ROLL_WAIT_TIMEOUT}
+   */
   protected static final String WAL_ROLL_RETRIES = "hbase.regionserver.logroll.retries";
 
   protected final ConcurrentMap<WAL, RollController> wals = new ConcurrentHashMap<>();
@@ -123,7 +131,8 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
     this.checkLowReplicationInterval =
       conf.getLong("hbase.regionserver.hlog.check.lowreplication.interval", 30 * 1000);
     this.rollWaitTimeout = conf.getLong(WAL_ROLL_WAIT_TIMEOUT, 30000);
-    this.maxRollRetry = conf.getInt(WAL_ROLL_RETRIES, 2);
+    // retry rolling does not have to be the default behavior, so the default value is 0 here
+    this.maxRollRetry = conf.getInt(WAL_ROLL_RETRIES, 0);
   }
 
   /**
