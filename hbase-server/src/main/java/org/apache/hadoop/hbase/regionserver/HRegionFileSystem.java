@@ -508,6 +508,10 @@ public class HRegionFileSystem {
    * @throws IOException
    */
   Path commitStoreFile(final Path buildPath, Path dstPath) throws IOException {
+    // rename is not necessary in case of direct-insert stores
+    if(buildPath.equals(dstPath)){
+      return dstPath;
+    }
     // buildPath exists, therefore not doing an exists() check.
     if (!rename(buildPath, dstPath)) {
       throw new IOException("Failed rename of " + buildPath + " to " + dstPath);

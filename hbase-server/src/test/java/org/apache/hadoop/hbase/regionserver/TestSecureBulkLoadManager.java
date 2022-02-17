@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -46,23 +48,29 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 
 
+@RunWith(Parameterized.class)
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestSecureBulkLoadManager {
 
@@ -87,15 +95,34 @@ public class TestSecureBulkLoadManager {
   private Thread laterBulkload;
 
   protected final static HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  protected Boolean useFileBasedSFT;
+
   private static Configuration conf = testUtil.getConfiguration();
 
-  @BeforeClass
-  public static void setUp() throws Exception {
+  public TestSecureBulkLoadManager(Boolean useFileBasedSFT) {
+    this.useFileBasedSFT = useFileBasedSFT;
+  }
+
+  @Parameterized.Parameters
+  public static Collection<Boolean> data() {
+    Boolean[] data = {false, true};
+    return Arrays.asList(data);
+  }
+
+  @Before
+  public void setUp() throws Exception {
+    if (useFileBasedSFT) {
+      conf.set(StoreFileTrackerFactory.TRACKER_IMPL,
+        "org.apache.hadoop.hbase.regionserver.storefiletracker.FileBasedStoreFileTracker");
+    }
+    else{
+      conf.unset(StoreFileTrackerFactory.TRACKER_IMPL);
+    }
     testUtil.startMiniCluster();
   }
 
-  @AfterClass
-  public static void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     testUtil.shutdownMiniCluster();
     testUtil.cleanupTestDir();
   }
