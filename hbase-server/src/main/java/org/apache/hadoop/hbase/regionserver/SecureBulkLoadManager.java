@@ -342,7 +342,8 @@ public class SecureBulkLoadManager {
     return user;
   }
 
-  protected static class SecureBulkLoadListener implements BulkLoadListener {
+  //package-private for test purpose only
+  static class SecureBulkLoadListener implements BulkLoadListener {
     // Target filesystem
     private final FileSystem fs;
     private final String stagingDir;
@@ -350,14 +351,14 @@ public class SecureBulkLoadManager {
     // Source filesystem
     private FileSystem srcFs = null;
     private Map<String, FsPermission> origPermissions = null;
-    private Map<String, String> origlSources = null;
+    private Map<String, String> origSources = null;
 
     public SecureBulkLoadListener(FileSystem fs, String stagingDir, Configuration conf) {
       this.fs = fs;
       this.stagingDir = stagingDir;
       this.conf = conf;
       this.origPermissions = new HashMap<>();
-      this.origlSources = new HashMap<>();
+      this.origSources = new HashMap<>();
     }
 
     @Override
@@ -400,7 +401,7 @@ public class SecureBulkLoadManager {
         LOG.debug("Moving " + p + " to " + stageP);
         FileStatus origFileStatus = fs.getFileStatus(p);
         origPermissions.put(srcPath, origFileStatus.getPermission());
-        origlSources.put(stageP.toString(), srcPath);
+        origSources.put(stageP.toString(), srcPath);
         if(!fs.rename(p, stageP)) {
           throw new IOException("Failed to move HFile: " + p + " to " + stageP);
         }
@@ -429,7 +430,7 @@ public class SecureBulkLoadManager {
     @Override
     public void failedBulkLoad(final byte[] family, final String stagedPath) throws IOException {
       try {
-        String src = origlSources.get(stagedPath);
+        String src = origSources.get(stagedPath);
         if(StringUtils.isEmpty(src)){
           LOG.debug(stagedPath + " was not moved to staging. No need to move back");
           return;
