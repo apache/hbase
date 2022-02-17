@@ -112,7 +112,10 @@ public class TestMasterBalancerNPE {
           .entrySet()) {
         if (entry.getValue()!= null) {
           entry.getValue().stream().forEach((reginInfo) -> {
-            if(reginInfo.getTable().equals(tableName)) {assignedRegionServerNames.add(entry.getKey());}});
+            if (reginInfo.getTable().equals(tableName)) {
+              assignedRegionServerNames.add(entry.getKey());
+            }
+          });
         }
       }
       assertTrue(assignedRegionServerNames.size() == 1);
