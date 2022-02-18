@@ -686,7 +686,8 @@ public class TestBucketCache {
 
     Assert.assertEquals(0, allocator.getUsedSize());
     try {
-      re.writeToCache(ioEngine, allocator, null, null);
+      re.writeToCache(ioEngine, allocator, null, null,
+        ByteBuffer.allocate(HFileBlock.BLOCK_METADATA_SPACE));
       Assert.fail();
     } catch (Exception e) {
     }

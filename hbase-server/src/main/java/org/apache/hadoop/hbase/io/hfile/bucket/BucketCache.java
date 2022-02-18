@@ -945,6 +945,7 @@ public class BucketCache implements BlockCache, HeapSize {
   class WriterThread extends Thread {
     private final BlockingQueue<RAMQueueEntry> inputQueue;
     private volatile boolean writerEnabled = true;
+    private final ByteBuffer metaBuff = ByteBuffer.allocate(HFileBlock.BLOCK_METADATA_SPACE);
 
     WriterThread(BlockingQueue<RAMQueueEntry> queue) {
       super("BucketCacheWriterThread");
@@ -970,7 +971,7 @@ public class BucketCache implements BlockCache, HeapSize {
                 break;
               }
             }
-            doDrain(entries);
+            doDrain(entries, metaBuff);
           } catch (Exception ioe) {
             LOG.error("WriterThread encountered error", ioe);
           }
@@ -1046,7 +1047,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * @param entries Presumes list passed in here will be processed by this invocation only. No
    *          interference expected.
    */
-  void doDrain(final List<RAMQueueEntry> entries) throws InterruptedException {
+  void doDrain(final List<RAMQueueEntry> entries, ByteBuffer metaBuff) throws InterruptedException {
     if (entries.isEmpty()) {
       return;
     }
@@ -1074,9 +1075,14 @@ public class BucketCache implements BlockCache, HeapSize {
         if (ramCache.containsKey(cacheKey)) {
           blocksByHFile.add(cacheKey);
         }
-
+        // Reset the position for reuse.
+        // It should be guaranteed that the data in the metaBuff has been transferred to the
+        // ioEngine safely. Otherwise, this reuse is problematic. Fortunately, the data is already
+        // transferred with our current IOEngines. Should take care, when we have new kinds of
+        // IOEngine in the future.
+        metaBuff.clear();
         BucketEntry bucketEntry = re.writeToCache(ioEngine, bucketAllocator, realCacheSize,
-          this::createRecycler);
+          this::createRecycler, metaBuff);
         // Successfully added. Up index and add bucketEntry. Clear io exceptions.
         bucketEntries[index] = bucketEntry;
         if (ioErrorStartTime > 0) {
@@ -1504,8 +1510,8 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     public BucketEntry writeToCache(final IOEngine ioEngine, final BucketAllocator alloc,
-        final LongAdder realCacheSize, Function<BucketEntry, Recycler> createRecycler)
-        throws IOException {
+        final LongAdder realCacheSize, Function<BucketEntry, Recycler> createRecycler,
+        ByteBuffer metaBuff) throws IOException {
       int len = data.getSerializedLength();
       // This cacheable thing can't be serialized
       if (len == 0) {
@@ -1522,9 +1528,9 @@ public class BucketCache implements BlockCache, HeapSize {
           // If an instance of HFileBlock, save on some allocations.
           HFileBlock block = (HFileBlock) data;
           ByteBuff sliceBuf = block.getBufferReadOnly();
-          ByteBuffer metadata = block.getMetaData();
+          block.getMetaData(metaBuff);
           ioEngine.write(sliceBuf, offset);
-          ioEngine.write(metadata, offset + len - metadata.limit());
+          ioEngine.write(metaBuff, offset + len - metaBuff.limit());
         } else {
           // Only used for testing.
           ByteBuffer bb = ByteBuffer.allocate(len);
