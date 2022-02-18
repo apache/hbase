@@ -84,6 +84,8 @@ public abstract class RpcExecutor {
 
   public static final String PLUGGABLE_CALL_QUEUE_CLASS_NAME =
     "hbase.ipc.server.callqueue.pluggable.queue.class.name";
+  public static final String PLUGGABLE_CALL_QUEUE_WITH_FAST_PATH_ENABLED =
+    "hbase.ipc.server.callqueue.pluggable.queue.fast.path.enabled";
 
   private LongAdder numGeneralCallsDropped = new LongAdder();
   private LongAdder numLifoModeSwitches = new LongAdder();
@@ -463,6 +465,11 @@ public abstract class RpcExecutor {
 
   public static boolean isPluggableQueueType(String callQueueType) {
     return callQueueType.equals(CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE);
+  }
+
+  public static boolean isPluggableQueueWithFastPath(String callQueueType, Configuration conf) {
+    return isPluggableQueueType(callQueueType) &&
+      conf.getBoolean(PLUGGABLE_CALL_QUEUE_WITH_FAST_PATH_ENABLED, false);
   }
 
   private Optional<Class<? extends BlockingQueue<CallRunner>>> getPluggableQueueClass() {
