@@ -590,18 +590,12 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   @Override
   public final void sync(boolean forceSync) throws IOException {
-    TraceUtil.trace(() -> {
-      doSync(forceSync);
-      return null;
-    }, () -> createSpan("WAL.sync"));
+    TraceUtil.trace(() -> doSync(forceSync), () -> createSpan("WAL.sync"));
   }
 
   @Override
   public final void sync(long txid, boolean forceSync) throws IOException {
-    TraceUtil.trace(() -> {
-      doSync(txid, forceSync);
-      return null;
-    }, () -> createSpan("WAL.sync"));
+    TraceUtil.trace(() -> doSync(txid, forceSync), () -> createSpan("WAL.sync"));
   }
 
   protected abstract void doSync(boolean forceSync) throws IOException;
