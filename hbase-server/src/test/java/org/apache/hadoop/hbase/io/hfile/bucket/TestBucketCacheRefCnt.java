@@ -627,8 +627,8 @@ public class TestBucketCacheRefCnt {
     }
 
     @Override
-    void doDrain(List<RAMQueueEntry> entries) throws InterruptedException {
-      super.doDrain(entries);
+    void doDrain(List<RAMQueueEntry> entries, ByteBuffer metaBuff) throws InterruptedException {
+      super.doDrain(entries, metaBuff);
       if (entries.size() > 0) {
         /**
          * Caching Block completed,release {@link #GET_BLOCK_THREAD_NAME} and
