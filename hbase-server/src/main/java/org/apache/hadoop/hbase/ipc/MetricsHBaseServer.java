@@ -135,6 +135,10 @@ public class MetricsHBaseServer {
     }
   }
 
+  void callTimedOut() {
+    source.callTimedOut();
+  }
+
   public MetricsHBaseServerSource getMetricsSource() {
     return source;
   }
