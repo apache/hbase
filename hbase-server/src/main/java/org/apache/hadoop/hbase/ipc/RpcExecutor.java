@@ -20,28 +20,25 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
-import java.util.Map;
-import java.util.HashMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hbase.thirdparty.io.netty.util.internal.StringUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 
@@ -70,6 +67,10 @@ public abstract class RpcExecutor {
   public static final String CALL_QUEUE_TYPE_PLUGGABLE_CONF_VALUE = "pluggable";
   public static final String CALL_QUEUE_TYPE_CONF_KEY = "hbase.ipc.server.callqueue.type";
   public static final String CALL_QUEUE_TYPE_CONF_DEFAULT = CALL_QUEUE_TYPE_FIFO_CONF_VALUE;
+
+  public static final String CALL_QUEUE_QUEUE_BALANCER_CLASS = "hbase.ipc.server.callqueue.balancer.class";
+  public static final Class<?> CALL_QUEUE_QUEUE_BALANCER_CLASS_DEFAULT = RandomQueueBalancer.class;
+
 
   // These 3 are only used by Codel executor
   public static final String CALL_QUEUE_CODEL_TARGET_DELAY = "hbase.ipc.server.callqueue.codel.target.delay";
@@ -295,19 +296,13 @@ public abstract class RpcExecutor {
         handlers.size(), threadPrefix, qsize, port);
   }
 
-  public static abstract class QueueBalancer {
-    /**
-     * @return the index of the next queue to which a request should be inserted
-     */
-    public abstract int getNextQueue();
-  }
-
-  public static QueueBalancer getBalancer(int queueSize) {
-    Preconditions.checkArgument(queueSize > 0, "Queue size is <= 0, must be at least 1");
-    if (queueSize == 1) {
+  public static QueueBalancer getBalancer(String executorName, Configuration conf, List<BlockingQueue<CallRunner>> queues) {
+    Preconditions.checkArgument(queues.size() > 0, "Queue size is <= 0, must be at least 1");
+    if (queues.size() == 1) {
       return ONE_QUEUE;
     } else {
-      return new RandomQueueBalancer(queueSize);
+      Class<?> balancerClass = conf.getClass(CALL_QUEUE_QUEUE_BALANCER_CLASS, CALL_QUEUE_QUEUE_BALANCER_CLASS_DEFAULT);
+      return (QueueBalancer) ReflectionUtils.newInstance(balancerClass, conf, executorName, queues);
     }
   }
 
@@ -316,26 +311,10 @@ public abstract class RpcExecutor {
    */
   private static QueueBalancer ONE_QUEUE = new QueueBalancer() {
     @Override
-    public int getNextQueue() {
+    public int getNextQueue(CallRunner callRunner) {
       return 0;
     }
   };
-
-  /**
-   * Queue balancer that just randomly selects a queue in the range [0, num queues).
-   */
-  private static class RandomQueueBalancer extends QueueBalancer {
-    private final int queueSize;
-
-    public RandomQueueBalancer(int queueSize) {
-      this.queueSize = queueSize;
-    }
-
-    @Override
-    public int getNextQueue() {
-      return ThreadLocalRandom.current().nextInt(queueSize);
-    }
-  }
 
   /**
    * Comparator used by the "normal callQueue" if DEADLINE_CALL_QUEUE_CONF_KEY is set to true. It

@@ -21,22 +21,22 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Action;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 
 /**
  * RPC Executor that uses different queues for reads and writes.
@@ -96,13 +96,16 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     numScanQueues = scanQueues;
     scanHandlersCount = scanHandlers;
 
-    this.writeBalancer = getBalancer(numWriteQueues);
-    this.readBalancer = getBalancer(numReadQueues);
-    this.scanBalancer = numScanQueues > 0 ? getBalancer(numScanQueues) : null;
-
     initializeQueues(numWriteQueues);
     initializeQueues(numReadQueues);
     initializeQueues(numScanQueues);
+
+    this.writeBalancer = getBalancer(name, conf, queues.subList(0, numWriteQueues));
+    this.readBalancer = getBalancer(name, conf, queues.subList(numWriteQueues, numWriteQueues + numReadQueues));
+    this.scanBalancer = numScanQueues > 0 ?
+      getBalancer(name, conf, queues.subList(numWriteQueues + numReadQueues,
+        numWriteQueues + numReadQueues + numScanQueues)) :
+      null;
 
     LOG.info(getName() + " writeQueues=" + numWriteQueues + " writeHandlers=" + writeHandlersCount
       + " readQueues=" + numReadQueues + " readHandlers=" + readHandlersCount + " scanQueues="
@@ -138,11 +141,11 @@ public class RWQueueRpcExecutor extends RpcExecutor {
       final CallRunner callTask) {
     int queueIndex;
     if (toWriteQueue) {
-      queueIndex = writeBalancer.getNextQueue();
+      queueIndex = writeBalancer.getNextQueue(callTask);
     } else if (toScanQueue) {
-      queueIndex = numWriteQueues + numReadQueues + scanBalancer.getNextQueue();
+      queueIndex = numWriteQueues + numReadQueues + scanBalancer.getNextQueue(callTask);
     } else {
-      queueIndex = numWriteQueues + readBalancer.getNextQueue();
+      queueIndex = numWriteQueues + readBalancer.getNextQueue(callTask);
     }
 
     Queue<CallRunner> queue = queues.get(queueIndex);
@@ -234,6 +237,18 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     return false;
   }
 
+  QueueBalancer getWriteBalancer() {
+    return writeBalancer;
+  }
+
+  QueueBalancer getReadBalancer() {
+    return readBalancer;
+  }
+
+  QueueBalancer getScanBalancer() {
+    return scanBalancer;
+  }
+
   private boolean isScanRequest(final RequestHeader header, final Message param) {
     return param instanceof ScanRequest;
   }
@@ -265,5 +280,19 @@ public class RWQueueRpcExecutor extends RpcExecutor {
    */
   private static int calcNumReaders(final int count, final float readShare) {
     return count - calcNumWriters(count, readShare);
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    super.onConfigurationChange(conf);
+    propagateBalancerConfigChange(writeBalancer, conf);
+    propagateBalancerConfigChange(readBalancer, conf);
+    propagateBalancerConfigChange(scanBalancer, conf);
+  }
+
+  private void propagateBalancerConfigChange(QueueBalancer balancer, Configuration conf) {
+    if (balancer instanceof ConfigurationObserver) {
+      ((ConfigurationObserver) balancer).onConfigurationChange(conf);
+    }
   }
 }
