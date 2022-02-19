@@ -1789,6 +1789,17 @@ module Hbase
       end
     end
 
+    #----------------------------------------------------------------------------------------------
+    # Change table's sft
+    def modify_table_sft(tableName, sft)
+      @admin.modifyTableStoreFileTracker(tableName, sft)
+    end
+
+     #----------------------------------------------------------------------------------------------
+    # Change table column family's sft
+    def modify_table_family_sft(tableName, family_bytes, sft)
+      @admin.modifyColumnFamilyStoreFileTracker(tableName, family_bytes, sft)
+    end
   end
   # rubocop:enable Metrics/ClassLength
 end
