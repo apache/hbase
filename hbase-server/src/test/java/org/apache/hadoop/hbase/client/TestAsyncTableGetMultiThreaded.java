@@ -26,11 +26,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -144,7 +144,7 @@ public class TestAsyncTableGetMultiThreaded {
       return null;
     })));
     LOG.info("====== Scheduled {} read threads ======", numThreads);
-    Collections.shuffle(Arrays.asList(SPLIT_KEYS), new Random(123));
+    Collections.shuffle(Arrays.asList(SPLIT_KEYS), ThreadLocalRandom.current());
     Admin admin = TEST_UTIL.getAdmin();
     for (byte[] splitPoint : SPLIT_KEYS) {
       int oldRegionCount = admin.getRegions(TABLE_NAME).size();

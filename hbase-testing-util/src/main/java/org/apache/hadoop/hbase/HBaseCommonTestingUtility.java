@@ -272,10 +272,7 @@ public class HBaseCommonTestingUtility {
     return Waiter.waitFor(this.conf, timeout, interval, failIfTimeout, predicate);
   }
 
-  // Support for Random Port Generation.
-  static Random random = new Random();
-
-  private static final PortAllocator portAllocator = new PortAllocator(random);
+  private static final PortAllocator portAllocator = new PortAllocator();
 
   public static int randomFreePort() {
     return portAllocator.randomFreePort();
@@ -288,11 +285,9 @@ public class HBaseCommonTestingUtility {
     /** A set of ports that have been claimed using {@link #randomFreePort()}. */
     private final Set<Integer> takenRandomPorts = new HashSet<>();
 
-    private final Random random;
     private final AvailablePortChecker portChecker;
 
-    public PortAllocator(Random random) {
-      this.random = random;
+    public PortAllocator() {
       this.portChecker = new AvailablePortChecker() {
         @Override
         public boolean available(int port) {
@@ -307,8 +302,7 @@ public class HBaseCommonTestingUtility {
       };
     }
 
-    public PortAllocator(Random random, AvailablePortChecker portChecker) {
-      this.random = random;
+    public PortAllocator(AvailablePortChecker portChecker) {
       this.portChecker = portChecker;
     }
 
@@ -339,7 +333,7 @@ public class HBaseCommonTestingUtility {
      */
     private int randomPort() {
       return MIN_RANDOM_PORT
-        + random.nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
+        + ThreadLocalRandom.current().nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
     }
 
     interface AvailablePortChecker {

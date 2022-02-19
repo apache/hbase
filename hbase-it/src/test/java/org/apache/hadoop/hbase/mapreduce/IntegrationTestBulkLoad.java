@@ -27,10 +27,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -155,7 +155,6 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
   public static class SlowMeCoproScanOperations implements RegionCoprocessor, RegionObserver {
     static final AtomicLong sleepTime = new AtomicLong(2000);
-    Random r = new Random();
     AtomicLong countOfNext = new AtomicLong(0);
     AtomicLong countOfOpen = new AtomicLong(0);
     public SlowMeCoproScanOperations() {}
@@ -373,7 +372,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
       taskId = taskId + iteration * numMapTasks;
       numMapTasks = numMapTasks * numIterations;
 
-      long chainId = Math.abs(new Random().nextLong());
+      long chainId = Math.abs(RandomUtils.nextLong());
       chainId = chainId - (chainId % numMapTasks) + taskId; // ensure that chainId is unique per task and across iterations
       LongWritable[] keys = new LongWritable[] {new LongWritable(chainId)};
 
@@ -390,8 +389,6 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
    */
   public static class LinkedListCreationMapper
       extends Mapper<LongWritable, LongWritable, ImmutableBytesWritable, KeyValue> {
-
-    private Random rand = new Random();
 
     @Override
     protected void map(LongWritable key, LongWritable value, Context context)
@@ -429,7 +426,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
     /** Returns a unique row id within this chain for this index */
     private long getNextRow(long index, long chainLength) {
-      long nextRow = Math.abs(rand.nextLong());
+      long nextRow = RandomUtils.nextLong(0, Long.MAX_VALUE);
       // use significant bits from the random number, but pad with index to ensure it is unique
       // this also ensures that we do not reuse row = 0
       // row collisions from multiple mappers are fine, since we guarantee unique chainIds

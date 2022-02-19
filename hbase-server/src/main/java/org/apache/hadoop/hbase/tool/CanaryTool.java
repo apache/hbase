@@ -34,7 +34,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
@@ -1831,7 +1830,6 @@ public class CanaryTool implements Tool, Canary {
         RegionServerStdOutSink regionServerSink) {
       List<RegionServerTask> tasks = new ArrayList<>();
       Map<String, AtomicLong> successMap = new HashMap<>();
-      Random rand = new Random();
       for (Map.Entry<String, List<RegionInfo>> entry : rsAndRMap.entrySet()) {
         String serverName = entry.getKey();
         AtomicLong successes = new AtomicLong(0);
@@ -1848,7 +1846,8 @@ public class CanaryTool implements Tool, Canary {
           }
         } else {
           // random select a region if flag not set
-          RegionInfo region = entry.getValue().get(rand.nextInt(entry.getValue().size()));
+          RegionInfo region = entry.getValue()
+              .get(ThreadLocalRandom.current().nextInt(entry.getValue().size()));
           tasks.add(new RegionServerTask(this.connection,
               serverName,
               region,

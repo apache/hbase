@@ -21,8 +21,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -54,7 +57,7 @@ public class TestAvlUtil {
     final TreeMap<Integer, Object> treeMap = new TreeMap<>();
     TestAvlNode root = null;
 
-    final Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < NELEM; ++i) {
       int key = rand.nextInt(MAX_KEY);
       if (AvlTree.get(root, key, KEY_COMPARATOR) != null) {

@@ -22,7 +22,6 @@ import static org.junit.Assert.assertNotEquals;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -41,13 +40,13 @@ public class TestCompatibilitySingletonFactory {
       HBaseClassTestRule.forClass(TestCompatibilitySingletonFactory.class);
 
   private static final int ITERATIONS = 100000;
-  private static final Random RANDOM = new Random();
 
   private class TestCompatibilitySingletonFactoryCallable implements Callable<String> {
 
     @Override
     public String call() throws Exception {
-      Thread.sleep(RANDOM.nextInt(10));
+      // XXX: Why is this sleep here?
+      Thread.sleep(10);
       RandomStringGenerator
           instance =
           CompatibilitySingletonFactory.getInstance(RandomStringGenerator.class);

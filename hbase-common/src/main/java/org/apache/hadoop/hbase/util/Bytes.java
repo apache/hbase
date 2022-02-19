@@ -2358,6 +2358,8 @@ public class Bytes implements Comparable<Bytes> {
     Arrays.fill(b, offset, offset + length, (byte) 0);
   }
 
+  // SecureRandom is more expensive than other options but Bytes.random may be used to create
+  // key material.
   private static final SecureRandom RNG = new SecureRandom();
 
   /**

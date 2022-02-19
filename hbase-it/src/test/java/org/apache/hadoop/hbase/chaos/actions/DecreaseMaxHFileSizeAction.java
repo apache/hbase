@@ -19,7 +19,8 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-import java.util.Random;
+
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -35,13 +36,11 @@ public class DecreaseMaxHFileSizeAction extends Action {
 
   private final long sleepTime;
   private final TableName tableName;
-  private final Random random;
   private Admin admin;
 
   public DecreaseMaxHFileSizeAction(long sleepTime, TableName tableName) {
     this.sleepTime = sleepTime;
     this.tableName = tableName;
-    this.random = new Random();
   }
 
   @Override protected Logger getLogger() {
@@ -75,7 +74,7 @@ public class DecreaseMaxHFileSizeAction extends Action {
 
     // We don't want to go too far below 1gb.
     // So go to about 1gb +/- 512 on each side.
-    newValue = Math.max(minFileSize, newValue) - (512 - random.nextInt(1024));
+    newValue = Math.max(minFileSize, newValue) - (512 - RandomUtils.nextInt(0, 1024));
 
     // Change the table descriptor.
     TableDescriptor modifiedTable =

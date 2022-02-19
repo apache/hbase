@@ -19,7 +19,8 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-import java.util.Random;
+
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,11 +34,8 @@ public class ChangeVersionsAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(ChangeVersionsAction.class);
   private final TableName tableName;
 
-  private final Random random;
-
   public ChangeVersionsAction(TableName tableName) {
     this.tableName = tableName;
-    this.random = new Random();
   }
 
   @Override protected Logger getLogger() {
@@ -46,7 +44,7 @@ public class ChangeVersionsAction extends Action {
 
   @Override
   public void perform() throws IOException {
-    final int versions =  random.nextInt(3) + 1;
+    final int versions =  RandomUtils.nextInt(0, 3) + 1;
 
     getLogger().debug("Performing action: Changing versions on " + tableName + " to " + versions);
     modifyAllTableColumns(tableName, columnBuilder -> {

@@ -18,7 +18,8 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-import java.util.concurrent.ThreadLocalRandom;
+
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -60,7 +61,7 @@ public class SplitAllRegionOfTableAction extends Action {
 
 
     // Don't always split. This should allow splitting of a full table later in the run
-    if (ThreadLocalRandom.current().nextDouble()
+    if (RandomUtils.nextDouble()
         < (((double) splits) / ((double) maxFullTableSplits)) / ((double) 2)) {
       splits++;
       getLogger().info("Performing action: Split all regions of {}", tableName);

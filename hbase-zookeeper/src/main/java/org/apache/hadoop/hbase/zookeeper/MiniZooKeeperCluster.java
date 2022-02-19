@@ -29,7 +29,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.net.Address;
@@ -143,7 +144,7 @@ public class MiniZooKeeperCluster {
       if (defaultClientPort > 0) {
         returnClientPort = defaultClientPort;
       } else {
-        returnClientPort = 0xc000 + new Random().nextInt(0x3f00);
+        returnClientPort = 0xc000 + ThreadLocalRandom.current().nextInt(0x3f00);
       }
     }
     // Make sure that the port is unused.

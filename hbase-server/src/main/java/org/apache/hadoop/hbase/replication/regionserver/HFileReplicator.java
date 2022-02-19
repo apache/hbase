@@ -22,7 +22,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.math.BigInteger;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
@@ -33,6 +32,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
@@ -307,7 +307,7 @@ public class HFileReplicator implements Closeable {
     int RANDOM_RADIX = 32;
     String doubleUnderScore = UNDERSCORE + UNDERSCORE;
     String randomDir = user.getShortName() + doubleUnderScore + tblName + doubleUnderScore
-        + (new BigInteger(RANDOM_WIDTH, new SecureRandom()).toString(RANDOM_RADIX));
+        + (new BigInteger(RANDOM_WIDTH, ThreadLocalRandom.current()).toString(RANDOM_RADIX));
     return createStagingDir(baseDir, user, randomDir);
   }
 

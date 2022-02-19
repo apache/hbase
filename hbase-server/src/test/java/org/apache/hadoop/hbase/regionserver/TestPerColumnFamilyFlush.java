@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -527,13 +529,12 @@ public class TestPerColumnFamilyFlush {
     Region region = getRegionWithName(table.getName()).getFirst();
     // cf1 4B per row, cf2 40B per row and cf3 400B per row
     byte[] qf = Bytes.toBytes("qf");
-    Random rand = new Random();
     byte[] value1 = new byte[100];
     byte[] value2 = new byte[200];
     byte[] value3 = new byte[400];
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 10000; i++) {
       Put put = new Put(Bytes.toBytes("row-" + i));
-      rand.setSeed(i);
       rand.nextBytes(value1);
       rand.nextBytes(value2);
       rand.nextBytes(value3);
@@ -656,16 +657,14 @@ public class TestPerColumnFamilyFlush {
 
     Table table = conn.getTable(TABLENAME);
     byte[] qf = Bytes.toBytes("qf");
-    Random rand = new Random();
     byte[] value1 = new byte[16];
     byte[] value2 = new byte[256];
     byte[] value3 = new byte[4096];
     for (long i = 0; i < numRows; i++) {
       Put put = new Put(Hashing.md5().hashLong(i).asBytes());
-      rand.setSeed(i);
-      rand.nextBytes(value1);
-      rand.nextBytes(value2);
-      rand.nextBytes(value3);
+      Bytes.random(value1);
+      Bytes.random(value2);
+      Bytes.random(value3);
       put.addColumn(FAMILY1, qf, value1);
       put.addColumn(FAMILY2, qf, value2);
       put.addColumn(FAMILY3, qf, value3);

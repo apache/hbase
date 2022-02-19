@@ -19,7 +19,8 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-import java.util.Random;
+
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.io.compress.Compressor;
@@ -31,12 +32,10 @@ import org.slf4j.LoggerFactory;
  */
 public class ChangeCompressionAction extends Action {
   private final TableName tableName;
-  private final Random random;
   private static final Logger LOG = LoggerFactory.getLogger(ChangeCompressionAction.class);
 
   public ChangeCompressionAction(TableName tableName) {
     this.tableName = tableName;
-    this.random = new Random();
   }
 
   @Override protected Logger getLogger() {
@@ -57,7 +56,7 @@ public class ChangeCompressionAction extends Action {
     // exception.
     Algorithm algo;
     do {
-      algo = possibleAlgos[random.nextInt(possibleAlgos.length)];
+      algo = possibleAlgos[RandomUtils.nextInt(0, possibleAlgos.length)];
 
       try {
         Compressor c = algo.getCompressor();
@@ -75,7 +74,7 @@ public class ChangeCompressionAction extends Action {
     getLogger().debug("Performing action: Changing compression algorithms on "
       + tableName.getNameAsString() + " to " + chosenAlgo);
     modifyAllTableColumns(tableName, columnFamilyDescriptorBuilder -> {
-      if (random.nextBoolean()) {
+      if (RandomUtils.nextBoolean()) {
         columnFamilyDescriptorBuilder.setCompactionCompressionType(chosenAlgo);
       } else {
         columnFamilyDescriptorBuilder.setCompressionType(chosenAlgo);

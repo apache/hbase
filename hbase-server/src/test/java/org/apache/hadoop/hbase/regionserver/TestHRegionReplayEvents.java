@@ -1521,9 +1521,8 @@ public class TestHRegionReplayEvents {
     primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     // bulk load a file into primary region
-    Random random = new Random();
     byte[] randomValues = new byte[20];
-    random.nextBytes(randomValues);
+    Bytes.random(randomValues);
     Path testPath = TEST_UTIL.getDataTestDirOnTestFS();
 
     List<Pair<byte[], String>> familyPaths = new ArrayList<>();

@@ -26,13 +26,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
-import java.util.Random;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -189,10 +190,7 @@ public void cleanUpCluster() throws Exception {
     protected BufferedMutator mutator;
     protected Configuration conf;
     protected int numBackReferencesPerRow;
-
     protected String shortTaskId;
-
-    protected Random rand = new Random();
     protected Counter rowsWritten, refsWritten;
 
     @Override
@@ -245,7 +243,7 @@ public void cleanUpCluster() throws Exception {
           p.addColumn(TEST_FAMILY, TEST_QUALIFIER, HConstants.EMPTY_BYTE_ARRAY);
           if (blockStart > 0) {
             for (int j = 0; j < numBackReferencesPerRow; j++) {
-              long referredRow = blockStart - BLOCK_SIZE + rand.nextInt(BLOCK_SIZE);
+              long referredRow = blockStart - BLOCK_SIZE + RandomUtils.nextInt(0, BLOCK_SIZE);
               Bytes.putLong(row, 0, swapLong(referredRow));
               p.addColumn(TEST_FAMILY, row, HConstants.EMPTY_BYTE_ARRAY);
             }

@@ -72,14 +72,11 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     HBaseClassTestRule.forClass(TestFanOutOneBlockAsyncDFSOutput.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFanOutOneBlockAsyncDFSOutput.class);
-
   private static DistributedFileSystem FS;
-
   private static EventLoopGroup EVENT_LOOP_GROUP;
-
   private static Class<? extends Channel> CHANNEL_CLASS;
-
   private static int READ_TIMEOUT_MS = 2000;
+  private static final Random RNG = new Random();
 
   private static StreamSlowMonitor MONITOR;
 
@@ -108,10 +105,10 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     throws IOException, InterruptedException, ExecutionException {
     List<CompletableFuture<Long>> futures = new ArrayList<>();
     byte[] b = new byte[10];
-    Random rand = new Random(12345);
     // test pipelined flush
+    RNG.setSeed(12345);
     for (int i = 0; i < 10; i++) {
-      rand.nextBytes(b);
+      RNG.nextBytes(b);
       out.write(b);
       futures.add(out.flush(false));
       futures.add(out.flush(false));
@@ -123,11 +120,11 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     out.close();
     assertEquals(b.length * 10, fs.getFileStatus(f).getLen());
     byte[] actual = new byte[b.length];
-    rand.setSeed(12345);
+    RNG.setSeed(12345);
     try (FSDataInputStream in = fs.open(f)) {
       for (int i = 0; i < 10; i++) {
         in.readFully(actual);
-        rand.nextBytes(b);
+        RNG.nextBytes(b);
         assertArrayEquals(b, actual);
       }
       assertEquals(-1, in.read());

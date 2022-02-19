@@ -19,7 +19,8 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-import java.util.Random;
+
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.slf4j.Logger;
@@ -30,12 +31,10 @@ import org.slf4j.LoggerFactory;
  */
 public class ChangeEncodingAction extends Action {
   private final TableName tableName;
-  private final Random random;
   private static final Logger LOG = LoggerFactory.getLogger(ChangeEncodingAction.class);
 
   public ChangeEncodingAction(TableName tableName) {
     this.tableName = tableName;
-    this.random = new Random();
   }
 
   @Override protected Logger getLogger() {
@@ -49,7 +48,7 @@ public class ChangeEncodingAction extends Action {
     final int[] possibleIds = {0, 2, 3, 4, 7};
 
     modifyAllTableColumns(tableName, (columnName, columnBuilder) -> {
-      short id = (short) possibleIds[random.nextInt(possibleIds.length)];
+      short id = (short) possibleIds[RandomUtils.nextInt(0, possibleIds.length)];
       DataBlockEncoding encoding = DataBlockEncoding.getEncodingById(id);
       columnBuilder.setDataBlockEncoding(encoding);
       getLogger().debug("Set encoding of column family " + columnName + " to: " + encoding);

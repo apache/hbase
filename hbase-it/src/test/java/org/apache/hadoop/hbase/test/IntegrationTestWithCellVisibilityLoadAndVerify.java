@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -167,7 +168,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
       int BLOCK_SIZE = (int) (recordsToWrite / 100);
       for (long i = 0; i < recordsToWrite;) {
         for (long idx = 0; idx < BLOCK_SIZE && i < recordsToWrite; idx++, i++) {
-          int expIdx = rand.nextInt(BLOCK_SIZE) % VISIBILITY_EXPS_COUNT;
+          int expIdx = RandomUtils.nextInt(0, VISIBILITY_EXPS_COUNT);
           String exp = VISIBILITY_EXPS[expIdx];
           byte[] row = Bytes.add(Bytes.toBytes(i), Bytes.toBytes(suffix), Bytes.toBytes(exp));
           Put p = new Put(row);

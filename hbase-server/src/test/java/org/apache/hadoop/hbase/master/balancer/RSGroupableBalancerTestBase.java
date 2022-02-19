@@ -23,15 +23,17 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -62,7 +64,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  */
 public class RSGroupableBalancerTestBase extends BalancerTestBase {
 
-  static SecureRandom rand = new SecureRandom();
   static String[] groups = new String[] { RSGroupInfo.DEFAULT_GROUP, "dg2", "dg3", "dg4" };
   static TableName table0 = TableName.valueOf("dt0");
   static TableName[] tables = new TableName[] { TableName.valueOf("dt1"), TableName.valueOf("dt2"),
@@ -299,6 +300,7 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
     List<RegionInfo> regions = new ArrayList<>(numRegions);
     byte[] start = new byte[16];
     byte[] end = new byte[16];
+    Random rand = ThreadLocalRandom.current();
     rand.nextBytes(start);
     rand.nextBytes(end);
     int regionIdx = rand.nextInt(tables.length);
@@ -344,6 +346,7 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
 
   protected static List<ServerName> generateServers(int numServers) {
     List<ServerName> servers = new ArrayList<>(numServers);
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < numServers; i++) {
       String host = "server" + rand.nextInt(100000);
       int port = rand.nextInt(60000);
@@ -370,6 +373,7 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
       groupMap.put(grpName, RSGroupInfo);
       index++;
     }
+    Random rand = ThreadLocalRandom.current();
     while (index < servers.size()) {
       int grpIndex = rand.nextInt(groups.length);
       groupMap.get(groups[grpIndex]).addServer(servers.get(index).getAddress());
@@ -385,6 +389,7 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
    */
   protected static Map<TableName, TableDescriptor> constructTableDesc(boolean hasBogusTable) {
     Map<TableName, TableDescriptor> tds = new HashMap<>();
+    Random rand = ThreadLocalRandom.current();
     int index = rand.nextInt(groups.length);
     for (int i = 0; i < tables.length; i++) {
       int grpIndex = (i + index) % groups.length;

@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
@@ -282,7 +283,7 @@ public class CacheTestUtils {
 
   public static HFileBlockPair[] generateHFileBlocks(int blockSize, int numBlocks) {
     HFileBlockPair[] returnedBlocks = new HFileBlockPair[numBlocks];
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     HashSet<String> usedStrings = new HashSet<>();
     for (int i = 0; i < numBlocks; i++) {
       ByteBuffer cachedBuffer = ByteBuffer.allocate(blockSize);

@@ -44,6 +44,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
@@ -207,7 +208,7 @@ public class TestHFileOutputFormat2  {
 
       int taskId = context.getTaskAttemptID().getTaskID().getId();
       assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
-      Random random = new Random();
+      Random random = ThreadLocalRandom.current();
       byte[] key;
       for (int j = 0; j < tables.length; ++j) {
         for (int i = 0; i < ROWSPERSPLIT; i++) {
@@ -277,7 +278,7 @@ public class TestHFileOutputFormat2  {
       int taskId = context.getTaskAttemptID().getTaskID().getId();
       assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
 
-      Random random = new Random();
+      Random random = ThreadLocalRandom.current();
       byte[] key;
       for (int j = 0; j < tables.length; ++j) {
         for (int i = 0; i < ROWSPERSPLIT; i++) {
@@ -565,7 +566,7 @@ public class TestHFileOutputFormat2  {
   }
 
   private byte [][] generateRandomStartKeys(int numKeys) {
-    Random random = new Random();
+    Random random = ThreadLocalRandom.current();
     byte[][] ret = new byte[numKeys][];
     // first region start key is always empty
     ret[0] = HConstants.EMPTY_BYTE_ARRAY;
@@ -577,7 +578,7 @@ public class TestHFileOutputFormat2  {
   }
 
   private byte[][] generateRandomSplitKeys(int numKeys) {
-    Random random = new Random();
+    Random random = ThreadLocalRandom.current();
     byte[][] ret = new byte[numKeys][];
     for (int i = 0; i < numKeys; i++) {
       ret[i] =
@@ -1254,7 +1255,7 @@ public class TestHFileOutputFormat2  {
     int taskId = context.getTaskAttemptID().getTaskID().getId();
     assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
     final byte [] qualifier = Bytes.toBytes("data");
-    Random random = new Random();
+    Random random = ThreadLocalRandom.current();
     for (int i = 0; i < numRows; i++) {
 
       Bytes.putInt(keyBytes, 0, i);

@@ -19,8 +19,9 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-import java.util.Random;
 import java.util.Set;
+
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -39,12 +40,10 @@ public class RemoveColumnAction extends Action {
   private final TableName tableName;
   private final Set<String> protectedColumns;
   private Admin admin;
-  private final Random random;
 
   public RemoveColumnAction(TableName tableName, Set<String> protectedColumns) {
     this.tableName = tableName;
     this.protectedColumns = protectedColumns;
-    random = new Random();
   }
 
   @Override protected Logger getLogger() {
@@ -66,10 +65,10 @@ public class RemoveColumnAction extends Action {
       return;
     }
 
-    int index = random.nextInt(columnDescriptors.length);
+    int index = RandomUtils.nextInt(0, columnDescriptors.length);
     while(protectedColumns != null &&
           protectedColumns.contains(columnDescriptors[index].getNameAsString())) {
-      index = random.nextInt(columnDescriptors.length);
+      index = RandomUtils.nextInt(0, columnDescriptors.length);
     }
     byte[] colDescName = columnDescriptors[index].getName();
     getLogger().debug("Performing action: Removing " + Bytes.toString(colDescName)+ " from "

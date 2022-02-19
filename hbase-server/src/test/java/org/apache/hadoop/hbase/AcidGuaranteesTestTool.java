@@ -23,6 +23,7 @@ import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -137,7 +138,6 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
    * Thread that does random full-row writes into a table.
    */
   public static class AtomicityWriter extends RepeatingTestThread {
-    Random rand = new Random();
     byte data[] = new byte[10];
     byte[][] targetRows;
     byte[][] targetFamilies;
@@ -157,6 +157,7 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
     @Override
     public void doAnAction() throws Exception {
       // Pick a random row to write into
+      Random rand = ThreadLocalRandom.current();
       byte[] targetRow = targetRows[rand.nextInt(targetRows.length)];
       Put p = new Put(targetRow);
       rand.nextBytes(data);

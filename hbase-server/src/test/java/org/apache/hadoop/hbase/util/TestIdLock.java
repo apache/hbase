@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hbase.thirdparty.io.netty.util.internal.ThreadLocalRandom;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -66,7 +67,7 @@ public class TestIdLock {
     @Override
     public Boolean call() throws Exception {
       Thread.currentThread().setName(clientId);
-      Random rand = new Random();
+      Random rand = ThreadLocalRandom.current();
       long endTime = EnvironmentEdgeManager.currentTime() + NUM_SECONDS * 1000;
       while (EnvironmentEdgeManager.currentTime() < endTime) {
         long id = rand.nextInt(NUM_IDS);

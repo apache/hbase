@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -536,7 +537,7 @@ public class TestCleanerChore {
   }
 
   private void createFiles(FileSystem fs, Path parentDir, int numOfFiles) throws IOException {
-    Random random = new Random();
+    Random random = ThreadLocalRandom.current();
     for (int i = 0; i < numOfFiles; i++) {
       int xMega = 1 + random.nextInt(3); // size of each file is between 1~3M
       try (FSDataOutputStream fsdos = fs.create(new Path(parentDir, "file-" + i))) {

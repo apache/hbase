@@ -53,6 +53,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+import org.apache.hbase.thirdparty.io.netty.util.internal.ThreadLocalRandom;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.GnuParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
@@ -519,7 +520,7 @@ public class RegionPlacementMaintainer implements Closeable {
     public RandomizedMatrix(int rows, int cols) {
       this.rows = rows;
       this.cols = cols;
-      Random random = new Random();
+      Random random = ThreadLocalRandom.current();
       rowTransform = new int[rows];
       rowInverse = new int[rows];
       for (int i = 0; i < rows; i++) {

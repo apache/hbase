@@ -20,22 +20,16 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.commons.math3.random.GaussianRandomGenerator;
 import org.apache.commons.math3.random.MersenneTwister;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 
 class GaussianFileListGenerator extends StoreFileListGenerator {
 
-  GaussianFileListGenerator() {
-    super(GaussianFileListGenerator.class);
-  }
-
   @Override
   public Iterator<List<HStoreFile>> iterator() {
     return new Iterator<List<HStoreFile>>() {
-      private GaussianRandomGenerator gen =
-          new GaussianRandomGenerator(new MersenneTwister(random.nextInt()));
+      private GaussianRandomGenerator gen = new GaussianRandomGenerator(new MersenneTwister());
       private int count = 0;
 
       @Override
@@ -61,4 +55,5 @@ class GaussianFileListGenerator extends StoreFileListGenerator {
       }
     };
   }
+
 }

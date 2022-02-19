@@ -63,8 +63,8 @@ public class TestRegionHDFSBlockLocationFinder {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionHDFSBlockLocationFinder.class);
 
+  private static final Random RNG = new Random();
   private static TableDescriptor TD;
-
   private static List<RegionInfo> REGIONS;
 
   private RegionHDFSBlockLocationFinder finder;
@@ -72,10 +72,10 @@ public class TestRegionHDFSBlockLocationFinder {
   private static HDFSBlocksDistribution generate(RegionInfo region) {
     HDFSBlocksDistribution distribution = new HDFSBlocksDistribution();
     int seed = region.hashCode();
-    Random rand = new Random(seed);
-    int size = 1 + rand.nextInt(10);
+    RNG.setSeed(seed);
+    int size = 1 + RNG.nextInt(10);
     for (int i = 0; i < size; i++) {
-      distribution.addHostsAndBlockWeight(new String[] { "host-" + i }, 1 + rand.nextInt(100));
+      distribution.addHostsAndBlockWeight(new String[] { "host-" + i }, 1 + RNG.nextInt(100));
     }
     return distribution;
   }

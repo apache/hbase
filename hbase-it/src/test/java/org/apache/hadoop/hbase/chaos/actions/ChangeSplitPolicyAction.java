@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.chaos.actions;
 
-import java.util.Random;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -33,7 +33,6 @@ public class ChangeSplitPolicyAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(ChangeSplitPolicyAction.class);
   private final TableName tableName;
   private final String[] possiblePolicies;
-  private final Random random;
 
   public ChangeSplitPolicyAction(TableName tableName) {
     this.tableName = tableName;
@@ -42,7 +41,6 @@ public class ChangeSplitPolicyAction extends Action {
         ConstantSizeRegionSplitPolicy.class.getName(),
         DisabledRegionSplitPolicy.class.getName()
     };
-    this.random = new Random();
   }
 
   @Override protected Logger getLogger() {
@@ -57,7 +55,7 @@ public class ChangeSplitPolicyAction extends Action {
     getLogger().info("Performing action: Change split policy of table " + tableName);
     TableDescriptor tableDescriptor = admin.getDescriptor(tableName);
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
-    String chosenPolicy = possiblePolicies[random.nextInt(possiblePolicies.length)];
+    String chosenPolicy = possiblePolicies[RandomUtils.nextInt(0, possiblePolicies.length)];
     builder.setRegionSplitPolicyClassName(chosenPolicy);
     getLogger().info("Changing "  + tableName + " split policy to " + chosenPolicy);
     admin.modifyTable(builder.build());
