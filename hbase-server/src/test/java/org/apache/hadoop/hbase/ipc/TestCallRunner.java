@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.net.InetSocketAddress;
+import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandlerImpl;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
@@ -60,7 +62,7 @@ public class TestCallRunner {
   }
 
   @Test
-  public void testCallRunnerDrop() {
+  public void testCallRunnerDropDisconnected() {
     RpcServerInterface mockRpcServer = Mockito.mock(RpcServerInterface.class);
     Mockito.when(mockRpcServer.isStarted()).thenReturn(true);
     ServerCall mockCall = Mockito.mock(ServerCall.class);
@@ -70,5 +72,22 @@ public class TestCallRunner {
     cr.setStatus(new MonitoredRPCHandlerImpl());
     cr.drop();
     Mockito.verify(mockCall, Mockito.times(1)).cleanup();
+  }
+
+  @Test
+  public void testCallRunnerDropConnected() {
+    RpcServerInterface mockRpcServer = Mockito.mock(RpcServerInterface.class);
+    MetricsHBaseServer mockMetrics = Mockito.mock(MetricsHBaseServer.class);
+    Mockito.when(mockRpcServer.getMetrics()).thenReturn(mockMetrics);
+    Mockito.when(mockRpcServer.isStarted()).thenReturn(true);
+    Mockito.when(mockRpcServer.getListenerAddress()).thenReturn(InetSocketAddress.createUnresolved("foo", 60020));
+    ServerCall mockCall = Mockito.mock(ServerCall.class);
+    Mockito.when(mockCall.disconnectSince()).thenReturn(-1L);
+
+    CallRunner cr = new CallRunner(mockRpcServer, mockCall);
+    cr.setStatus(new MonitoredRPCHandlerImpl());
+    cr.drop();
+    Mockito.verify(mockCall, Mockito.times(1)).cleanup();
+    Mockito.verify(mockMetrics).exception(Mockito.any(CallDroppedException.class));
   }
 }

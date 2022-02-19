@@ -44,6 +44,7 @@ public interface ExceptionTrackingSource extends BaseSource {
   String EXCEPTIONS_QUOTA_EXCEEDED = "exceptions.quotaExceeded";
   String EXCEPTIONS_RPC_THROTTLING = "exceptions.rpcThrottling";
   String EXCEPTIONS_CALL_DROPPED = "exceptions.callDropped";
+  String EXCEPTIONS_CALL_TIMED_OUT = "exceptions.callTimedOut";
 
   void exception();
 
@@ -62,4 +63,5 @@ public interface ExceptionTrackingSource extends BaseSource {
   void quotaExceededException();
   void rpcThrottlingException();
   void callDroppedException();
+  void callTimedOut();
 }
