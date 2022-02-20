@@ -208,7 +208,7 @@ EOF
 
       # create scan to get table names using prefix
       scan = org.apache.hadoop.hbase.client.Scan.new
-      scan.setRowPrefixFilter(prefix.to_java_bytes)
+      scan.setStartStopRowForPrefixScan(prefix.to_java_bytes)
       # Run the scanner to get all rowkeys
       scanner = @table.getScanner(scan)
       # Create a list to store all deletes
@@ -536,7 +536,7 @@ EOF
                end
 
         # This will overwrite any startrow/stoprow settings
-        scan.setRowPrefixFilter(rowprefixfilter.to_java_bytes) if rowprefixfilter
+        scan.setStartStopRowForPrefixScan(rowprefixfilter.to_java_bytes) if rowprefixfilter
 
         # Clear converters from last scan.
         @converters.clear

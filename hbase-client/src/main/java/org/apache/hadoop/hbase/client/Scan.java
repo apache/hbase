@@ -340,8 +340,8 @@ public class Scan extends Query {
    * If the specified row does not exist, the Scanner will start from the next closest row after the
    * specified row.
    * <p>
-   * <b>Note:</b><strong>Do NOT use this in combination with
-   * {@link #setRowPrefixFilter(byte[])}.</strong>
+   * <b>Note:</b> <strong>Do NOT use this in combination with
+   * {@link #setRowPrefixFilter(byte[])} or {@link #setStartStopRowForPrefixScan(byte[])}.</strong>
    * Doing so will make the scan result unexpected or even undefined.
    * </p>
    * @param startRow row to start scanner at or after
@@ -359,8 +359,8 @@ public class Scan extends Query {
    * If the specified row does not exist, or the {@code inclusive} is {@code false}, the Scanner
    * will start from the next closest row after the specified row.
    * <p>
-   * <b>Note:</b><strong>Do NOT use this in combination with
-   * {@link #setRowPrefixFilter(byte[])}.</strong>
+   * <b>Note:</b> <strong>Do NOT use this in combination with
+   * {@link #setRowPrefixFilter(byte[])} or {@link #setStartStopRowForPrefixScan(byte[])}.</strong>
    * Doing so will make the scan result unexpected or even undefined.
    * </p>
    * @param startRow row to start scanner at or after
@@ -384,8 +384,8 @@ public class Scan extends Query {
    * <p>
    * The scan will include rows that are lexicographically less than the provided stopRow.
    * <p>
-   * <b>Note:</b><strong>Do NOT use this in combination with
-   * {@link #setRowPrefixFilter(byte[])}.</strong>
+   * <b>Note:</b> <strong>Do NOT use this in combination with
+   * {@link #setRowPrefixFilter(byte[])} or {@link #setStartStopRowForPrefixScan(byte[])}.</strong>
    * Doing so will make the scan result unexpected or even undefined.
    * </p>
    * @param stopRow row to end at (exclusive)
@@ -403,8 +403,8 @@ public class Scan extends Query {
    * The scan will include rows that are lexicographically less than (or equal to if
    * {@code inclusive} is {@code true}) the provided stopRow.
    * <p>
-   * <b>Note:</b><strong>Do NOT use this in combination with
-   * {@link #setRowPrefixFilter(byte[])}.</strong>
+   * <b>Note:</b> <strong>Do NOT use this in combination with
+   * {@link #setRowPrefixFilter(byte[])} or {@link #setStartStopRowForPrefixScan(byte[])}.</strong>
    * Doing so will make the scan result unexpected or even undefined.
    * </p>
    * @param stopRow row to end at
@@ -433,8 +433,27 @@ public class Scan extends Query {
    * Such a combination will yield unexpected and even undefined results.</p>
    * @param rowPrefix the prefix all rows must start with. (Set <i>null</i> to remove the filter.)
    * @return this
+   * @deprecated since 3.0.0. The name of this method is considered to be confusing as it does not
+   *       use a {@link Filter} but uses setting the startRow and stopRow instead.
+   *       Use {@link #setStartStopRowForPrefixScan(byte[])} instead.
    */
+  @Deprecated
   public Scan setRowPrefixFilter(byte[] rowPrefix) {
+    return setStartStopRowForPrefixScan(rowPrefix);
+  }
+
+  /**
+   * <p>Set a filter (using stopRow and startRow) so the result set only contains rows where the
+   * rowKey starts with the specified prefix.</p>
+   * <p>This is a utility method that converts the desired rowPrefix into the appropriate values
+   * for the startRow and stopRow to achieve the desired result.</p>
+   * <p>This can safely be used in combination with setFilter.</p>
+   * <p><strong>This CANNOT be used in combination with withStartRow and/or withStopRow.</strong>
+   * Such a combination will yield unexpected and even undefined results.</p>
+   * @param rowPrefix the prefix all rows must start with. (Set <i>null</i> to remove the filter.)
+   * @return this
+   */
+  public Scan setStartStopRowForPrefixScan(byte[] rowPrefix) {
     if (rowPrefix == null) {
       withStartRow(HConstants.EMPTY_START_ROW);
       withStopRow(HConstants.EMPTY_END_ROW);
