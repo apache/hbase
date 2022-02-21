@@ -115,6 +115,15 @@ public class TestResult extends TestCase {
     assertNull(r.current());
   }
 
+  public void testAdvanceMultipleOnEmptyCell() throws IOException {
+    Result r = Result.create(new Cell[0]);
+    // After HBASE-26688, advance of result with empty cell list will always return false.
+    // Here 10 is an arbitrary number to test the logic.
+    for (int i = 0; i < 10; i++) {
+      assertFalse(r.advance());
+    }
+  }
+
   public void testMultiVersionGetColumn() throws Exception {
     KeyValue [] kvs1 = genKVs(row, family, value, 1, 100);
     KeyValue [] kvs2 = genKVs(row, family, value, 200, 100);
