@@ -109,7 +109,7 @@ public class HFileBlockDefaultEncodingContext implements HFileBlockEncodingConte
     if (cryptoContext != Encryption.Context.NONE) {
       cryptoByteStream = new ByteArrayOutputStream();
       iv = new byte[cryptoContext.getCipher().getIvLength()];
-      Bytes.random(iv);
+      Bytes.secureRandom(iv);
     }
 
     dummyHeader = Preconditions.checkNotNull(headerBytes,

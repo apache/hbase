@@ -19,8 +19,7 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-
-import org.apache.commons.lang3.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.TableName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,8 +43,7 @@ public class ChangeVersionsAction extends Action {
 
   @Override
   public void perform() throws IOException {
-    final int versions =  RandomUtils.nextInt(0, 3) + 1;
-
+    final int versions =  ThreadLocalRandom.current().nextInt(3) + 1;
     getLogger().debug("Performing action: Changing versions on " + tableName + " to " + versions);
     modifyAllTableColumns(tableName, columnBuilder -> {
       columnBuilder.setMinVersions(versions).setMaxVersions(versions);

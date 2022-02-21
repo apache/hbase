@@ -19,8 +19,8 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.Arrays;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hbase.thirdparty.io.netty.util.internal.ThreadLocalRandom;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**

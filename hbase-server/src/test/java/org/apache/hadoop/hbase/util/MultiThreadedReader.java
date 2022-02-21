@@ -19,9 +19,10 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -263,18 +264,19 @@ public class MultiThreadedReader extends MultiThreadedAction
       // later. Set a flag to make sure that we don't count this key towards
       // the set of unique keys we have verified.
       readingRandomKey = true;
-      return startKey + Math.abs(RandomUtils.nextLong())
+      return startKey + Math.abs(ThreadLocalRandom.current().nextLong())
           % (maxKeyToRead - startKey + 1);
     }
 
     private Get[] readKey(long[] keysToRead) {
+      Random rand = ThreadLocalRandom.current();
       Get [] gets = new Get[keysToRead.length];
       int i = 0;
       for (long keyToRead : keysToRead) {
         try {
           gets[i] = createGet(keyToRead);
           if (keysToRead.length == 1) {
-            queryKey(gets[i], RandomUtils.nextInt(0, 100) < verifyPercent, keyToRead);
+            queryKey(gets[i], rand.nextInt(100) < verifyPercent, keyToRead);
           }
           i++;
         } catch (IOException e) {
@@ -290,7 +292,7 @@ public class MultiThreadedReader extends MultiThreadedAction
       }
       if (keysToRead.length > 1) {
         try {
-          queryKey(gets, RandomUtils.nextInt(0, 100) < verifyPercent, keysToRead);
+          queryKey(gets, rand.nextInt(100) < verifyPercent, keysToRead);
         } catch (IOException e) {
           numReadFailures.addAndGet(gets.length);
           for (long keyToRead : keysToRead) {

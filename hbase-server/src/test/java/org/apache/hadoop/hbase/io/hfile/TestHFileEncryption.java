@@ -91,7 +91,7 @@ public class TestHFileEncryption {
     assertNotNull(aes);
     cryptoContext.setCipher(aes);
     byte[] key = new byte[aes.getKeyLength()];
-    Bytes.random(key);
+    Bytes.secureRandom(key);
     cryptoContext.setKey(key);
   }
 

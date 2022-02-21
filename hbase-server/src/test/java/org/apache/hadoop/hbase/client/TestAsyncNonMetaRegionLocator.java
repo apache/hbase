@@ -198,11 +198,11 @@ public class TestAsyncNonMetaRegionLocator {
       assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, serverName,
         getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW, locateType, false).get());
     }
-    byte[] randKey = new byte[ThreadLocalRandom.current().nextInt(128)];
-    ThreadLocalRandom.current().nextBytes(randKey);
+    byte[] key = new byte[ThreadLocalRandom.current().nextInt(128)];
+    Bytes.random(key);
     for (RegionLocateType locateType : RegionLocateType.values()) {
       assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, serverName,
-        getDefaultRegionLocation(TABLE_NAME, randKey, locateType, false).get());
+        getDefaultRegionLocation(TABLE_NAME, key, locateType, false).get());
     }
   }
 

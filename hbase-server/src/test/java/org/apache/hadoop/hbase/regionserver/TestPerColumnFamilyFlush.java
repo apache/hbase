@@ -25,9 +25,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -62,7 +59,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.hash.Hashing;
 
 /**
@@ -529,17 +525,16 @@ public class TestPerColumnFamilyFlush {
     Region region = getRegionWithName(table.getName()).getFirst();
     // cf1 4B per row, cf2 40B per row and cf3 400B per row
     byte[] qf = Bytes.toBytes("qf");
-    byte[] value1 = new byte[100];
-    byte[] value2 = new byte[200];
-    byte[] value3 = new byte[400];
-    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 10000; i++) {
       Put put = new Put(Bytes.toBytes("row-" + i));
-      rand.nextBytes(value1);
-      rand.nextBytes(value2);
-      rand.nextBytes(value3);
+      byte[] value1 = new byte[100];
+      Bytes.random(value1);
       put.addColumn(FAMILY1, qf, value1);
+      byte[] value2 = new byte[200];
+      Bytes.random(value2);
       put.addColumn(FAMILY2, qf, value2);
+      byte[] value3 = new byte[400];
+      Bytes.random(value3);
       put.addColumn(FAMILY3, qf, value3);
       table.put(put);
       // slow down to let regionserver flush region.

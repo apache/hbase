@@ -28,9 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -83,7 +82,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
@@ -372,7 +370,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
       taskId = taskId + iteration * numMapTasks;
       numMapTasks = numMapTasks * numIterations;
 
-      long chainId = Math.abs(RandomUtils.nextLong());
+      long chainId = Math.abs(ThreadLocalRandom.current().nextLong());
       chainId = chainId - (chainId % numMapTasks) + taskId; // ensure that chainId is unique per task and across iterations
       LongWritable[] keys = new LongWritable[] {new LongWritable(chainId)};
 
@@ -401,6 +399,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
       long chainLength = context.getConfiguration().getLong(CHAIN_LENGTH_KEY, CHAIN_LENGTH);
       long nextRow = getNextRow(0, chainLength);
+      byte[] valueBytes = new byte[50];
 
       for (long i = 0; i < chainLength; i++) {
         byte[] rk = Bytes.toBytes(currentRow);
@@ -410,9 +409,8 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
         // What link in the chain this is.
         KeyValue sortKv = new KeyValue(rk, SORT_FAM, chainIdArray, Bytes.toBytes(i));
         // Added data so that large stores are created.
-        KeyValue dataKv = new KeyValue(rk, DATA_FAM, chainIdArray,
-          Bytes.toBytes(RandomStringUtils.randomAlphabetic(50))
-        );
+        Bytes.random(valueBytes);
+        KeyValue dataKv = new KeyValue(rk, DATA_FAM, chainIdArray, valueBytes);
 
         // Emit the key values.
         context.write(new ImmutableBytesWritable(rk), linkKv);
@@ -426,7 +424,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
     /** Returns a unique row id within this chain for this index */
     private long getNextRow(long index, long chainLength) {
-      long nextRow = RandomUtils.nextLong(0, Long.MAX_VALUE);
+      long nextRow = ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
       // use significant bits from the random number, but pad with index to ensure it is unique
       // this also ensures that we do not reuse row = 0
       // row collisions from multiple mappers are fine, since we guarantee unique chainIds

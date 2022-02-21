@@ -48,9 +48,9 @@ public class TestEncryption {
   @Test
   public void testSmallBlocks() throws Exception {
     byte[] key = new byte[16];
-    Bytes.random(key);
+    Bytes.secureRandom(key);
     byte[] iv = new byte[16];
-    Bytes.random(iv);
+    Bytes.secureRandom(iv);
     for (int size: new int[] { 4, 8, 16, 32, 64, 128, 256, 512 }) {
       checkTransformSymmetry(key, iv, getRandomBlock(size));
     }
@@ -59,9 +59,9 @@ public class TestEncryption {
   @Test
   public void testLargeBlocks() throws Exception {
     byte[] key = new byte[16];
-    Bytes.random(key);
+    Bytes.secureRandom(key);
     byte[] iv = new byte[16];
-    Bytes.random(iv);
+    Bytes.secureRandom(iv);
     for (int size: new int[] { 256 * 1024, 512 * 1024, 1024 * 1024 }) {
       checkTransformSymmetry(key, iv, getRandomBlock(size));
     }
@@ -70,9 +70,9 @@ public class TestEncryption {
   @Test
   public void testOddSizedBlocks() throws Exception {
     byte[] key = new byte[16];
-    Bytes.random(key);
+    Bytes.secureRandom(key);
     byte[] iv = new byte[16];
-    Bytes.random(iv);
+    Bytes.secureRandom(iv);
     for (int size: new int[] { 3, 7, 11, 23, 47, 79, 119, 175 }) {
       checkTransformSymmetry(key, iv, getRandomBlock(size));
     }
@@ -81,9 +81,9 @@ public class TestEncryption {
   @Test
   public void testTypicalHFileBlocks() throws Exception {
     byte[] key = new byte[16];
-    Bytes.random(key);
+    Bytes.secureRandom(key);
     byte[] iv = new byte[16];
-    Bytes.random(iv);
+    Bytes.secureRandom(iv);
     for (int size: new int[] { 4 * 1024, 8 * 1024, 64 * 1024, 128 * 1024 }) {
       checkTransformSymmetry(key, iv, getRandomBlock(size));
     }

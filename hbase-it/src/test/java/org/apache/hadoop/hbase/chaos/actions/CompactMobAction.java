@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
-import org.apache.commons.lang3.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -39,8 +39,7 @@ public class CompactMobAction extends Action {
     this(-1, tableName, majorRatio);
   }
 
-  public CompactMobAction(
-          int sleepTime, TableName tableName, float majorRatio) {
+  public CompactMobAction(int sleepTime, TableName tableName, float majorRatio) {
     this.tableName = tableName;
     this.majorRatio = (int) (100 * majorRatio);
     this.sleepTime = sleepTime;
@@ -54,7 +53,7 @@ public class CompactMobAction extends Action {
   public void perform() throws Exception {
     HBaseTestingUtil util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
-    boolean major = RandomUtils.nextInt(0, 100) < majorRatio;
+    boolean major = ThreadLocalRandom.current().nextInt(100) < majorRatio;
 
     // Don't try the modify if we're stopping
     if (context.isStopping()) {

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.chaos.actions;
 
-import org.apache.commons.lang3.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -51,11 +51,11 @@ public class ChangeSplitPolicyAction extends Action {
   public void perform() throws Exception {
     HBaseTestingUtil util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
-
     getLogger().info("Performing action: Change split policy of table " + tableName);
     TableDescriptor tableDescriptor = admin.getDescriptor(tableName);
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
-    String chosenPolicy = possiblePolicies[RandomUtils.nextInt(0, possiblePolicies.length)];
+    String chosenPolicy =
+      possiblePolicies[ThreadLocalRandom.current().nextInt(possiblePolicies.length)];
     builder.setRegionSplitPolicyClassName(chosenPolicy);
     getLogger().info("Changing "  + tableName + " split policy to " + chosenPolicy);
     admin.modifyTable(builder.build());

@@ -103,7 +103,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.TestHRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
-import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
@@ -208,14 +207,13 @@ public class TestHFileOutputFormat2  {
 
       int taskId = context.getTaskAttemptID().getTaskID().getId();
       assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
-      Random random = ThreadLocalRandom.current();
       byte[] key;
       for (int j = 0; j < tables.length; ++j) {
         for (int i = 0; i < ROWSPERSPLIT; i++) {
-          random.nextBytes(keyBytes);
+          Bytes.random(keyBytes);
           // Ensure that unique tasks generate unique keys
           keyBytes[keyLength - 1] = (byte) (taskId & 0xFF);
-          random.nextBytes(valBytes);
+          Bytes.random(valBytes);
           key = keyBytes;
           if (multiTableMapper) {
             key = MultiTableHFileOutputFormat.createCompositeKey(tables[j].getName(), keyBytes);
@@ -278,14 +276,13 @@ public class TestHFileOutputFormat2  {
       int taskId = context.getTaskAttemptID().getTaskID().getId();
       assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
 
-      Random random = ThreadLocalRandom.current();
       byte[] key;
       for (int j = 0; j < tables.length; ++j) {
         for (int i = 0; i < ROWSPERSPLIT; i++) {
-          random.nextBytes(keyBytes);
+          Bytes.random(keyBytes);
           // Ensure that unique tasks generate unique keys
           keyBytes[keyLength - 1] = (byte) (taskId & 0xFF);
-          random.nextBytes(valBytes);
+          Bytes.random(valBytes);
           key = keyBytes;
           if (multiTableMapper) {
             key = MultiTableHFileOutputFormat.createCompositeKey(tables[j].getName(), keyBytes);
@@ -1255,13 +1252,10 @@ public class TestHFileOutputFormat2  {
     int taskId = context.getTaskAttemptID().getTaskID().getId();
     assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
     final byte [] qualifier = Bytes.toBytes("data");
-    Random random = ThreadLocalRandom.current();
     for (int i = 0; i < numRows; i++) {
-
       Bytes.putInt(keyBytes, 0, i);
-      random.nextBytes(valBytes);
+      Bytes.random(valBytes);
       ImmutableBytesWritable key = new ImmutableBytesWritable(keyBytes);
-
       for (byte[] family : families) {
         Cell kv = new KeyValue(keyBytes, family, qualifier, valBytes);
         writer.write(key, kv);

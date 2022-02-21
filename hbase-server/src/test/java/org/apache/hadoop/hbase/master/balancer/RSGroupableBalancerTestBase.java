@@ -33,7 +33,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -55,7 +54,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -299,11 +297,10 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase {
   protected List<RegionInfo> randomRegions(int numRegions) {
     List<RegionInfo> regions = new ArrayList<>(numRegions);
     byte[] start = new byte[16];
+    Bytes.random(start);
     byte[] end = new byte[16];
-    Random rand = ThreadLocalRandom.current();
-    rand.nextBytes(start);
-    rand.nextBytes(end);
-    int regionIdx = rand.nextInt(tables.length);
+    Bytes.random(end);
+    int regionIdx = ThreadLocalRandom.current().nextInt(tables.length);
     for (int i = 0; i < numRegions; i++) {
       Bytes.putInt(start, 0, numRegions << 1);
       Bytes.putInt(end, 0, (numRegions << 1) + 1);

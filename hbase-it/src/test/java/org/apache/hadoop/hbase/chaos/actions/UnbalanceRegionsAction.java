@@ -21,7 +21,8 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import org.apache.commons.lang3.RandomUtils;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.slf4j.Logger;
@@ -57,8 +58,9 @@ public class UnbalanceRegionsAction extends Action {
     List<ServerName> victimServers = new LinkedList<>(status.getLiveServerMetrics().keySet());
     int targetServerCount = (int)Math.ceil(fractionOfServers * victimServers.size());
     List<ServerName> targetServers = new ArrayList<>(targetServerCount);
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < targetServerCount; ++i) {
-      int victimIx = RandomUtils.nextInt(0, victimServers.size());
+      int victimIx = rand.nextInt(victimServers.size());
       targetServers.add(victimServers.remove(victimIx));
     }
     unbalanceRegions(status, victimServers, targetServers, fractionOfRegions);

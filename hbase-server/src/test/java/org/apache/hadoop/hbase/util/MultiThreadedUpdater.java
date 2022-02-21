@@ -27,9 +27,10 @@ import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -134,11 +135,12 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
     @Override
     public void run() {
       try {
+        Random rand = ThreadLocalRandom.current();
         long rowKeyBase;
         StringBuilder buf = new StringBuilder();
         byte[][] columnFamilies = dataGenerator.getColumnFamilies();
         while ((rowKeyBase = getNextKeyToUpdate()) < endKey) {
-          if (RandomUtils.nextInt(0, 100) < updatePercent) {
+          if (rand.nextInt(100) < updatePercent) {
             byte[] rowKey = dataGenerator.getDeterministicUniqueKey(rowKeyBase);
             Increment inc = new Increment(rowKey);
             Append app = new Append(rowKey);
@@ -187,8 +189,8 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                   if (Bytes.equals(column, INCREMENT) || Bytes.equals(column, MUTATE_INFO)) {
                     continue;
                   }
-                  MutationType mt = MutationType
-                      .valueOf(RandomUtils.nextInt(0, MutationType.values().length));
+                  MutationType mt =
+                    MutationType.values()[rand.nextInt(MutationType.values().length)];
                   long columnHash = Arrays.hashCode(column);
                   long hashCode = cfHash + columnHash;
                   byte[] hashCodeBytes = Bytes.toBytes(hashCode);

@@ -37,6 +37,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
+
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.io.RawComparator;
@@ -2358,9 +2360,7 @@ public class Bytes implements Comparable<Bytes> {
     Arrays.fill(b, offset, offset + length, (byte) 0);
   }
 
-  // SecureRandom is more expensive than other options but Bytes.random may be used to create
-  // key material.
-  private static final SecureRandom RNG = new SecureRandom();
+  private static final Random RNG = new Random();
 
   /**
    * Fill given array with random bytes.
@@ -2382,6 +2382,33 @@ public class Bytes implements Comparable<Bytes> {
     checkPositionIndex(offset + length, b.length, "offset + length");
     byte[] buf = new byte[length];
     RNG.nextBytes(buf);
+    System.arraycopy(buf, 0, b, offset, length);
+  }
+
+  // Bytes.secureRandom may be used to create key material.
+  private static final SecureRandom SECURE_RNG = new SecureRandom();
+
+  /**
+   * Fill given array with random bytes using a strong random number generator.
+   * @param b array which needs to be filled with random bytes
+   */
+  public static void secureRandom(byte[] b) {
+    SECURE_RNG.nextBytes(b);
+  }
+
+  /**
+   * Fill given array with random bytes at the specified position using a strong random number
+   * generator.
+   * @param b
+   * @param offset
+   * @param length
+   */
+  public static void secureRandom(byte[] b, int offset, int length) {
+    checkPositionIndex(offset, b.length, "offset");
+    checkArgument(length > 0, "length must be greater than 0");
+    checkPositionIndex(offset + length, b.length, "offset + length");
+    byte[] buf = new byte[length];
+    SECURE_RNG.nextBytes(buf);
     System.arraycopy(buf, 0, b, offset, length);
   }
 

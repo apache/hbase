@@ -77,11 +77,11 @@ public class TestEncryptionKeyRotation {
   static {
     // Create the test encryption keys
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    Bytes.random(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm =
         conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     initialCFKey = new SecretKeySpec(keyBytes, algorithm);
-    Bytes.random(keyBytes);
+    Bytes.secureRandom(keyBytes);
     secondCFKey = new SecretKeySpec(keyBytes, algorithm);
   }
 

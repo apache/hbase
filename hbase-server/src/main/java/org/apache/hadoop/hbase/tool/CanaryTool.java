@@ -99,7 +99,6 @@ import org.apache.zookeeper.client.ConnectStringParser;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -603,14 +602,13 @@ public class CanaryTool implements Tool, Canary {
         if (rowToCheck.length == 0) {
           rowToCheck = new byte[]{0x0};
         }
-        int writeValueSize =
-            connection.getConfiguration().getInt(HConstants.HBASE_CANARY_WRITE_VALUE_SIZE_KEY, 10);
+        int writeValueSize = connection.getConfiguration()
+          .getInt(HConstants.HBASE_CANARY_WRITE_VALUE_SIZE_KEY, 10);
         for (ColumnFamilyDescriptor column : tableDesc.getColumnFamilies()) {
           Put put = new Put(rowToCheck);
           byte[] value = new byte[writeValueSize];
           Bytes.random(value);
           put.addColumn(column.getName(), HConstants.EMPTY_BYTE_ARRAY, value);
-
           LOG.debug("Writing to {} {} {} {}",
             tableDesc.getTableName(), region.getRegionNameAsString(), column.getNameAsString(),
             Bytes.toStringBinary(rowToCheck));

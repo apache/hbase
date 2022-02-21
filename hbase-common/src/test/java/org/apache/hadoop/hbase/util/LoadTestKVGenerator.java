@@ -110,7 +110,7 @@ public class LoadTestKVGenerator {
         seed += bytesString.hashCode();
       }
     }
-    Random seededRandom = new Random(seed);
+    Random seededRandom = new Random(seed); // Random with specific seed needed here
     byte[] randomBytes = new byte[dataSize];
     seededRandom.nextBytes(randomBytes);
     return randomBytes;

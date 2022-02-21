@@ -80,7 +80,7 @@ public class TestHBaseFsckEncryption {
 
     // Create the test encryption key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    Bytes.random(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm =
         conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     cfKey = new SecretKeySpec(keyBytes,algorithm);

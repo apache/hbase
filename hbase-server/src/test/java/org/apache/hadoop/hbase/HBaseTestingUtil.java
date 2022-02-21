@@ -151,9 +151,7 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
-
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -1955,10 +1953,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   public void loadRandomRows(final Table t, final byte[] f, int rowSize, int totalRows)
     throws IOException {
-    Random r = ThreadLocalRandom.current();
-    byte[] row = new byte[rowSize];
     for (int i = 0; i < totalRows; i++) {
-      r.nextBytes(row);
+      byte[] row = new byte[rowSize];
+      Bytes.random(row);;
       Put put = new Put(row);
       put.addColumn(f, new byte[] { 0 }, new byte[] { 0 });
       t.put(put);

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
-import org.apache.commons.lang3.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -50,7 +50,7 @@ public class TruncateTableAction extends Action {
       return;
     }
 
-    boolean preserveSplits = RandomUtils.nextBoolean();
+    boolean preserveSplits = ThreadLocalRandom.current().nextBoolean();
     getLogger().info("Performing action: Truncate table {} preserve splits {}",
       tableName.getNameAsString(), preserveSplits);
     admin.truncateTable(tableName, preserveSplits);

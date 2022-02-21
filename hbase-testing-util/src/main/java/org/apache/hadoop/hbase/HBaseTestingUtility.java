@@ -2262,10 +2262,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   public void loadRandomRows(final Table t, final byte[] f, int rowSize, int totalRows)
       throws IOException {
-    Random rand = ThreadLocalRandom.current();
     byte[] row = new byte[rowSize];
     for (int i = 0; i < totalRows; i++) {
-      rand.nextBytes(row);
+      Bytes.random(row);
       Put put = new Put(row);
       put.addColumn(f, new byte[]{0}, new byte[]{0});
       t.put(put);

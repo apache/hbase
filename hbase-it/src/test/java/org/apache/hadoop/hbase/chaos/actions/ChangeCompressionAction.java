@@ -19,8 +19,8 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-
-import org.apache.commons.lang3.RandomUtils;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.io.compress.Compressor;
@@ -47,16 +47,15 @@ public class ChangeCompressionAction extends Action {
     // Possible compression algorithms. If an algorithm is not supported,
     // modifyTable will fail, so there is no harm.
     Algorithm[] possibleAlgos = Algorithm.values();
-
     // Since not every compression algorithm is supported,
     // let's use the same algorithm for all column families.
-
+    Random rand = ThreadLocalRandom.current();
     // If an unsupported compression algorithm is chosen, pick a different one.
     // This is to work around the issue that modifyTable() does not throw remote
     // exception.
     Algorithm algo;
     do {
-      algo = possibleAlgos[RandomUtils.nextInt(0, possibleAlgos.length)];
+      algo = possibleAlgos[rand.nextInt(possibleAlgos.length)];
 
       try {
         Compressor c = algo.getCompressor();
@@ -74,7 +73,7 @@ public class ChangeCompressionAction extends Action {
     getLogger().debug("Performing action: Changing compression algorithms on "
       + tableName.getNameAsString() + " to " + chosenAlgo);
     modifyAllTableColumns(tableName, columnFamilyDescriptorBuilder -> {
-      if (RandomUtils.nextBoolean()) {
+      if (rand.nextBoolean()) {
         columnFamilyDescriptorBuilder.setCompactionCompressionType(chosenAlgo);
       } else {
         columnFamilyDescriptorBuilder.setCompressionType(chosenAlgo);

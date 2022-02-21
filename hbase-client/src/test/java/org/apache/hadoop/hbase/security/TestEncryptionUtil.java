@@ -110,7 +110,7 @@ public class TestEncryptionUtil {
 
     // generate a test key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    Bytes.random(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key key = new SecretKeySpec(keyBytes, algorithm);
 
@@ -152,7 +152,7 @@ public class TestEncryptionUtil {
 
     // generate a test key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    Bytes.random(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm =
       conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key key = new SecretKeySpec(keyBytes, algorithm);
@@ -189,7 +189,7 @@ public class TestEncryptionUtil {
 
     // generate a test key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    Bytes.random(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key key = new SecretKeySpec(keyBytes, algorithm);
 
@@ -214,7 +214,7 @@ public class TestEncryptionUtil {
 
     // generate a test key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    Bytes.random(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm =
       conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key key = new SecretKeySpec(keyBytes, algorithm);

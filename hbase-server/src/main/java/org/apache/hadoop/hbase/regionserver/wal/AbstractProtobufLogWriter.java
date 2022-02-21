@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.security.Key;
 import java.util.concurrent.atomic.AtomicLong;
-import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
 import org.apache.hadoop.hbase.util.EncryptionTest;
@@ -111,9 +109,7 @@ public abstract class AbstractProtobufLogWriter {
       }
 
       // Generate a random encryption key for this WAL
-      byte[] keyBytes = new byte[cipher.getKeyLength()];
-      Bytes.random(keyBytes);
-      Key key = new SecretKeySpec(keyBytes, cipher.getName());
+      Key key = cipher.getRandomKey();
       builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(EncryptionUtil.wrapKey(conf,
           conf.get(HConstants.CRYPTO_WAL_KEY_NAME_CONF_KEY,
               conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,

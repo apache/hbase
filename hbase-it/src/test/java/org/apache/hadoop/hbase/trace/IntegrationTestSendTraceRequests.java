@@ -23,12 +23,12 @@ import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 @Category(IntegrationTests.class)
@@ -223,16 +222,18 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
   private LinkedBlockingQueue<Long> insertData() throws IOException, InterruptedException {
     LinkedBlockingQueue<Long> rowKeys = new LinkedBlockingQueue<>(25000);
     BufferedMutator ht = util.getConnection().getBufferedMutator(this.tableName);
+    Random rand = ThreadLocalRandom.current();
+    byte[] value = new byte[300];
     for (int x = 0; x < 5000; x++) {
       Span span = TraceUtil.getGlobalTracer().spanBuilder("insertData").startSpan();
       try (Scope scope = span.makeCurrent()) {
         for (int i = 0; i < 5; i++) {
-          long rk = RandomUtils.nextLong();
+          long rk = rand.nextLong();
           rowKeys.add(rk);
           Put p = new Put(Bytes.toBytes(rk));
           for (int y = 0; y < 10; y++) {
-            p.addColumn(familyName, Bytes.toBytes(RandomUtils.nextLong()),
-              RandomUtils.nextBytes(300));
+            Bytes.random(value);
+            p.addColumn(familyName, Bytes.toBytes(rand.nextLong()), value);
           }
           ht.mutate(p);
         }

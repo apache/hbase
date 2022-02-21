@@ -150,7 +150,7 @@ public class SecureWALCellCodec extends WALCellCodec {
       @Override
       protected byte[] initialValue() {
         byte[] iv = new byte[encryptor.getIvLength()];
-        Bytes.random(iv);
+        Bytes.secureRandom(iv);
         return iv;
       }
     };

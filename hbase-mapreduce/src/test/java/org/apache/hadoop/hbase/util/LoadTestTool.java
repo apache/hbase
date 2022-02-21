@@ -290,7 +290,7 @@ public class LoadTestTool extends AbstractHBaseTool {
         }
         if (cipher != null) {
           byte[] keyBytes = new byte[cipher.getKeyLength()];
-          Bytes.random(keyBytes);
+          Bytes.secureRandom(keyBytes);
           columnDescBuilder.setEncryptionType(cipher.getName());
           columnDescBuilder.setEncryptionKey(
               EncryptionUtil.wrapKey(conf,

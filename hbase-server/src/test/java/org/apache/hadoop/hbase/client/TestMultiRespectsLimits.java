@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -156,7 +155,7 @@ public class TestMultiRespectsLimits {
     // however the block being reference will be larger than MAX_SIZE.
     // This should cause the regionserver to try and send a result immediately.
     byte[] value = new byte[MAX_SIZE - 100];
-    ThreadLocalRandom.current().nextBytes(value);
+    Bytes.random(value);
 
     for (byte[] col:cols) {
       Put p = new Put(row);

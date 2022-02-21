@@ -366,7 +366,7 @@ public class HFilePerformanceEvaluation {
       
       if (cipher == "aes") {
         byte[] cipherKey = new byte[AES.KEY_LENGTH];
-        Bytes.random(cipherKey);
+        Bytes.secureRandom(cipherKey);
         builder.withEncryptionContext(Encryption.newContext(conf)
             .setCipher(Encryption.getCipher(conf, cipher))
             .setKey(cipherKey));

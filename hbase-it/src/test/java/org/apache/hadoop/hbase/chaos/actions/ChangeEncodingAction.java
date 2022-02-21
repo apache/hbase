@@ -19,8 +19,7 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-
-import org.apache.commons.lang3.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.slf4j.Logger;
@@ -46,9 +45,8 @@ public class ChangeEncodingAction extends Action {
     getLogger().debug("Performing action: Changing encodings on " + tableName);
     // possible DataBlockEncoding id's
     final int[] possibleIds = {0, 2, 3, 4, 7};
-
     modifyAllTableColumns(tableName, (columnName, columnBuilder) -> {
-      short id = (short) possibleIds[RandomUtils.nextInt(0, possibleIds.length)];
+      short id = (short) possibleIds[ThreadLocalRandom.current().nextInt(possibleIds.length)];
       DataBlockEncoding encoding = DataBlockEncoding.getEncodingById(id);
       columnBuilder.setDataBlockEncoding(encoding);
       getLogger().debug("Set encoding of column family " + columnName + " to: " + encoding);

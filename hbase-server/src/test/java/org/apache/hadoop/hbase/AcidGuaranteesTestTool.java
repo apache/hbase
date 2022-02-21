@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -157,11 +156,9 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
     @Override
     public void doAnAction() throws Exception {
       // Pick a random row to write into
-      Random rand = ThreadLocalRandom.current();
-      byte[] targetRow = targetRows[rand.nextInt(targetRows.length)];
+      byte[] targetRow = targetRows[ThreadLocalRandom.current().nextInt(targetRows.length)];
       Put p = new Put(targetRow);
-      rand.nextBytes(data);
-
+      Bytes.random(data);
       for (byte[] family : targetFamilies) {
         for (int i = 0; i < NUM_COLS_TO_CHECK; i++) {
           byte qualifier[] = Bytes.toBytes("col" + i);

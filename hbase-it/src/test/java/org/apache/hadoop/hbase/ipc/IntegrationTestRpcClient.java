@@ -31,12 +31,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.codec.Codec;
@@ -133,7 +132,7 @@ public class IntegrationTestRpcClient {
           return;
         }
         int size = rpcServers.size();
-        int rand = RandomUtils.nextInt(0, size);
+        int rand = ThreadLocalRandom.current().nextInt(size);
         rpcServer = serverList.remove(rand);
         InetSocketAddress address = rpcServer.getListenerAddress();
         if (address == null) {
@@ -175,7 +174,7 @@ public class IntegrationTestRpcClient {
       lock.readLock().lock();
       try {
         int size = rpcServers.size();
-        int rand = RandomUtils.nextInt(0, size);
+        int rand = ThreadLocalRandom.current().nextInt(size);
         return serverList.get(rand);
       } finally {
         lock.readLock().unlock();
@@ -195,7 +194,7 @@ public class IntegrationTestRpcClient {
     @Override
     public void run() {
       while (running.get()) {
-        if (RandomUtils.nextBoolean()) {
+        if (ThreadLocalRandom.current().nextBoolean()) {
           //start a server
           try {
             cluster.startServer();
@@ -247,7 +246,7 @@ public class IntegrationTestRpcClient {
     @Override
     public void run() {
       while (running.get()) {
-        boolean isBigPayload = RandomUtils.nextBoolean();
+        boolean isBigPayload = ThreadLocalRandom.current().nextBoolean();
         String message = isBigPayload ? BIG_PAYLOAD : id + numCalls;
         EchoRequestProto param = EchoRequestProto.newBuilder().setMessage(message).build();
         EchoResponseProto ret;

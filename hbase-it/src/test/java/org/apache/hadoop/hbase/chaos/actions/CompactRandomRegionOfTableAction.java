@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
-import org.apache.commons.lang3.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
@@ -38,13 +38,11 @@ public class CompactRandomRegionOfTableAction extends Action {
   private final long sleepTime;
   private final TableName tableName;
 
-  public CompactRandomRegionOfTableAction(
-      TableName tableName, float majorRatio) {
+  public CompactRandomRegionOfTableAction(TableName tableName, float majorRatio) {
     this(-1, tableName, majorRatio);
   }
 
-  public CompactRandomRegionOfTableAction(
-      int sleepTime, TableName tableName, float majorRatio) {
+  public CompactRandomRegionOfTableAction(int sleepTime, TableName tableName, float majorRatio) {
     this.majorRatio = (int) (100 * majorRatio);
     this.sleepTime = sleepTime;
     this.tableName = tableName;
@@ -58,7 +56,7 @@ public class CompactRandomRegionOfTableAction extends Action {
   public void perform() throws Exception {
     HBaseTestingUtil util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
-    boolean major = RandomUtils.nextInt(0, 100) < majorRatio;
+    boolean major = ThreadLocalRandom.current().nextInt(100) < majorRatio;
 
     getLogger().info("Performing action: Compact random region of table "
       + tableName + ", major=" + major);

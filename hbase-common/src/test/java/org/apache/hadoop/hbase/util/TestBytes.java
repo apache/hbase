@@ -597,10 +597,10 @@ public class TestBytes {
     List<byte[]> testByteData = new ArrayList<>(5);
     testByteData.addAll(Arrays.asList(new byte[0], new byte[1], new byte[10],
       new byte[] { 1, 2, 3, 4, 5 }, new byte[] { (byte) 0xFF }));
-    Random r = ThreadLocalRandom.current();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 20; i++) {
-      byte[] bytes = new byte[r.nextInt(100)];
-      r.nextBytes(bytes);
+      byte[] bytes = new byte[rand.nextInt(100)];
+      Bytes.random(bytes);
       testByteData.add(bytes);
     }
 
