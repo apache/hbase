@@ -94,7 +94,7 @@ public class RESTServer implements Constants {
   static final String REST_CSRF_METHODS_TO_IGNORE_DEFAULT = "GET,OPTIONS,HEAD,TRACE";
   public static final String SKIP_LOGIN_KEY = "hbase.rest.skip.login";
   static final int DEFAULT_HTTP_MAX_HEADER_SIZE = 64 * 1024; // 64k
-  static final String HTTP_HEADER_CACHE_SIZE = "hbase.rest.jetty.httpConfig.headerCacheSize";
+  static final String HTTP_HEADER_CACHE_SIZE = "hbase.rest.http.header.cache.size";
   static final int DEFAULT_HTTP_HEADER_CACHE_SIZE = Character.MAX_VALUE -1;
 
   private static final String PATH_SPEC_ANY = "/*";
