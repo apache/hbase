@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.region;
 import static org.apache.hadoop.hbase.HConstants.HREGION_LOGDIR_NAME;
 
 import java.io.IOException;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -27,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -34,13 +36,18 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
@@ -91,6 +98,10 @@ public final class MasterRegion {
   private static final String REPLAY_EDITS_DIR = "recovered.wals";
 
   private static final String DEAD_WAL_DIR_SUFFIX = "-dead";
+
+  static final String INITIALIZING_FLAG = ".initializing";
+
+  static final String INITIALIZED_FLAG = ".initialized";
 
   private static final int REGION_ID = 1;
 
@@ -196,32 +207,37 @@ public final class MasterRegion {
 
   private static HRegion bootstrap(Configuration conf, TableDescriptor td, FileSystem fs,
     Path rootDir, FileSystem walFs, Path walRootDir, WALFactory walFactory,
-    MasterRegionWALRoller walRoller, String serverName) throws IOException {
+    MasterRegionWALRoller walRoller, String serverName, boolean touchInitializingFlag)
+    throws IOException {
     TableName tn = td.getTableName();
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tn).setRegionId(REGION_ID).build();
-    Path tmpTableDir = CommonFSUtils.getTableDir(rootDir,
-      TableName.valueOf(tn.getNamespaceAsString(), tn.getQualifierAsString() + "-tmp"));
-    if (fs.exists(tmpTableDir) && !fs.delete(tmpTableDir, true)) {
-      throw new IOException("Can not delete partial created proc region " + tmpTableDir);
-    }
-    HRegion.createHRegion(conf, regionInfo, fs, tmpTableDir, td).close();
     Path tableDir = CommonFSUtils.getTableDir(rootDir, tn);
-    if (!fs.rename(tmpTableDir, tableDir)) {
-      throw new IOException("Can not rename " + tmpTableDir + " to " + tableDir);
+    // persist table descriptor
+    FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, td, true);
+    HRegion.createHRegion(conf, regionInfo, fs, tableDir, td).close();
+    Path initializedFlag = new Path(tableDir, INITIALIZED_FLAG);
+    if (!fs.mkdirs(initializedFlag)) {
+      throw new IOException("Can not touch initialized flag: " + initializedFlag);
+    }
+    Path initializingFlag = new Path(tableDir, INITIALIZING_FLAG);
+    if (!fs.delete(initializingFlag, true)) {
+      LOG.warn("failed to clean up initializing flag: " + initializingFlag);
     }
     WAL wal = createWAL(walFactory, walRoller, serverName, walFs, walRootDir, regionInfo);
     return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null, null);
   }
 
-  private static HRegion open(Configuration conf, TableDescriptor td, FileSystem fs, Path rootDir,
-    FileSystem walFs, Path walRootDir, WALFactory walFactory, MasterRegionWALRoller walRoller,
-    String serverName) throws IOException {
-    Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
+  private static RegionInfo loadRegionInfo(FileSystem fs, Path tableDir) throws IOException {
     Path regionDir =
       fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]
         .getPath();
-    RegionInfo regionInfo = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
+    return HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
+  }
 
+  private static HRegion open(Configuration conf, TableDescriptor td, RegionInfo regionInfo,
+    FileSystem fs, Path rootDir, FileSystem walFs, Path walRootDir, WALFactory walFactory,
+    MasterRegionWALRoller walRoller, String serverName) throws IOException {
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
     Path walRegionDir = FSUtils.getRegionDirFromRootDir(walRootDir, regionInfo);
     Path replayEditsDir = new Path(walRegionDir, REPLAY_EDITS_DIR);
     if (!walFs.exists(replayEditsDir) && !walFs.mkdirs(replayEditsDir)) {
@@ -287,6 +303,39 @@ public final class MasterRegion {
     }
   }
 
+  private static void tryMigrate(Configuration conf, FileSystem fs, Path tableDir,
+    RegionInfo regionInfo, TableDescriptor oldTd, TableDescriptor newTd) throws IOException {
+    Class<? extends StoreFileTracker> oldSft =
+      StoreFileTrackerFactory.getTrackerClass(oldTd.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
+    Class<? extends StoreFileTracker> newSft =
+      StoreFileTrackerFactory.getTrackerClass(newTd.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
+    if (oldSft.equals(newSft)) {
+      LOG.debug("old store file tracker {} is the same with new store file tracker, skip migration",
+        StoreFileTrackerFactory.getStoreFileTrackerName(oldSft));
+      if (!oldTd.equals(newTd)) {
+        // we may change other things such as adding a new family, so here we still need to persist
+        // the new table descriptor
+        LOG.info("Update table descriptor from {} to {}", oldTd, newTd);
+        FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, newTd, true);
+      }
+      return;
+    }
+    LOG.info("Migrate store file tracker from {} to {}", oldSft.getSimpleName(),
+      newSft.getSimpleName());
+    HRegionFileSystem hfs =
+      HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, regionInfo, false);
+    for (ColumnFamilyDescriptor oldCfd : oldTd.getColumnFamilies()) {
+      StoreFileTracker oldTracker = StoreFileTrackerFactory.create(conf, oldTd, oldCfd, hfs);
+      StoreFileTracker newTracker = StoreFileTrackerFactory.create(conf, oldTd, oldCfd, hfs);
+      List<StoreFileInfo> files = oldTracker.load();
+      LOG.debug("Store file list for {}: {}", oldCfd.getNameAsString(), files);
+      newTracker.set(oldTracker.load());
+    }
+    // persist the new table descriptor after migration
+    LOG.info("Update table descriptor from {} to {}", oldTd, newTd);
+    FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, newTd, true);
+  }
+
   public static MasterRegion create(MasterRegionParams params) throws IOException {
     TableDescriptor td = params.tableDescriptor();
     LOG.info("Create or load local region for table " + td);
@@ -321,16 +370,58 @@ public final class MasterRegion {
 
     WALFactory walFactory = new WALFactory(conf, server.getServerName().toString(), server, false);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
+    Path initializingFlag = new Path(tableDir, INITIALIZING_FLAG);
+    Path initializedFlag = new Path(tableDir, INITIALIZED_FLAG);
     HRegion region;
-    if (fs.exists(tableDir)) {
-      // load the existing region.
-      region = open(conf, td, fs, rootDir, walFs, walRootDir, walFactory, walRoller,
-        server.getServerName().toString());
-    } else {
-      // bootstrapping...
+    if (!fs.exists(tableDir)) {
+      // bootstrap, no doubt
+      if (!fs.mkdirs(initializedFlag)) {
+        throw new IOException("Can not touch initialized flag");
+      }
       region = bootstrap(conf, td, fs, rootDir, walFs, walRootDir, walFactory, walRoller,
-        server.getServerName().toString());
+        server.getServerName().toString(), true);
+    } else {
+      if (!fs.exists(initializedFlag)) {
+        if (!fs.exists(initializingFlag)) {
+          // should be old style, where we do not have the initializing or initialized file, persist
+          // the table descriptor, touch the initialized flag and then open the region.
+          // the store file tracker must be DEFAULT
+          LOG.info("No {} or {} file, try upgrading", INITIALIZING_FLAG, INITIALIZED_FLAG);
+          TableDescriptor oldTd =
+            TableDescriptorBuilder.newBuilder(td).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+              StoreFileTrackerFactory.Trackers.DEFAULT.name()).build();
+          FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, oldTd, true);
+          if (!fs.mkdirs(initializedFlag)) {
+            throw new IOException("Can not touch initialized flag: " + initializedFlag);
+          }
+          RegionInfo regionInfo = loadRegionInfo(fs, tableDir);
+          tryMigrate(conf, fs, tableDir, regionInfo, oldTd, td);
+          region = open(conf, td, regionInfo, fs, rootDir, walFs, walRootDir, walFactory, walRoller,
+            server.getServerName().toString());
+        } else {
+          // delete all contents besides the initializing flag, here we can make sure tableDir
+          // exists(unless someone delete it manually...), so we do not do null check here.
+          for (FileStatus status : fs.listStatus(tableDir)) {
+            if (!status.getPath().getName().equals(INITIALIZING_FLAG)) {
+              fs.delete(status.getPath(), true);
+            }
+          }
+          region = bootstrap(conf, td, fs, rootDir, walFs, walRootDir, walFactory, walRoller,
+            server.getServerName().toString(), false);
+        }
+      } else {
+        if (fs.exists(initializingFlag) && !fs.delete(initializingFlag, true)) {
+          LOG.warn("failed to clean up initializing flag: " + initializingFlag);
+        }
+        // open it, make sure to load the table descriptor from fs
+        TableDescriptor oldTd = FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
+        RegionInfo regionInfo = loadRegionInfo(fs, tableDir);
+        tryMigrate(conf, fs, tableDir, regionInfo, oldTd, td);
+        region = open(conf, td, regionInfo, fs, rootDir, walFs, walRootDir, walFactory, walRoller,
+          server.getServerName().toString());
+      }
     }
+
     Path globalArchiveDir = HFileArchiveUtil.getArchivePath(baseConf);
     MasterRegionFlusherAndCompactor flusherAndCompactor = new MasterRegionFlusherAndCompactor(conf,
       server, region, params.flushSize(), params.flushPerChanges(), params.flushIntervalMs(),

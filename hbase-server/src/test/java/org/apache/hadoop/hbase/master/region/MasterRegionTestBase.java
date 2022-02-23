@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -87,20 +88,25 @@ public class MasterRegionTestBase {
   /**
    * Creates a new MasterRegion using an existing {@code htu} on this class.
    */
-  protected void createMasterRegion() throws IOException {
-    configure(htu.getConfiguration());
+  protected final void createMasterRegion() throws IOException {
+    Configuration conf = htu.getConfiguration();
+    configure(conf);
     choreService = new ChoreService(getClass().getSimpleName());
-    hfileCleanerPool = DirScanPool.getHFileCleanerScanPool(htu.getConfiguration());
-    logCleanerPool = DirScanPool.getLogCleanerScanPool(htu.getConfiguration());
+    hfileCleanerPool = DirScanPool.getHFileCleanerScanPool(conf);
+    logCleanerPool = DirScanPool.getLogCleanerScanPool(conf);
     Server server = mock(Server.class);
-    when(server.getConfiguration()).thenReturn(htu.getConfiguration());
+    when(server.getConfiguration()).thenReturn(conf);
     when(server.getServerName())
       .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));
     when(server.getChoreService()).thenReturn(choreService);
     Path testDir = htu.getDataTestDir();
-    CommonFSUtils.setRootDir(htu.getConfiguration(), testDir);
+    CommonFSUtils.setRootDir(conf, testDir);
     MasterRegionParams params = new MasterRegionParams();
-    params.server(server).regionDirName(REGION_DIR_NAME).tableDescriptor(TD)
+    TableDescriptor td = TableDescriptorBuilder
+      .newBuilder(TD).setValue(StoreFileTrackerFactory.TRACKER_IMPL, conf
+        .get(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()))
+      .build();
+    params.server(server).regionDirName(REGION_DIR_NAME).tableDescriptor(td)
       .flushSize(TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE).flushPerChanges(1_000_000)
       .flushIntervalMs(TimeUnit.MINUTES.toMillis(15)).compactMin(4).maxWals(32).useHsync(false)
       .ringBufferSlotCount(16).rollPeriodMs(TimeUnit.MINUTES.toMillis(15))
