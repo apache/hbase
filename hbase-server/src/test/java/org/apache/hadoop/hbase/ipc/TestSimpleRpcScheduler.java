@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -782,7 +781,7 @@ public class TestSimpleRpcScheduler {
       }
     };
 
-    CallRunner cr = new CallRunner(null, putCall) {
+    return new CallRunner(null, putCall, null) {
       @Override
       public void run() {
         if (sleepTime <= 0) {
@@ -805,7 +804,5 @@ public class TestSimpleRpcScheduler {
       public void drop() {
       }
     };
-
-    return cr;
   }
 }

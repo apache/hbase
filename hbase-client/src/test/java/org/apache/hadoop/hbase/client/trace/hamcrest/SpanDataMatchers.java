@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.is;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.sdk.trace.data.EventData;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
 import java.time.Duration;
@@ -64,6 +65,15 @@ public final class SpanDataMatchers {
       }
       @Override public void describeTo(Description description) {
         description.appendText("SpanData that hasEnded");
+      }
+    };
+  }
+
+  public static Matcher<SpanData> hasEvents(Matcher<Iterable<? super EventData>> matcher) {
+    return new FeatureMatcher<SpanData, Iterable<? super EventData>>(
+      matcher, "SpanData having events that", "events") {
+      @Override protected Iterable<? super EventData> featureValueOf(SpanData item) {
+        return item.getEvents();
       }
     };
   }

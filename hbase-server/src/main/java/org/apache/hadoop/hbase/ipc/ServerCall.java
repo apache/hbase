@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
@@ -299,11 +300,12 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     // Once a response message is created and set to this.response, this Call can be treated as
     // done. The Responder thread will do the n/w write of this message back to client.
     if (this.rpcCallback != null) {
-      try {
+      try (Scope ignored = span.makeCurrent()) {
         this.rpcCallback.run();
       } catch (Exception e) {
         // Don't allow any exception here to kill this handler thread.
         RpcServer.LOG.warn("Exception while running the Rpc Callback.", e);
+        TraceUtil.setError(span, e);
       }
     }
   }
