@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.regionreplication;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Threads;
@@ -56,7 +57,7 @@ class RegionReplicationFlushRequester {
 
   private final long minIntervalSecs;
 
-  private long lastRequestNanos;
+  private long lastRequestNanos = 0;
 
   private long pendingFlushRequestSequenceId;
 
@@ -139,5 +140,17 @@ class RegionReplicationFlushRequester {
       pendingFlushRequest.cancel();
       pendingFlushRequest = null;
     }
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  synchronized Timeout getPendingFlushRequest() {
+    return this.pendingFlushRequest;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  synchronized long getLastRequestNanos() {
+    return this.lastRequestNanos;
   }
 }

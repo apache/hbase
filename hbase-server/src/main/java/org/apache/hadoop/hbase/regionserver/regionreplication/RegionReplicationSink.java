@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.regionreplication;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -98,7 +99,7 @@ public class RegionReplicationSink {
 
   public static final int BATCH_COUNT_CAPACITY_DEFAULT = 100;
 
-  private static final class SinkEntry {
+  static final class SinkEntry {
 
     final WALKeyImpl key;
 
@@ -170,7 +171,7 @@ public class RegionReplicationSink {
 
   private volatile long pendingSize;
 
-  private long lastFlushedSequenceId;
+  private volatile long lastFlushedSequenceId;
 
   private boolean sending;
 
@@ -215,31 +216,40 @@ public class RegionReplicationSink {
     }
     manager.decrease(toReleaseSize);
     Set<Integer> failed = new HashSet<>();
+    long lastFlushedSequenceIdToUse = this.lastFlushedSequenceId;
     for (Map.Entry<Integer, MutableObject<Throwable>> entry : replica2Error.entrySet()) {
       Integer replicaId = entry.getKey();
       Throwable error = entry.getValue().getValue();
       if (error != null) {
-        if (maxSequenceId > lastFlushedSequenceId) {
+        if (maxSequenceId > lastFlushedSequenceIdToUse) {
           LOG.warn(
             "Failed to replicate to secondary replica {} for {}, since the max sequence" +
               " id of sunk entris is {}, which is greater than the last flush SN {}," +
               " we will stop replicating for a while and trigger a flush",
-            replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
+            replicaId, primary, maxSequenceId, lastFlushedSequenceIdToUse, error);
           failed.add(replicaId);
         } else {
           LOG.warn(
             "Failed to replicate to secondary replica {} for {}, since the max sequence" +
               " id of sunk entris is {}, which is less than or equal to the last flush SN {}," +
               " we will not stop replicating",
-            replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
+            replicaId, primary, maxSequenceId, lastFlushedSequenceIdToUse, error);
         }
       }
     }
+    checkFailedReplicaAndSend(failed, toReleaseSize, maxSequenceId);
+  }
+
+  protected void checkFailedReplicaAndSend(Set<Integer> failed, long toReleaseSize,
+      long maxSequenceId) {
     synchronized (entries) {
       pendingSize -= toReleaseSize;
-      if (!failed.isEmpty()) {
-        failedReplicas.addAll(failed);
-        flushRequester.requestFlush(maxSequenceId);
+      // double check
+      if (maxSequenceId > lastFlushedSequenceId) {
+        if (!failed.isEmpty()) {
+          failedReplicas.addAll(failed);
+          flushRequester.requestFlush(maxSequenceId);
+        }
       }
       sending = false;
       if (stopping) {
@@ -253,7 +263,7 @@ public class RegionReplicationSink {
     }
   }
 
-  private void send() {
+  void send() {
     List<SinkEntry> toSend = new ArrayList<>();
     long totalSize = 0L;
     boolean hasMetaEdit = false;
@@ -448,4 +458,35 @@ public class RegionReplicationSink {
       }
     }
   }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  RegionReplicationFlushRequester getFlushRequester() {
+    return this.flushRequester;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  IntHashSet getFailedReplicas() {
+    synchronized (entries) {
+      return this.failedReplicas;
+    }
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  boolean isSending() {
+    synchronized (entries) {
+      return this.sending;
+    }
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  Queue<SinkEntry> getEntries() {
+    synchronized (entries) {
+      return this.entries;
+    }
+  }
+
 }
