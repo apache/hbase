@@ -147,11 +147,12 @@ public class RESTServer implements Constants {
     ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
   }
 
-  private void addSecurityHeadersFilter(ServletContextHandler ctxHandler, Configuration conf) {
+  private void addSecurityHeadersFilter(ServletContextHandler ctxHandler,
+    Configuration conf, boolean isSecure) {
     FilterHolder holder = new FilterHolder();
     holder.setName("securityheaders");
     holder.setClassName(SecurityHeadersFilter.class.getName());
-    holder.setInitParameters(SecurityHeadersFilter.getDefaultParameters(conf));
+    holder.setInitParameters(SecurityHeadersFilter.getDefaultParameters(conf, isSecure));
     ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
   }
 
@@ -301,7 +302,9 @@ public class RESTServer implements Constants {
     httpConfig.setSendDateHeader(false);
 
     ServerConnector serverConnector;
+    boolean isSecure = false;
     if (conf.getBoolean(REST_SSL_ENABLED, false)) {
+      isSecure = true;
       HttpConfiguration httpsConfig = new HttpConfiguration(httpConfig);
       httpsConfig.addCustomizer(new SecureRequestCustomizer());
 
@@ -389,7 +392,7 @@ public class RESTServer implements Constants {
     }
     addCSRFFilter(ctxHandler, conf);
     addClickjackingPreventionFilter(ctxHandler, conf);
-    addSecurityHeadersFilter(ctxHandler, conf);
+    addSecurityHeadersFilter(ctxHandler, conf, isSecure);
     HttpServerUtil.constrainHttpMethods(ctxHandler, servlet.getConfiguration()
         .getBoolean(REST_HTTP_ALLOW_OPTIONS_METHOD, REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
