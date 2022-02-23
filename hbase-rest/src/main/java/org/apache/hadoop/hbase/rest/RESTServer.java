@@ -94,6 +94,8 @@ public class RESTServer implements Constants {
   static final String REST_CSRF_METHODS_TO_IGNORE_DEFAULT = "GET,OPTIONS,HEAD,TRACE";
   public static final String SKIP_LOGIN_KEY = "hbase.rest.skip.login";
   static final int DEFAULT_HTTP_MAX_HEADER_SIZE = 64 * 1024; // 64k
+  static final String HTTP_HEADER_CACHE_SIZE = "hbase.rest.http.header.cache.size";
+  static final int DEFAULT_HTTP_HEADER_CACHE_SIZE = Character.MAX_VALUE -1;
 
   private static final String PATH_SPEC_ANY = "/*";
 
@@ -291,10 +293,12 @@ public class RESTServer implements Constants {
 
     String host = servlet.getConfiguration().get("hbase.rest.host", "0.0.0.0");
     int servicePort = servlet.getConfiguration().getInt("hbase.rest.port", 8080);
+    int httpHeaderCacheSize = servlet.getConfiguration().getInt(HTTP_HEADER_CACHE_SIZE,
+      DEFAULT_HTTP_HEADER_CACHE_SIZE);
     HttpConfiguration httpConfig = new HttpConfiguration();
     httpConfig.setSecureScheme("https");
     httpConfig.setSecurePort(servicePort);
-    httpConfig.setHeaderCacheSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
+    httpConfig.setHeaderCacheSize(httpHeaderCacheSize);
     httpConfig.setRequestHeaderSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
     httpConfig.setResponseHeaderSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
     httpConfig.setSendServerVersion(false);
