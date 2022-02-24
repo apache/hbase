@@ -43,12 +43,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
 
-  private final AsyncTable<AdvancedScanResultConsumer> rawTable;
+  private final RawAsyncTableImpl rawTable;
 
   private final ExecutorService pool;
 
-  AsyncTableImpl(AsyncConnectionImpl conn, AsyncTable<AdvancedScanResultConsumer> rawTable,
-      ExecutorService pool) {
+  AsyncTableImpl(RawAsyncTableImpl rawTable, ExecutorService pool) {
     this.rawTable = rawTable;
     this.pool = pool;
   }
