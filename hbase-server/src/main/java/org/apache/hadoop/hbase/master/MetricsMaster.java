@@ -42,6 +42,7 @@ public class MetricsMaster {
   private MetricsMasterSource masterSource;
   private MetricsMasterProcSource masterProcSource;
   private MetricsMasterQuotaSource masterQuotaSource;
+  private MetricsMasterFileSystemSource masterFsSource;
 
   private ProcedureMetrics serverCrashProcMetrics;
 
@@ -51,6 +52,8 @@ public class MetricsMaster {
             CompatibilitySingletonFactory.getInstance(MetricsMasterProcSourceFactory.class).create(masterWrapper);
     masterQuotaSource =
             CompatibilitySingletonFactory.getInstance(MetricsMasterQuotaSourceFactory.class).create(masterWrapper);
+    masterFsSource = CompatibilitySingletonFactory
+      .getInstance(MetricsMasterFileSystemSourceFactory.class).create(masterWrapper);
 
     serverCrashProcMetrics = convertToProcedureMetrics(masterSource.getServerCrashMetrics());
   }
@@ -66,6 +69,10 @@ public class MetricsMaster {
 
   public MetricsMasterQuotaSource getMetricsQuotaSource() {
     return masterQuotaSource;
+  }
+
+  public MetricsMasterFileSystemSource getMasterFsSource() {
+    return masterFsSource;
   }
 
   /**

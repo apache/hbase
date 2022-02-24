@@ -74,7 +74,7 @@ public class MasterWalManager {
 
   // metrics for master
   // TODO: Rename it, since those metrics are split-manager related
-  private final MetricsMasterFileSystem metricsMasterFilesystem = new MetricsMasterFileSystem();
+  private final MetricsMasterFileSystem metricsMasterFilesystem;
 
   // Keep around for convenience.
   private final MasterServices services;
@@ -114,6 +114,8 @@ public class MasterWalManager {
     this.services = services;
     this.splitLogManager = new SplitLogManager(services, conf);
     this.oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    this.metricsMasterFilesystem =
+      new MetricsMasterFileSystem(this.services.getMasterMetrics().getMasterFsSource());
   }
 
   public void stop() {

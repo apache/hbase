@@ -408,6 +408,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   private RegionsRecoveryChore regionsRecoveryChore = null;
 
+  private SpaceUsageCalculationChore spaceUsageCalculationChore = null;
+
   private RegionsRecoveryConfigManager regionsRecoveryConfigManager = null;
   // it is assigned after 'initialized' guard set to true, so should be volatile
   private volatile MasterQuotaManager quotaManager;
@@ -1237,6 +1239,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     this.rollingUpgradeChore = new RollingUpgradeChore(this);
     getChoreService().scheduleChore(rollingUpgradeChore);
+
+    this.spaceUsageCalculationChore = new SpaceUsageCalculationChore(this);
+    getChoreService().scheduleChore(spaceUsageCalculationChore);
   }
 
   private void createMissingCFsInMetaDuringUpgrade(
@@ -4137,6 +4142,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   public Collection<ServerName> getLiveRegionServers() {
     return regionServerTracker.getRegionServers();
+  }
+
+  public SpaceUsageCalculationChore getSpaceUsedCalculationChore() {
+    return spaceUsageCalculationChore;
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",

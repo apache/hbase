@@ -241,4 +241,34 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
       return new PairOfSameType<>(0, 0);
     }
   }
+
+  @Override
+  public long getArchiveDirSpaceUsage() {
+    SpaceUsageCalculationChore chore = master.getSpaceUsedCalculationChore();
+    if (chore != null) {
+      return chore.getArchiveDirSize();
+    } else {
+      return 0;
+    }
+  }
+
+  @Override
+  public long getOldWALDirSpaceUsage() {
+    SpaceUsageCalculationChore chore = master.getSpaceUsedCalculationChore();
+    if (chore != null) {
+      return chore.getOldWALDirSize();
+    } else {
+      return 0;
+    }
+  }
+
+  @Override
+  public Map<TableName, Long> getDisabledTableSpaceUsage() {
+    SpaceUsageCalculationChore chore = master.getSpaceUsedCalculationChore();
+    if (chore != null) {
+      return chore.getDisabledTableSpaceUsage();
+    } else {
+      return null;
+    }
+  }
 }

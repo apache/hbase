@@ -20,32 +20,11 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * Interface of a factory to create MetricsMasterFileSystemSource when given a MetricsMasterWrapper
+ */
 @InterfaceAudience.Private
-public class MetricsMasterFileSystem {
+public interface MetricsMasterFileSystemSourceFactory {
 
-  private final MetricsMasterFileSystemSource source;
-
-  public MetricsMasterFileSystem(MetricsMasterFileSystemSource source) {
-    this.source = source;
-  }
-
-  /**
-   * Record a single instance of a split
-   * @param time time that the split took
-   * @param size length of original WALs that were split
-   */
-  public synchronized void addSplit(long time, long size) {
-    source.updateSplitTime(time);
-    source.updateSplitSize(size);
-  }
-
-  /**
-   * Record a single instance of a split
-   * @param time time that the split took
-   * @param size length of original WALs that were split
-   */
-  public synchronized void addMetaWALSplit(long time, long size) {
-    source.updateMetaWALSplitTime(time);
-    source.updateMetaWALSplitSize(size);
-  }
+  MetricsMasterFileSystemSource create(MetricsMasterWrapper masterWrapper);
 }

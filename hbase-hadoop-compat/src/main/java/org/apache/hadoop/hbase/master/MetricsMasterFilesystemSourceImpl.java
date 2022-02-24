@@ -18,8 +18,13 @@
 
 package org.apache.hadoop.hbase.master;
 
+import java.util.Map;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
+import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricHistogram;
+import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -32,14 +37,19 @@ public class MetricsMasterFilesystemSourceImpl
   private MetricHistogram metaSplitTimeHisto;
   private MetricHistogram metaSplitSizeHisto;
 
-  public MetricsMasterFilesystemSourceImpl() {
-    this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
+  private MetricsMasterWrapper masterWrapper;
+
+  public MetricsMasterFilesystemSourceImpl(MetricsMasterWrapper masterWrapper) {
+    this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, masterWrapper);
   }
 
   public MetricsMasterFilesystemSourceImpl(String metricsName,
                                            String metricsDescription,
-                                           String metricsContext, String metricsJmxContext) {
+                                           String metricsContext,
+                                           String metricsJmxContext,
+                                           MetricsMasterWrapper masterWrapper) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
+    this.masterWrapper = masterWrapper;
   }
 
   @Override
@@ -71,5 +81,28 @@ public class MetricsMasterFilesystemSourceImpl
   @Override
   public void updateMetaWALSplitSize(long size) {
     metaSplitSizeHisto.add(size);
+  }
+
+  @Override
+  public void getMetrics(MetricsCollector metricsCollector, boolean all) {
+    MetricsRecordBuilder mrb = metricsCollector.addRecord(metricsRegistry.info());
+
+    if (masterWrapper != null && masterWrapper.isRunning()) {
+      mrb.addGauge(Interns.info(ARCHIVE_DIR_SPACE_USAGE, ARCHIVE_DIR_SPACE_USAGE_DESC),
+          masterWrapper.getArchiveDirSpaceUsage())
+        .addGauge(Interns.info(OLD_WAL_DIR_SPACE_USAGE, OLD_WAL_DIR_SPACE_USAGE_DESC),
+          masterWrapper.getOldWALDirSpaceUsage());
+
+      Map<TableName, Long> disabledTableSpaceUsage = masterWrapper.getDisabledTableSpaceUsage();
+      for (Map.Entry<TableName, Long> entry : disabledTableSpaceUsage.entrySet()) {
+        mrb.addGauge(Interns.info(qualifyMetricsName(entry.getKey()), ""), entry.getValue());
+      }
+    }
+    metricsRegistry.snapshot(mrb, all);
+  }
+
+  private String qualifyMetricsName(TableName tableName) {
+    return "Namespace_" + tableName.getNamespaceAsString() + "_table_"
+      + tableName.getQualifierAsString() + "_metric_spaceUsageSize";
   }
 }

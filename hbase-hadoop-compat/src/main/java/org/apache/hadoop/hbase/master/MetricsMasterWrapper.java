@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.util.Map;
 import java.util.Map.Entry;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -168,4 +169,19 @@ public interface MetricsMasterWrapper {
    * @return pair of count for online regions and offline regions
    */
   PairOfSameType<Integer> getRegionCounts();
+
+  /**
+   *  Get the space usage of archive directory.
+   */
+  long getArchiveDirSpaceUsage();
+
+  /**
+   * Get the space usage of old wal directory.
+   */
+  long getOldWALDirSpaceUsage();
+
+  /**
+   * Get the space usage of disabled tables
+   */
+  Map<TableName, Long> getDisabledTableSpaceUsage();
 }
