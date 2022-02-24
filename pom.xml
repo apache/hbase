@@ -727,6 +727,12 @@
       <email>huangzhuoyue@apache.org</email>
       <timezone>+8</timezone>
     </developer>
+    <developer>
+      <id>xiaoyt</id>
+      <name>Yutong Xiao</name>
+      <email>xiaoyt@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
   </developers>
   <build>
     <extensions>
