@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -30,8 +31,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The {@link ResultScanner} implementation for {@link AsyncTable}. It will fetch data automatically
- * in background and cache it in memory. Typically the {@link #maxCacheSize} will be
+ * The {@link ResultScanner} implementation for {@link RawAsyncTableImpl}. It will fetch data
+ * automatically in background and cache it in memory. Typically, the {@link #maxCacheSize} will be
  * {@code 2 * scan.getMaxResultSize()}.
  */
 @InterfaceAudience.Private
@@ -39,7 +40,7 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncTableResultScanner.class);
 
-  private final AsyncTable<AdvancedScanResultConsumer> rawTable;
+  private final TableName tableName;
 
   private final long maxCacheSize;
 
@@ -57,12 +58,10 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
 
   private ScanResumer resumer;
 
-  public AsyncTableResultScanner(AsyncTable<AdvancedScanResultConsumer> table, Scan scan,
-      long maxCacheSize) {
-    this.rawTable = table;
+  public AsyncTableResultScanner(TableName tableName, Scan scan, long maxCacheSize) {
+    this.tableName = tableName;
     this.maxCacheSize = maxCacheSize;
     this.scan = scan;
-    table.scan(scan, this);
   }
 
   private void addToCache(Result result) {
@@ -72,9 +71,10 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
 
   private void stopPrefetch(ScanController controller) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug(String.format("0x%x", System.identityHashCode(this)) +
-        " stop prefetching when scanning " + rawTable.getName() + " as the cache size " +
-        cacheSize + " is greater than the maxCacheSize " + maxCacheSize);
+      LOG.debug("{} stop prefetching when scanning {} as the cache size {}" +
+        " is greater than the maxCacheSize {}",
+        String.format("0x%x", System.identityHashCode(this)), tableName, cacheSize,
+        maxCacheSize);
     }
     resumer = controller.suspend();
   }
@@ -138,7 +138,7 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
         return null;
       }
       if (error != null) {
-        FutureUtils.rethrow(error);
+        throw FutureUtils.rethrow(error);
       }
       try {
         wait();

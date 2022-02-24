@@ -666,10 +666,14 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   }
 
   @Override
-  public ResultScanner getScanner(Scan scan) {
-    return new AsyncTableResultScanner(this, ReflectionUtils.newInstance(scan.getClass(), scan),
-      resultSize2CacheSize(
-        scan.getMaxResultSize() > 0 ? scan.getMaxResultSize() : defaultScannerMaxResultSize));
+  public AsyncTableResultScanner getScanner(Scan scan) {
+    final long maxCacheSize = resultSize2CacheSize(
+      scan.getMaxResultSize() > 0 ? scan.getMaxResultSize() : defaultScannerMaxResultSize);
+    final Scan scanCopy = ReflectionUtils.newInstance(scan.getClass(), scan);
+    final AsyncTableResultScanner scanner =
+      new AsyncTableResultScanner(tableName, scanCopy, maxCacheSize);
+    scan(scan, scanner);
+    return scanner;
   }
 
   @Override
