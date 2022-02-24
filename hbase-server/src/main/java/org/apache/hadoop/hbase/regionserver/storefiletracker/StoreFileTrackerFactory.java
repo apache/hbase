@@ -89,7 +89,7 @@ public final class StoreFileTrackerFactory {
     return conf.get(TRACKER_IMPL, Trackers.DEFAULT.name());
   }
 
-  static String getStoreFileTrackerName(Class<? extends StoreFileTracker> clazz) {
+  public static String getStoreFileTrackerName(Class<? extends StoreFileTracker> clazz) {
     Trackers name = CLASS_TO_ENUM.get(clazz);
     return name != null ? name.name() : clazz.getName();
   }
@@ -174,6 +174,10 @@ public final class StoreFileTrackerFactory {
       return tracker.updateWithTrackerConfigs(builder).build();
     }
     return descriptor;
+  }
+
+  public static boolean isMigration(Class<?> clazz) {
+    return MigrationStoreFileTracker.class.isAssignableFrom(clazz);
   }
 
   // should not use MigrationStoreFileTracker for new family

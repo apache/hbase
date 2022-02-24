@@ -3845,6 +3845,12 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  public MasterRegion getMasterRegion() {
+    return masterRegion;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
       allowedOnPath = ".*/src/test/.*")
   void setLoadBalancer(LoadBalancer loadBalancer) {
     this.balancer = loadBalancer;

@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -85,9 +86,11 @@ public class TestMasterRegionOnTwoFileSystems {
 
   private static byte[] CQ = Bytes.toBytes("q");
 
-  private static TableDescriptor TD =
-    TableDescriptorBuilder.newBuilder(TableName.valueOf("test:local"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build();
+  private static TableDescriptor TD = TableDescriptorBuilder
+    .newBuilder(TableName.valueOf("test:local"))
+    .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF))
+    .setValue(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name())
+    .build();
 
   private static int COMPACT_MIN = 4;
 
