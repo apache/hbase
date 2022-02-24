@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.regionreplication;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -60,7 +62,7 @@ import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationS
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
@@ -69,6 +71,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -76,7 +79,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestRegionReplicationSinkSuspend {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -119,120 +122,17 @@ public class TestRegionReplicationSinkSuspend {
    */
   @Test
   public void test() throws Exception {
-    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-        .setRegionReplication(NB_SERVERS).setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-        .setRegionMemStoreReplication(true).build();
-    HTU.getAdmin().createTable(tableDescriptor);
-    final HRegionForTest[] regions = new HRegionForTest[NB_SERVERS];
-    for (int i = 0; i < NB_SERVERS; i++) {
-      HRegionServer rs = HTU.getMiniHBaseCluster().getRegionServer(i);
-      List<HRegion> onlineRegions = rs.getRegions(tableName);
-      for (HRegion region : onlineRegions) {
-        int replicaId = region.getRegionInfo().getReplicaId();
-        assertTrue(regions[replicaId] == null);
-        regions[region.getRegionInfo().getReplicaId()] = (HRegionForTest) region;
-      }
-    }
-    for (Region region : regions) {
-      assertNotNull(region);
-    }
-
+    final HRegionForTest[] regions = this.createTable();
     final AtomicInteger sinkCheckFailedReplicaAndSendCounter = new AtomicInteger(0);
+    final AtomicInteger sinkSendCounter = new AtomicInteger(0);
+    AtomicReference<Throwable> catchedThrowableRef = new AtomicReference<Throwable>(null);
+
     RegionReplicationSink regionReplicationSink =
         regions[0].getRegionReplicationSink().get();
     assertTrue(regionReplicationSink != null);
-    RegionReplicationSink spiedRegionReplicationSink = Mockito.spy(regionReplicationSink);
-    AtomicReference<Throwable> catchedThrowableRef = new AtomicReference<Throwable>(null);
-    Mockito.doAnswer((invocationOnMock) -> {
-      try {
-        if (!startTest) {
-          invocationOnMock.callRealMethod();
-          return null;
-        }
-        int count = sinkCheckFailedReplicaAndSendCounter.incrementAndGet();
-        if (count == 1) {
-          RegionReplicationSink currentSink = (RegionReplicationSink) invocationOnMock.getMock();
-          assertTrue(currentSink.getFailedReplicas().size() == 0);
-          @SuppressWarnings("unchecked")
-          Set<Integer> inputFailedReplicas = (Set<Integer>) invocationOnMock.getArgument(0);
-          assertTrue(inputFailedReplicas.size() == 1);
-          /**
-           * Wait {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} starting,
-           * Only before entering {@link RegionReplicationSink#checkFailedReplicaAndSend},
-           * {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} could starting.
-           */
-          regions[0].cyclicBarrier.await();
-          /**
-           * Wait {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} ending.
-           * After {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} ending,
-           * {@link RegionReplicationSink#checkFailedReplicaAndSend} could enter its method to
-           * execute.
-           */
-          regions[0].cyclicBarrier.await();
-          assertTrue(currentSink.getFailedReplicas().isEmpty());
-
-          invocationOnMock.callRealMethod();
-          assertTrue(currentSink.getFailedReplicas().isEmpty());
-          assertTrue(currentSink.getFlushRequester().getPendingFlushRequest() == null);
-          /**
-           * After {@link RegionReplicationSink#checkFailedReplicaAndSend} ending, MemStore Flushing
-           * could commit flush
-           */
-          regions[0].cyclicBarrier.await();
-          return null;
-        }
-        invocationOnMock.callRealMethod();
-        return null;
-      } catch (Throwable throwable) {
-        catchedThrowableRef.set(throwable);
-      }
-      return null;
-    }).when(spiedRegionReplicationSink).checkFailedReplicaAndSend(
-      Mockito.anySet(),
-      Mockito.anyLong(),
-      Mockito.anyLong());
-
-    Mockito.doAnswer((invocationOnMock) -> {
-      if (!startTest) {
-        invocationOnMock.callRealMethod();
-        return null;
-      }
-      if (regions[0].prepareFlush
-          && Thread.currentThread().getName().equals(HRegionForTest.USER_THREAD_NAME)) {
-        /**
-         * Only before entering {@link RegionReplicationSink#checkFailedReplicaAndSend},
-         * {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} could starting.
-         */
-        regions[0].cyclicBarrier.await();
-        invocationOnMock.callRealMethod();
-        /**
-         * After {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} ending,
-         * {@link RegionReplicationSink#checkFailedReplicaAndSend} could enter its method to
-         * execute.
-         */
-        regions[0].cyclicBarrier.await();
-        /**
-         * Wait {@link RegionReplicationSink#checkFailedReplicaAndSend} ending. After
-         * {@link RegionReplicationSink#checkFailedReplicaAndSend} ending, MemStore Flushing could
-         * commit flush.
-         */
-        regions[0].cyclicBarrier.await();
-        return null;
-      }
-      invocationOnMock.callRealMethod();
-      return null;
-    }).when(spiedRegionReplicationSink).add(Mockito.any(), Mockito.any(), Mockito.any());
-
-    final AtomicInteger sinkSendCounter = new AtomicInteger(0);
-    Mockito.doAnswer((invocationOnMock) -> {
-      if (startTest) {
-        sinkSendCounter.incrementAndGet();
-      }
-      invocationOnMock.callRealMethod();
-      return null;
-    }).when(spiedRegionReplicationSink).send();
-
-    regions[0].setRegionReplicationSink(spiedRegionReplicationSink);
+    RegionReplicationSink spiedRegionReplicationSink =
+        this.setUpSpiedRegionReplicationSink(regionReplicationSink, regions[0],
+          sinkCheckFailedReplicaAndSendCounter, sinkSendCounter, catchedThrowableRef);
 
     String oldThreadName = Thread.currentThread().getName();
     Thread.currentThread().setName(HRegionForTest.USER_THREAD_NAME);
@@ -252,8 +152,8 @@ public class TestRegionReplicationSinkSuspend {
        * {@link RegionReplicationSink#checkFailedReplicaAndSend} for this cell would wait for
        * {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} ending.
        */
-      regions[0].put(new Put(Bytes.toBytes(1)).addColumn(FAMILY, QUAL, Bytes.toBytes(1)));
-
+      byte[] rowKey1 = Bytes.toBytes(1);
+      regions[0].put(new Put(rowKey1).addColumn(FAMILY, QUAL, Bytes.toBytes(1)));
       /**
        * For {@link FlushAction#START_FLUSH}, after {@link RegionReplicationSink#add} is
        * ending,{@link RegionReplicationSink#checkFailedReplicaAndSend} could execute,
@@ -267,7 +167,8 @@ public class TestRegionReplicationSinkSuspend {
 
       HTU.waitFor(120000, () -> !spiedRegionReplicationSink.isSending());
       /**
-       * No failed replicas.
+       * No failed replicas. Before HBASE-26768, here failed replicas is not empty and replication
+       * suspend.
        */
       assertTrue(spiedRegionReplicationSink.getFailedReplicas().isEmpty());
       /**
@@ -284,21 +185,144 @@ public class TestRegionReplicationSinkSuspend {
        */
       assertTrue(sinkSendCounter.get() == 3);
 
-      regions[0].put(new Put(Bytes.toBytes(2)).addColumn(FAMILY, QUAL, Bytes.toBytes(2)));
+      byte[] rowKey2 = Bytes.toBytes(2);
+      regions[0].put(new Put(rowKey2).addColumn(FAMILY, QUAL, Bytes.toBytes(2)));
 
       HTU.waitFor(1200000, () -> !spiedRegionReplicationSink.isSending());
       assertTrue(spiedRegionReplicationSink.getFlushRequester().getPendingFlushRequest() == null);
       assertTrue(spiedRegionReplicationSink.getFlushRequester()
           .getLastRequestNanos() == initialRequestNanos);
+      /**
+       * send key1,{@link FlushAction#START_FLUSH} , {@link FlushAction#COMMIT_FLUSH},and key2
+       */
       assertTrue(sinkSendCounter.get() == 4);
       assertTrue(sinkEntrys.size() == 0);
       assertTrue(catchedThrowableRef.get() == null);
+
+      assertEquals(1, Bytes.toInt(regions[1].get(new Get(rowKey1)).getValue(FAMILY, QUAL)));
+      assertEquals(2, Bytes.toInt(regions[1].get(new Get(rowKey2)).getValue(FAMILY, QUAL)));
     } finally {
       startTest = false;
       Thread.currentThread().setName(oldThreadName);
     }
   }
 
+  private RegionReplicationSink setUpSpiedRegionReplicationSink(
+      final RegionReplicationSink regionReplicationSink, final HRegionForTest primaryRegion,
+      final AtomicInteger sinkCheckFailedReplicaAndSendCounter,
+      final AtomicInteger sinkSendCounter, final AtomicReference<Throwable> catchedThrowableRef) {
+    RegionReplicationSink spiedRegionReplicationSink = Mockito.spy(regionReplicationSink);
+
+    Mockito.doAnswer((invocationOnMock) -> {
+      try {
+        if (!startTest) {
+          invocationOnMock.callRealMethod();
+          return null;
+        }
+        int count = sinkCheckFailedReplicaAndSendCounter.incrementAndGet();
+        if (count == 1) {
+          RegionReplicationSink currentSink = (RegionReplicationSink) invocationOnMock.getMock();
+          assertTrue(currentSink.getFailedReplicas().size() == 0);
+          @SuppressWarnings("unchecked")
+          Set<Integer> inputFailedReplicas = (Set<Integer>) invocationOnMock.getArgument(0);
+          assertTrue(inputFailedReplicas.size() == 1);
+          /**
+           * Wait {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} starting,
+           * Only before entering {@link RegionReplicationSink#checkFailedReplicaAndSend},
+           * {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} could starting.
+           */
+          primaryRegion.cyclicBarrier.await();
+          /**
+           * Wait {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} ending.
+           * After {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} ending,
+           * {@link RegionReplicationSink#checkFailedReplicaAndSend} could enter its method to
+           * execute.
+           */
+          primaryRegion.cyclicBarrier.await();
+          assertTrue(currentSink.getFailedReplicas().isEmpty());
+
+          invocationOnMock.callRealMethod();
+          assertTrue(currentSink.getFailedReplicas().isEmpty());
+          assertTrue(currentSink.getFlushRequester().getPendingFlushRequest() == null);
+          /**
+           * After {@link RegionReplicationSink#checkFailedReplicaAndSend} ending, MemStore Flushing
+           * could commit flush
+           */
+          primaryRegion.cyclicBarrier.await();
+          return null;
+        }
+        invocationOnMock.callRealMethod();
+        return null;
+      } catch (Throwable throwable) {
+        catchedThrowableRef.set(throwable);
+      }
+      return null;
+    }).when(spiedRegionReplicationSink).checkFailedReplicaAndSend(Mockito.anySet(),
+      Mockito.anyLong(), Mockito.anyLong());
+
+    Mockito.doAnswer((invocationOnMock) -> {
+      if (!startTest) {
+        invocationOnMock.callRealMethod();
+        return null;
+      }
+      if (primaryRegion.prepareFlush
+          && Thread.currentThread().getName().equals(HRegionForTest.USER_THREAD_NAME)) {
+        /**
+         * Only before entering {@link RegionReplicationSink#checkFailedReplicaAndSend},
+         * {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} could starting.
+         */
+        primaryRegion.cyclicBarrier.await();
+        invocationOnMock.callRealMethod();
+        /**
+         * After {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} ending,
+         * {@link RegionReplicationSink#checkFailedReplicaAndSend} could enter its method to
+         * execute.
+         */
+        primaryRegion.cyclicBarrier.await();
+        /**
+         * Wait {@link RegionReplicationSink#checkFailedReplicaAndSend} ending. After
+         * {@link RegionReplicationSink#checkFailedReplicaAndSend} ending, MemStore Flushing could
+         * commit flush.
+         */
+        primaryRegion.cyclicBarrier.await();
+        return null;
+      }
+      invocationOnMock.callRealMethod();
+      return null;
+    }).when(spiedRegionReplicationSink).add(Mockito.any(), Mockito.any(), Mockito.any());
+
+    Mockito.doAnswer((invocationOnMock) -> {
+      if (startTest) {
+        sinkSendCounter.incrementAndGet();
+      }
+      invocationOnMock.callRealMethod();
+      return null;
+    }).when(spiedRegionReplicationSink).send();
+
+    primaryRegion.setRegionReplicationSink(spiedRegionReplicationSink);
+    return spiedRegionReplicationSink;
+  }
+
+  private HRegionForTest[] createTable() throws Exception {
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+        .setRegionReplication(NB_SERVERS).setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+        .build();
+    HTU.getAdmin().createTable(tableDescriptor);
+    final HRegionForTest[] regions = new HRegionForTest[NB_SERVERS];
+    for (int i = 0; i < NB_SERVERS; i++) {
+      HRegionServer rs = HTU.getMiniHBaseCluster().getRegionServer(i);
+      List<HRegion> onlineRegions = rs.getRegions(tableName);
+      for (HRegion region : onlineRegions) {
+        int replicaId = region.getRegionInfo().getReplicaId();
+        assertTrue(regions[replicaId] == null);
+        regions[region.getRegionInfo().getReplicaId()] = (HRegionForTest) region;
+      }
+    }
+    for (Region region : regions) {
+      assertNotNull(region);
+    }
+    return regions;
+  }
 
   public static final class HRegionForTest extends HRegion {
     static final String USER_THREAD_NAME = "TestReplicationHang";
