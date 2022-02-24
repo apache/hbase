@@ -520,6 +520,13 @@ public class FSTableDescriptors implements TableDescriptors {
     return td != null ? Optional.of(Pair.newPair(descFile, td)) : Optional.empty();
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  public static void deleteTableDescriptors(FileSystem fs, Path tableDir) throws IOException {
+    Path tableInfoDir = new Path(tableDir, TABLEINFO_DIR);
+    deleteTableDescriptorFiles(fs, tableInfoDir, Integer.MAX_VALUE);
+  }
+
   /**
    * Deletes files matching the table info file pattern within the given directory whose sequenceId
    * is at most the given max sequenceId.

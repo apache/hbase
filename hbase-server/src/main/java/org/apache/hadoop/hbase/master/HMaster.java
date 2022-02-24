@@ -799,7 +799,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         // done with in a one row put, which means if we have data in catalog family then we can
         // make sure that the migration is done.
         LOG.info("The {} family in master local region already has data in it, skip migrating...",
-          HConstants.CATALOG_FAMILY);
+          HConstants.CATALOG_FAMILY_STR);
         return;
       }
     }
@@ -4077,7 +4077,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
     allowedOnPath = ".*/src/test/.*")
-  MasterRegion getMasterRegion() {
+  public MasterRegion getMasterRegion() {
     return masterRegion;
   }
 
