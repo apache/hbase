@@ -30,6 +30,7 @@ import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -53,12 +54,18 @@ import org.mockito.stubbing.Answer;
 
 @Category(SmallTests.class)
 public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
-  private final RegionServerServices regionServerServices = mock(RegionServerServices.class);
   private final CompactionRequester compactionRequester = mock(CompactSplit.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCompactionAfterBulkLoad.class);
+
+  private final RegionServerServices regionServerServices = mock(RegionServerServices.class);
+  public static AtomicInteger called = new AtomicInteger(0);
+
+  public TestCompactionAfterBulkLoad(boolean useFileBasedSFT) {
+    super(useFileBasedSFT);
+  }
 
   @Override
   protected HRegion testRegionWithFamiliesAndSpecifiedTableName(TableName tableName,
