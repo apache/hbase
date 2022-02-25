@@ -61,6 +61,10 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
   private final RegionServerServices regionServerServices = mock(RegionServerServices.class);
   public static AtomicInteger called = new AtomicInteger(0);
 
+  public TestCompactionAfterBulkLoad(boolean useFileBasedSFT) {
+    super(useFileBasedSFT);
+  }
+
   @Override
   protected HRegion testRegionWithFamiliesAndSpecifiedTableName(TableName tableName,
       byte[]... families) throws IOException {
