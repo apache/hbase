@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutput;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -67,6 +68,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -118,7 +120,39 @@ public class TestRegionReplicationSinkSuspend {
   }
 
   /**
-   * This test is for HBASE-26768
+   * <pre>
+   * This test is for HBASE-26768. Assuming we have only one secondary replica for region.
+   * The threads sequence before HBASE-26768 is:
+   * 1.We write first cell,replicating to secondary replica, but the regionServer which
+   *   serving secondary replica responses error.
+   * 2.The regionServer which serving primary replica receives error response and Netty
+   *   nioEventLoop thread invokes {@link RegionReplicationSink#onComplete},and adds the
+   *   error secondary replica to the failed local variable,but stops before entering the
+   *   synchronized block.
+   * 3.Flusher thread invokes {@link RegionReplicationSink#add} to add
+   *   {@link FlushAction#START_FLUSH} flush marker, in {@link RegionReplicationSink#add}
+   *   clears the {@link RegionReplicationSink#failedReplicas}, set
+   *   {@link RegionReplicationSink#lastFlushedSequenceId} and
+   *   {@link RegionReplicationFlushRequester#lastFlushedSequenceId} to the flushing hfile
+   *   logSequenceId.
+   * 4.After flusher thread completes {@link RegionReplicationSink#add}, Netty nioEventLoop
+   *   thread continues to enter the synchronized block in
+   *   {@link RegionReplicationSink#onComplete},and still adds the error replica to the
+   *   {@link RegionReplicationSink#failedReplicas} even though the maxSequenceId of the failed
+   *   replicating {@link WALEdit}s is less than
+   *   {@link RegionReplicationSink#lastFlushedSequenceId}.
+   * 5.In the synchronized block, {@link RegionReplicationFlushRequester#requestFlush} is also
+   *   invoked but the flushing would be skipped because in
+   *   {@link RegionReplicationFlushRequester#flush},
+   *   {@link RegionReplicationFlushRequester#pendingFlushRequestSequenceId} is less than
+   *   {@link RegionReplicationFlushRequester#lastFlushedSequenceId}, so this only secondary
+   *   replica is marked failed and requested flushing is skipped, the replication may suspend
+   *   until next memstore flush.
+   *   After HBASE-26768, for above step 4, the error replica is not added to the
+   *   {@link RegionReplicationSink#failedReplicas} if the maxSequenceId of the failed replicating
+   *   {@link WALEdit}s is less than {@link RegionReplicationSink#lastFlushedSequenceId}, and
+   *   {@link RegionReplicationFlushRequester#requestFlush} is not invoked.
+   * </pre>
    */
   @Test
   public void test() throws Exception {
@@ -423,6 +457,9 @@ public class TestRegionReplicationSinkSuspend {
         return super.replicateToReplica(rpcController, replicateWALEntryRequest);
       }
 
+      /**
+       * Simulate the first cell replicating error.
+       */
       int count = callCounter.incrementAndGet();
       if (count > 1) {
         return super.replicateToReplica(rpcController, replicateWALEntryRequest);
