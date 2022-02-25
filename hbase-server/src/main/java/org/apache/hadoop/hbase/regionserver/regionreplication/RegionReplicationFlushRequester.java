@@ -57,7 +57,7 @@ class RegionReplicationFlushRequester {
 
   private final long minIntervalSecs;
 
-  private long lastRequestNanos = 0;
+  private long lastRequestNanos;
 
   private long pendingFlushRequestSequenceId;
 
