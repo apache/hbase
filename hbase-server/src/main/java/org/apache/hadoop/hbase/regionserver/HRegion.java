@@ -6844,7 +6844,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * @return final path to be used for actual loading
      * @throws IOException
      */
-    String prepareBulkLoad(byte[] family, String srcPath, boolean copyFile)
+    String prepareBulkLoad(byte[] family, String srcPath, boolean copyFile, String customStaging)
         throws IOException;
 
     /**
@@ -6966,12 +6966,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           familyWithFinalPath.put(familyName, new ArrayList<>());
         }
         List<Pair<Path, Path>> lst = familyWithFinalPath.get(familyName);
+        String finalPath = path;
         try {
-          String finalPath = path;
+          boolean reqTmp = store.storeEngine.requireWritingToTmpDirFirst();
           if (bulkLoadListener != null) {
-            finalPath = bulkLoadListener.prepareBulkLoad(familyName, path, copyFile);
+            finalPath = bulkLoadListener.prepareBulkLoad(familyName, path, copyFile,
+              reqTmp ? null : regionDir.toString());
           }
-          Pair<Path, Path> pair = store.preBulkLoadHFile(finalPath, seqId);
+          Pair<Path, Path> pair = null;
+          if (reqTmp) {
+            pair = store.preBulkLoadHFile(finalPath, seqId);
+          }
+          else {
+            Path livePath = new Path(finalPath);
+            pair = new Pair<>(livePath, livePath);
+          }
           lst.add(pair);
         } catch (IOException ioe) {
           // A failure here can cause an atomicity violation that we currently
@@ -6981,7 +6990,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               " load " + Bytes.toString(p.getFirst()) + " : " + p.getSecond(), ioe);
           if (bulkLoadListener != null) {
             try {
-              bulkLoadListener.failedBulkLoad(familyName, path);
+              bulkLoadListener.failedBulkLoad(familyName, finalPath);
             } catch (Exception ex) {
               LOG.error("Error while calling failedBulkLoad for family " +
                   Bytes.toString(familyName) + " with path " + path, ex);
