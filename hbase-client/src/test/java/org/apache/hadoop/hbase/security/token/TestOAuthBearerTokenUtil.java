@@ -39,7 +39,7 @@ public class TestOAuthBearerTokenUtil {
   @Test
   public void testAddTokenFromEnvVar() {
     // Arrange
-    User user = User.createUserForTesting(new HBaseConfiguration(), "testuser", new String[] {});
+    User user = User.createUserForTesting(HBaseConfiguration.create(), "testuser", new String[] {});
     String testToken = "some_base64_encoded_stuff,2022-01-25T16:59:48.614000+00:00";
 
     // Act
@@ -132,7 +132,7 @@ public class TestOAuthBearerTokenUtil {
     long numberOfTokens = user.getTokens().stream()
       .filter((t) -> new Text(TOKEN_KIND).equals(t.getKind()))
       .count();
-    assertEquals("Invalid number of tokens on User",1, numberOfTokens);
+    assertEquals("Invalid number of tokens on User", 1, numberOfTokens);
     user.runAs(new PrivilegedAction<Object>() {
       @Override public Object run() {
         Subject subject = Subject.getSubject(AccessController.getContext());

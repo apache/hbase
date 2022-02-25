@@ -74,7 +74,7 @@ public class ConnectionFactory {
     "hbase.client.async.connection.impl";
 
   /** Environment variable for OAuth Bearer token */
-  public static final String ENV_OAUTHBEARER_TOKEN = "HADOOP_JWT";
+  public static final String ENV_OAUTHBEARER_TOKEN = "HBASE_JWT";
 
   /** No public c.tors */
   protected ConnectionFactory() {

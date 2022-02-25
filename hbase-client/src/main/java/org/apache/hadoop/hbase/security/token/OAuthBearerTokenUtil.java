@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.security.token;
 
+import static org.apache.hadoop.hbase.client.ConnectionFactory.ENV_OAUTHBEARER_TOKEN;
 import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.TOKEN_KIND;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -84,7 +85,7 @@ public final class OAuthBearerTokenUtil {
   }
 
   /**
-   * Check whether an OAuth Beaerer token is provided in environment variable HADOOP_JWT.
+   * Check whether an OAuth Beaerer token is provided in environment variable HBASE_JWT.
    * Parse and add it to user private credentials, but only if another token is not already present.
    */
   public static void addTokenFromEnvironmentVar(User user, String token) {
@@ -93,6 +94,8 @@ public final class OAuthBearerTokenUtil {
       .findFirst();
 
     if (oauthBearerToken.isPresent()) {
+      LOG.warn("Ignoring OAuth Bearer token in " + ENV_OAUTHBEARER_TOKEN + " environment "
+        + "variable, because another token is already present");
       return;
     }
 
