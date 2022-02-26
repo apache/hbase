@@ -184,7 +184,8 @@ public class TestImmutableScan {
       scanCopy.setStartStopRowForPrefixScan(new byte[] { 1, 2 });
       throw new RuntimeException("Should not reach here");
     } catch (UnsupportedOperationException e) {
-      assertEquals("ImmutableScan does not allow access to setStartStopRowForPrefixScan", e.getMessage());
+      assertEquals("ImmutableScan does not allow access to setStartStopRowForPrefixScan",
+        e.getMessage());
     }
     try {
       scanCopy.readAllVersions();
