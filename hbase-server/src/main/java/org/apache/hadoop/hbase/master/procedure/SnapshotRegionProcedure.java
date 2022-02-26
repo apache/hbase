@@ -164,7 +164,7 @@ public class SnapshotRegionProcedure extends Procedure<MasterProcedureEnv>
           region.getRegionNameAsString(), regionNode.getProcedure()));
         throw new ProcedureSuspendedException();
       }
-      if (!regionNode.getState().matches(RegionState.State.OPEN)) {
+      if (!regionNode.isInState(RegionState.State.OPEN)) {
         setTimeoutForSuspend(env, String.format("region state of %s is %s",
           region.getRegionNameAsString(), regionNode.getState()));
         throw new ProcedureSuspendedException();
@@ -198,7 +198,7 @@ public class SnapshotRegionProcedure extends Procedure<MasterProcedureEnv>
 
   @Override
   protected void rollback(MasterProcedureEnv env) {
-    // nothing to rollback
+    throw new UnsupportedOperationException();
   }
 
   private void setTimeoutForSuspend(MasterProcedureEnv env, String reason) {
