@@ -439,6 +439,10 @@ public class SnapshotProcedure
 
   @Override
   protected void afterReplay(MasterProcedureEnv env) {
+    if (getCurrentState() == getInitialState()) {
+      // if we are in the initial state, it is unnecessary to call prepareSnapshotEnv().
+      return;
+    }
     try {
       prepareSnapshotEnv(env);
       boolean snapshotProcedureEnabled = conf.getBoolean(SnapshotManager.SNAPSHOT_PROCEDURE_ENABLED,
