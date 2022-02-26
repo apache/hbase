@@ -433,7 +433,7 @@ public class Scan extends Query {
    * Such a combination will yield unexpected and even undefined results.</p>
    * @param rowPrefix the prefix all rows must start with. (Set <i>null</i> to remove the filter.)
    * @return this
-   * @deprecated since 3.0.0. The name of this method is considered to be confusing as it does not
+   * @deprecated since 2.5.0. The name of this method is considered to be confusing as it does not
    *       use a {@link Filter} but uses setting the startRow and stopRow instead.
    *       Use {@link #setStartStopRowForPrefixScan(byte[])} instead.
    */
