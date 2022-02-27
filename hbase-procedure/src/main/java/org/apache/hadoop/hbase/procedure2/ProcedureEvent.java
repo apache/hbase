@@ -130,8 +130,8 @@ public class ProcedureEvent<T> {
   }
 
   @Override
-  public String toString() {
-    return getClass().getSimpleName() + " for " + object + ", ready=" + isReady() +
-        ", " + suspendedProcedures;
+  public synchronized String toString() {
+    return getClass().getSimpleName() + " for " + object + ", ready=" + isReady() + ", " +
+      suspendedProcedures;
   }
 }
