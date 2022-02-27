@@ -751,8 +751,8 @@ elif [ "$COMMAND" = "hbtop" ] ; then
     done
   fi
 
-  if [ -f "${HBASE_HOME}/conf/log4j-hbtop.properties" ] ; then
-    HBASE_HBTOP_OPTS="${HBASE_HBTOP_OPTS} -Dlog4j.configuration=file:${HBASE_HOME}/conf/log4j-hbtop.properties"
+  if [ -f "${HBASE_HOME}/conf/log4j2-hbtop.properties" ] ; then
+    HBASE_HBTOP_OPTS="${HBASE_HBTOP_OPTS} -Dlog4j2.configurationFile=file:${HBASE_HOME}/conf/log4j2-hbtop.properties"
   fi
   HBASE_OPTS="${HBASE_OPTS} ${HBASE_HBTOP_OPTS}"
 else
@@ -826,11 +826,7 @@ HBASE_OPTS="$HBASE_OPTS -Dhbase.log.dir=$HBASE_LOG_DIR"
 HBASE_OPTS="$HBASE_OPTS -Dhbase.log.file=$HBASE_LOGFILE"
 HBASE_OPTS="$HBASE_OPTS -Dhbase.home.dir=$HBASE_HOME"
 HBASE_OPTS="$HBASE_OPTS -Dhbase.id.str=$HBASE_IDENT_STRING"
-# log4j2 does not support setting log level and appender at once, so we need to split HBASE_ROOT_LOGGER
-HBASE_ROOT_LOGGER=${HBASE_ROOT_LOGGER:-INFO,console}
-array=(${HBASE_ROOT_LOGGER//,/ })
-HBASE_OPTS="$HBASE_OPTS -Dhbase.root.logger.level=${array[0]}"
-HBASE_OPTS="$HBASE_OPTS -Dhbase.root.logger.appender=${array[1]}"
+HBASE_OPTS="$HBASE_OPTS -Dhbase.root.logger=${HBASE_ROOT_LOGGER:-INFO,console}"
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
   HBASE_OPTS="$HBASE_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
   export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$JAVA_LIBRARY_PATH"
@@ -838,13 +834,10 @@ fi
 
 # Enable security logging on the master and regionserver only
 if [ "$COMMAND" = "master" ] || [ "$COMMAND" = "regionserver" ]; then
-  HBASE_SECURITY_LOGGER=${HBASE_SECURITY_LOGGER:-INFO,RFAS}
+  HBASE_OPTS="$HBASE_OPTS -Dhbase.security.logger=${HBASE_SECURITY_LOGGER:-INFO,RFAS}"
 else
-  HBASE_SECURITY_LOGGER=${HBASE_SECURITY_LOGGER:-INFO,NullAppender}
+  HBASE_OPTS="$HBASE_OPTS -Dhbase.security.logger=${HBASE_SECURITY_LOGGER:-INFO,NullAppender}"
 fi
-array=(${HBASE_SECURITY_LOGGER//,/ })
-HBASE_OPTS="$HBASE_OPTS -Dhbase.security.logger.level=${array[0]}"
-HBASE_OPTS="$HBASE_OPTS -Dhbase.security.logger.appender=${array[1]}"
 
 HEAP_SETTINGS="$JAVA_HEAP_MAX $JAVA_OFFHEAP_MAX"
 # by now if we're running a command it means we need logging
