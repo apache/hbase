@@ -98,7 +98,7 @@ public class RegionReplicationSink {
 
   public static final int BATCH_COUNT_CAPACITY_DEFAULT = 100;
 
-  static final class SinkEntry {
+  private static final class SinkEntry {
 
     final WALKeyImpl key;
 
@@ -205,7 +205,7 @@ public class RegionReplicationSink {
   }
 
   void onComplete(List<SinkEntry> sent,
-      Map<Integer, MutableObject<Throwable>> replica2Error) {
+    Map<Integer, MutableObject<Throwable>> replica2Error) {
     long maxSequenceId = Long.MIN_VALUE;
     long toReleaseSize = 0;
     for (SinkEntry entry : sent) {
