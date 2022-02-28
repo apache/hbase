@@ -23,6 +23,9 @@
 # hbase 2.4.10 Release Notes
 No changes
 
+# hbase 2.4.10 Release Notes
+No changes
+
 # HBASE  2.4.9 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
