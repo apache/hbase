@@ -164,6 +164,7 @@ public class TestRegionReplicationSinkCallbackAndFluhConcurrently {
       }
       int count = onCompleteCounter.incrementAndGet();
       if (count == 1) {
+        //wait for adding for flush all edit completed.
         primaryRegion.cyclicBarrier.await();
         invocationOnMock.callRealMethod();
         completedRef.set(true);
@@ -181,6 +182,7 @@ public class TestRegionReplicationSinkCallbackAndFluhConcurrently {
       if (primaryRegion.prepareFlush
           && Thread.currentThread().getName().equals(HRegionForTest.USER_THREAD_NAME)) {
         invocationOnMock.callRealMethod();
+        //onComplete could execute
         primaryRegion.cyclicBarrier.await();
         return null;
       }
