@@ -216,7 +216,7 @@ public class RegionReplicationSink {
     manager.decrease(toReleaseSize);
     synchronized (entries) {
       pendingSize -= toReleaseSize;
-      boolean updateFailedReplicas = false;
+      boolean addFailedReplicas = false;
       for (Map.Entry<Integer, MutableObject<Throwable>> entry : replica2Error.entrySet()) {
         Integer replicaId = entry.getKey();
         Throwable error = entry.getValue().getValue();
@@ -228,7 +228,7 @@ public class RegionReplicationSink {
                   + " we will stop replicating for a while and trigger a flush",
               replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
             failedReplicas.add(replicaId);
-            updateFailedReplicas = true;
+            addFailedReplicas = true;
           } else {
             LOG.warn(
               "Failed to replicate to secondary replica {} for {}, since the max sequence"
@@ -239,7 +239,7 @@ public class RegionReplicationSink {
         }
       }
 
-      if (updateFailedReplicas) {
+      if (addFailedReplicas) {
         flushRequester.requestFlush(maxSequenceId);
       }
       sending = false;
