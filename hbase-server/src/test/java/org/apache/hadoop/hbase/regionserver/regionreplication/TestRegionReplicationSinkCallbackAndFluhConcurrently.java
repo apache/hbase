@@ -75,10 +75,10 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 @Category({ RegionServerTests.class, LargeTests.class })
-public class TestRegionReplicationSinkSuspend {
+public class TestRegionReplicationSinkCallbackAndFluhConcurrently {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionReplicationSinkSuspend.class);
+      HBaseClassTestRule.forClass(TestRegionReplicationSinkCallbackAndFluhConcurrently.class);
 
   private static final byte[] FAMILY = Bytes.toBytes("family_test");
 
