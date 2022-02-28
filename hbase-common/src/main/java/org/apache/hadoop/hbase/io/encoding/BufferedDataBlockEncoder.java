@@ -715,11 +715,6 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       throw new UnsupportedOperationException();
     }
 
-    @Override
-    public ExtendedCell deepClone() {
-      // This is not used in actual flow. Throwing UnsupportedOperationException
-      throw new UnsupportedOperationException();
-    }
   }
 
   protected abstract static class BufferedEncodedSeeker<STATE extends SeekerState>
