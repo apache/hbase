@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver.regionreplication;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -25,11 +24,9 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,13 +40,11 @@ import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutput;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -59,7 +54,6 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationSink.SinkEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
@@ -68,7 +62,6 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -96,7 +89,6 @@ public class TestRegionReplicationSinkSuspend {
 
   private static TableName tableName = TableName.valueOf("testRegionReplicationSinkSuspend");
   private static volatile boolean startTest = false;
-  private static volatile boolean initialFlush = false;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -120,121 +112,38 @@ public class TestRegionReplicationSinkSuspend {
   }
 
   /**
-   * <pre>
-   * This test is for HBASE-26768. Assuming we have only one secondary replica for region.
-   * The threads sequence before HBASE-26768 is:
-   * 1.We write first cell,replicating to secondary replica, but the regionServer which
-   *   serving secondary replica responses error.
-   * 2.The regionServer which serving primary replica receives error response and Netty
-   *   nioEventLoop thread invokes {@link RegionReplicationSink#onComplete},and adds the
-   *   error secondary replica to the failed local variable,but stops before entering the
-   *   synchronized block.
-   * 3.Flusher thread invokes {@link RegionReplicationSink#add} to add
-   *   {@link FlushAction#START_FLUSH} flush marker, in {@link RegionReplicationSink#add}
-   *   clears the {@link RegionReplicationSink#failedReplicas}, set
-   *   {@link RegionReplicationSink#lastFlushedSequenceId} and
-   *   {@link RegionReplicationFlushRequester#lastFlushedSequenceId} to the flushing hfile
-   *   logSequenceId.
-   * 4.After flusher thread completes {@link RegionReplicationSink#add}, Netty nioEventLoop
-   *   thread continues to enter the synchronized block in
-   *   {@link RegionReplicationSink#onComplete},and still adds the error replica to the
-   *   {@link RegionReplicationSink#failedReplicas} even though the maxSequenceId of the failed
-   *   replicating {@link WALEdit}s is less than
-   *   {@link RegionReplicationSink#lastFlushedSequenceId}.
-   * 5.In the synchronized block, {@link RegionReplicationFlushRequester#requestFlush} is also
-   *   invoked but the flushing would be skipped because in
-   *   {@link RegionReplicationFlushRequester#flush},
-   *   {@link RegionReplicationFlushRequester#pendingFlushRequestSequenceId} is less than
-   *   {@link RegionReplicationFlushRequester#lastFlushedSequenceId}, so this only secondary
-   *   replica is marked failed and requested flushing is skipped, the replication may suspend
-   *   until next memstore flush.
-   *   After HBASE-26768, for above step 4, the error replica is not added to the
-   *   {@link RegionReplicationSink#failedReplicas} if the maxSequenceId of the failed replicating
-   *   {@link WALEdit}s is less than {@link RegionReplicationSink#lastFlushedSequenceId}, and
-   *   {@link RegionReplicationFlushRequester#requestFlush} is not invoked.
-   * </pre>
+   * This test is for HBASE-26768,test the case that we have already clear the
+   * {@link RegionReplicationSink#failedReplicas} due to a flush all edit,which may in flusher
+   * thread,and then in the callback of replay, which may in Netty nioEventLoop,we add a replica to
+   * the {@link RegionReplicationSink#failedReplicas} because of a failure of replicating.
    */
   @Test
   public void test() throws Exception {
     final HRegionForTest[] regions = this.createTable();
-    final AtomicInteger sinkCheckFailedReplicaAndSendCounter = new AtomicInteger(0);
-    final AtomicInteger sinkSendCounter = new AtomicInteger(0);
-    AtomicReference<Throwable> catchedThrowableRef = new AtomicReference<Throwable>(null);
-
+    final AtomicInteger onCompleteCounter = new AtomicInteger(0);
+    final AtomicBoolean completedRef = new AtomicBoolean(false);
     RegionReplicationSink regionReplicationSink =
         regions[0].getRegionReplicationSink().get();
     assertTrue(regionReplicationSink != null);
-    RegionReplicationSink spiedRegionReplicationSink =
-        this.setUpSpiedRegionReplicationSink(regionReplicationSink, regions[0],
-          sinkCheckFailedReplicaAndSendCounter, sinkSendCounter, catchedThrowableRef);
+
+    RegionReplicationSink spiedRegionReplicationSink = this.setUpSpiedRegionReplicationSink(
+      regionReplicationSink, regions[0], onCompleteCounter,
+      completedRef);
 
     String oldThreadName = Thread.currentThread().getName();
     Thread.currentThread().setName(HRegionForTest.USER_THREAD_NAME);
     try {
-      initialFlush = true;
-      spiedRegionReplicationSink.getFlushRequester().requestFlush(-1);
-      regions[0].flushMemStoreCyclicBarrierBeforeStartTest.await();
-      HTU.waitFor(120000, () -> !spiedRegionReplicationSink.isSending());
-      assertTrue(spiedRegionReplicationSink.getFlushRequester().getPendingFlushRequest() == null);
-      long initialRequestNanos =
-          spiedRegionReplicationSink.getFlushRequester().getLastRequestNanos();
-      assertTrue(initialRequestNanos > 0);
-      initialFlush = false;
       startTest = true;
       /**
        * Write First cell,replicating to secondary replica is error.
-       * {@link RegionReplicationSink#checkFailedReplicaAndSend} for this cell would wait for
-       * {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} ending.
        */
       byte[] rowKey1 = Bytes.toBytes(1);
+
       regions[0].put(new Put(rowKey1).addColumn(FAMILY, QUAL, Bytes.toBytes(1)));
-      /**
-       * For {@link FlushAction#START_FLUSH}, after {@link RegionReplicationSink#add} is
-       * ending,{@link RegionReplicationSink#checkFailedReplicaAndSend} could execute,
-       * {@link FlushAction#START_FLUSH} is in {@link RegionReplicationSink#entries},and is sent by
-       * {@link RegionReplicationSink#checkFailedReplicaAndSend},After
-       * {@link RegionReplicationSink#checkFailedReplicaAndSend} ending, MemStore Flushing could
-       * commit flush.<br/>
-       * For {@link FlushAction#COMMIT_FLUSH},it is directly sent.
-       */
       regions[0].flushcache(true, true, FlushLifeCycleTracker.DUMMY);
 
-      HTU.waitFor(120000, () -> !spiedRegionReplicationSink.isSending());
-      /**
-       * No failed replicas. Before HBASE-26768, here failed replicas is not empty and replication
-       * suspend.
-       */
+      HTU.waitFor(120000, () -> completedRef.get());
       assertTrue(spiedRegionReplicationSink.getFailedReplicas().isEmpty());
-      /**
-       * No flush requester.
-       */
-      assertTrue(spiedRegionReplicationSink.getFlushRequester().getPendingFlushRequest() == null);
-      assertTrue(spiedRegionReplicationSink.getFlushRequester()
-          .getLastRequestNanos() == initialRequestNanos);
-      Queue<SinkEntry> sinkEntrys = spiedRegionReplicationSink.getEntries();
-      assertTrue(sinkEntrys.size() == 0);
-      assertTrue(!spiedRegionReplicationSink.isSending());
-      /**
-       * send key1,{@link FlushAction#START_FLUSH} and {@link FlushAction#COMMIT_FLUSH}
-       */
-      assertTrue(sinkSendCounter.get() == 3);
-
-      byte[] rowKey2 = Bytes.toBytes(2);
-      regions[0].put(new Put(rowKey2).addColumn(FAMILY, QUAL, Bytes.toBytes(2)));
-
-      HTU.waitFor(1200000, () -> !spiedRegionReplicationSink.isSending());
-      assertTrue(spiedRegionReplicationSink.getFlushRequester().getPendingFlushRequest() == null);
-      assertTrue(spiedRegionReplicationSink.getFlushRequester()
-          .getLastRequestNanos() == initialRequestNanos);
-      /**
-       * send key1,{@link FlushAction#START_FLUSH} , {@link FlushAction#COMMIT_FLUSH},and key2
-       */
-      assertTrue(sinkSendCounter.get() == 4);
-      assertTrue(sinkEntrys.size() == 0);
-      assertTrue(catchedThrowableRef.get() == null);
-
-      assertEquals(1, Bytes.toInt(regions[1].get(new Get(rowKey1)).getValue(FAMILY, QUAL)));
-      assertEquals(2, Bytes.toInt(regions[1].get(new Get(rowKey2)).getValue(FAMILY, QUAL)));
     } finally {
       startTest = false;
       Thread.currentThread().setName(oldThreadName);
@@ -243,56 +152,26 @@ public class TestRegionReplicationSinkSuspend {
 
   private RegionReplicationSink setUpSpiedRegionReplicationSink(
       final RegionReplicationSink regionReplicationSink, final HRegionForTest primaryRegion,
-      final AtomicInteger sinkCheckFailedReplicaAndSendCounter,
-      final AtomicInteger sinkSendCounter, final AtomicReference<Throwable> catchedThrowableRef) {
+      final AtomicInteger onCompleteCounter,
+      final AtomicBoolean completedRef) {
+
     RegionReplicationSink spiedRegionReplicationSink = Mockito.spy(regionReplicationSink);
 
     Mockito.doAnswer((invocationOnMock) -> {
-      try {
-        if (!startTest) {
-          invocationOnMock.callRealMethod();
-          return null;
-        }
-        int count = sinkCheckFailedReplicaAndSendCounter.incrementAndGet();
-        if (count == 1) {
-          RegionReplicationSink currentSink = (RegionReplicationSink) invocationOnMock.getMock();
-          assertTrue(currentSink.getFailedReplicas().size() == 0);
-          @SuppressWarnings("unchecked")
-          Set<Integer> inputFailedReplicas = (Set<Integer>) invocationOnMock.getArgument(0);
-          assertTrue(inputFailedReplicas.size() == 1);
-          /**
-           * Wait {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} starting,
-           * Only before entering {@link RegionReplicationSink#checkFailedReplicaAndSend},
-           * {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} could starting.
-           */
-          primaryRegion.cyclicBarrier.await();
-          /**
-           * Wait {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} ending.
-           * After {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} ending,
-           * {@link RegionReplicationSink#checkFailedReplicaAndSend} could enter its method to
-           * execute.
-           */
-          primaryRegion.cyclicBarrier.await();
-          assertTrue(currentSink.getFailedReplicas().isEmpty());
-
-          invocationOnMock.callRealMethod();
-          assertTrue(currentSink.getFailedReplicas().isEmpty());
-          assertTrue(currentSink.getFlushRequester().getPendingFlushRequest() == null);
-          /**
-           * After {@link RegionReplicationSink#checkFailedReplicaAndSend} ending, MemStore Flushing
-           * could commit flush
-           */
-          primaryRegion.cyclicBarrier.await();
-          return null;
-        }
+      if (!startTest) {
         invocationOnMock.callRealMethod();
         return null;
-      } catch (Throwable throwable) {
-        catchedThrowableRef.set(throwable);
       }
+      int count = onCompleteCounter.incrementAndGet();
+      if (count == 1) {
+        primaryRegion.cyclicBarrier.await();
+        invocationOnMock.callRealMethod();
+        completedRef.set(true);
+        return null;
+      }
+      invocationOnMock.callRealMethod();
       return null;
-    }).when(spiedRegionReplicationSink).checkFailedReplicaAndSend(Mockito.anySet(),
-      Mockito.anyLong(), Mockito.anyLong());
+    }).when(spiedRegionReplicationSink).onComplete(Mockito.anyList(), Mockito.anyMap());
 
     Mockito.doAnswer((invocationOnMock) -> {
       if (!startTest) {
@@ -301,37 +180,13 @@ public class TestRegionReplicationSinkSuspend {
       }
       if (primaryRegion.prepareFlush
           && Thread.currentThread().getName().equals(HRegionForTest.USER_THREAD_NAME)) {
-        /**
-         * Only before entering {@link RegionReplicationSink#checkFailedReplicaAndSend},
-         * {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} could starting.
-         */
-        primaryRegion.cyclicBarrier.await();
         invocationOnMock.callRealMethod();
-        /**
-         * After {@link RegionReplicationSink#add} for {@link FlushAction#START_FLUSH} ending,
-         * {@link RegionReplicationSink#checkFailedReplicaAndSend} could enter its method to
-         * execute.
-         */
-        primaryRegion.cyclicBarrier.await();
-        /**
-         * Wait {@link RegionReplicationSink#checkFailedReplicaAndSend} ending. After
-         * {@link RegionReplicationSink#checkFailedReplicaAndSend} ending, MemStore Flushing could
-         * commit flush.
-         */
         primaryRegion.cyclicBarrier.await();
         return null;
       }
       invocationOnMock.callRealMethod();
       return null;
     }).when(spiedRegionReplicationSink).add(Mockito.any(), Mockito.any(), Mockito.any());
-
-    Mockito.doAnswer((invocationOnMock) -> {
-      if (startTest) {
-        sinkSendCounter.incrementAndGet();
-      }
-      invocationOnMock.callRealMethod();
-      return null;
-    }).when(spiedRegionReplicationSink).send();
 
     primaryRegion.setRegionReplicationSink(spiedRegionReplicationSink);
     return spiedRegionReplicationSink;
@@ -362,7 +217,6 @@ public class TestRegionReplicationSinkSuspend {
     static final String USER_THREAD_NAME = "TestReplicationHang";
     final CyclicBarrier cyclicBarrier = new CyclicBarrier(2);
     volatile boolean prepareFlush = false;
-    final CyclicBarrier flushMemStoreCyclicBarrierBeforeStartTest = new CyclicBarrier(2);
 
     public HRegionForTest(HRegionFileSystem fs, WAL wal, Configuration confParam,
         TableDescriptor htd, RegionServerServices rsServices) {
@@ -380,24 +234,6 @@ public class TestRegionReplicationSinkSuspend {
     }
 
     @Override
-    protected FlushResultImpl internalFlushcache(WAL wal, long myseqid,
-        Collection<HStore> storesToFlush, MonitoredTask status, boolean writeFlushWalMarker,
-        FlushLifeCycleTracker tracker) throws IOException {
-
-      FlushResultImpl result = super.internalFlushcache(wal, myseqid, storesToFlush, status,
-        writeFlushWalMarker, tracker);
-      if (!startTest && this.getRegionInfo().getReplicaId() == 0
-          && this.getRegionInfo().getTable().equals(tableName) && initialFlush) {
-        try {
-          this.flushMemStoreCyclicBarrierBeforeStartTest.await();
-        } catch (Throwable e) {
-          throw new RuntimeException(e);
-        }
-      }
-      return result;
-    }
-
-    @Override
     protected PrepareFlushResult internalPrepareFlushCache(WAL wal, long myseqid,
         Collection<HStore> storesToFlush, MonitoredTask status, boolean writeFlushWalMarker,
         FlushLifeCycleTracker tracker) throws IOException {
@@ -411,8 +247,11 @@ public class TestRegionReplicationSinkSuspend {
         this.prepareFlush = true;
       }
       try {
-        return super.internalPrepareFlushCache(wal, myseqid, storesToFlush, status,
+        PrepareFlushResult result =
+            super.internalPrepareFlushCache(wal, myseqid, storesToFlush, status,
           writeFlushWalMarker, tracker);
+
+        return result;
       }
       finally {
         if (this.getRegionInfo().getReplicaId() == 0

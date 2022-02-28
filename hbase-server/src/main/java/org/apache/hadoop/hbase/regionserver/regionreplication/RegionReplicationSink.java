@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -171,7 +170,7 @@ public class RegionReplicationSink {
 
   private volatile long pendingSize;
 
-  private volatile long lastFlushedSequenceId;
+  private long lastFlushedSequenceId;
 
   private boolean sending;
 
@@ -205,8 +204,8 @@ public class RegionReplicationSink {
     this.failedReplicas = new IntHashSet(regionReplication - 1);
   }
 
-  private void onComplete(List<SinkEntry> sent,
-    Map<Integer, MutableObject<Throwable>> replica2Error) {
+  void onComplete(List<SinkEntry> sent,
+      Map<Integer, MutableObject<Throwable>> replica2Error) {
     long maxSequenceId = Long.MIN_VALUE;
     long toReleaseSize = 0;
     for (SinkEntry entry : sent) {
@@ -215,41 +214,33 @@ public class RegionReplicationSink {
       toReleaseSize += entry.size;
     }
     manager.decrease(toReleaseSize);
-    Set<Integer> failed = new HashSet<>();
-    long lastFlushedSequenceIdToUse = this.lastFlushedSequenceId;
-    for (Map.Entry<Integer, MutableObject<Throwable>> entry : replica2Error.entrySet()) {
-      Integer replicaId = entry.getKey();
-      Throwable error = entry.getValue().getValue();
-      if (error != null) {
-        if (maxSequenceId > lastFlushedSequenceIdToUse) {
-          LOG.warn(
-            "Failed to replicate to secondary replica {} for {}, since the max sequence" +
-              " id of sunk entris is {}, which is greater than the last flush SN {}," +
-              " we will stop replicating for a while and trigger a flush",
-            replicaId, primary, maxSequenceId, lastFlushedSequenceIdToUse, error);
-          failed.add(replicaId);
-        } else {
-          LOG.warn(
-            "Failed to replicate to secondary replica {} for {}, since the max sequence" +
-              " id of sunk entris is {}, which is less than or equal to the last flush SN {}," +
-              " we will not stop replicating",
-            replicaId, primary, maxSequenceId, lastFlushedSequenceIdToUse, error);
-        }
-      }
-    }
-    checkFailedReplicaAndSend(failed, toReleaseSize, maxSequenceId);
-  }
-
-  protected void checkFailedReplicaAndSend(Set<Integer> failed, long toReleaseSize,
-      long maxSequenceId) {
     synchronized (entries) {
       pendingSize -= toReleaseSize;
-      // double check
-      if (maxSequenceId > lastFlushedSequenceId) {
-        if (!failed.isEmpty()) {
-          failedReplicas.addAll(failed);
-          flushRequester.requestFlush(maxSequenceId);
+      boolean updateFailedReplicas = false;
+      for (Map.Entry<Integer, MutableObject<Throwable>> entry : replica2Error.entrySet()) {
+        Integer replicaId = entry.getKey();
+        Throwable error = entry.getValue().getValue();
+        if (error != null) {
+          if (maxSequenceId > lastFlushedSequenceId) {
+            LOG.warn(
+              "Failed to replicate to secondary replica {} for {}, since the max sequence"
+                  + " id of sunk entris is {}, which is greater than the last flush SN {},"
+                  + " we will stop replicating for a while and trigger a flush",
+              replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
+            failedReplicas.add(replicaId);
+            updateFailedReplicas = true;
+          } else {
+            LOG.warn(
+              "Failed to replicate to secondary replica {} for {}, since the max sequence"
+                  + " id of sunk entris is {}, which is less than or equal to the last flush SN {},"
+                  + " we will not stop replicating",
+              replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
+          }
         }
+      }
+
+      if (updateFailedReplicas) {
+        flushRequester.requestFlush(maxSequenceId);
       }
       sending = false;
       if (stopping) {
@@ -461,32 +452,9 @@ public class RegionReplicationSink {
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
       allowedOnPath = ".*/src/test/.*")
-  RegionReplicationFlushRequester getFlushRequester() {
-    return this.flushRequester;
-  }
-
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
   IntHashSet getFailedReplicas() {
     synchronized (entries) {
       return this.failedReplicas;
     }
   }
-
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
-  boolean isSending() {
-    synchronized (entries) {
-      return this.sending;
-    }
-  }
-
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
-  Queue<SinkEntry> getEntries() {
-    synchronized (entries) {
-      return this.entries;
-    }
-  }
-
 }
