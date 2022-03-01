@@ -38,7 +38,9 @@
 include Java
 
 # Some goodies for hirb. Should these be left up to the user's discretion?
-require 'irb/completion'
+if $stdin.tty?
+  require 'irb/completion'
+end
 require 'pathname'
 
 # Add the directory names in hbase.jruby.sources commandline option
