@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,15 +21,11 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Map;
-import java.util.Optional;
-
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
-
 import org.apache.hadoop.hbase.security.provider.AttemptingUserProvidingSaslServer;
 import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProvider;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -66,11 +62,9 @@ public class HBaseSaslRpcServer {
   }
 
   public String getAttemptingUser() {
-    Optional<UserGroupInformation> optionalUser = serverWithProvider.getAttemptingUser();
-    if (optionalUser.isPresent()) {
-      optionalUser.get().toString();
-    }
-    return "Unknown";
+    return serverWithProvider.getAttemptingUser()
+      .map(Object::toString)
+      .orElse("Unknown");
   }
 
   public byte[] wrap(byte[] buf, int off, int len) throws SaslException {
