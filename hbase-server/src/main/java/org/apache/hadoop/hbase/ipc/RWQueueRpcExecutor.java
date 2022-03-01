@@ -131,7 +131,7 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   }
 
   @Override
-  public boolean dispatch(final CallRunner callTask) throws InterruptedException {
+  public boolean dispatch(final CallRunner callTask) {
     RpcCall call = callTask.getRpcCall();
     return dispatchTo(isWriteRequest(call.getHeader(), call.getParam()),
       shouldDispatchToScanQueue(callTask), callTask);

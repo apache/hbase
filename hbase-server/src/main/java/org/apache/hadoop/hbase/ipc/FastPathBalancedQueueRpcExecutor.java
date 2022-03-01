@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.util.Deque;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -64,7 +63,7 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
   }
 
   @Override
-  public boolean dispatch(CallRunner callTask) throws InterruptedException {
+  public boolean dispatch(CallRunner callTask) {
     //FastPathHandlers don't check queue limits, so if we're completely shut down
     //we have to prevent ourselves from using the handler in the first place
     if (currentQueueLimit == 0){
