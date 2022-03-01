@@ -94,6 +94,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -7867,7 +7868,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // See more details in HBASE-26036.
       for (Cell cell : tmp) {
         results.add(cell instanceof ByteBufferExtendedCell ?
-          new KeyValue(cell) : cell);
+            KeyValueUtil.copyToNewKeyValue(cell) : cell);
       }
     }
 
