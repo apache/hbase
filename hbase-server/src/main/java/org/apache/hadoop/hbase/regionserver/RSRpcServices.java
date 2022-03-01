@@ -478,6 +478,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         return;
       }
       LOG.info("Scanner lease {} expired {}", this.scannerName, rsh);
+      server.getMetrics().incrScannerLeaseExpired();
       RegionScanner s = rsh.s;
       HRegion region = null;
       try {
