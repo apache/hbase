@@ -33,7 +33,7 @@ module IRB
       # happen is the shell exiting because of failed IRB construction with
       # no error (though we're not blanking STDERR)
 
-      # Map the '/dev/null' according to the runing platform
+      # Map the '/dev/null' according to the running platform
       # Under Windows platform the 'dev/null' is not fully compliant with unix,
       # and the 'NUL' object need to be use instead.
       devnull = '/dev/null'
@@ -42,8 +42,10 @@ module IRB
       $stdout = f
       # This is a workaround for the jruby issue 1372.
       # The stderr is an input to stty to re-adjust the terminal for the error('stdin isnt a terminal')
-      # incase the command is piped with hbase shell(eg - >echo 'list' | bin/hbase shell)
-      `stty icrnl <&2`
+      # in case the command is piped with hbase shell(eg - >echo 'list' | bin/hbase shell)
+      if $stdin.tty?
+        `stty icrnl <&2`
+      end
       super(workspace, input_method)
     ensure
       f.close
