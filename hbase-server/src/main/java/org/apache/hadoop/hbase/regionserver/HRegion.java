@@ -7867,7 +7867,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // See more details in HBASE-26036.
       for (Cell cell : tmp) {
         results.add(cell instanceof ByteBufferExtendedCell ?
-          ((ByteBufferExtendedCell) cell).deepClone(): cell);
+          new KeyValue(cell) : cell);
       }
     }
 
