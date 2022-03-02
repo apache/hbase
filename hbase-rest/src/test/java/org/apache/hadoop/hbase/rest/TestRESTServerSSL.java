@@ -121,6 +121,12 @@ public class TestRESTServerSSL {
 
     Response response = sslClient.get("/version", Constants.MIMETYPE_TEXT);
     assertEquals(200, response.getCode());
+
+    // Default security headers
+    assertEquals("max-age=63072000;includeSubDomains;preload",
+      response.getHeader("Strict-Transport-Security"));
+    assertEquals("default-src https: data: 'unsafe-inline' 'unsafe-eval'",
+      response.getHeader("Content-Security-Policy"));
   }
 
   @Test(expected = org.apache.http.client.ClientProtocolException.class)
