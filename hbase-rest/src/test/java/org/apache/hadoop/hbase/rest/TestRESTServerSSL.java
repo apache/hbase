@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.rest;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
@@ -107,6 +105,12 @@ public class TestRESTServerSSL {
 
     Response response = sslClient.get("/version", Constants.MIMETYPE_TEXT);
     assertEquals(200, response.getCode());
+
+    // Default security headers
+    assertEquals("max-age=63072000;includeSubDomains;preload",
+      response.getHeader("Strict-Transport-Security"));
+    assertEquals("default-src https: data: 'unsafe-inline' 'unsafe-eval'",
+      response.getHeader("Content-Security-Policy"));
   }
 
   @Test(expected = org.apache.http.client.ClientProtocolException.class)
