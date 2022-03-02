@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -183,5 +184,22 @@ public class ScanInfo {
     return new ScanInfo(family, minVersions, maxVersions, ttl, keepDeletedCells, timeToPurgeDeletes,
       comparator, tableMaxRowSize, usePread, cellsPerTimeoutCheck, parallelSeekEnabled,
       preadMaxBytes, newVersionBehavior);
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this)
+      .append("family", Bytes.toStringBinary(family))
+      .append("minVersions", minVersions)
+      .append("maxVersions", maxVersions)
+      .append("ttl", ttl)
+      .append("keepDeletedCells", keepDeletedCells)
+      .append("timeToPurgeDeletes", timeToPurgeDeletes)
+      .append("tableMaxRowSize", tableMaxRowSize)
+      .append("usePread", usePread)
+      .append("cellsPerTimeoutCheck", cellsPerTimeoutCheck)
+      .append("parallelSeekEnabled", parallelSeekEnabled)
+      .append("preadMaxBytes", preadMaxBytes)
+      .append("newVersionBehavior", newVersionBehavior).toString();
   }
 }
