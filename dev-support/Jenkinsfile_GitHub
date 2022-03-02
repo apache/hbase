@@ -250,7 +250,8 @@ pipeline {
                     }
                     post {
                         always {
-                            junit testResults: "${WORKDIR_REL}/${SRC_REL}/**/target/**/TEST-*.xml", allowEmptyResults: true
+                            junit testResults: "${WORKDIR_REL}/${SRC_REL}/**/target/**/TEST-*.xml",
+                              allowEmptyResults: true, skipPublishingChecks: true
                             sh label: 'zip surefire reports', script: '''#!/bin/bash -e
                                 if [ -d "${PATCHDIR}/archiver" ]; then
                                   count=$(find "${PATCHDIR}/archiver" -type f | wc -l)
@@ -382,7 +383,8 @@ pipeline {
                     }
                     post {
                         always {
-                            junit testResults: "${WORKDIR_REL}/${SRC_REL}/**/target/**/TEST-*.xml", allowEmptyResults: true
+                            junit testResults: "${WORKDIR_REL}/${SRC_REL}/**/target/**/TEST-*.xml",
+                              allowEmptyResults: true, skipPublishingChecks: true
                             sh label: 'zip surefire reports', script: '''#!/bin/bash -e
                                 if [ -d "${PATCHDIR}/archiver" ]; then
                                   count=$(find "${PATCHDIR}/archiver" -type f | wc -l)
