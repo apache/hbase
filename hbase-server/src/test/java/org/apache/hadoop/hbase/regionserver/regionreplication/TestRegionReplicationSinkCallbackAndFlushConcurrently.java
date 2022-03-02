@@ -120,14 +120,13 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
   @Test
   public void test() throws Exception {
     final HRegionForTest[] regions = this.createTable();
-    final AtomicInteger onCompleteCounter = new AtomicInteger(0);
     final AtomicBoolean completedRef = new AtomicBoolean(false);
     RegionReplicationSink regionReplicationSink =
         regions[0].getRegionReplicationSink().get();
     assertTrue(regionReplicationSink != null);
 
     RegionReplicationSink spiedRegionReplicationSink = this.setUpSpiedRegionReplicationSink(
-      regionReplicationSink, regions[0], onCompleteCounter,
+      regionReplicationSink, regions[0],
       completedRef);
 
     String oldThreadName = Thread.currentThread().getName();
@@ -152,9 +151,9 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
 
   private RegionReplicationSink setUpSpiedRegionReplicationSink(
       final RegionReplicationSink regionReplicationSink, final HRegionForTest primaryRegion,
-      final AtomicInteger onCompleteCounter,
       final AtomicBoolean completedRef) {
-
+    final AtomicInteger onCompleteCounter = new AtomicInteger(0);
+    final AtomicInteger getStartFlushAllDescriptorCounter = new AtomicInteger(0);
     RegionReplicationSink spiedRegionReplicationSink = Mockito.spy(regionReplicationSink);
 
     Mockito.doAnswer((invocationOnMock) -> {
@@ -164,7 +163,6 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
       }
       int count = onCompleteCounter.incrementAndGet();
       if (count == 1) {
-        //wait for adding for flush all edit completed.
         primaryRegion.cyclicBarrier.await();
         invocationOnMock.callRealMethod();
         completedRef.set(true);
@@ -176,19 +174,19 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
 
     Mockito.doAnswer((invocationOnMock) -> {
       if (!startTest) {
-        invocationOnMock.callRealMethod();
-        return null;
+        return invocationOnMock.callRealMethod();
       }
       if (primaryRegion.prepareFlush
           && Thread.currentThread().getName().equals(HRegionForTest.USER_THREAD_NAME)) {
-        invocationOnMock.callRealMethod();
-        //onComplete could execute
-        primaryRegion.cyclicBarrier.await();
-        return null;
+        int count = getStartFlushAllDescriptorCounter.incrementAndGet();
+        if(count == 1) {
+          //onComplete could execute
+          primaryRegion.cyclicBarrier.await();
+          return invocationOnMock.callRealMethod();
+        }
       }
-      invocationOnMock.callRealMethod();
-      return null;
-    }).when(spiedRegionReplicationSink).add(Mockito.any(), Mockito.any(), Mockito.any());
+      return invocationOnMock.callRealMethod();
+    }).when(spiedRegionReplicationSink).getStartFlushAllDescriptor(Mockito.any());
 
     primaryRegion.setRegionReplicationSink(spiedRegionReplicationSink);
     return spiedRegionReplicationSink;

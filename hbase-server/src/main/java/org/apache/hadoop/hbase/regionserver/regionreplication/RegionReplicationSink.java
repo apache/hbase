@@ -254,7 +254,7 @@ public class RegionReplicationSink {
     }
   }
 
-  void send() {
+  private void send() {
     List<SinkEntry> toSend = new ArrayList<>();
     long totalSize = 0L;
     boolean hasMetaEdit = false;
@@ -324,7 +324,7 @@ public class RegionReplicationSink {
     return storesFlushed.containsAll(tableDesc.getColumnFamilyNames());
   }
 
-  private Optional<FlushDescriptor> getStartFlushAllDescriptor(Cell metaCell) {
+  Optional<FlushDescriptor> getStartFlushAllDescriptor(Cell metaCell) {
     if (!CellUtil.matchingFamily(metaCell, WALEdit.METAFAMILY)) {
       return Optional.empty();
     }
