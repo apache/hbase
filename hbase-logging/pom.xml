@@ -38,7 +38,7 @@
       <testResource>
         <directory>src/test/resources</directory>
         <includes>
-          <include>log4j2.xml</include>
+          <include>log4j2.properties</include>
         </includes>
       </testResource>
     </testResources>

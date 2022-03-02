@@ -127,11 +127,11 @@
 # export HBASE_MANAGES_ZK=true
 
 # The default log rolling policy is RFA, where the log file is rolled as per the size defined for the 
-# RFA appender. Please refer to the log4j.properties file to see more details on this appender.
+# RFA appender. Please refer to the log4j2.properties file to see more details on this appender.
 # In case one needs to do log rolling on a date change, one should set the environment property
 # HBASE_ROOT_LOGGER to "<DESIRED_LOG LEVEL>,DRFA".
 # For example:
-# HBASE_ROOT_LOGGER=INFO,DRFA
+# export HBASE_ROOT_LOGGER=INFO,DRFA
 # The reason for changing default to RFA is to avoid the boundary case of filling out disk space as 
 # DRFA doesn't put any cap on the log size. Please refer to HBase-5655 for more context.
 
