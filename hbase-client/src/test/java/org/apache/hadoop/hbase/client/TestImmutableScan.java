@@ -84,7 +84,7 @@ public class TestImmutableScan {
       .setReplicaId(3)
       .setReversed(true)
       .setRowOffsetPerColumnFamily(5)
-      .setRowPrefixFilter(Bytes.toBytes("row_"))
+      .setStartStopRowForPrefixScan(Bytes.toBytes("row_"))
       .setScanMetricsEnabled(true)
       .setReadType(Scan.ReadType.STREAM)
       .withStartRow(Bytes.toBytes("row_1"))
@@ -181,10 +181,11 @@ public class TestImmutableScan {
       assertEquals("ImmutableScan does not allow access to withStopRow", e.getMessage());
     }
     try {
-      scanCopy.setRowPrefixFilter(new byte[] { 1, 2 });
+      scanCopy.setStartStopRowForPrefixScan(new byte[] { 1, 2 });
       throw new RuntimeException("Should not reach here");
     } catch (UnsupportedOperationException e) {
-      assertEquals("ImmutableScan does not allow access to setRowPrefixFilter", e.getMessage());
+      assertEquals("ImmutableScan does not allow access to setStartStopRowForPrefixScan",
+        e.getMessage());
     }
     try {
       scanCopy.readAllVersions();
