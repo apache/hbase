@@ -247,7 +247,7 @@ public class TestScan {
         .setReplicaId(3)
         .setReversed(true)
         .setRowOffsetPerColumnFamily(5)
-        .setRowPrefixFilter(Bytes.toBytes("row_"))
+        .setStartStopRowForPrefixScan(Bytes.toBytes("row_"))
         .setScanMetricsEnabled(true)
         .setSmall(true)
         .setReadType(ReadType.STREAM)

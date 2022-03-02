@@ -101,9 +101,9 @@ public final class ImmutableScan extends Scan {
   }
 
   @Override
-  public Scan setRowPrefixFilter(byte[] rowPrefix) {
+  public Scan setStartStopRowForPrefixScan(byte[] rowPrefix) {
     throw new UnsupportedOperationException(
-      "ImmutableScan does not allow access to setRowPrefixFilter");
+      "ImmutableScan does not allow access to setStartStopRowForPrefixScan");
   }
 
   @Override
