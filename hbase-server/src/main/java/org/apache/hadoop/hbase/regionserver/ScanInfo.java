@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
@@ -145,5 +146,20 @@ public class ScanInfo {
 
   public KVComparator getComparator() {
     return comparator;
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this)
+      .append("family", Bytes.toStringBinary(family))
+      .append("minVersions", minVersions)
+      .append("maxVersions", maxVersions)
+      .append("ttl", ttl)
+      .append("keepDeletedCells", keepDeletedCells)
+      .append("timeToPurgeDeletes", timeToPurgeDeletes)
+      .append("tableMaxRowSize", tableMaxRowSize)
+      .append("usePread", usePread)
+      .append("cellsPerTimeoutCheck", cellsPerTimeoutCheck)
+      .append("parallelSeekEnabled", parallelSeekEnabled).toString();
   }
 }
