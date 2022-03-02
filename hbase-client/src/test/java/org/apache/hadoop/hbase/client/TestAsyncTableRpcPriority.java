@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.HIGH_QOS;
 import static org.apache.hadoop.hbase.HConstants.NORMAL_QOS;
 import static org.apache.hadoop.hbase.HConstants.SYSTEMTABLE_QOS;
 import static org.apache.hadoop.hbase.NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
@@ -214,6 +215,16 @@ public class TestAsyncTableRpcPriority {
       @Override
       public boolean matches(HBaseRpcController controller) {
         return controller.getPriority() == priority;
+      }
+    });
+  }
+
+  private ScanRequest assertScannerCloseRequest() {
+    return argThat(new ArgumentMatcher<ScanRequest>() {
+
+      @Override
+      public boolean matches(ScanRequest request) {
+        return request.hasCloseScanner() && request.getCloseScanner();
       }
     });
   }
@@ -481,50 +492,66 @@ public class TestAsyncTableRpcPriority {
   @Test
   public void testScan() throws IOException, InterruptedException {
     try (ResultScanner scanner = conn.getTable(TableName.valueOf(name.getMethodName()))
-      .getScanner(new Scan().setCaching(1).setMaxResultSize(1).setPriority(19))) {
-      assertNotNull(scanner.next());
-      Thread.sleep(1000);
+      .getScanner(new Scan().setCaching(1).setMaxResultSize(1).setPriority(19).setLimit(10))) {
+      for (Result result : scanner) {
+        assertNotNull(result);
+        Thread.sleep(1000);
+      }
     }
     Thread.sleep(1000);
-    // open, next, several renew lease, and then close
-    verify(stub, atLeast(4)).scan(assertPriority(19), any(ScanRequest.class), any());
+    // open, next, then several renew lease
+    verify(stub, atLeast(3)).scan(assertPriority(19), any(ScanRequest.class), any());
+    // close should use high qos
+    verify(stub, times(1)).scan(assertPriority(HIGH_QOS), assertScannerCloseRequest(), any());
   }
 
   @Test
   public void testScanNormalTable() throws IOException, InterruptedException {
     try (ResultScanner scanner = conn.getTable(TableName.valueOf(name.getMethodName()))
-      .getScanner(new Scan().setCaching(1).setMaxResultSize(1))) {
-      assertNotNull(scanner.next());
-      Thread.sleep(1000);
+      .getScanner(new Scan().setCaching(1).setMaxResultSize(1).setLimit(10))) {
+      for (Result result : scanner) {
+        assertNotNull(result);
+        Thread.sleep(1000);
+      }
     }
     Thread.sleep(1000);
-    // open, next, several renew lease, and then close
-    verify(stub, atLeast(4)).scan(assertPriority(NORMAL_QOS), any(ScanRequest.class), any());
+    // open, next, then several renew lease
+    verify(stub, atLeast(3)).scan(assertPriority(NORMAL_QOS), any(ScanRequest.class), any());
+    // close should use high qos
+    verify(stub, times(1)).scan(assertPriority(HIGH_QOS), assertScannerCloseRequest(), any());
   }
 
   @Test
   public void testScanSystemTable() throws IOException, InterruptedException {
     try (ResultScanner scanner =
       conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
-        .getScanner(new Scan().setCaching(1).setMaxResultSize(1))) {
-      assertNotNull(scanner.next());
-      Thread.sleep(1000);
+        .getScanner(new Scan().setCaching(1).setMaxResultSize(1).setLimit(10))) {
+      for (Result result : scanner) {
+        assertNotNull(result);
+        Thread.sleep(1000);
+      }
     }
     Thread.sleep(1000);
-    // open, next, several renew lease, and then close
-    verify(stub, atLeast(4)).scan(assertPriority(SYSTEMTABLE_QOS), any(ScanRequest.class), any());
+    // open, next, then several renew lease
+    verify(stub, atLeast(3)).scan(assertPriority(SYSTEMTABLE_QOS), any(ScanRequest.class), any());
+    // close should use high qos
+    verify(stub, times(1)).scan(assertPriority(HIGH_QOS), assertScannerCloseRequest(), any());
   }
 
   @Test
   public void testScanMetaTable() throws IOException, InterruptedException {
     try (ResultScanner scanner = conn.getTable(TableName.META_TABLE_NAME)
       .getScanner(new Scan().setCaching(1).setMaxResultSize(1))) {
-      assertNotNull(scanner.next());
-      Thread.sleep(1000);
+      for (Result result : scanner) {
+        assertNotNull(result);
+        Thread.sleep(1000);
+      }
     }
     Thread.sleep(1000);
     // open, next, several renew lease, and then close
-    verify(stub, atLeast(4)).scan(assertPriority(SYSTEMTABLE_QOS), any(ScanRequest.class), any());
+    verify(stub, atLeast(3)).scan(assertPriority(SYSTEMTABLE_QOS), any(ScanRequest.class), any());
+    // close should use high qos
+    verify(stub, times(1)).scan(assertPriority(HIGH_QOS), assertScannerCloseRequest(), any());
   }
 
   @Test
