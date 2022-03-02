@@ -41,7 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test if Scan.setRowPrefixFilter works as intended.
+ * Test if Scan.setStartStopRowForPrefixScan works as intended.
  */
 @Category({FilterTests.class, MediumTests.class})
 public class TestScanRowPrefix extends FilterTestingCluster {
@@ -63,8 +63,8 @@ public class TestScanRowPrefix extends FilterTestingCluster {
     Table table = openTable(tableName);
 
     /**
-     * Note that about half of these tests were relevant for an different implementation approach
-     * of setRowPrefixFilter. These test cases have been retained to ensure that also the
+     * Note that about half of these tests were relevant for a different implementation approach
+     * of setStartStopRowForPrefixScan. These test cases have been retained to ensure that also the
      * edge cases found there are still covered.
      */
 
@@ -118,16 +118,16 @@ public class TestScanRowPrefix extends FilterTestingCluster {
     // ========
     // PREFIX 0
     Scan scan = new Scan();
-    scan.setRowPrefixFilter(prefix0);
+    scan.setStartStopRowForPrefixScan(prefix0);
     verifyScanResult(table, scan, expected0, "Scan empty prefix failed");
 
     // ========
     // PREFIX 1
     scan = new Scan();
-    scan.setRowPrefixFilter(prefix1);
+    scan.setStartStopRowForPrefixScan(prefix1);
     verifyScanResult(table, scan, expected1, "Scan normal prefix failed");
 
-    scan.setRowPrefixFilter(null);
+    scan.setStartStopRowForPrefixScan(null);
     verifyScanResult(table, scan, expected0, "Scan after prefix reset failed");
 
     scan = new Scan();
@@ -137,10 +137,10 @@ public class TestScanRowPrefix extends FilterTestingCluster {
     // ========
     // PREFIX 2
     scan = new Scan();
-    scan.setRowPrefixFilter(prefix2);
+    scan.setStartStopRowForPrefixScan(prefix2);
     verifyScanResult(table, scan, expected2, "Scan edge 0xFF prefix failed");
 
-    scan.setRowPrefixFilter(null);
+    scan.setStartStopRowForPrefixScan(null);
     verifyScanResult(table, scan, expected0, "Scan after prefix reset failed");
 
     scan = new Scan();
@@ -150,10 +150,10 @@ public class TestScanRowPrefix extends FilterTestingCluster {
     // ========
     // PREFIX 3
     scan = new Scan();
-    scan.setRowPrefixFilter(prefix3);
+    scan.setStartStopRowForPrefixScan(prefix3);
     verifyScanResult(table, scan, expected3, "Scan normal with 0x00 ends failed");
 
-    scan.setRowPrefixFilter(null);
+    scan.setStartStopRowForPrefixScan(null);
     verifyScanResult(table, scan, expected0, "Scan after prefix reset failed");
 
     scan = new Scan();
@@ -163,10 +163,10 @@ public class TestScanRowPrefix extends FilterTestingCluster {
     // ========
     // PREFIX 4
     scan = new Scan();
-    scan.setRowPrefixFilter(prefix4);
+    scan.setStartStopRowForPrefixScan(prefix4);
     verifyScanResult(table, scan, expected4, "Scan end prefix failed");
 
-    scan.setRowPrefixFilter(null);
+    scan.setStartStopRowForPrefixScan(null);
     verifyScanResult(table, scan, expected0, "Scan after prefix reset failed");
 
     scan = new Scan();
@@ -177,13 +177,13 @@ public class TestScanRowPrefix extends FilterTestingCluster {
     // COMBINED
     // Prefix + Filter
     scan = new Scan();
-    scan.setRowPrefixFilter(prefix1);
+    scan.setStartStopRowForPrefixScan(prefix1);
     verifyScanResult(table, scan, expected1, "Prefix filter failed");
 
     scan.setFilter(new ColumnPrefixFilter(prefix2));
     verifyScanResult(table, scan, expected2, "Combined Prefix + Filter failed");
 
-    scan.setRowPrefixFilter(null);
+    scan.setStartStopRowForPrefixScan(null);
     verifyScanResult(table, scan, expected2, "Combined Prefix + Filter; removing Prefix failed");
 
     scan.setFilter(null);
@@ -195,13 +195,13 @@ public class TestScanRowPrefix extends FilterTestingCluster {
     scan.setFilter(new ColumnPrefixFilter(prefix2));
     verifyScanResult(table, scan, expected2, "Test filter failed");
 
-    scan.setRowPrefixFilter(prefix1);
+    scan.setStartStopRowForPrefixScan(prefix1);
     verifyScanResult(table, scan, expected2, "Combined Filter + Prefix failed");
 
     scan.setFilter(null);
     verifyScanResult(table, scan, expected1, "Combined Filter + Prefix ; removing Filter failed");
 
-    scan.setRowPrefixFilter(null);
+    scan.setStartStopRowForPrefixScan(null);
     verifyScanResult(table, scan, expected0, "Scan after prefix reset failed");
   }
 
