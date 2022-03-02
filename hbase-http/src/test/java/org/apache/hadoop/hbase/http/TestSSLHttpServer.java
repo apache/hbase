@@ -21,9 +21,11 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+import java.security.GeneralSecurityException;
 import javax.net.ssl.HttpsURLConnection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -71,6 +73,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     serverConf = HTU.getConfiguration();
 
     serverConf.setInt(HttpServer.HTTP_MAX_THREADS, TestHttpServer.MAX_THREADS);
+    serverConf.setBoolean(ServerConfigurationKeys.HBASE_SSL_ENABLED_KEY, true);
 
     keystoresDir = new File(HTU.getDataTestDir("keystore").toString());
     keystoresDir.mkdirs();
@@ -115,6 +118,17 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   public void testEcho() throws Exception {
     assertEquals("a:b\nc:d\n", readOut(new URL(baseUrl, "/echo?a=b&c=d")));
     assertEquals("a:b\nc&lt;:d\ne:&gt;\n", readOut(new URL(baseUrl, "/echo?a=b&c<=d&e=>")));
+  }
+
+  @Test
+  public void testSecurityHeaders() throws IOException, GeneralSecurityException {
+    HttpsURLConnection conn = (HttpsURLConnection) baseUrl.openConnection();
+    conn.setSSLSocketFactory(clientSslFactory.createSSLSocketFactory());
+    assertEquals(HttpsURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals("max-age=63072000;includeSubDomains;preload",
+      conn.getHeaderField("Strict-Transport-Security"));
+    assertEquals("default-src https: data: 'unsafe-inline' 'unsafe-eval'",
+      conn.getHeaderField("Content-Security-Policy"));
   }
 
   private static String readOut(URL url) throws Exception {
