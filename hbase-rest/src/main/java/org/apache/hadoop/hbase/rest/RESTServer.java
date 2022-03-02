@@ -291,7 +291,9 @@ public class RESTServer implements Constants {
     httpConfig.setSendDateHeader(false);
 
     ServerConnector serverConnector;
+    boolean isSecure = false;
     if (conf.getBoolean(REST_SSL_ENABLED, false)) {
+      isSecure = true;
       HttpConfiguration httpsConfig = new HttpConfiguration(httpConfig);
       httpsConfig.addCustomizer(new SecureRequestCustomizer());
 
@@ -378,8 +380,8 @@ public class RESTServer implements Constants {
       ctxHandler.addFilter(filter, PATH_SPEC_ANY, EnumSet.of(DispatcherType.REQUEST));
     }
     addCSRFFilter(ctxHandler, conf);
-    HttpServerUtil.addClickjackingPreventionFilter(ctxHandler, conf);
-    HttpServerUtil.addSecurityHeadersFilter(ctxHandler, conf);
+    HttpServerUtil.addClickjackingPreventionFilter(ctxHandler, conf, PATH_SPEC_ANY);
+    HttpServerUtil.addSecurityHeadersFilter(ctxHandler, conf, isSecure, PATH_SPEC_ANY);
     HttpServerUtil.constrainHttpMethods(ctxHandler, servlet.getConfiguration()
       .getBoolean(REST_HTTP_ALLOW_OPTIONS_METHOD, REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
