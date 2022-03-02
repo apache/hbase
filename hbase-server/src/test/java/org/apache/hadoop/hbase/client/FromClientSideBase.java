@@ -281,12 +281,24 @@ class FromClientSideBase {
           e.printStackTrace();
         }
         regions = locator.getAllRegionLocations();
-        if (regions.size() > originalCount) {
+        if (regions.size() > originalCount && allRegionsHaveHostnames(regions)) {
           break;
         }
       }
       return regions;
     }
+  }
+
+  // We need to check for null serverNames due to https://issues.apache.org/jira/browse/HBASE-26790,
+  // because the null serverNames cause the ScannerCallable to fail.
+  // we can remove this check once that is resolved
+  private boolean allRegionsHaveHostnames(List<HRegionLocation> regions) {
+    for (HRegionLocation region : regions) {
+      if (region.getServerName() == null) {
+        return false;
+      }
+    }
+    return true;
   }
 
   protected Result getSingleScanResult(Table ht, Scan scan) throws IOException {

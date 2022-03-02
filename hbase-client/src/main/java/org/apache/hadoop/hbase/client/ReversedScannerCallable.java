@@ -24,14 +24,14 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStartRow;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -43,6 +43,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class ReversedScannerCallable extends ScannerCallable {
+
+  private byte[] locationSearchKey;
 
   /**
    * @param connection which connection
@@ -59,6 +61,18 @@ public class ReversedScannerCallable extends ScannerCallable {
     super(connection, tableName, scan, scanMetrics, rpcFactory, replicaId);
   }
 
+  @Override
+  public void throwable(Throwable t, boolean retrying) {
+    // for reverse scans, we need to update cache using the search key found for the reverse scan
+    // range in prepare. Otherwise, we will see weird behavior at the table boundaries,
+    // when trying to clear cache for an empty row.
+    if (location != null && locationSearchKey != null) {
+      getConnection().updateCachedLocations(getTableName(),
+          location.getRegionInfo().getRegionName(),
+          locationSearchKey, t, location.getServerName());
+    }
+  }
+
   /**
    * @param reload force reload of server location
    */
@@ -67,33 +81,37 @@ public class ReversedScannerCallable extends ScannerCallable {
     if (Thread.interrupted()) {
       throw new InterruptedIOException();
     }
+
+    if (reload && getTableName() != null && !getTableName().equals(TableName.META_TABLE_NAME)
+      && getConnection().isTableDisabled(getTableName())) {
+      throw new TableNotEnabledException(getTableName().getNameAsString() + " is disabled.");
+    }
+
     if (!instantiated || reload) {
       // we should use range locate if
       // 1. we do not want the start row
       // 2. the start row is empty which means we need to locate to the last region.
       if (scan.includeStartRow() && !isEmptyStartRow(getRow())) {
         // Just locate the region with the row
-        RegionLocations rl = getRegionLocations(reload, getRow());
+        RegionLocations rl = getRegionLocationsForPrepare(getRow());
         this.location = getLocationForReplica(rl);
-        if (location == null || location.getServerName() == null) {
-          throw new IOException("Failed to find location, tableName="
-              + getTableName() + ", row=" + Bytes.toStringBinary(getRow()) + ", reload="
-              + reload);
-        }
+        this.locationSearchKey = getRow();
       } else {
-        // Need to locate the regions with the range, and the target location is
-        // the last one which is the previous region of last region scanner
+        // The locateStart row is an approximation. So we need to search between
+        // that and the actual row in order to really find the last region
         byte[] locateStartRow = createCloseRowBefore(getRow());
-        List<HRegionLocation> locatedRegions = locateRegionsInRange(
-            locateStartRow, getRow(), reload);
-        if (locatedRegions.isEmpty()) {
-          throw new DoNotRetryIOException(
-              "Does hbase:meta exist hole? Couldn't get regions for the range from "
-                  + Bytes.toStringBinary(locateStartRow) + " to "
-                  + Bytes.toStringBinary(getRow()));
-        }
-        this.location = locatedRegions.get(locatedRegions.size() - 1);
+        Pair<HRegionLocation, byte[]> lastRegionAndKey = locateLastRegionInRange(
+            locateStartRow, getRow());
+        this.location = lastRegionAndKey.getFirst();
+        this.locationSearchKey = lastRegionAndKey.getSecond();
       }
+
+      if (location == null || location.getServerName() == null) {
+        throw new IOException("Failed to find location, tableName="
+          + getTableName() + ", row=" + Bytes.toStringBinary(getRow()) + ", reload="
+          + reload);
+      }
+
       setStub(getConnection().getClient(getLocation().getServerName()));
       checkIfRegionServerIsRemote();
       instantiated = true;
@@ -106,15 +124,14 @@ public class ReversedScannerCallable extends ScannerCallable {
   }
 
   /**
-   * Get the corresponding regions for an arbitrary range of keys.
+   * Get the last region before the endkey, which will be used to execute the reverse scan
    * @param startKey Starting row in range, inclusive
    * @param endKey Ending row in range, exclusive
-   * @param reload force reload of server location
-   * @return A list of HRegionLocation corresponding to the regions that contain
-   *         the specified range
+   * @return The last location, and the rowKey used to find it. May be null,
+   *    if a region could not be found.
    */
-  private List<HRegionLocation> locateRegionsInRange(byte[] startKey,
-      byte[] endKey, boolean reload) throws IOException {
+  private Pair<HRegionLocation, byte[]> locateLastRegionInRange(byte[] startKey, byte[] endKey)
+      throws IOException {
     final boolean endKeyIsEndOfTable = Bytes.equals(endKey,
         HConstants.EMPTY_END_ROW);
     if ((Bytes.compareTo(startKey, endKey) > 0) && !endKeyIsEndOfTable) {
@@ -122,13 +139,17 @@ public class ReversedScannerCallable extends ScannerCallable {
           + Bytes.toStringBinary(startKey) + " > "
           + Bytes.toStringBinary(endKey));
     }
-    List<HRegionLocation> regionList = new ArrayList<>();
+
+    HRegionLocation lastRegion = null;
+    byte[] lastFoundKey = null;
     byte[] currentKey = startKey;
+
     do {
-      RegionLocations rl = getRegionLocations(reload, currentKey);
+      RegionLocations rl = getRegionLocationsForPrepare(currentKey);
       HRegionLocation regionLocation = getLocationForReplica(rl);
       if (regionLocation.getRegionInfo().containsRow(currentKey)) {
-        regionList.add(regionLocation);
+        lastFoundKey = currentKey;
+        lastRegion = regionLocation;
       } else {
         throw new DoNotRetryIOException(
           "Does hbase:meta exist hole? Locating row " + Bytes.toStringBinary(currentKey) +
@@ -137,7 +158,8 @@ public class ReversedScannerCallable extends ScannerCallable {
       currentKey = regionLocation.getRegionInfo().getEndKey();
     } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)
         && (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0));
-    return regionList;
+
+    return new Pair<>(lastRegion, lastFoundKey);
   }
 
   @Override
