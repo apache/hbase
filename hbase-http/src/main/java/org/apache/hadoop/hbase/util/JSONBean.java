@@ -255,7 +255,7 @@ public class JSONBean {
     if ("modelerType".equals(attName)) {
       return;
     }
-    if (attName.indexOf("=") >= 0 || attName.indexOf(":") >= 0 || attName.indexOf(" ") >= 0) {
+    if (attName.indexOf("=") >= 0 || attName.indexOf(" ") >= 0) {
       return;
     }
 
