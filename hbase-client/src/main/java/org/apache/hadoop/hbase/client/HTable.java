@@ -530,7 +530,7 @@ public class HTable implements Table {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(delete);
-    TraceUtil.traceWithIOException(() -> {
+    TraceUtil.trace(() -> {
       ClientServiceCallable<Void> callable =
         new ClientServiceCallable<Void>(this.connection, getName(), delete.getRow(),
           this.rpcControllerFactory.newController(), delete.getPriority()) {
@@ -573,7 +573,7 @@ public class HTable implements Table {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName)
       .setOperation(put);
-    TraceUtil.traceWithIOException(() -> {
+    TraceUtil.trace(() -> {
       validatePut(put);
       ClientServiceCallable<Void> callable =
         new ClientServiceCallable<Void>(this.connection, getName(), put.getRow(),
@@ -1116,7 +1116,7 @@ public class HTable implements Table {
       .setName("HTable.close")
       .setTableName(tableName)
       .setSpanKind(SpanKind.INTERNAL);
-    TraceUtil.traceWithIOException(() -> {
+    TraceUtil.trace(() -> {
       if (this.closed) {
         return;
       }
