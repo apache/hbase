@@ -1286,6 +1286,7 @@ class ConnectionManager {
       Scan s = new Scan();
       s.setReversed(true);
       s.withStartRow(metaKey);
+      s.addFamily(HConstants.CATALOG_FAMILY);
 
       if (this.useMetaReplicas) {
         s.setConsistency(Consistency.TIMELINE);

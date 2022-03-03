@@ -220,6 +220,7 @@ public class MetaScanner {
   throws IOException {
     byte[] searchRow = HRegionInfo.createRegionName(userTableName, row, HConstants.NINES, false);
     Scan scan = Scan.createGetClosestRowOrBeforeReverseScan(searchRow);
+    scan.addFamily(HConstants.CATALOG_FAMILY);
     if (useMetaReplicas) {
       scan.setConsistency(Consistency.TIMELINE);
     }
