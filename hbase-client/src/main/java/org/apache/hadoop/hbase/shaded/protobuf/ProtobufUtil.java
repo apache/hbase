@@ -67,6 +67,8 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ServerTask;
+import org.apache.hadoop.hbase.ServerTaskBuilder;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.BalanceResponse;
@@ -836,10 +838,7 @@ public final class ProtobufUtil {
           if (qv.hasQualifier()) {
             qualifier = qv.getQualifier().toByteArray();
           }
-          long ts = HConstants.LATEST_TIMESTAMP;
-          if (qv.hasTimestamp()) {
-            ts = qv.getTimestamp();
-          }
+          long ts = cellTimestampOrLatest(qv);
           if (deleteType == DeleteType.DELETE_ONE_VERSION) {
             delete.addColumn(family, qualifier, ts);
           } else if (deleteType == DeleteType.DELETE_MULTIPLE_VERSIONS) {
@@ -906,7 +905,7 @@ public final class ProtobufUtil {
                   .setRow(mutation.getRow())
                   .setFamily(family)
                   .setQualifier(qualifier)
-                  .setTimestamp(qv.getTimestamp())
+                  .setTimestamp(cellTimestampOrLatest(qv))
                   .setType(KeyValue.Type.Put.getCode())
                   .setValue(value)
                   .setTags(tags)
@@ -919,6 +918,14 @@ public final class ProtobufUtil {
       mutation.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
     return mutation;
+  }
+
+  private static long cellTimestampOrLatest(QualifierValue cell) {
+    if (cell.hasTimestamp()) {
+      return cell.getTimestamp();
+    } else {
+      return HConstants.LATEST_TIMESTAMP;
+    }
   }
 
   /**
@@ -2836,10 +2843,12 @@ public final class ProtobufUtil {
 
   public static ReplicationLoadSink toReplicationLoadSink(
       ClusterStatusProtos.ReplicationLoadSink rls) {
-    return new ReplicationLoadSink(rls.getAgeOfLastAppliedOp(),
-        rls.getTimeStampsOfLastAppliedOp(),
-        rls.hasTimestampStarted()? rls.getTimestampStarted(): -1L,
-        rls.hasTotalOpsProcessed()? rls.getTotalOpsProcessed(): -1L);
+    ReplicationLoadSink.ReplicationLoadSinkBuilder builder = ReplicationLoadSink.newBuilder();
+    builder.setAgeOfLastAppliedOp(rls.getAgeOfLastAppliedOp()).
+      setTimestampsOfLastAppliedOp(rls.getTimeStampsOfLastAppliedOp()).
+      setTimestampStarted(rls.hasTimestampStarted()? rls.getTimestampStarted(): -1L).
+      setTotalOpsProcessed(rls.hasTotalOpsProcessed()? rls.getTotalOpsProcessed(): -1L);
+    return builder.build();
   }
 
   public static ReplicationLoadSource toReplicationLoadSource(
@@ -3895,6 +3904,26 @@ public final class ProtobufUtil {
       .setBalancerRan(response.hasBalancerRan() && response.getBalancerRan())
       .setMovesCalculated(response.hasMovesCalculated() ? response.getMovesExecuted() : 0)
       .setMovesExecuted(response.hasMovesExecuted() ? response.getMovesExecuted() : 0)
+      .build();
+  }
+
+  public static ServerTask getServerTask(ClusterStatusProtos.ServerTask task) {
+    return ServerTaskBuilder.newBuilder()
+      .setDescription(task.getDescription())
+      .setStatus(task.getStatus())
+      .setState(ServerTask.State.valueOf(task.getState().name()))
+      .setStartTime(task.getStartTime())
+      .setCompletionTime(task.getCompletionTime())
+      .build();
+  }
+
+  public static ClusterStatusProtos.ServerTask toServerTask(ServerTask task) {
+    return ClusterStatusProtos.ServerTask.newBuilder()
+      .setDescription(task.getDescription())
+      .setStatus(task.getStatus())
+      .setState(ClusterStatusProtos.ServerTask.State.valueOf(task.getState().name()))
+      .setStartTime(task.getStartTime())
+      .setCompletionTime(task.getCompletionTime())
       .build();
   }
 

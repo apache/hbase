@@ -288,7 +288,7 @@ public class QuotaTableUtil {
     // Limit to "u:v" column
     s.addColumn(QUOTA_FAMILY_USAGE, QUOTA_QUALIFIER_POLICY);
     if (null == tn) {
-      s.setRowPrefixFilter(QUOTA_TABLE_ROW_KEY_PREFIX);
+      s.setStartStopRowForPrefixScan(QUOTA_TABLE_ROW_KEY_PREFIX);
     } else {
       byte[] row = getTableRowKey(tn);
       // Limit rowspace to the "t:" prefix
@@ -637,7 +637,8 @@ public class QuotaTableUtil {
     throws IOException {
     Scan s = new Scan();
     //Get rows for all tables in namespace
-    s.setRowPrefixFilter(Bytes.add(QUOTA_TABLE_ROW_KEY_PREFIX, Bytes.toBytes(namespace + TableName.NAMESPACE_DELIM)));
+    s.setStartStopRowForPrefixScan(
+      Bytes.add(QUOTA_TABLE_ROW_KEY_PREFIX, Bytes.toBytes(namespace + TableName.NAMESPACE_DELIM)));
     //Scan for table usage column (u:p) in quota table
     s.addColumn(QUOTA_FAMILY_USAGE,QUOTA_QUALIFIER_POLICY);
     //Scan for table quota column (q:s) if table has a space quota defined
@@ -706,7 +707,7 @@ public class QuotaTableUtil {
     Scan s = new Scan();
     if (namespace == null || namespace.isEmpty()) {
       // Read all namespaces, just look at the row prefix
-      s.setRowPrefixFilter(QUOTA_NAMESPACE_ROW_KEY_PREFIX);
+      s.setStartStopRowForPrefixScan(QUOTA_NAMESPACE_ROW_KEY_PREFIX);
     } else {
       // Fetch the exact row for the table
       byte[] rowkey = getNamespaceRowKey(namespace);
@@ -727,7 +728,7 @@ public class QuotaTableUtil {
     Scan s = new Scan();
     if (null == table) {
       // Read all tables, just look at the row prefix
-      s.setRowPrefixFilter(QUOTA_TABLE_ROW_KEY_PREFIX);
+      s.setStartStopRowForPrefixScan(QUOTA_TABLE_ROW_KEY_PREFIX);
     } else {
       // Fetch the exact row for the table
       byte[] rowkey = getTableRowKey(table);

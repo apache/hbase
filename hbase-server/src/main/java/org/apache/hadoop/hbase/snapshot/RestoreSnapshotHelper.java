@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
+import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -53,7 +55,11 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
@@ -67,9 +73,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -195,8 +199,8 @@ public class RestoreSnapshotHelper {
 
     List<RegionInfo> tableRegions = getTableRegions();
 
-    RegionInfo mobRegion = MobUtils.getMobRegionInfo(snapshotManifest.getTableDescriptor()
-        .getTableName());
+    RegionInfo mobRegion =
+      MobUtils.getMobRegionInfo(snapshotManifest.getTableDescriptor().getTableName());
     if (tableRegions != null) {
       // restore the mob region in case
       if (regionNames.contains(mobRegion.getEncodedName())) {
@@ -500,18 +504,28 @@ public class RestoreSnapshotHelper {
     String tableName = tableDesc.getTableName().getNameAsString();
     final String snapshotName = snapshotDesc.getName();
 
+    Path regionPath = new Path(tableDir, regionInfo.getEncodedName());
+    HRegionFileSystem regionFS = (fs.exists(regionPath)) ?
+      HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, regionInfo, false) :
+      HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, regionInfo);
+
     // Restore families present in the table
     for (Path familyDir: FSUtils.getFamilyDirs(fs, regionDir)) {
       byte[] family = Bytes.toBytes(familyDir.getName());
+
       Set<String> familyFiles = getTableRegionFamilyFiles(familyDir);
       List<SnapshotRegionManifest.StoreFile> snapshotFamilyFiles =
           snapshotFiles.remove(familyDir.getName());
+      List<StoreFileInfo> filesToTrack = new ArrayList<>();
       if (snapshotFamilyFiles != null) {
         List<SnapshotRegionManifest.StoreFile> hfilesToAdd = new ArrayList<>();
         for (SnapshotRegionManifest.StoreFile storeFile: snapshotFamilyFiles) {
           if (familyFiles.contains(storeFile.getName())) {
             // HFile already present
             familyFiles.remove(storeFile.getName());
+            //no need to restore already present files, but we need to add those to tracker
+            filesToTrack.add(new StoreFileInfo(conf, fs,
+              new Path(familyDir, storeFile.getName()), true));
           } else {
             // HFile missing
             hfilesToAdd.add(storeFile);
@@ -521,9 +535,11 @@ public class RestoreSnapshotHelper {
         // Remove hfiles not present in the snapshot
         for (String hfileName: familyFiles) {
           Path hfile = new Path(familyDir, hfileName);
-          LOG.trace("Removing HFile=" + hfileName + " not present in snapshot=" + snapshotName+
-            " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
-          HFileArchiver.archiveStoreFile(conf, fs, regionInfo, tableDir, family, hfile);
+          if (!fs.getFileStatus(hfile).isDirectory()) {
+            LOG.trace("Removing HFile=" + hfileName + " not present in snapshot=" +
+              snapshotName + " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
+            HFileArchiver.archiveStoreFile(conf, fs, regionInfo, tableDir, family, hfile);
+          }
         }
 
         // Restore Missing files
@@ -531,7 +547,10 @@ public class RestoreSnapshotHelper {
           LOG.debug("Restoring missing HFileLink " + storeFile.getName() +
                   " of snapshot=" + snapshotName+
                   " to region=" + regionInfo.getEncodedName() + " table=" + tableName);
-          restoreStoreFile(familyDir, regionInfo, storeFile, createBackRefs);
+          String fileName = restoreStoreFile(familyDir, regionInfo, storeFile, createBackRefs);
+          // mark the reference file to be added to tracker
+          filesToTrack.add(new StoreFileInfo(conf, fs,
+            new Path(familyDir, fileName), true));
         }
       } else {
         // Family doesn't exists in the snapshot
@@ -540,12 +559,24 @@ public class RestoreSnapshotHelper {
         HFileArchiver.archiveFamilyByFamilyDir(fs, conf, regionInfo, familyDir, family);
         fs.delete(familyDir, true);
       }
+
+      StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true,
+          StoreContext.getBuilder().withFamilyStoreDirectoryPath(familyDir).
+            withRegionFileSystem(regionFS).build());
+
+      //simply reset list of tracked files with the matching files
+      //and the extra one present in the snapshot
+      tracker.set(filesToTrack);
     }
 
     // Add families not present in the table
     for (Map.Entry<String, List<SnapshotRegionManifest.StoreFile>> familyEntry:
                                                                       snapshotFiles.entrySet()) {
       Path familyDir = new Path(regionDir, familyEntry.getKey());
+      StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true,
+          StoreContext.getBuilder().withFamilyStoreDirectoryPath(familyDir).
+            withRegionFileSystem(regionFS).build());
+      List<StoreFileInfo> files = new ArrayList<>();
       if (!fs.mkdirs(familyDir)) {
         throw new IOException("Unable to create familyDir=" + familyDir);
       }
@@ -553,8 +584,10 @@ public class RestoreSnapshotHelper {
       for (SnapshotRegionManifest.StoreFile storeFile: familyEntry.getValue()) {
         LOG.trace("Adding HFileLink (Not present in the table) " + storeFile.getName()
                 + " of snapshot " + snapshotName + " to table=" + tableName);
-        restoreStoreFile(familyDir, regionInfo, storeFile, createBackRefs);
+        String fileName = restoreStoreFile(familyDir, regionInfo, storeFile, createBackRefs);
+        files.add(new StoreFileInfo(conf, fs, new Path(familyDir, fileName), true));
       }
+      tracker.set(files);
     }
   }
 
@@ -627,7 +660,8 @@ public class RestoreSnapshotHelper {
       final RegionInfo region) throws IOException {
     // clone region info (change embedded tableName with the new one)
     Path clonedRegionPath = MobUtils.getMobRegionPath(rootDir, tableDesc.getTableName());
-    cloneRegion(clonedRegionPath, region, regionManifests.get(region.getEncodedName()));
+    cloneRegion(MobUtils.getMobRegionInfo(tableDesc.getTableName()),
+      clonedRegionPath, region, regionManifests.get(region.getEncodedName()));
   }
 
   /**
@@ -641,18 +675,46 @@ public class RestoreSnapshotHelper {
    * @param regionDir {@link Path} cloned dir
    * @param snapshotRegionInfo
    */
-  private void cloneRegion(final Path regionDir, final RegionInfo snapshotRegionInfo,
-      final SnapshotRegionManifest manifest) throws IOException {
+  private void cloneRegion(final RegionInfo newRegionInfo, final Path regionDir,
+      final RegionInfo snapshotRegionInfo, final SnapshotRegionManifest manifest)
+        throws IOException {
     final String tableName = tableDesc.getTableName().getNameAsString();
     final String snapshotName = snapshotDesc.getName();
     for (SnapshotRegionManifest.FamilyFiles familyFiles: manifest.getFamilyFilesList()) {
       Path familyDir = new Path(regionDir, familyFiles.getFamilyName().toStringUtf8());
+      List<StoreFileInfo> clonedFiles = new ArrayList<>();
       for (SnapshotRegionManifest.StoreFile storeFile: familyFiles.getStoreFilesList()) {
         LOG.info("Adding HFileLink " + storeFile.getName() +" from cloned region "
                 + "in snapshot " + snapshotName + " to table=" + tableName);
-        restoreStoreFile(familyDir, snapshotRegionInfo, storeFile, createBackRefs);
+        if (MobUtils.isMobRegionInfo(newRegionInfo)) {
+          String mobFileName = HFileLink.createHFileLinkName(snapshotRegionInfo,
+            storeFile.getName());
+          Path mobPath = new Path(familyDir, mobFileName);
+          if (fs.exists(mobPath)) {
+            fs.delete(mobPath, true);
+          }
+          restoreStoreFile(familyDir, snapshotRegionInfo, storeFile, createBackRefs);
+        } else {
+          String file = restoreStoreFile(familyDir, snapshotRegionInfo, storeFile, createBackRefs);
+          clonedFiles.add(new StoreFileInfo(conf, fs, new Path(familyDir, file), true));
+        }
+      }
+      //we don't need to track files under mobdir
+      if (!MobUtils.isMobRegionInfo(newRegionInfo)) {
+        Path regionPath = new Path(tableDir, newRegionInfo.getEncodedName());
+        HRegionFileSystem regionFS = (fs.exists(regionPath)) ?
+          HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, newRegionInfo, false) :
+          HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, newRegionInfo);
+
+        Configuration sftConf = StoreUtils.createStoreConfiguration(conf, tableDesc,
+          tableDesc.getColumnFamily(familyFiles.getFamilyName().toByteArray()));
+        StoreFileTracker tracker = StoreFileTrackerFactory.create(sftConf, true,
+          StoreContext.getBuilder().withFamilyStoreDirectoryPath(familyDir).
+            withRegionFileSystem(regionFS).build());
+        tracker.set(clonedFiles);
       }
     }
+
   }
 
   /**
@@ -668,7 +730,9 @@ public class RestoreSnapshotHelper {
    */
   private void cloneRegion(final HRegion region, final RegionInfo snapshotRegionInfo,
       final SnapshotRegionManifest manifest) throws IOException {
-    cloneRegion(new Path(tableDir, region.getRegionInfo().getEncodedName()), snapshotRegionInfo,
+    cloneRegion(region.getRegionInfo(),
+      new Path(tableDir, region.getRegionInfo().getEncodedName()),
+      snapshotRegionInfo,
       manifest);
   }
 
@@ -685,16 +749,16 @@ public class RestoreSnapshotHelper {
    * @param createBackRef - Whether back reference should be created. Defaults to true.
    * @param storeFile store file name (can be a Reference, HFileLink or simple HFile)
    */
-  private void restoreStoreFile(final Path familyDir, final RegionInfo regionInfo,
+  private String restoreStoreFile(final Path familyDir, final RegionInfo regionInfo,
       final SnapshotRegionManifest.StoreFile storeFile, final boolean createBackRef)
           throws IOException {
     String hfileName = storeFile.getName();
     if (HFileLink.isHFileLink(hfileName)) {
-      HFileLink.createFromHFileLink(conf, fs, familyDir, hfileName, createBackRef);
+      return HFileLink.createFromHFileLink(conf, fs, familyDir, hfileName, createBackRef);
     } else if (StoreFileInfo.isReference(hfileName)) {
-      restoreReferenceFile(familyDir, regionInfo, storeFile);
+      return restoreReferenceFile(familyDir, regionInfo, storeFile);
     } else {
-      HFileLink.create(conf, fs, familyDir, regionInfo, hfileName, createBackRef);
+      return HFileLink.create(conf, fs, familyDir, regionInfo, hfileName, createBackRef);
     }
   }
 
@@ -716,7 +780,7 @@ public class RestoreSnapshotHelper {
    * @param regionInfo destination region info for the table
    * @param storeFile reference file name
    */
-  private void restoreReferenceFile(final Path familyDir, final RegionInfo regionInfo,
+  private String restoreReferenceFile(final Path familyDir, final RegionInfo regionInfo,
       final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
     String hfileName = storeFile.getName();
 
@@ -760,6 +824,7 @@ public class RestoreSnapshotHelper {
       IOUtils.copyBytes(in, out, conf);
     }
 
+
     // Add the daughter region to the map
     String regionName = Bytes.toString(regionsMap.get(regionInfo.getEncodedNameAsBytes()));
     if (regionName == null) {
@@ -777,6 +842,7 @@ public class RestoreSnapshotHelper {
         daughters.setSecond(regionName);
       }
     }
+    return outPath.getName();
   }
 
   /**

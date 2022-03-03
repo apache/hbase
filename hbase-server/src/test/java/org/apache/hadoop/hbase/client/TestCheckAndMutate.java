@@ -24,7 +24,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1214,6 +1213,56 @@ public class TestCheckAndMutate {
       assertEquals("f", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("F"))));
       assertEquals(1, Bytes.toLong(result.getValue(FAMILY, Bytes.toBytes("G"))));
       assertEquals("h", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("H"))));
+    }
+  }
+
+  @Test
+  public void testCheckAndMutateForNull() throws Exception {
+    byte[] qualifier = Bytes.toBytes("Q");
+    try (Table table = createTable()) {
+      byte [] row1 = Bytes.toBytes("testRow1");
+      Put put = new Put(row1);
+      put.addColumn(FAMILY, qualifier, Bytes.toBytes("v0"));
+      table.put(put);
+      assertEquals("v0", Bytes.toString(
+        table.get(new Get(row1).addColumn(FAMILY, qualifier)).getValue(FAMILY, qualifier)));
+
+      CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(row1)
+        .ifMatches(FAMILY, qualifier, CompareOperator.NOT_EQUAL, new byte[] {})
+        .build(new Put(row1).addColumn(FAMILY, qualifier, Bytes.toBytes("v1")));
+      table.checkAndMutate(checkAndMutate1);
+      assertEquals("v1", Bytes.toString(
+        table.get(new Get(row1).addColumn(FAMILY, qualifier)).getValue(FAMILY, qualifier)));
+
+      byte [] row2 = Bytes.toBytes("testRow2");
+      put = new Put(row2);
+      put.addColumn(FAMILY, qualifier, new byte[] {});
+      table.put(put);
+      assertEquals(0,
+        table.get(new Get(row2).addColumn(FAMILY, qualifier)).getValue(FAMILY, qualifier).length);
+
+      CheckAndMutate checkAndMutate2 = CheckAndMutate.newBuilder(row2)
+        .ifMatches(FAMILY, qualifier, CompareOperator.EQUAL, new byte[] {})
+        .build(new Put(row2).addColumn(FAMILY, qualifier, Bytes.toBytes("v2")));
+      table.checkAndMutate(checkAndMutate2);
+      assertEquals("v2", Bytes.toString(
+        table.get(new Get(row2).addColumn(FAMILY, qualifier)).getValue(FAMILY, qualifier)));
+
+      byte [] row3 = Bytes.toBytes("testRow3");
+      put = new Put(row3).addColumn(FAMILY, qualifier, Bytes.toBytes("v0"));
+      assertNull(table.get(new Get(row3).addColumn(FAMILY, qualifier)).getValue(FAMILY, qualifier));
+      CheckAndMutate checkAndMutate3 = CheckAndMutate.newBuilder(row3)
+        .ifMatches(FAMILY, qualifier, CompareOperator.NOT_EQUAL, new byte[] {})
+        .build(put);
+      table.checkAndMutate(checkAndMutate3);
+      assertNull(table.get(new Get(row3).addColumn(FAMILY, qualifier)).getValue(FAMILY, qualifier));
+
+      CheckAndMutate checkAndMutate4 = CheckAndMutate.newBuilder(row3)
+        .ifMatches(FAMILY, qualifier, CompareOperator.EQUAL, new byte[] {})
+        .build(put);
+      table.checkAndMutate(checkAndMutate4);
+      assertEquals("v0", Bytes.toString(
+        table.get(new Get(row3).addColumn(FAMILY, qualifier)).getValue(FAMILY, qualifier)));
     }
   }
 }

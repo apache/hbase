@@ -89,6 +89,7 @@ include::_chapters/zookeeper.adoc[]
 include::_chapters/community.adoc[]
 include::_chapters/hbtop.adoc[]
 include::_chapters/tracing.adoc[]
+include::_chapters/store_file_tracking.adoc[]
 
 = Appendix
 

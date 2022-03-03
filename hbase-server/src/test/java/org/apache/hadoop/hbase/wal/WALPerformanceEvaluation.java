@@ -471,7 +471,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         private int appends = 0;
 
         @Override
-        public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) {
+        public void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {
           this.appends++;
           if (this.appends % whenToRoll == 0) {
             LOG.info("Rolling after " + appends + " edits");

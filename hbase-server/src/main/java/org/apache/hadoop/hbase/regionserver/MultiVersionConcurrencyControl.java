@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.LinkedList;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -202,6 +203,7 @@ public class MultiVersionConcurrencyControl {
         if (queueFirst.isCompleted()) {
           nextReadValue = queueFirst.getWriteNumber();
           writeQueue.removeFirst();
+          queueFirst.runCompletionAction();
         } else {
           break;
         }
@@ -271,20 +273,34 @@ public class MultiVersionConcurrencyControl {
    * Every created WriteEntry must be completed by calling mvcc#complete or #completeAndWait.
    */
   @InterfaceAudience.Private
-  public static class WriteEntry {
+  public static final class WriteEntry {
     private final long writeNumber;
     private boolean completed = false;
+    /**
+     * Will be called after completion, i.e, when being removed from the
+     * {@link MultiVersionConcurrencyControl#writeQueue}.
+     */
+    private Optional<Runnable> completionAction = Optional.empty();
 
-    WriteEntry(long writeNumber) {
+    private WriteEntry(long writeNumber) {
       this.writeNumber = writeNumber;
     }
 
-    void markCompleted() {
+    private void markCompleted() {
       this.completed = true;
     }
 
-    boolean isCompleted() {
+    private boolean isCompleted() {
       return this.completed;
+    }
+
+    public void attachCompletionAction(Runnable action) {
+      assert !completionAction.isPresent();
+      completionAction = Optional.of(action);
+    }
+
+    private void runCompletionAction() {
+      completionAction.ifPresent(Runnable::run);
     }
 
     public long getWriteNumber() {

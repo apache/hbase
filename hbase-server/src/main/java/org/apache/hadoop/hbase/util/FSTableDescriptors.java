@@ -17,19 +17,22 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.io.EOFException;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,7 +40,6 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.TableInfoMissingException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -47,6 +49,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,9 +89,8 @@ public class FSTableDescriptors implements TableDescriptors {
   /**
    * The file name prefix used to store HTD in HDFS
    */
-  public static final String TABLEINFO_FILE_PREFIX = ".tableinfo";
+  static final String TABLEINFO_FILE_PREFIX = ".tableinfo";
   public static final String TABLEINFO_DIR = ".tabledesc";
-  public static final String TMP_DIR = ".tmp";
 
   // This cache does not age out the old stuff.  Thinking is that the amount
   // of data we keep up in here is so small, no need to do occasional purge.
@@ -123,21 +125,22 @@ public class FSTableDescriptors implements TableDescriptors {
   public static TableDescriptor tryUpdateAndGetMetaTableDescriptor(Configuration conf,
     FileSystem fs, Path rootdir) throws IOException {
     // see if we already have meta descriptor on fs. Write one if not.
-    try {
-      return getTableDescriptorFromFs(fs, rootdir, TableName.META_TABLE_NAME);
-    } catch (TableInfoMissingException e) {
-      TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
-      TableDescriptor td = builder.build();
-      LOG.info("Creating new hbase:meta table descriptor {}", td);
-      TableName tableName = td.getTableName();
-      Path tableDir = CommonFSUtils.getTableDir(rootdir, tableName);
-      Path p = writeTableDescriptor(fs, td, tableDir, getTableInfoPath(fs, tableDir, true));
-      if (p == null) {
-        throw new IOException("Failed update hbase:meta table descriptor");
-      }
-      LOG.info("Updated hbase:meta table descriptor to {}", p);
-      return td;
+    Optional<Pair<FileStatus, TableDescriptor>> opt = getTableDescriptorFromFs(fs,
+      CommonFSUtils.getTableDir(rootdir, TableName.META_TABLE_NAME), false);
+    if (opt.isPresent()) {
+      return opt.get().getSecond();
     }
+    TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
+    TableDescriptor td = StoreFileTrackerFactory.updateWithTrackerConfigs(conf, builder.build());
+    LOG.info("Creating new hbase:meta table descriptor {}", td);
+    TableName tableName = td.getTableName();
+    Path tableDir = CommonFSUtils.getTableDir(rootdir, tableName);
+    Path p = writeTableDescriptor(fs, td, tableDir, null);
+    if (p == null) {
+      throw new IOException("Failed update hbase:meta table descriptor");
+    }
+    LOG.info("Updated hbase:meta table descriptor to {}", p);
+    return td;
   }
 
   public static ColumnFamilyDescriptor getTableFamilyDescForMeta(
@@ -228,10 +231,9 @@ public class FSTableDescriptors implements TableDescriptors {
     }
     TableDescriptor tdmt = null;
     try {
-      tdmt = getTableDescriptorFromFs(fs, rootdir, tableName);
-    } catch (TableInfoMissingException e) {
-      // ignore. This is regular operation
-    } catch (NullPointerException | IOException ioe) {
+      tdmt = getTableDescriptorFromFs(fs, getTableDir(tableName), fsreadonly).map(Pair::getSecond)
+        .orElse(null);
+    } catch (IOException ioe) {
       LOG.debug("Exception during readTableDecriptor. Current table name = " + tableName, ioe);
     }
     // last HTD written wins
@@ -305,10 +307,13 @@ public class FSTableDescriptors implements TableDescriptors {
     }
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests or self", link = "",
+    allowedOnPath = ".*/src/test/.*|.*/FSTableDescriptors\\.java")
   Path updateTableDescriptor(TableDescriptor td) throws IOException {
     TableName tableName = td.getTableName();
     Path tableDir = getTableDir(tableName);
-    Path p = writeTableDescriptor(fs, td, tableDir, getTableInfoPath(tableDir));
+    Path p = writeTableDescriptor(fs, td, tableDir,
+      getTableDescriptorFromFs(fs, tableDir, fsreadonly).map(Pair::getFirst).orElse(null));
     if (p == null) {
       throw new IOException("Failed update");
     }
@@ -336,80 +341,11 @@ public class FSTableDescriptors implements TableDescriptors {
     return descriptor;
   }
 
-  private FileStatus getTableInfoPath(Path tableDir) throws IOException {
-    return getTableInfoPath(fs, tableDir, !fsreadonly);
-  }
-
   /**
-   * Find the most current table info file for the table located in the given table directory.
-   *
-   * Looks within the {@link #TABLEINFO_DIR} subdirectory of the given directory for any table info
-   * files and takes the 'current' one - meaning the one with the highest sequence number if present
-   * or no sequence number at all if none exist (for backward compatibility from before there
-   * were sequence numbers).
-   *
-   * @return The file status of the current table info file or null if it does not exist
+   * Check whether we have a valid TableDescriptor.
    */
-  public static FileStatus getTableInfoPath(FileSystem fs, Path tableDir)
-  throws IOException {
-    return getTableInfoPath(fs, tableDir, false);
-  }
-
-  /**
-   * Find the most current table info file for the table in the given table directory.
-   *
-   * Looks within the {@link #TABLEINFO_DIR} subdirectory of the given directory for any table info
-   * files and takes the 'current' one - meaning the one with the highest sequence number if
-   * present or no sequence number at all if none exist (for backward compatibility from before
-   * there were sequence numbers).
-   * If there are multiple table info files found and removeOldFiles is true it also deletes the
-   * older files.
-   *
-   * @return The file status of the current table info file or null if none exist
-   */
-  private static FileStatus getTableInfoPath(FileSystem fs, Path tableDir, boolean removeOldFiles)
-      throws IOException {
-    Path tableInfoDir = new Path(tableDir, TABLEINFO_DIR);
-    return getCurrentTableInfoStatus(fs, tableInfoDir, removeOldFiles);
-  }
-
-  /**
-   * Find the most current table info file in the given directory
-   * <p/>
-   * Looks within the given directory for any table info files and takes the 'current' one - meaning
-   * the one with the highest sequence number if present or no sequence number at all if none exist
-   * (for backward compatibility from before there were sequence numbers).
-   * <p/>
-   * If there are multiple possible files found and the we're not in read only mode it also deletes
-   * the older files.
-   * @return The file status of the current table info file or null if it does not exist
-   */
-  private static FileStatus getCurrentTableInfoStatus(FileSystem fs, Path dir,
-    boolean removeOldFiles) throws IOException {
-    FileStatus[] status = CommonFSUtils.listStatus(fs, dir, TABLEINFO_PATHFILTER);
-    if (status == null || status.length < 1) {
-      return null;
-    }
-    FileStatus mostCurrent = null;
-    for (FileStatus file : status) {
-      if (mostCurrent == null || TABLEINFO_FILESTATUS_COMPARATOR.compare(file, mostCurrent) < 0) {
-        mostCurrent = file;
-      }
-    }
-    if (removeOldFiles && status.length > 1) {
-      // Clean away old versions
-      for (FileStatus file : status) {
-        Path path = file.getPath();
-        if (!file.equals(mostCurrent)) {
-          if (!fs.delete(file.getPath(), false)) {
-            LOG.warn("Failed cleanup of " + path);
-          } else {
-            LOG.debug("Cleaned up old tableinfo file " + path);
-          }
-        }
-      }
-    }
-    return mostCurrent;
+  public static boolean isTableDir(FileSystem fs, Path tableDir) throws IOException {
+    return getTableDescriptorFromFs(fs, tableDir, true).isPresent();
   }
 
   /**
@@ -419,14 +355,14 @@ public class FSTableDescriptors implements TableDescriptors {
     new Comparator<FileStatus>() {
       @Override
       public int compare(FileStatus left, FileStatus right) {
-        return right.compareTo(left);
+        return right.getPath().getName().compareTo(left.getPath().getName());
       }
     };
 
   /**
    * Return the table directory in HDFS
    */
-  Path getTableDir(final TableName tableName) {
+  private Path getTableDir(TableName tableName) {
     return CommonFSUtils.getTableDir(rootdir, tableName);
   }
 
@@ -457,39 +393,53 @@ public class FSTableDescriptors implements TableDescriptors {
     return Bytes.toString(b);
   }
 
-  /**
-   * Regex to eat up sequenceid suffix on a .tableinfo file.
-   * Use regex because may encounter oldstyle .tableinfos where there is no
-   * sequenceid on the end.
-   */
-  private static final Pattern TABLEINFO_FILE_REGEX =
-    Pattern.compile(TABLEINFO_FILE_PREFIX + "(\\.([0-9]{" + WIDTH_OF_SEQUENCE_ID + "}))?$");
+  static final class SequenceIdAndFileLength {
 
-  /**
-   * @param p Path to a <code>.tableinfo</code> file.
-   * @return The current editid or 0 if none found.
-   */
-  static int getTableInfoSequenceId(final Path p) {
-    if (p == null) {
-      return 0;
+    final int sequenceId;
+
+    final int fileLength;
+
+    SequenceIdAndFileLength(int sequenceId, int fileLength) {
+      this.sequenceId = sequenceId;
+      this.fileLength = fileLength;
     }
-    Matcher m = TABLEINFO_FILE_REGEX.matcher(p.getName());
-    if (!m.matches()) {
-      throw new IllegalArgumentException(p.toString());
-    }
-    String suffix = m.group(2);
-    if (suffix == null || suffix.length() <= 0) {
-      return 0;
-    }
-    return Integer.parseInt(m.group(2));
   }
 
   /**
-   * @param sequenceid
-   * @return Name of tableinfo file.
+   * Returns the current sequence id and file length or 0 if none found.
+   * @param p Path to a <code>.tableinfo</code> file.
    */
-  static String getTableInfoFileName(final int sequenceid) {
-    return TABLEINFO_FILE_PREFIX + "." + formatTableInfoSequenceId(sequenceid);
+  @RestrictedApi(explanation = "Should only be called in tests or self", link = "",
+    allowedOnPath = ".*/src/test/.*|.*/FSTableDescriptors\\.java")
+  static SequenceIdAndFileLength getTableInfoSequenceIdAndFileLength(Path p) {
+    String name = p.getName();
+    if (!name.startsWith(TABLEINFO_FILE_PREFIX)) {
+      throw new IllegalArgumentException("Invalid table descriptor file name: " + name);
+    }
+    int firstDot = name.indexOf('.', TABLEINFO_FILE_PREFIX.length());
+    if (firstDot < 0) {
+      // oldest style where we do not have both sequence id and file length
+      return new SequenceIdAndFileLength(0, 0);
+    }
+    int secondDot = name.indexOf('.', firstDot + 1);
+    if (secondDot < 0) {
+      // old stype where we do not have file length
+      int sequenceId = Integer.parseInt(name.substring(firstDot + 1));
+      return new SequenceIdAndFileLength(sequenceId, 0);
+    }
+    int sequenceId = Integer.parseInt(name.substring(firstDot + 1, secondDot));
+    int fileLength = Integer.parseInt(name.substring(secondDot + 1));
+    return new SequenceIdAndFileLength(sequenceId, fileLength);
+  }
+
+  /**
+   * Returns Name of tableinfo file.
+   */
+  @RestrictedApi(explanation = "Should only be called in tests or self", link = "",
+    allowedOnPath = ".*/src/test/.*|.*/FSTableDescriptors\\.java")
+  static String getTableInfoFileName(int sequenceId, byte[] content) {
+    return TABLEINFO_FILE_PREFIX + "." + formatTableInfoSequenceId(sequenceId) + "." +
+      content.length;
   }
 
   /**
@@ -504,131 +454,142 @@ public class FSTableDescriptors implements TableDescriptors {
   }
 
   /**
-   * Returns the latest table descriptor for the table located at the given directory
-   * directly from the file system if it exists.
-   * @throws TableInfoMissingException if there is no descriptor
+   * Returns the latest table descriptor for the table located at the given directory directly from
+   * the file system if it exists.
    */
   public static TableDescriptor getTableDescriptorFromFs(FileSystem fs, Path tableDir)
     throws IOException {
-    FileStatus status = getTableInfoPath(fs, tableDir, false);
-    if (status == null) {
-      throw new TableInfoMissingException("No table descriptor file under " + tableDir);
-    }
-    return readTableDescriptor(fs, status);
+    return getTableDescriptorFromFs(fs, tableDir, true).map(Pair::getSecond).orElse(null);
   }
 
-  private static TableDescriptor readTableDescriptor(FileSystem fs, FileStatus status)
-      throws IOException {
-    int len = Ints.checkedCast(status.getLen());
-    byte [] content = new byte[len];
-    FSDataInputStream fsDataInputStream = fs.open(status.getPath());
-    try {
-      fsDataInputStream.readFully(content);
-    } finally {
-      fsDataInputStream.close();
+  private static void deleteMalformedFile(FileSystem fs, Path file) throws IOException {
+    LOG.info("Delete malformed table descriptor file {}", file);
+    if (!fs.delete(file, false)) {
+      LOG.warn("Failed to delete malformed table descriptor file {}", file);
     }
-    TableDescriptor htd = null;
-    try {
-      htd = TableDescriptorBuilder.parseFrom(content);
-    } catch (DeserializationException e) {
-      throw new IOException("content=" + Bytes.toShort(content), e);
+  }
+
+  private static Optional<Pair<FileStatus, TableDescriptor>> getTableDescriptorFromFs(FileSystem fs,
+    Path tableDir, boolean readonly) throws IOException {
+    Path tableInfoDir = new Path(tableDir, TABLEINFO_DIR);
+    FileStatus[] descFiles = CommonFSUtils.listStatus(fs, tableInfoDir, TABLEINFO_PATHFILTER);
+    if (descFiles == null || descFiles.length < 1) {
+      return Optional.empty();
     }
-    return htd;
+    Arrays.sort(descFiles, TABLEINFO_FILESTATUS_COMPARATOR);
+    int i = 0;
+    TableDescriptor td = null;
+    FileStatus descFile = null;
+    for (; i < descFiles.length; i++) {
+      descFile = descFiles[i];
+      Path file = descFile.getPath();
+      // get file length from file name if present
+      int fileLength = getTableInfoSequenceIdAndFileLength(file).fileLength;
+      byte[] content = new byte[fileLength > 0 ? fileLength : Ints.checkedCast(descFile.getLen())];
+      try (FSDataInputStream in = fs.open(file)) {
+        in.readFully(content);
+      } catch (EOFException e) {
+        LOG.info("Failed to load file {} due to EOF, it should be half written: {}", file,
+          e.toString());
+        if (!readonly) {
+          deleteMalformedFile(fs, file);
+        }
+        continue;
+      }
+      try {
+        td = TableDescriptorBuilder.parseFrom(content);
+        break;
+      } catch (DeserializationException e) {
+        LOG.info("Failed to parse file {} due to malformed protobuf message: {}", file,
+          e.toString());
+        if (!readonly) {
+          deleteMalformedFile(fs, file);
+        }
+      }
+    }
+    if (!readonly) {
+      // i + 1 to skip the one we load
+      for (i = i + 1; i < descFiles.length; i++) {
+        Path file = descFiles[i].getPath();
+        LOG.info("Delete old table descriptor file {}", file);
+        if (!fs.delete(file, false)) {
+          LOG.info("Failed to delete old table descriptor file {}", file);
+        }
+      }
+    }
+    return td != null ? Optional.of(Pair.newPair(descFile, td)) : Optional.empty();
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  public static void deleteTableDescriptors(FileSystem fs, Path tableDir) throws IOException {
+    Path tableInfoDir = new Path(tableDir, TABLEINFO_DIR);
+    deleteTableDescriptorFiles(fs, tableInfoDir, Integer.MAX_VALUE);
   }
 
   /**
-   * Deletes files matching the table info file pattern within the given directory
-   * whose sequenceId is at most the given max sequenceId.
+   * Deletes files matching the table info file pattern within the given directory whose sequenceId
+   * is at most the given max sequenceId.
    */
   private static void deleteTableDescriptorFiles(FileSystem fs, Path dir, int maxSequenceId)
-  throws IOException {
-    FileStatus [] status = CommonFSUtils.listStatus(fs, dir, TABLEINFO_PATHFILTER);
+    throws IOException {
+    FileStatus[] status = CommonFSUtils.listStatus(fs, dir, TABLEINFO_PATHFILTER);
     for (FileStatus file : status) {
       Path path = file.getPath();
-      int sequenceId = getTableInfoSequenceId(path);
+      int sequenceId = getTableInfoSequenceIdAndFileLength(path).sequenceId;
       if (sequenceId <= maxSequenceId) {
         boolean success = CommonFSUtils.delete(fs, path, false);
         if (success) {
-          LOG.debug("Deleted " + path);
+          LOG.debug("Deleted {}", path);
         } else {
-          LOG.error("Failed to delete table descriptor at " + path);
+          LOG.error("Failed to delete table descriptor at {}", path);
         }
       }
     }
   }
 
   /**
-   * Attempts to write a new table descriptor to the given table's directory. It first writes it to
-   * the .tmp dir then uses an atomic rename to move it into place. It begins at the
+   * Attempts to write a new table descriptor to the given table's directory. It begins at the
    * currentSequenceId + 1 and tries 10 times to find a new sequence number not already in use.
    * <p/>
    * Removes the current descriptor file if passed in.
    * @return Descriptor file or null if we failed write.
    */
-  private static Path writeTableDescriptor(final FileSystem fs, final TableDescriptor htd,
+  private static Path writeTableDescriptor(final FileSystem fs, final TableDescriptor td,
     final Path tableDir, final FileStatus currentDescriptorFile) throws IOException {
-    // Get temporary dir into which we'll first write a file to avoid half-written file phenomenon.
-    // This directory is never removed to avoid removing it out from under a concurrent writer.
-    Path tmpTableDir = new Path(tableDir, TMP_DIR);
+    // Here we will write to the final directory directly to avoid renaming as on OSS renaming is
+    // not atomic and has performance issue. The reason why we could do this is that, in the below
+    // code we will not overwrite existing files, we will write a new file instead. And when
+    // loading, we will skip the half written file, please see the code in getTableDescriptorFromFs
     Path tableInfoDir = new Path(tableDir, TABLEINFO_DIR);
 
-    // What is current sequenceid?  We read the current sequenceid from
-    // the current file.  After we read it, another thread could come in and
-    // compete with us writing out next version of file.  The below retries
-    // should help in this case some but its hard to do guarantees in face of
-    // concurrent schema edits.
+    // In proc v2 we have table lock so typically, there will be no concurrent writes. Keep the
+    // retry logic here since we may still want to write the table descriptor from for example,
+    // HBCK2?
     int currentSequenceId = currentDescriptorFile == null ? 0 :
-      getTableInfoSequenceId(currentDescriptorFile.getPath());
-    int newSequenceId = currentSequenceId;
+      getTableInfoSequenceIdAndFileLength(currentDescriptorFile.getPath()).sequenceId;
 
     // Put arbitrary upperbound on how often we retry
-    int retries = 10;
-    int retrymax = currentSequenceId + retries;
-    Path tableInfoDirPath = null;
-    do {
-      newSequenceId += 1;
-      String filename = getTableInfoFileName(newSequenceId);
-      Path tempPath = new Path(tmpTableDir, filename);
-      if (fs.exists(tempPath)) {
-        LOG.debug(tempPath + " exists; retrying up to " + retries + " times");
+    int maxAttempts = 10;
+    int maxSequenceId = currentSequenceId + maxAttempts;
+    byte[] bytes = TableDescriptorBuilder.toByteArray(td);
+    for (int newSequenceId =
+      currentSequenceId + 1; newSequenceId <= maxSequenceId; newSequenceId++) {
+      String fileName = getTableInfoFileName(newSequenceId, bytes);
+      Path filePath = new Path(tableInfoDir, fileName);
+      try (FSDataOutputStream out = fs.create(filePath, false)) {
+        out.write(bytes);
+      } catch (FileAlreadyExistsException e) {
+        LOG.debug("{} exists; retrying up to {} times", filePath, maxAttempts, e);
+        continue;
+      } catch (IOException e) {
+        LOG.debug("Failed write {}; retrying up to {} times", filePath, maxAttempts, e);
         continue;
       }
-      tableInfoDirPath = new Path(tableInfoDir, filename);
-      try {
-        writeTD(fs, tempPath, htd);
-        fs.mkdirs(tableInfoDirPath.getParent());
-        if (!fs.rename(tempPath, tableInfoDirPath)) {
-          throw new IOException("Failed rename of " + tempPath + " to " + tableInfoDirPath);
-        }
-        LOG.debug("Wrote into " + tableInfoDirPath);
-      } catch (IOException ioe) {
-        // Presume clash of names or something; go around again.
-        LOG.debug("Failed write and/or rename; retrying", ioe);
-        if (!CommonFSUtils.deleteDirectory(fs, tempPath)) {
-          LOG.warn("Failed cleanup of " + tempPath);
-        }
-        tableInfoDirPath = null;
-        continue;
-      }
-      break;
-    } while (newSequenceId < retrymax);
-    if (tableInfoDirPath != null) {
-      // if we succeeded, remove old table info files.
       deleteTableDescriptorFiles(fs, tableInfoDir, newSequenceId - 1);
+      return filePath;
     }
-    return tableInfoDirPath;
-  }
-
-  private static void writeTD(final FileSystem fs, final Path p, final TableDescriptor htd)
-  throws IOException {
-    FSDataOutputStream out = fs.create(p, false);
-    try {
-      // We used to write this file out as a serialized HTD Writable followed by two '\n's and then
-      // the toString version of HTD.  Now we just write out the pb serialization.
-      out.write(TableDescriptorBuilder.toByteArray(htd));
-    } finally {
-      out.close();
-    }
+    return null;
   }
 
   /**
@@ -686,20 +647,18 @@ public class FSTableDescriptors implements TableDescriptors {
    * @throws IOException if a filesystem error occurs
    */
   public static boolean createTableDescriptorForTableDirectory(FileSystem fs, Path tableDir,
-      TableDescriptor htd, boolean forceCreation) throws IOException {
-    FileStatus status = getTableInfoPath(fs, tableDir);
-    if (status != null) {
-      LOG.debug("Current path=" + status.getPath());
+    TableDescriptor htd, boolean forceCreation) throws IOException {
+    Optional<Pair<FileStatus, TableDescriptor>> opt = getTableDescriptorFromFs(fs, tableDir, false);
+    if (opt.isPresent()) {
+      LOG.debug("Current path={}", opt.get().getFirst());
       if (!forceCreation) {
-        if (fs.exists(status.getPath()) && status.getLen() > 0) {
-          if (readTableDescriptor(fs, status).equals(htd)) {
-            LOG.trace("TableInfo already exists.. Skipping creation");
-            return false;
-          }
+        if (htd.equals(opt.get().getSecond())) {
+          LOG.trace("TableInfo already exists.. Skipping creation");
+          return false;
         }
       }
     }
-    return writeTableDescriptor(fs, htd, tableDir, status) != null;
+    return writeTableDescriptor(fs, htd, tableDir, opt.map(Pair::getFirst).orElse(null)) != null;
   }
 }
 

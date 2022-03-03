@@ -207,6 +207,8 @@ message CloneSnapshotStateData {
   required TableSchema table_schema = 3;
   repeated RegionInfo region_info = 4;
   repeated RestoreParentToChildRegionsPair parent_to_child_regions_pair_list = 5;
+  optional bool restore_acl = 6;
+  optional string customSFT = 7;
 }
 
 enum RestoreSnapshotState {
@@ -225,6 +227,7 @@ message RestoreSnapshotStateData {
   repeated RegionInfo region_info_for_remove = 5;
   repeated RegionInfo region_info_for_add = 6;
   repeated RestoreParentToChildRegionsPair parent_to_child_regions_pair_list = 7;
+  optional bool restore_acl = 8;
 }
 
 enum DispatchMergingRegionsState {
@@ -652,6 +655,21 @@ enum ModifyTableDescriptorState {
 }
 
 message ModifyTableDescriptorStateData {
-  required TableSchema unmodified_table_schema = 1;
+  required TableName table_name = 1;
   optional TableSchema modified_table_schema = 2;
+}
+
+enum ModifyStoreFileTrackerState {
+  MODIFY_STORE_FILE_TRACKER_FINISH_PREVIOUS_MIGRATION = 1;
+  MODIFY_STORE_FILE_TRACKER_START_MIGRATION = 2;
+  MODIFY_STORE_FILE_TRACKER_FINISH_MIGRATION = 3;
+}
+
+message ModifyStoreFileTrackerStateData {
+  required TableName table_name = 1;
+  required string dst_sft = 2;
+}
+
+message ModifyColumnFamilyStoreFileTrackerStateData {
+  required bytes family = 1;
 }

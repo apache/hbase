@@ -93,6 +93,9 @@ NOTE: End-of-life releases are not included in this list.
 | 2.3
 | Nick Dimiduk
 
+| 2.4
+| Andrew Purtell
+
 |===
 
 [[hbase.commit.msg.format]]

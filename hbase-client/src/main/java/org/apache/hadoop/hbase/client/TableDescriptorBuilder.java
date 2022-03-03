@@ -1561,6 +1561,10 @@ public class TableDescriptorBuilder {
       // if we found a match, remove it
       if (match != null) {
         ModifyableTableDescriptor.this.removeValue(match);
+      } else {
+        throw new IllegalArgumentException(String
+          .format("coprocessor with class name %s was not found in the table attribute",
+            className));
       }
     }
 

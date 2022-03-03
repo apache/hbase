@@ -54,6 +54,10 @@ public class TestBulkLoad extends TestBulkloadBase {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestBulkLoad.class);
 
+  public TestBulkLoad(boolean useFileBasedSFT) {
+    super(useFileBasedSFT);
+  }
+
   @Test
   public void verifyBulkLoadEvent() throws IOException {
     TableName tableName = TableName.valueOf("test", "test");

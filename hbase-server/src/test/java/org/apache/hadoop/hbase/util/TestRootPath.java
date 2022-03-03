@@ -17,14 +17,16 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
-import junit.framework.TestCase;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +35,7 @@ import org.slf4j.LoggerFactory;
  * Test requirement that root directory must be a URI
  */
 @Category({MiscTests.class, SmallTests.class})
-public class TestRootPath extends TestCase {
+public class TestRootPath {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -42,6 +44,7 @@ public class TestRootPath extends TestCase {
   private static final Logger LOG = LoggerFactory.getLogger(TestRootPath.class);
 
   /** The test */
+  @Test
   public void testRootPath() {
     try {
       // Try good path

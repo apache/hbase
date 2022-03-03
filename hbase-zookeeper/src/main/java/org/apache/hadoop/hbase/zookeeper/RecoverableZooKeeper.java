@@ -25,6 +25,8 @@ import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
@@ -82,6 +84,57 @@ public class RecoverableZooKeeper {
   private final int sessionTimeout;
   private final String quorumServers;
   private final int maxMultiSize;
+
+  /**
+   * See {@link #connect(Configuration, String, Watcher, String)}
+   */
+  public static RecoverableZooKeeper connect(Configuration conf, Watcher watcher)
+    throws IOException {
+    String ensemble = ZKConfig.getZKQuorumServersString(conf);
+    return connect(conf, ensemble, watcher);
+  }
+
+  /**
+   * See {@link #connect(Configuration, String, Watcher, String)}
+   */
+  public static RecoverableZooKeeper connect(Configuration conf, String ensemble,
+    Watcher watcher)
+    throws IOException {
+    return connect(conf, ensemble, watcher, null);
+  }
+
+  /**
+   * Creates a new connection to ZooKeeper, pulling settings and ensemble config
+   * from the specified configuration object using methods from {@link ZKConfig}.
+   *
+   * Sets the connection status monitoring watcher to the specified watcher.
+   *
+   * @param conf configuration to pull ensemble and other settings from
+   * @param watcher watcher to monitor connection changes
+   * @param ensemble ZooKeeper servers quorum string
+   * @param identifier value used to identify this client instance.
+   * @return connection to zookeeper
+   * @throws IOException if unable to connect to zk or config problem
+   */
+  public static RecoverableZooKeeper connect(Configuration conf, String ensemble,
+    Watcher watcher, final String identifier)
+    throws IOException {
+    if(ensemble == null) {
+      throw new IOException("Unable to determine ZooKeeper ensemble");
+    }
+    int timeout = conf.getInt(HConstants.ZK_SESSION_TIMEOUT,
+      HConstants.DEFAULT_ZK_SESSION_TIMEOUT);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("{} opening connection to ZooKeeper ensemble={}", identifier, ensemble);
+    }
+    int retry = conf.getInt("zookeeper.recovery.retry", 3);
+    int retryIntervalMillis =
+      conf.getInt("zookeeper.recovery.retry.intervalmill", 1000);
+    int maxSleepTime = conf.getInt("zookeeper.recovery.retry.maxsleeptime", 60000);
+    int multiMaxSize = conf.getInt("zookeeper.multi.max.size", 1024*1024);
+    return new RecoverableZooKeeper(ensemble, timeout, watcher,
+      retry, retryIntervalMillis, maxSleepTime, identifier, multiMaxSize);
+  }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DE_MIGHT_IGNORE",
       justification="None. Its always been this way.")

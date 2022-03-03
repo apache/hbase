@@ -394,6 +394,9 @@ public class CompactingMemStore extends AbstractMemStore {
     return Bytes.toString(getFamilyNameInBytes());
   }
 
+  /**
+   * This method is protected under {@link HStore#lock} read lock.
+   */
   @Override
   public List<KeyValueScanner> getScanners(long readPt) throws IOException {
     MutableSegment activeTmp = getActive();

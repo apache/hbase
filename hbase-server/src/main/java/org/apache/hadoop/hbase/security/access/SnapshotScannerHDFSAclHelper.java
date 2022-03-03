@@ -474,8 +474,8 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
    */
   List<Path> getTableRootPaths(TableName tableName, boolean includeSnapshotPath)
       throws IOException {
-    List<Path> paths = Lists.newArrayList(pathHelper.getTmpTableDir(tableName),
-      pathHelper.getDataTableDir(tableName), pathHelper.getMobTableDir(tableName),
+    List<Path> paths = Lists.newArrayList(pathHelper.getDataTableDir(tableName),
+      pathHelper.getMobTableDir(tableName),
       pathHelper.getArchiveTableDir(tableName));
     if (includeSnapshotPath) {
       paths.addAll(getTableSnapshotPaths(tableName));

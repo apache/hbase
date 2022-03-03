@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -50,6 +49,7 @@ import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Acts as the single ZooKeeper Watcher.  One instance of this is instantiated
@@ -68,11 +68,11 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
 
   // Identifier for this watcher (for logging only).  It is made of the prefix
   // passed on construction and the zookeeper sessionid.
-  private String prefix;
+  private final String prefix;
   private String identifier;
 
   // zookeeper quorum
-  private String quorum;
+  private final String quorum;
 
   // zookeeper connection
   private final RecoverableZooKeeper recoverableZooKeeper;
@@ -177,7 +177,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     this.abortable = abortable;
     this.znodePaths = new ZNodePaths(conf);
     PendingWatcher pendingWatcher = new PendingWatcher();
-    this.recoverableZooKeeper = ZKUtil.connect(conf, quorum, pendingWatcher, identifier);
+    this.recoverableZooKeeper =
+      RecoverableZooKeeper.connect(conf, quorum, pendingWatcher, identifier);
     pendingWatcher.prepare(this);
     if (canCreateBaseZNode) {
       try {
@@ -194,6 +195,55 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     }
     this.zkSyncTimeout = conf.getLong(HConstants.ZK_SYNC_BLOCKING_TIMEOUT_MS,
         HConstants.ZK_SYNC_BLOCKING_TIMEOUT_DEFAULT_MS);
+  }
+
+  public List<ACL> createACL(String node) {
+    return createACL(node, ZKAuthentication.isSecureZooKeeper(getConfiguration()));
+  }
+
+  public List<ACL> createACL(String node, boolean isSecureZooKeeper) {
+    if (!node.startsWith(getZNodePaths().baseZNode)) {
+      return Ids.OPEN_ACL_UNSAFE;
+    }
+    if (isSecureZooKeeper) {
+      ArrayList<ACL> acls = new ArrayList<>();
+      // add permission to hbase supper user
+      String[] superUsers = getConfiguration().getStrings(Superusers.SUPERUSER_CONF_KEY);
+      String hbaseUser = null;
+      try {
+        hbaseUser = UserGroupInformation.getCurrentUser().getShortUserName();
+      } catch (IOException e) {
+        LOG.debug("Could not acquire current User.", e);
+      }
+      if (superUsers != null) {
+        List<String> groups = new ArrayList<>();
+        for (String user : superUsers) {
+          if (AuthUtil.isGroupPrincipal(user)) {
+            // TODO: Set node ACL for groups when ZK supports this feature
+            groups.add(user);
+          } else {
+            if(!user.equals(hbaseUser)) {
+              acls.add(new ACL(Perms.ALL, new Id("sasl", user)));
+            }
+          }
+        }
+        if (!groups.isEmpty()) {
+          LOG.warn("Znode ACL setting for group {} is skipped, ZooKeeper doesn't support this " +
+            "feature presently.", groups);
+        }
+      }
+      // Certain znodes are accessed directly by the client,
+      // so they must be readable by non-authenticated clients
+      if (getZNodePaths().isClientReadable(node)) {
+        acls.addAll(Ids.CREATOR_ALL_ACL);
+        acls.addAll(Ids.READ_ACL_UNSAFE);
+      } else {
+        acls.addAll(Ids.CREATOR_ALL_ACL);
+      }
+      return acls;
+    } else {
+      return Ids.OPEN_ACL_UNSAFE;
+    }
   }
 
   private void createBaseZNodes() throws ZooKeeperConnectionException {
@@ -219,7 +269,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * perms.
    */
   public void checkAndSetZNodeAcls() {
-    if (!ZKUtil.isSecureZooKeeper(getConfiguration())) {
+    if (!ZKAuthentication.isSecureZooKeeper(getConfiguration())) {
       LOG.info("not a secure deployment, proceeding");
       return;
     }
@@ -253,7 +303,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     for (String child : children) {
       setZnodeAclsRecursive(ZNodePaths.joinZNode(znode, child));
     }
-    List<ACL> acls = ZKUtil.createACL(this, znode, true);
+    List<ACL> acls = createACL(znode, true);
     LOG.info("Setting ACLs for znode:{} , acl:{}", znode, acls);
     recoverableZooKeeper.setAcl(znode, acls, -1);
   }

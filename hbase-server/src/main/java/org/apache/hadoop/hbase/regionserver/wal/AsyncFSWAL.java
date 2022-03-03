@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -200,22 +201,26 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private final int waitOnShutdownInSeconds;
 
+  private final StreamSlowMonitor streamSlowMonitor;
+
   public AsyncFSWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
       Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
       String prefix, String suffix, EventLoopGroup eventLoopGroup,
       Class<? extends Channel> channelClass) throws FailedLogCloseException, IOException {
     this(fs, null, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix,
-        eventLoopGroup, channelClass);
+        eventLoopGroup, channelClass, StreamSlowMonitor.create(conf, "monitorForSuffix"));
   }
 
   public AsyncFSWAL(FileSystem fs, Abortable abortable, Path rootDir, String logDir,
       String archiveDir, Configuration conf, List<WALActionsListener> listeners,
       boolean failIfWALExists, String prefix, String suffix, EventLoopGroup eventLoopGroup,
-      Class<? extends Channel> channelClass) throws FailedLogCloseException, IOException {
+      Class<? extends Channel> channelClass, StreamSlowMonitor monitor)
+      throws FailedLogCloseException, IOException {
     super(fs, abortable, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
         suffix);
     this.eventLoopGroup = eventLoopGroup;
     this.channelClass = channelClass;
+    this.streamSlowMonitor = monitor;
     Supplier<Boolean> hasConsumerTask;
     if (conf.getBoolean(ASYNC_WAL_USE_SHARED_EVENT_LOOP, DEFAULT_ASYNC_WAL_USE_SHARED_EVENT_LOOP)) {
       this.consumeExecutor = eventLoopGroup.next();
@@ -237,8 +242,9 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       ThreadPoolExecutor threadPool =
         new ThreadPoolExecutor(1, 1, 0L,
           TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(),
-            new ThreadFactoryBuilder().setNameFormat("AsyncFSWAL-%d-" + rootDir.toString()).
-              setDaemon(true).build());
+          new ThreadFactoryBuilder().setNameFormat("AsyncFSWAL-%d-"+ rootDir.toString() +
+              "-prefix:" + (prefix == null ? "default" : prefix).replace("%", "%%"))
+            .setDaemon(true).build());
       hasConsumerTask = () -> threadPool.getQueue().peek() == consumer;
       this.consumeExecutor = threadPool;
     }
@@ -448,12 +454,20 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     }
   }
 
+  // confirm non-empty before calling
+  private static long getLastTxid(Deque<FSWALEntry> queue) {
+    return queue.peekLast().getTxid();
+  }
+
   private void appendAndSync() {
     final AsyncWriter writer = this.writer;
     // maybe a sync request is not queued when we issue a sync, so check here to see if we could
     // finish some.
     finishSync();
     long newHighestProcessedAppendTxid = -1L;
+    // this is used to avoid calling peedLast every time on unackedAppends, appendAndAsync is single
+    // threaded, this could save us some cycles
+    boolean addedToUnackedAppends = false;
     for (Iterator<FSWALEntry> iter = toWriteAppends.iterator(); iter.hasNext();) {
       FSWALEntry entry = iter.next();
       boolean appended;
@@ -467,10 +481,21 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       if (appended) {
         // This is possible, when we fail to sync, we will add the unackedAppends back to
         // toWriteAppends, so here we may get an entry which is already in the unackedAppends.
-        if (unackedAppends.isEmpty() || unackedAppends.peekLast().getTxid() < entry.getTxid()) {
+        if (addedToUnackedAppends || unackedAppends.isEmpty() ||
+          getLastTxid(unackedAppends) < entry.getTxid()) {
           unackedAppends.addLast(entry);
+          addedToUnackedAppends = true;
         }
-        if (writer.getLength() - fileLengthAtLastSync >= batchSize) {
+        // See HBASE-25905, here we need to make sure that, we will always write all the entries in
+        // unackedAppends out. As the code in the consume method will assume that, the entries in
+        // unackedAppends have all been sent out so if there is roll request and unackedAppends is
+        // not empty, we could just return as later there will be a syncCompleted call to clear the
+        // unackedAppends, or a syncFailed to lead us to another state.
+        // There could be other ways to fix, such as changing the logic in the consume method, but
+        // it will break the assumption and then (may) lead to a big refactoring. So here let's use
+        // this way to fix first, can optimize later.
+        if (writer.getLength() - fileLengthAtLastSync >= batchSize &&
+          (addedToUnackedAppends || entry.getTxid() >= getLastTxid(unackedAppends))) {
           break;
         }
       }
@@ -692,7 +717,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   protected final AsyncWriter createAsyncWriter(FileSystem fs, Path path) throws IOException {
     return AsyncFSWALProvider.createAsyncWriter(conf, fs, path, false, this.blocksize,
-      eventLoopGroup, channelClass);
+      eventLoopGroup, channelClass, streamSlowMonitor);
   }
 
   @Override

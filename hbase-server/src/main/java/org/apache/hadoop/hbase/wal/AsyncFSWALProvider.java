@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutput;
 import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper;
 import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper;
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.AsyncProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
@@ -48,6 +49,8 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncFSWALProvider.class);
 
+  public static final String WRITER_IMPL = "hbase.regionserver.hlog.async.writer.impl";
+
   // Only public so classes back in regionserver.wal can access
   public interface AsyncWriter extends WALProvider.AsyncWriter {
     /**
@@ -55,8 +58,8 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
      * @throws StreamLacksCapabilityException if the given FileSystem can't provide streams that
      *         meet the needs of the given Writer implementation.
      */
-    void init(FileSystem fs, Path path, Configuration c, boolean overwritable, long blocksize)
-        throws IOException, CommonFSUtils.StreamLacksCapabilityException;
+    void init(FileSystem fs, Path path, Configuration c, boolean overwritable, long blocksize,
+        StreamSlowMonitor monitor) throws IOException, CommonFSUtils.StreamLacksCapabilityException;
   }
 
   private EventLoopGroup eventLoopGroup;
@@ -66,10 +69,10 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
   @Override
   protected AsyncFSWAL createWAL() throws IOException {
     return new AsyncFSWAL(CommonFSUtils.getWALFileSystem(conf), this.abortable,
-        CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
-        getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
-        META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null, eventLoopGroup,
-        channelClass);
+      CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
+      getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
+      META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null, eventLoopGroup,
+      channelClass, factory.getExcludeDatanodeManager().getStreamSlowMonitor(providerId));
   }
 
   @Override
@@ -87,7 +90,7 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
       boolean overwritable, EventLoopGroup eventLoopGroup,
       Class<? extends Channel> channelClass) throws IOException {
     return createAsyncWriter(conf, fs, path, overwritable, WALUtil.getWALBlockSize(conf, fs, path),
-        eventLoopGroup, channelClass);
+        eventLoopGroup, channelClass, StreamSlowMonitor.create(conf, path.getName()));
   }
 
   /**
@@ -95,14 +98,14 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
    */
   public static AsyncWriter createAsyncWriter(Configuration conf, FileSystem fs, Path path,
       boolean overwritable, long blocksize, EventLoopGroup eventLoopGroup,
-      Class<? extends Channel> channelClass) throws IOException {
+      Class<? extends Channel> channelClass, StreamSlowMonitor monitor) throws IOException {
     // Configuration already does caching for the Class lookup.
     Class<? extends AsyncWriter> logWriterClass = conf.getClass(
-      "hbase.regionserver.hlog.async.writer.impl", AsyncProtobufLogWriter.class, AsyncWriter.class);
+      WRITER_IMPL, AsyncProtobufLogWriter.class, AsyncWriter.class);
     try {
       AsyncWriter writer = logWriterClass.getConstructor(EventLoopGroup.class, Class.class)
           .newInstance(eventLoopGroup, channelClass);
-      writer.init(fs, path, conf, overwritable, blocksize);
+      writer.init(fs, path, conf, overwritable, blocksize, monitor);
       return writer;
     } catch (Exception e) {
       if (e instanceof CommonFSUtils.StreamLacksCapabilityException) {

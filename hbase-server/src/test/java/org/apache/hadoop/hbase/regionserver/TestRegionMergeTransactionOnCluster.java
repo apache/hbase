@@ -245,7 +245,7 @@ public class TestRegionMergeTransactionOnCluster {
         TEST_UTIL.getConfiguration(), fs, tabledir, mergedRegionInfo);
       int count = 0;
       for(ColumnFamilyDescriptor colFamily : columnFamilies) {
-        count += hrfs.getStoreFiles(colFamily.getName()).size();
+        count += hrfs.getStoreFiles(colFamily.getNameAsString()).size();
       }
       ADMIN.compactRegion(mergedRegionInfo.getRegionName());
       // clean up the merged region store files
@@ -254,7 +254,7 @@ public class TestRegionMergeTransactionOnCluster {
       int newcount = 0;
       while (EnvironmentEdgeManager.currentTime() < timeout) {
         for(ColumnFamilyDescriptor colFamily : columnFamilies) {
-          newcount += hrfs.getStoreFiles(colFamily.getName()).size();
+          newcount += hrfs.getStoreFiles(colFamily.getNameAsString()).size();
         }
         if(newcount > count) {
           break;
@@ -273,7 +273,7 @@ public class TestRegionMergeTransactionOnCluster {
       while (EnvironmentEdgeManager.currentTime() < timeout) {
         int newcount1 = 0;
         for(ColumnFamilyDescriptor colFamily : columnFamilies) {
-          newcount1 += hrfs.getStoreFiles(colFamily.getName()).size();
+          newcount1 += hrfs.getStoreFiles(colFamily.getNameAsString()).size();
         }
         if(newcount1 <= 1) {
           break;

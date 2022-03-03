@@ -65,9 +65,13 @@ public class TestDefaultStoreEngine {
         DummyCompactionPolicy.class.getName());
     conf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
         DummyStoreFlusher.class.getName());
+    HRegion mockRegion = Mockito.mock(HRegion.class);
     HStore mockStore = Mockito.mock(HStore.class);
+    mockStore.conf = conf;
     Mockito.when(mockStore.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    StoreEngine<?, ?, ?, ?> se = StoreEngine.create(mockStore, conf, CellComparatorImpl.COMPARATOR);
+    Mockito.when(mockStore.getHRegion()).thenReturn(mockRegion);
+    StoreEngine<?, ?, ?, ?> se =
+      StoreEngine.create(mockStore, conf, CellComparatorImpl.COMPARATOR);
     Assert.assertTrue(se instanceof DefaultStoreEngine);
     Assert.assertTrue(se.getCompactionPolicy() instanceof DummyCompactionPolicy);
     Assert.assertTrue(se.getStoreFlusher() instanceof DummyStoreFlusher);

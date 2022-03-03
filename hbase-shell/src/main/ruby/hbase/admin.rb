@@ -477,7 +477,7 @@ module Hbase
       )
       zk = @zk_wrapper.getRecoverableZooKeeper.getZooKeeper
       @zk_main = org.apache.zookeeper.ZooKeeperMain.new(zk)
-      org.apache.hadoop.hbase.zookeeper.ZKUtil.dump(@zk_wrapper)
+      org.apache.hadoop.hbase.zookeeper.ZKDump.dump(@zk_wrapper)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -824,6 +824,17 @@ module Hbase
               tdb.removeValue(name)
             end
             hasTableUpdate = true
+          elsif method == 'table_remove_coprocessor'
+            classname = arg.delete(CLASSNAME)
+            raise(ArgumentError, 'CLASSNAME parameter missing for table_remove_coprocessor method') unless classname
+            if classname.is_a?(Array)
+              classname.each do |key|
+                tdb.removeCoprocessor(key)
+              end
+            else
+              tdb.removeCoprocessor(classname)
+            end
+            hasTableUpdate = true
           # Unset table configuration
           elsif method == 'table_conf_unset'
             raise(ArgumentError, 'NAME parameter missing for table_conf_unset method') unless name
@@ -912,14 +923,17 @@ module Hbase
         for v in cluster_metrics.getRegionStatesInTransition
           puts(format('    %s', v))
         end
-        master = cluster_metrics.getMasterName
-        puts(format('active master:  %s:%d %d', master.getHostname, master.getPort,
-                    master.getStartcode))
-        puts(format('%d backup masters', cluster_metrics.getBackupMasterNames.size))
-        for server in cluster_metrics.getBackupMasterNames
+        master = cluster_metrics.getMaster
+        unless master.nil?
+          puts(format('active master:  %s:%d %d', master.getHostname, master.getPort, master.getStartcode))
+          for task in cluster_metrics.getMasterTasks
+            puts(format('    %s', task.toString))
+          end
+        end
+        puts(format('%d backup masters', cluster_metrics.getBackupMastersSize))
+        for server in cluster_metrics.getBackupMasters
           puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
         end
-
         master_coprocs = @admin.getMasterCoprocessorNames.toString
         unless master_coprocs.nil?
           puts(format('master coprocessors: %s', master_coprocs))
@@ -931,6 +945,9 @@ module Hbase
           for name, region in cluster_metrics.getLiveServerMetrics.get(server).getRegionMetrics
             puts(format('        %s', region.getNameAsString.dump))
             puts(format('            %s', region.toString))
+          end
+          for task in cluster_metrics.getLoad(server).getTasks
+            puts(format('        %s', task.toString))
           end
         end
         puts(format('%d dead servers', cluster_metrics.getDeadServerNames.size))
@@ -969,6 +986,33 @@ module Hbase
           else
             puts(format('%<source>s', source: r_source_string))
             puts(format('%<sink>s', sink: r_sink_string))
+          end
+        end
+      elsif format == 'tasks'
+        master = cluster_metrics.getMaster
+        unless master.nil?
+          puts(format('active master:  %s:%d %d', master.getHostname, master.getPort, master.getStartcode))
+          printed = false
+          for task in cluster_metrics.getMasterTasks
+            next unless task.getState.name == 'RUNNING'
+            puts(format('    %s', task.toString))
+            printed = true
+          end
+          if !printed
+            puts('    no active tasks')
+          end
+        end
+        puts(format('%d live servers', cluster_metrics.getServersSize))
+        for server in cluster_metrics.getServers
+          puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
+          printed = false
+          for task in cluster_metrics.getLoad(server).getTasks
+            next unless task.getState.name == 'RUNNING'
+            puts(format('        %s', task.toString))
+            printed = true
+          end
+          if !printed
+            puts('        no active tasks')
           end
         end
       elsif format == 'simple'
@@ -1248,8 +1292,8 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Create a new table by cloning the snapshot content
-    def clone_snapshot(snapshot_name, table, restore_acl = false)
-      @admin.cloneSnapshot(snapshot_name, TableName.valueOf(table), restore_acl)
+    def clone_snapshot(snapshot_name, table, restore_acl = false, clone_sft = nil)
+      @admin.cloneSnapshot(snapshot_name, TableName.valueOf(table), restore_acl, clone_sft)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -1813,6 +1857,18 @@ module Hbase
       else
         java.util.Arrays.asList(server_names)
       end
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Change table's sft
+    def modify_table_sft(tableName, sft)
+      @admin.modifyTableStoreFileTracker(tableName, sft)
+    end
+
+     #----------------------------------------------------------------------------------------------
+    # Change table column family's sft
+    def modify_table_family_sft(tableName, family_bytes, sft)
+      @admin.modifyColumnFamilyStoreFileTracker(tableName, family_bytes, sft)
     end
   end
   # rubocop:enable Metrics/ClassLength

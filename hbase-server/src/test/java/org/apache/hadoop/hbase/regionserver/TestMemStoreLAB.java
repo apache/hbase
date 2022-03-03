@@ -16,15 +16,19 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
+import static org.apache.hadoop.hbase.regionserver.MemStoreLAB.CHUNK_SIZE_KEY;
+import static org.apache.hadoop.hbase.regionserver.MemStoreLAB.MAX_ALLOC_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
@@ -35,9 +39,11 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator.ChunkType;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -212,7 +218,7 @@ public class TestMemStoreLAB {
       Configuration conf = HBaseConfiguration.create();
       conf.setDouble(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, 0.1);
       // set chunk size to default max alloc size, so we could easily trigger chunk retirement
-      conf.setLong(MemStoreLABImpl.CHUNK_SIZE_KEY, MemStoreLABImpl.MAX_ALLOC_DEFAULT);
+      conf.setLong(CHUNK_SIZE_KEY, MemStoreLABImpl.MAX_ALLOC_DEFAULT);
       // reconstruct mslab
       long globalMemStoreLimit = (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
           .getMax() * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
@@ -253,17 +259,77 @@ public class TestMemStoreLAB {
       // none of the chunkIds would have been returned back
       assertTrue("All the chunks must have been cleared",
           ChunkCreator.instance.numberOfMappedChunks() != 0);
+      Set<Integer> chunkIds = new HashSet<Integer>(mslab.chunks);
       int pooledChunksNum = mslab.getPooledChunks().size();
       // close the mslab
       mslab.close();
       // make sure all chunks where reclaimed back to pool
-      int queueLength = mslab.getNumOfChunksReturnedToPool();
+      int queueLength = mslab.getNumOfChunksReturnedToPool(chunkIds);
       assertTrue("All chunks in chunk queue should be reclaimed or removed"
           + " after mslab closed but actually: " + (pooledChunksNum-queueLength),
           pooledChunksNum-queueLength == 0);
     } finally {
       ChunkCreator.instance = oldInstance;
     }
+  }
+
+  /**
+   * Test cell with right length, which constructed by testForceCopyOfBigCellInto. (HBASE-26467)
+   */
+  @Test
+  public void testForceCopyOfBigCellInto() {
+    Configuration conf = HBaseConfiguration.create();
+    int chunkSize = ChunkCreator.getInstance().getChunkSize();
+    conf.setInt(CHUNK_SIZE_KEY, chunkSize);
+    conf.setInt(MAX_ALLOC_KEY, chunkSize / 2);
+
+    MemStoreLABImpl mslab = new MemStoreLABImpl(conf);
+    byte[] row = Bytes.toBytes("row");
+    byte[] columnFamily = Bytes.toBytes("columnFamily");
+    byte[] qualify = Bytes.toBytes("qualify");
+    byte[] smallValue = new byte[chunkSize / 2];
+    byte[] bigValue = new byte[chunkSize];
+    KeyValue smallKV = new KeyValue(row, columnFamily, qualify, EnvironmentEdgeManager
+      .currentTime(), smallValue);
+
+    assertEquals(smallKV.getSerializedSize(),
+      mslab.forceCopyOfBigCellInto(smallKV).getSerializedSize());
+
+    KeyValue bigKV = new KeyValue(row, columnFamily, qualify, EnvironmentEdgeManager
+      .currentTime(), bigValue);
+    assertEquals(bigKV.getSerializedSize(),
+      mslab.forceCopyOfBigCellInto(bigKV).getSerializedSize());
+
+    /**
+     * Add test by HBASE-26576,all the chunks are in {@link ChunkCreator#chunkIdMap}
+     */
+    assertTrue(mslab.chunks.size() == 2);
+    Chunk dataChunk = null;
+    Chunk jumboChunk = null;
+
+    for (Integer chunkId : mslab.chunks) {
+      Chunk chunk = ChunkCreator.getInstance().getChunk(chunkId);
+      assertTrue(chunk != null);
+      if (chunk.getChunkType() == ChunkType.JUMBO_CHUNK) {
+        jumboChunk = chunk;
+      } else if (chunk.getChunkType() == ChunkType.DATA_CHUNK) {
+        dataChunk = chunk;
+      }
+    }
+
+    assertTrue(dataChunk != null);
+    assertTrue(jumboChunk != null);
+
+    mslab.close();
+    /**
+     * After mslab close, jumboChunk is removed from {@link ChunkCreator#chunkIdMap} but because
+     * dataChunk is recycled to pool so it is still in {@link ChunkCreator#chunkIdMap}.
+     */
+    assertTrue(ChunkCreator.getInstance().getChunk(jumboChunk.getId()) == null);
+    assertTrue(!ChunkCreator.getInstance().isChunkInPool(jumboChunk.getId()));
+    assertTrue(ChunkCreator.getInstance().getChunk(dataChunk.getId()) == dataChunk);
+    assertTrue(ChunkCreator.getInstance().isChunkInPool(dataChunk.getId()));
+
   }
 
   private Thread getChunkQueueTestThread(final MemStoreLABImpl mslab, String threadName,

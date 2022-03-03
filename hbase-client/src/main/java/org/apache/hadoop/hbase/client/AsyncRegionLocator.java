@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,26 +18,29 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
-import static org.apache.hadoop.hbase.trace.TraceUtil.REGION_NAMES_KEY;
-import static org.apache.hadoop.hbase.trace.TraceUtil.SERVER_NAME_KEY;
-import static org.apache.hadoop.hbase.trace.TraceUtil.createSpan;
-import static org.apache.hadoop.hbase.trace.TraceUtil.createTableSpan;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.SERVER_NAME_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.trace.ConnectionSpanBuilder;
+import org.apache.hadoop.hbase.client.trace.TableSpanBuilder;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -96,9 +99,12 @@ class AsyncRegionLocator {
     return TableName.isMetaTableName(tableName);
   }
 
-  private <T> CompletableFuture<T> tracedLocationFuture(Supplier<CompletableFuture<T>> action,
-    Function<T, List<String>> getRegionNames, TableName tableName, String methodName) {
-    Span span = createTableSpan("AsyncRegionLocator." + methodName, tableName);
+  private <T> CompletableFuture<T> tracedLocationFuture(
+    Supplier<CompletableFuture<T>> action,
+    Function<T, List<String>> getRegionNames,
+    Supplier<Span> spanSupplier
+  ) {
+    final Span span = spanSupplier.get();
     try (Scope scope = span.makeCurrent()) {
       CompletableFuture<T> future = action.get();
       FutureUtils.addListener(future, (resp, error) -> {
@@ -117,18 +123,30 @@ class AsyncRegionLocator {
     }
   }
 
-  private List<String> getRegionName(RegionLocations locs) {
-    List<String> names = new ArrayList<>();
-    for (HRegionLocation loc : locs.getRegionLocations()) {
-      if (loc != null) {
-        names.add(loc.getRegion().getRegionNameAsString());
-      }
+  private static List<String> getRegionNames(RegionLocations locs) {
+    if (locs == null || locs.getRegionLocations() == null) {
+      return Collections.emptyList();
     }
-    return names;
+    return Arrays.stream(locs.getRegionLocations())
+      .filter(Objects::nonNull)
+      .map(HRegionLocation::getRegion)
+      .map(RegionInfo::getRegionNameAsString)
+      .collect(Collectors.toList());
+  }
+
+  private static List<String> getRegionNames(HRegionLocation location) {
+    return Optional.ofNullable(location)
+      .map(HRegionLocation::getRegion)
+      .map(RegionInfo::getRegionNameAsString)
+      .map(Collections::singletonList)
+      .orElseGet(Collections::emptyList);
   }
 
   CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
     RegionLocateType type, boolean reload, long timeoutNs) {
+    final Supplier<Span> supplier = new TableSpanBuilder(conn)
+      .setName("AsyncRegionLocator.getRegionLocations")
+      .setTableName(tableName);
     return tracedLocationFuture(() -> {
       CompletableFuture<RegionLocations> future = isMeta(tableName) ?
         metaRegionLocator.getRegionLocations(RegionReplicaUtil.DEFAULT_REPLICA_ID, reload) :
@@ -138,11 +156,14 @@ class AsyncRegionLocator {
         () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs) +
           "ms) waiting for region locations for " + tableName + ", row='" +
           Bytes.toStringBinary(row) + "'");
-    }, this::getRegionName, tableName, "getRegionLocations");
+    }, AsyncRegionLocator::getRegionNames, supplier);
   }
 
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
     int replicaId, RegionLocateType type, boolean reload, long timeoutNs) {
+    final Supplier<Span> supplier = new TableSpanBuilder(conn)
+      .setName("AsyncRegionLocator.getRegionLocation")
+      .setTableName(tableName);
     return tracedLocationFuture(() -> {
       // meta region can not be split right now so we always call the same method.
       // Change it later if the meta table can have more than one regions.
@@ -173,8 +194,7 @@ class AsyncRegionLocator {
         () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs) +
           "ms) waiting for region location for " + tableName + ", row='" +
           Bytes.toStringBinary(row) + "', replicaId=" + replicaId);
-    }, loc -> Arrays.asList(loc.getRegion().getRegionNameAsString()), tableName,
-      "getRegionLocation");
+    }, AsyncRegionLocator::getRegionNames, supplier);
   }
 
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
@@ -202,6 +222,9 @@ class AsyncRegionLocator {
   }
 
   void clearCache(TableName tableName) {
+    Supplier<Span> supplier = new TableSpanBuilder(conn)
+      .setName("AsyncRegionLocator.clearCache")
+      .setTableName(tableName);
     TraceUtil.trace(() -> {
       LOG.debug("Clear meta cache for {}", tableName);
       if (tableName.equals(META_TABLE_NAME)) {
@@ -209,24 +232,28 @@ class AsyncRegionLocator {
       } else {
         nonMetaRegionLocator.clearCache(tableName);
       }
-    }, () -> createTableSpan("AsyncRegionLocator.clearCache", tableName));
+    }, supplier);
   }
 
   void clearCache(ServerName serverName) {
+    Supplier<Span> supplier = new ConnectionSpanBuilder(conn)
+      .setName("AsyncRegionLocator.clearCache")
+      .addAttribute(SERVER_NAME_KEY, serverName.getServerName());
     TraceUtil.trace(() -> {
       LOG.debug("Clear meta cache for {}", serverName);
       metaRegionLocator.clearCache(serverName);
       nonMetaRegionLocator.clearCache(serverName);
       conn.getConnectionMetrics().ifPresent(MetricsConnection::incrMetaCacheNumClearServer);
-    }, () -> createSpan("AsyncRegionLocator.clearCache").setAttribute(SERVER_NAME_KEY,
-      serverName.getServerName()));
+    }, supplier);
   }
 
   void clearCache() {
+    Supplier<Span> supplier = new ConnectionSpanBuilder(conn)
+      .setName("AsyncRegionLocator.clearCache");
     TraceUtil.trace(() -> {
       metaRegionLocator.clearCache();
       nonMetaRegionLocator.clearCache();
-    }, "AsyncRegionLocator.clearCache");
+    }, supplier);
   }
 
   AsyncNonMetaRegionLocator getNonMetaRegionLocator() {

@@ -626,9 +626,11 @@ public class HttpServer implements FilterContainer {
         ClickjackingPreventionFilter.class.getName(),
         ClickjackingPreventionFilter.getDefaultParameters(conf));
 
+    HttpConfig httpConfig = new HttpConfig(conf);
+
     addGlobalFilter("securityheaders",
         SecurityHeadersFilter.class.getName(),
-        SecurityHeadersFilter.getDefaultParameters(conf));
+        SecurityHeadersFilter.getDefaultParameters(conf, httpConfig.isSecure()));
 
     // But security needs to be enabled prior to adding the other servlets
     if (authenticationEnabled) {
@@ -787,10 +789,10 @@ public class HttpServer implements FilterContainer {
       if (Files.notExists(tmpDir)) {
         Files.createDirectories(tmpDir);
       }
-      ServletContextHandler genCtx = new ServletContextHandler(contexts, "/prof-output");
+      ServletContextHandler genCtx = new ServletContextHandler(contexts, "/prof-output-hbase");
       genCtx.addServlet(ProfileOutputServlet.class, "/*");
       genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
-      genCtx.setDisplayName("prof-output");
+      genCtx.setDisplayName("prof-output-hbase");
     } else {
       addUnprivilegedServlet("prof", "/prof", ProfileServlet.DisabledServlet.class);
       LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property " +

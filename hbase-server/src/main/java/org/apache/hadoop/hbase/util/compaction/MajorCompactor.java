@@ -202,8 +202,7 @@ public class MajorCompactor extends Configured implements Tool {
 
   protected Optional<MajorCompactionRequest> getMajorCompactionRequest(RegionInfo hri)
       throws IOException {
-    return MajorCompactionRequest.newRequest(connection.getConfiguration(), hri, storesToCompact,
-            timestamp);
+    return MajorCompactionRequest.newRequest(connection, hri, storesToCompact, timestamp);
   }
 
   private Collection<ServerName> getServersToCompact(Set<ServerName> snSet) {
@@ -352,8 +351,7 @@ public class MajorCompactor extends Configured implements Tool {
       for (HRegionLocation location : locations) {
         if (location.getRegion().getRegionId() > timestamp) {
           Optional<MajorCompactionRequest> compactionRequest = MajorCompactionRequest
-              .newRequest(connection.getConfiguration(), location.getRegion(), storesToCompact,
-                  timestamp);
+              .newRequest(connection, location.getRegion(), storesToCompact, timestamp);
           compactionRequest.ifPresent(request -> clusterCompactionQueues
               .addToCompactionQueue(location.getServerName(), request));
         }

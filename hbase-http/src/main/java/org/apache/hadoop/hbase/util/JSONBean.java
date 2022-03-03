@@ -66,8 +66,13 @@ public class JSONBean {
 
     void write(String key, String value) throws IOException;
 
-    int write(MBeanServer mBeanServer, ObjectName qry, String attribute, boolean description)
-        throws IOException;
+    default int write(MBeanServer mBeanServer, ObjectName qry, String attribute,
+        boolean description) throws IOException {
+      return write(mBeanServer, qry, attribute, description, null);
+    }
+
+    int write(MBeanServer mBeanServer, ObjectName qry, String attribute, boolean description,
+        ObjectName excluded) throws IOException;
 
     void flush() throws IOException;
   }
@@ -118,8 +123,8 @@ public class JSONBean {
 
       @Override
       public int write(MBeanServer mBeanServer, ObjectName qry, String attribute,
-          boolean description) throws IOException {
-        return JSONBean.write(jsonWriter, mBeanServer, qry, attribute, description);
+          boolean description, ObjectName excluded) throws IOException {
+        return JSONBean.write(jsonWriter, mBeanServer, qry, attribute, description, excluded);
       }
     };
   }
@@ -128,7 +133,7 @@ public class JSONBean {
    * @return Return non-zero if failed to find bean. 0
    */
   private static int write(JsonWriter writer, MBeanServer mBeanServer, ObjectName qry,
-      String attribute, boolean description) throws IOException {
+      String attribute, boolean description, ObjectName excluded) throws IOException {
     LOG.debug("Listing beans for {}", qry);
     Set<ObjectName> names = null;
     names = mBeanServer.queryNames(qry, null);
@@ -137,6 +142,9 @@ public class JSONBean {
     Pattern[] matchingPattern = null;
     while (it.hasNext()) {
       ObjectName oname = it.next();
+      if (excluded != null && excluded.apply(oname)) {
+        continue;
+      }
       MBeanInfo minfo;
       String code = "";
       String descriptionStr = null;
@@ -255,7 +263,7 @@ public class JSONBean {
     if ("modelerType".equals(attName)) {
       return;
     }
-    if (attName.indexOf("=") >= 0 || attName.indexOf(":") >= 0 || attName.indexOf(" ") >= 0) {
+    if (attName.indexOf("=") >= 0 || attName.indexOf(" ") >= 0) {
       return;
     }
 

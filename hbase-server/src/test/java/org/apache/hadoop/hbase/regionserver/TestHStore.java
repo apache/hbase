@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -52,8 +53,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.IntBinaryOperator;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -101,6 +102,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
+import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -312,7 +314,7 @@ public class TestHStore {
 
   /**
    * Verify that compression and data block encoding are respected by the
-   * Store.createWriterInTmp() method, used on store flush.
+   * createWriter method, used on store flush.
    */
   @Test
   public void testCreateWriter() throws Exception {
@@ -324,9 +326,11 @@ public class TestHStore {
         .build();
     init(name.getMethodName(), conf, hcd);
 
-    // Test createWriterInTmp()
-    StoreFileWriter writer =
-        store.createWriterInTmp(4, hcd.getCompressionType(), false, true, false, false);
+    // Test createWriter
+    StoreFileWriter writer = store.getStoreEngine()
+      .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(4)
+        .compression(hcd.getCompressionType()).isCompaction(false).includeMVCCReadpoint(true)
+        .includesTag(false).shouldDropBehind(false));
     Path path = writer.getPath();
     writer.append(new KeyValue(row, family, qf1, Bytes.toBytes(1)));
     writer.append(new KeyValue(row, family, qf2, Bytes.toBytes(2)));
@@ -782,11 +786,12 @@ public class TestHStore {
     }
   }
 
-  private static void flushStore(HStore store, long id) throws IOException {
+  private static StoreFlushContext flushStore(HStore store, long id) throws IOException {
     StoreFlushContext storeFlushCtx = store.createFlushContext(id, FlushLifeCycleTracker.DUMMY);
     storeFlushCtx.prepare();
     storeFlushCtx.flushCache(Mockito.mock(MonitoredTask.class));
     storeFlushCtx.commit(Mockito.mock(MonitoredTask.class));
+    return storeFlushCtx;
   }
 
   /**
@@ -1023,19 +1028,19 @@ public class TestHStore {
     // add one more file
     addStoreFile();
 
-    HStore spiedStore = spy(store);
+    StoreEngine<?, ?, ?, ?> spiedStoreEngine = spy(store.getStoreEngine());
 
     // call first time after files changed
-    spiedStore.refreshStoreFiles();
+    spiedStoreEngine.refreshStoreFiles();
     assertEquals(2, this.store.getStorefilesCount());
-    verify(spiedStore, times(1)).replaceStoreFiles(any(), any());
+    verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any(), any());
 
     // call second time
-    spiedStore.refreshStoreFiles();
+    spiedStoreEngine.refreshStoreFiles();
 
     // ensure that replaceStoreFiles is not called, i.e, the times does not change, if files are not
     // refreshed,
-    verify(spiedStore, times(1)).replaceStoreFiles(any(), any());
+    verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any(), any());
   }
 
   private long countMemStoreScanner(StoreScanner scanner) {
@@ -1646,7 +1651,7 @@ public class TestHStore {
     // Do compaction
     MyThread thread = new MyThread(storeScanner);
     thread.start();
-    store.replaceStoreFiles(actualStorefiles, actualStorefiles1);
+    store.replaceStoreFiles(actualStorefiles, actualStorefiles1, false);
     thread.join();
     KeyValueHeap heap2 = thread.getHeap();
     assertFalse(heap.equals(heap2));
@@ -1712,8 +1717,10 @@ public class TestHStore {
   @Test
   public void testHFileContextSetWithCFAndTable() throws Exception {
     init(this.name.getMethodName());
-    StoreFileWriter writer = store.createWriterInTmp(10000L,
-        Compression.Algorithm.NONE, false, true, false, true);
+    StoreFileWriter writer = store.getStoreEngine()
+      .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(10000L)
+        .compression(Compression.Algorithm.NONE).isCompaction(true).includeMVCCReadpoint(true)
+        .includesTag(false).shouldDropBehind(true));
     HFileContext hFileContext = writer.getHFileWriter().getFileContext();
     assertArrayEquals(family, hFileContext.getColumnFamily());
     assertArrayEquals(table, hFileContext.getTableName());
@@ -2146,6 +2153,120 @@ public class TestHStore {
     }
   }
 
+  /**
+   * <pre>
+   * This test is for HBASE-26465,
+   * test {@link DefaultMemStore#clearSnapshot} and {@link DefaultMemStore#getScanners} execute
+   * concurrently. The threads sequence before HBASE-26465 is:
+   * 1.The flush thread starts {@link DefaultMemStore} flushing after some cells have be added to
+   *  {@link DefaultMemStore}.
+   * 2.The flush thread stopping before {@link DefaultMemStore#clearSnapshot} in
+   *   {@link HStore#updateStorefiles} after completed flushing memStore to hfile.
+   * 3.The scan thread starts and stopping after {@link DefaultMemStore#getSnapshotSegments} in
+   *   {@link DefaultMemStore#getScanners},here the scan thread gets the
+   *   {@link DefaultMemStore#snapshot} which is created by the flush thread.
+   * 4.The flush thread continues {@link DefaultMemStore#clearSnapshot} and close
+   *   {@link DefaultMemStore#snapshot},because the reference count of the corresponding
+   *   {@link MemStoreLABImpl} is 0, the {@link Chunk}s in corresponding {@link MemStoreLABImpl}
+   *   are recycled.
+   * 5.The scan thread continues {@link DefaultMemStore#getScanners},and create a
+   *   {@link SegmentScanner} for this {@link DefaultMemStore#snapshot}, and increase the
+   *   reference count of the corresponding {@link MemStoreLABImpl}, but {@link Chunk}s in
+   *   corresponding {@link MemStoreLABImpl} are recycled by step 4, and these {@link Chunk}s may
+   *   be overwritten by other write threads,which may cause serious problem.
+   * After HBASE-26465,{@link DefaultMemStore#getScanners} and
+   * {@link DefaultMemStore#clearSnapshot} could not execute concurrently.
+   * </pre>
+   */
+  @Test
+  public void testClearSnapshotGetScannerConcurrently() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+
+    byte[] smallValue = new byte[3];
+    byte[] largeValue = new byte[9];
+    final long timestamp = EnvironmentEdgeManager.currentTime();
+    final long seqId = 100;
+    final Cell smallCell = createCell(qf1, timestamp, seqId, smallValue);
+    final Cell largeCell = createCell(qf2, timestamp, seqId, largeValue);
+    TreeSet<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+    quals.add(qf1);
+    quals.add(qf2);
+
+    conf.set(HStore.MEMSTORE_CLASS_NAME, MyDefaultMemStore.class.getName());
+    conf.setBoolean(WALFactory.WAL_ENABLED, false);
+
+    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
+    MyDefaultMemStore myDefaultMemStore = (MyDefaultMemStore) (store.memstore);
+    myDefaultMemStore.store = store;
+
+    MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
+    store.add(smallCell, memStoreSizing);
+    store.add(largeCell, memStoreSizing);
+
+    final AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>();
+    final Thread flushThread = new Thread(() -> {
+      try {
+        flushStore(store, id++);
+      } catch (Throwable exception) {
+        exceptionRef.set(exception);
+      }
+    });
+    flushThread.setName(MyDefaultMemStore.FLUSH_THREAD_NAME);
+    flushThread.start();
+
+    String oldThreadName = Thread.currentThread().getName();
+    StoreScanner storeScanner = null;
+    try {
+      Thread.currentThread().setName(MyDefaultMemStore.GET_SCANNER_THREAD_NAME);
+
+      /**
+       * Wait flush thread stopping before {@link DefaultMemStore#doClearSnapshot}
+       */
+      myDefaultMemStore.getScannerCyclicBarrier.await();
+
+      storeScanner = (StoreScanner) store.getScanner(new Scan(new Get(row)), quals, seqId + 1);
+      flushThread.join();
+
+      if (myDefaultMemStore.shouldWait) {
+        SegmentScanner segmentScanner = getTypeKeyValueScanner(storeScanner, SegmentScanner.class);
+        MemStoreLABImpl memStoreLAB = (MemStoreLABImpl) (segmentScanner.segment.getMemStoreLAB());
+        assertTrue(memStoreLAB.isClosed());
+        assertTrue(!memStoreLAB.chunks.isEmpty());
+        assertTrue(!memStoreLAB.isReclaimed());
+
+        Cell cell1 = segmentScanner.next();
+        CellUtil.equals(smallCell, cell1);
+        Cell cell2 = segmentScanner.next();
+        CellUtil.equals(largeCell, cell2);
+        assertNull(segmentScanner.next());
+      } else {
+        List<Cell> results = new ArrayList<>();
+        storeScanner.next(results);
+        assertEquals(2, results.size());
+        CellUtil.equals(smallCell, results.get(0));
+        CellUtil.equals(largeCell, results.get(1));
+      }
+      assertTrue(exceptionRef.get() == null);
+    } finally {
+      if (storeScanner != null) {
+        storeScanner.close();
+      }
+      Thread.currentThread().setName(oldThreadName);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private <T> T getTypeKeyValueScanner(StoreScanner storeScanner, Class<T> keyValueScannerClass) {
+    List<T> resultScanners = new ArrayList<T>();
+    for (KeyValueScanner keyValueScanner : storeScanner.currentScanners) {
+      if (keyValueScannerClass.isInstance(keyValueScanner)) {
+        resultScanners.add((T) keyValueScanner);
+      }
+    }
+    assertTrue(resultScanners.size() == 1);
+    return resultScanners.get(0);
+  }
+
   @Test 
   public void testOnConfigurationChange() throws IOException {
     final int COMMON_MAX_FILES_TO_COMPACT = 10;
@@ -2167,6 +2288,239 @@ public class TestHStore {
     this.store.onConfigurationChange(conf);
     assertEquals(STORE_MAX_FILES_TO_COMPACT,
       store.getStoreEngine().getCompactionPolicy().getConf().getMaxFilesToCompact());
+  }
+
+  /**
+   * This test is for HBASE-26476
+   */
+  @Test
+  public void testExtendsDefaultMemStore() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(WALFactory.WAL_ENABLED, false);
+
+    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
+    assertTrue(this.store.memstore.getClass() == DefaultMemStore.class);
+    tearDown();
+
+    conf.set(HStore.MEMSTORE_CLASS_NAME, CustomDefaultMemStore.class.getName());
+    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
+    assertTrue(this.store.memstore.getClass() == CustomDefaultMemStore.class);
+  }
+
+  static class CustomDefaultMemStore extends DefaultMemStore {
+
+    public CustomDefaultMemStore(Configuration conf, CellComparator c,
+        RegionServicesForStores regionServices) {
+      super(conf, c, regionServices);
+    }
+
+  }
+
+  /**
+   * This test is for HBASE-26488
+   */
+  @Test
+  public void testMemoryLeakWhenFlushMemStoreRetrying() throws Exception {
+
+    Configuration conf = HBaseConfiguration.create();
+
+    byte[] smallValue = new byte[3];
+    byte[] largeValue = new byte[9];
+    final long timestamp = EnvironmentEdgeManager.currentTime();
+    final long seqId = 100;
+    final Cell smallCell = createCell(qf1, timestamp, seqId, smallValue);
+    final Cell largeCell = createCell(qf2, timestamp, seqId, largeValue);
+    TreeSet<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+    quals.add(qf1);
+    quals.add(qf2);
+
+    conf.set(HStore.MEMSTORE_CLASS_NAME, MyDefaultMemStore1.class.getName());
+    conf.setBoolean(WALFactory.WAL_ENABLED, false);
+    conf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
+      MyDefaultStoreFlusher.class.getName());
+
+    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
+    MyDefaultMemStore1 myDefaultMemStore = (MyDefaultMemStore1) (store.memstore);
+    assertTrue((store.storeEngine.getStoreFlusher()) instanceof MyDefaultStoreFlusher);
+
+    MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
+    store.add(smallCell, memStoreSizing);
+    store.add(largeCell, memStoreSizing);
+    flushStore(store, id++);
+
+    MemStoreLABImpl memStoreLAB =
+        (MemStoreLABImpl) (myDefaultMemStore.snapshotImmutableSegment.getMemStoreLAB());
+    assertTrue(memStoreLAB.isClosed());
+    assertTrue(memStoreLAB.getRefCntValue() == 0);
+    assertTrue(memStoreLAB.isReclaimed());
+    assertTrue(memStoreLAB.chunks.isEmpty());
+    StoreScanner storeScanner = null;
+    try {
+      storeScanner =
+          (StoreScanner) store.getScanner(new Scan(new Get(row)), quals, seqId + 1);
+      assertTrue(store.storeEngine.getStoreFileManager().getStorefileCount() == 1);
+      assertTrue(store.memstore.size().getCellsCount() == 0);
+      assertTrue(store.memstore.getSnapshotSize().getCellsCount() == 0);
+      assertTrue(storeScanner.currentScanners.size() == 1);
+      assertTrue(storeScanner.currentScanners.get(0) instanceof StoreFileScanner);
+
+      List<Cell> results = new ArrayList<>();
+      storeScanner.next(results);
+      assertEquals(2, results.size());
+      CellUtil.equals(smallCell, results.get(0));
+      CellUtil.equals(largeCell, results.get(1));
+    } finally {
+      if (storeScanner != null) {
+        storeScanner.close();
+      }
+    }
+  }
+
+
+  static class MyDefaultMemStore1 extends DefaultMemStore {
+
+    private ImmutableSegment snapshotImmutableSegment;
+
+    public MyDefaultMemStore1(Configuration conf, CellComparator c,
+        RegionServicesForStores regionServices) {
+      super(conf, c, regionServices);
+    }
+
+    @Override
+    public MemStoreSnapshot snapshot() {
+      MemStoreSnapshot result = super.snapshot();
+      this.snapshotImmutableSegment = snapshot;
+      return result;
+    }
+
+  }
+
+  public static class MyDefaultStoreFlusher extends DefaultStoreFlusher {
+    private static final AtomicInteger failCounter = new AtomicInteger(1);
+    private static final AtomicInteger counter = new AtomicInteger(0);
+
+    public MyDefaultStoreFlusher(Configuration conf, HStore store) {
+      super(conf, store);
+    }
+
+    @Override
+    public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
+        MonitoredTask status, ThroughputController throughputController,
+        FlushLifeCycleTracker tracker) throws IOException {
+      counter.incrementAndGet();
+      return super.flushSnapshot(snapshot, cacheFlushId, status, throughputController, tracker);
+    }
+
+    @Override
+    protected void performFlush(InternalScanner scanner, final CellSink sink,
+        ThroughputController throughputController) throws IOException {
+
+      final int currentCount = counter.get();
+      CellSink newCellSink = (cell) -> {
+        if (currentCount <= failCounter.get()) {
+          throw new IOException("Simulated exception by tests");
+        }
+        sink.append(cell);
+      };
+      super.performFlush(scanner, newCellSink, throughputController);
+    }
+  }
+
+  /**
+   * This test is for HBASE-26494, test the {@link RefCnt} behaviors in {@link ImmutableMemStoreLAB}
+   */
+  @Test
+  public void testImmutableMemStoreLABRefCnt() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+
+    byte[] smallValue = new byte[3];
+    byte[] largeValue = new byte[9];
+    final long timestamp = EnvironmentEdgeManager.currentTime();
+    final long seqId = 100;
+    final Cell smallCell1 = createCell(qf1, timestamp, seqId, smallValue);
+    final Cell largeCell1 = createCell(qf2, timestamp, seqId, largeValue);
+    final Cell smallCell2 = createCell(qf3, timestamp, seqId+1, smallValue);
+    final Cell largeCell2 = createCell(qf4, timestamp, seqId+1, largeValue);
+    final Cell smallCell3 = createCell(qf5, timestamp, seqId+2, smallValue);
+    final Cell largeCell3 = createCell(qf6, timestamp, seqId+2, largeValue);
+
+    int smallCellByteSize = MutableSegment.getCellLength(smallCell1);
+    int largeCellByteSize = MutableSegment.getCellLength(largeCell1);
+    int firstWriteCellByteSize = (smallCellByteSize + largeCellByteSize);
+    int flushByteSize = firstWriteCellByteSize - 2;
+
+    // set CompactingMemStore.inmemoryFlushSize to flushByteSize.
+    conf.set(HStore.MEMSTORE_CLASS_NAME, CompactingMemStore.class.getName());
+    conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.005);
+    conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(flushByteSize * 200));
+    conf.setBoolean(WALFactory.WAL_ENABLED, false);
+
+    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
+
+    final CompactingMemStore myCompactingMemStore = ((CompactingMemStore) store.memstore);
+    assertTrue((int) (myCompactingMemStore.getInmemoryFlushSize()) == flushByteSize);
+    myCompactingMemStore.allowCompaction.set(false);
+
+    NonThreadSafeMemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
+    store.add(smallCell1, memStoreSizing);
+    store.add(largeCell1, memStoreSizing);
+    store.add(smallCell2, memStoreSizing);
+    store.add(largeCell2, memStoreSizing);
+    store.add(smallCell3, memStoreSizing);
+    store.add(largeCell3, memStoreSizing);
+    VersionedSegmentsList versionedSegmentsList = myCompactingMemStore.getImmutableSegments();
+    assertTrue(versionedSegmentsList.getNumOfSegments() == 3);
+    List<ImmutableSegment> segments = versionedSegmentsList.getStoreSegments();
+    List<MemStoreLABImpl> memStoreLABs = new ArrayList<MemStoreLABImpl>(segments.size());
+    for (ImmutableSegment segment : segments) {
+      memStoreLABs.add((MemStoreLABImpl) segment.getMemStoreLAB());
+    }
+    List<KeyValueScanner> scanners1 = myCompactingMemStore.getScanners(Long.MAX_VALUE);
+    for (MemStoreLABImpl memStoreLAB : memStoreLABs) {
+      assertTrue(memStoreLAB.getRefCntValue() == 2);
+    }
+
+    myCompactingMemStore.allowCompaction.set(true);
+    myCompactingMemStore.flushInMemory();
+
+    versionedSegmentsList = myCompactingMemStore.getImmutableSegments();
+    assertTrue(versionedSegmentsList.getNumOfSegments() == 1);
+    ImmutableMemStoreLAB immutableMemStoreLAB =
+        (ImmutableMemStoreLAB) (versionedSegmentsList.getStoreSegments().get(0).getMemStoreLAB());
+    for (MemStoreLABImpl memStoreLAB : memStoreLABs) {
+      assertTrue(memStoreLAB.getRefCntValue() == 2);
+    }
+
+    List<KeyValueScanner> scanners2 = myCompactingMemStore.getScanners(Long.MAX_VALUE);
+    for (MemStoreLABImpl memStoreLAB : memStoreLABs) {
+      assertTrue(memStoreLAB.getRefCntValue() == 2);
+    }
+    assertTrue(immutableMemStoreLAB.getRefCntValue() == 2);
+    for (KeyValueScanner scanner : scanners1) {
+      scanner.close();
+    }
+    for (MemStoreLABImpl memStoreLAB : memStoreLABs) {
+      assertTrue(memStoreLAB.getRefCntValue() == 1);
+    }
+    for (KeyValueScanner scanner : scanners2) {
+      scanner.close();
+    }
+    for (MemStoreLABImpl memStoreLAB : memStoreLABs) {
+      assertTrue(memStoreLAB.getRefCntValue() == 1);
+    }
+    assertTrue(immutableMemStoreLAB.getRefCntValue() == 1);
+    flushStore(store, id++);
+    for (MemStoreLABImpl memStoreLAB : memStoreLABs) {
+      assertTrue(memStoreLAB.getRefCntValue() == 0);
+    }
+    assertTrue(immutableMemStoreLAB.getRefCntValue() == 0);
+    assertTrue(immutableMemStoreLAB.isClosed());
+    for (MemStoreLABImpl memStoreLAB : memStoreLABs) {
+      assertTrue(memStoreLAB.isClosed());
+      assertTrue(memStoreLAB.isReclaimed());
+      assertTrue(memStoreLAB.chunks.isEmpty());
+    }
   }
 
   private HStoreFile mockStoreFileWithLength(long length) {
@@ -2844,6 +3198,113 @@ public class TestHStore {
           throw new RuntimeException(e);
         }
 
+      }
+    }
+  }
+
+  public static class MyDefaultMemStore extends DefaultMemStore {
+    private static final String GET_SCANNER_THREAD_NAME = "getScannerMyThread";
+    private static final String FLUSH_THREAD_NAME = "flushMyThread";
+    /**
+     * Only when flush thread enters {@link DefaultMemStore#doClearSnapShot}, getScanner thread
+     * could start.
+     */
+    private final CyclicBarrier getScannerCyclicBarrier = new CyclicBarrier(2);
+    /**
+     * Used by getScanner thread notifies flush thread {@link DefaultMemStore#getSnapshotSegments}
+     * completed, {@link DefaultMemStore#doClearSnapShot} could continue.
+     */
+    private final CyclicBarrier preClearSnapShotCyclicBarrier = new CyclicBarrier(2);
+    /**
+     * Used by flush thread notifies getScanner thread {@link DefaultMemStore#doClearSnapShot}
+     * completed, {@link DefaultMemStore#getScanners} could continue.
+     */
+    private final CyclicBarrier postClearSnapShotCyclicBarrier = new CyclicBarrier(2);
+    private final AtomicInteger getSnapshotSegmentsCounter = new AtomicInteger(0);
+    private final AtomicInteger clearSnapshotCounter = new AtomicInteger(0);
+    private volatile boolean shouldWait = true;
+    private volatile HStore store = null;
+
+    public MyDefaultMemStore(Configuration conf, CellComparator cellComparator,
+        RegionServicesForStores regionServices)
+        throws IOException {
+      super(conf, cellComparator, regionServices);
+    }
+
+    @Override
+    protected List<Segment> getSnapshotSegments() {
+
+      List<Segment> result = super.getSnapshotSegments();
+
+      if (Thread.currentThread().getName().equals(GET_SCANNER_THREAD_NAME)) {
+        int currentCount = getSnapshotSegmentsCounter.incrementAndGet();
+        if (currentCount == 1) {
+          if (this.shouldWait) {
+            try {
+              /**
+               * Notify flush thread {@link DefaultMemStore#getSnapshotSegments} completed,
+               * {@link DefaultMemStore#doClearSnapShot} could continue.
+               */
+              preClearSnapShotCyclicBarrier.await();
+              /**
+               * Wait for {@link DefaultMemStore#doClearSnapShot} completed.
+               */
+              postClearSnapShotCyclicBarrier.await();
+
+            } catch (Throwable e) {
+              throw new RuntimeException(e);
+            }
+          }
+        }
+      }
+      return result;
+    }
+
+
+    @Override
+    protected void doClearSnapShot() {
+      if (Thread.currentThread().getName().equals(FLUSH_THREAD_NAME)) {
+        int currentCount = clearSnapshotCounter.incrementAndGet();
+        if (currentCount == 1) {
+          try {
+            if (((ReentrantReadWriteLock) store.getStoreEngine().getLock())
+              .isWriteLockedByCurrentThread()) {
+              shouldWait = false;
+            }
+            /**
+             * Only when flush thread enters {@link DefaultMemStore#doClearSnapShot}, getScanner
+             * thread could start.
+             */
+            getScannerCyclicBarrier.await();
+
+            if (shouldWait) {
+              /**
+               * Wait for {@link DefaultMemStore#getSnapshotSegments} completed.
+               */
+              preClearSnapShotCyclicBarrier.await();
+            }
+          } catch (Throwable e) {
+            throw new RuntimeException(e);
+          }
+        }
+      }
+      super.doClearSnapShot();
+
+      if (Thread.currentThread().getName().equals(FLUSH_THREAD_NAME)) {
+        int currentCount = clearSnapshotCounter.get();
+        if (currentCount == 1) {
+          if (shouldWait) {
+            try {
+              /**
+               * Notify getScanner thread {@link DefaultMemStore#doClearSnapShot} completed,
+               * {@link DefaultMemStore#getScanners} could continue.
+               */
+              postClearSnapShotCyclicBarrier.await();
+            } catch (Throwable e) {
+              throw new RuntimeException(e);
+            }
+          }
+        }
       }
     }
   }

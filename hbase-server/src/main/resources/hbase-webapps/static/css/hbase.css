@@ -44,6 +44,11 @@ table#tab_Procedures td:nth-child(-n+7) {
     overflow-wrap: normal;
 }
 
+table#userTables td:nth-child(-n+11) {
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
 /* Region Server page styling */
 
 /* striped tables styling */

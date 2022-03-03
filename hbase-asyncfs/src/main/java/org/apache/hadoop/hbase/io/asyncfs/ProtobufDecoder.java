@@ -132,15 +132,11 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
     try {
       getParserForTypeMethod = protobufMessageLiteClass.getDeclaredMethod("getParserForType");
       newBuilderForTypeMethod = protobufMessageLiteClass.getDeclaredMethod("newBuilderForType");
+      // TODO: If this is false then the class will fail to load? Can refactor it out?
+      hasParser = true;
     } catch (NoSuchMethodException e) {
       // If the method is not found, we are in trouble. Abort.
       throw new RuntimeException(e);
-    }
-
-    try {
-      protobufMessageLiteClass.getDeclaredMethod("getParserForType");
-      hasParser = true;
-    } catch (Throwable var2) {
     }
 
     HAS_PARSER = hasParser;

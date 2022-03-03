@@ -996,7 +996,7 @@ public class TestHRegion {
             region.getRegionFileSystem().getStoreDir(Bytes.toString(family)));
 
       WALUtil.writeCompactionMarker(region.getWAL(), this.region.getReplicationScope(),
-          this.region.getRegionInfo(), compactionDescriptor, region.getMVCC());
+          this.region.getRegionInfo(), compactionDescriptor, region.getMVCC(), null);
 
       Path recoveredEditsDir = WALSplitUtil.getRegionDirRecoveredEditsDir(regiondir);
 
@@ -4446,6 +4446,23 @@ public class TestHRegion {
     }
   }
 
+  @Test
+  public void testScannerOperationId() throws IOException {
+    region = initHRegion(tableName, method, CONF, COLUMN_FAMILY_BYTES);
+    Scan scan = new Scan();
+    RegionScanner scanner = region.getScanner(scan);
+    assertNull(scanner.getOperationId());
+    scanner.close();
+
+    String operationId = "test_operation_id_0101";
+    scan = new Scan().setId(operationId);
+    scanner = region.getScanner(scan);
+    assertEquals(operationId, scanner.getOperationId());
+    scanner.close();
+
+    HBaseTestingUtil.closeRegionAndWAL(this.region);
+  }
+
   /**
    * Write an HFile block full with Cells whose qualifier that are identical between
    * 0 and Short.MAX_VALUE. See HBASE-13329.
@@ -5744,7 +5761,7 @@ public class TestHRegion {
       Collection<HStoreFile> storeFiles = primaryRegion.getStore(families[0]).getStorefiles();
       primaryRegion.getRegionFileSystem().removeStoreFiles(Bytes.toString(families[0]), storeFiles);
       Collection<StoreFileInfo> storeFileInfos = primaryRegion.getRegionFileSystem()
-          .getStoreFiles(families[0]);
+          .getStoreFiles(Bytes.toString(families[0]));
       Assert.assertTrue(storeFileInfos == null || storeFileInfos.isEmpty());
 
       verifyData(secondaryRegion, 0, 1000, cq, families);
@@ -7648,7 +7665,7 @@ public class TestHRegion {
             getCacheConfig() != null? getCacheConfig().shouldEvictOnClose(): true;
         for (Path newFile : newFiles) {
           // Create storefile around what we wrote with a reader on it.
-          HStoreFile sf = createStoreFileAndReader(newFile);
+          HStoreFile sf = storeEngine.createStoreFileAndReader(newFile);
           sf.closeStoreFile(evictOnClose);
           sfs.add(sf);
         }

@@ -18,14 +18,13 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -37,12 +36,12 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
-import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerValidationUtils;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
-import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -274,16 +273,22 @@ public class CreateTableProcedure
       MasterProcedureUtil.checkGroupNotEmpty(rsGroupInfo, forWhom);
     }
 
+    // check for store file tracker configurations
+    StoreFileTrackerValidationUtils.checkForCreateTable(env.getMasterConfiguration(),
+      tableDescriptor);
+
     return true;
   }
 
   private void preCreate(final MasterProcedureEnv env)
       throws IOException, InterruptedException {
     if (!getTableName().isSystemTable()) {
-      ProcedureSyncWait.getMasterQuotaManager(env)
-        .checkNamespaceTableAndRegionQuota(
-          getTableName(), (newRegions != null ? newRegions.size() : 0));
+      ProcedureSyncWait.getMasterQuotaManager(env).checkNamespaceTableAndRegionQuota(getTableName(),
+        (newRegions != null ? newRegions.size() : 0));
     }
+
+    tableDescriptor = StoreFileTrackerFactory.updateWithTrackerConfigs(env.getMasterConfiguration(),
+      tableDescriptor);
 
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
@@ -329,39 +334,20 @@ public class CreateTableProcedure
       final TableDescriptor tableDescriptor, List<RegionInfo> newRegions,
       final CreateHdfsRegions hdfsRegionHandler) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tempdir = mfs.getTempDir();
 
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
-    final Path tempTableDir = CommonFSUtils.getTableDir(tempdir, tableDescriptor.getTableName());
+    final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(),
+      tableDescriptor.getTableName());
     ((FSTableDescriptors)(env.getMasterServices().getTableDescriptors()))
-        .createTableDescriptorForTableDirectory(tempTableDir, tableDescriptor, false);
+        .createTableDescriptorForTableDirectory(
+          tableDir, tableDescriptor, false);
 
     // 2. Create Regions
-    newRegions = hdfsRegionHandler.createHdfsRegions(env, tempdir,
+    newRegions = hdfsRegionHandler.createHdfsRegions(env, mfs.getRootDir(),
             tableDescriptor.getTableName(), newRegions);
 
-    // 3. Move Table temp directory to the hbase root location
-    moveTempDirectoryToHBaseRoot(env, tableDescriptor, tempTableDir);
-
     return newRegions;
-  }
-
-  protected static void moveTempDirectoryToHBaseRoot(
-    final MasterProcedureEnv env,
-    final TableDescriptor tableDescriptor,
-    final Path tempTableDir) throws IOException {
-    final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tableDir =
-      CommonFSUtils.getTableDir(mfs.getRootDir(), tableDescriptor.getTableName());
-    FileSystem fs = mfs.getFileSystem();
-    if (!fs.delete(tableDir, true) && fs.exists(tableDir)) {
-      throw new IOException("Couldn't delete " + tableDir);
-    }
-    if (!fs.rename(tempTableDir, tableDir)) {
-      throw new IOException("Unable to move table from temp=" + tempTableDir +
-        " to hbase root=" + tableDir);
-    }
   }
 
   protected static List<RegionInfo> addTableToMeta(final MasterProcedureEnv env,
@@ -378,14 +364,6 @@ public class CreateTableProcedure
     // Add regions to META
     addRegionsToMeta(env, tableDescriptor, newRegions);
 
-    // Setup replication for region replicas if needed
-    if (tableDescriptor.getRegionReplication() > 1) {
-      try {
-        ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterServices());
-      } catch (ReplicationException e) {
-        throw new HBaseIOException(e);
-      }
-    }
     return newRegions;
   }
 

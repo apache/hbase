@@ -25,7 +25,7 @@
   <parent>
     <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>3.0.0-alpha-2-SNAPSHOT</version>
+    <version>3.0.0-alpha-3-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-shaded</artifactId>
@@ -525,8 +525,6 @@
                       <!-- We already concat NOTICE, safe to drop individual ones -->
                       <exclude>LICENSE</exclude>
                       <exclude>NOTICE</exclude>
-                      <!-- Remove the shaded guava added in hadoop-3.3.1+-->
-                      <exclude>org/apache/hadoop/thirdparty/**/*</exclude>
                     </excludes>
                   </filter>
                   <filter>

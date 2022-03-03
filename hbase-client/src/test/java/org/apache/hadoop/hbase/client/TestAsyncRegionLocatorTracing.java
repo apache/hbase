@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,13 +17,25 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-
+import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntry;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntryWithStringValuesOf;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasAttributes;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEnded;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasKind;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.TraceTestUtil.buildConnectionAttributesMatcher;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.TraceTestUtil.buildTableAttributesMatcher;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasItem;
+import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
-import java.util.List;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
@@ -31,6 +43,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -38,25 +51,27 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ ClientTests.class, MediumTests.class })
 public class TestAsyncRegionLocatorTracing {
+  private static final Logger LOG = LoggerFactory.getLogger(TestAsyncRegionLocatorTracing.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestAsyncRegionLocatorTracing.class);
 
-  private static Configuration CONF = HBaseConfiguration.create();
+  private static final Configuration CONF = HBaseConfiguration.create();
 
   private AsyncConnectionImpl conn;
 
@@ -90,16 +105,35 @@ public class TestAsyncRegionLocatorTracing {
   }
 
   private SpanData waitSpan(String name) {
-    Waiter.waitFor(CONF, 1000,
-      () -> traceRule.getSpans().stream().map(SpanData::getName).anyMatch(s -> s.equals(name)));
-    return traceRule.getSpans().stream().filter(s -> s.getName().equals(name)).findFirst().get();
+    return waitSpan(hasName(name));
+  }
+
+  private SpanData waitSpan(Matcher<SpanData> matcher) {
+    Matcher<SpanData> spanLocator = allOf(matcher, hasEnded());
+    try {
+      Waiter.waitFor(CONF, 1000, new MatcherPredicate<>(
+        "waiting for span",
+        () -> traceRule.getSpans(), hasItem(spanLocator)));
+    } catch (AssertionError e) {
+      LOG.error("AssertionError while waiting for matching span. Span reservoir contains: {}",
+        traceRule.getSpans());
+      throw e;
+    }
+    return traceRule.getSpans()
+      .stream()
+      .filter(spanLocator::matches)
+      .findFirst()
+      .orElseThrow(AssertionError::new);
   }
 
   @Test
   public void testClearCache() {
     conn.getLocator().clearCache();
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
-    assertEquals(StatusCode.OK, span.getStatus().getStatusCode());
+    assertThat(span, allOf(
+      hasStatusWithCode(StatusCode.OK),
+      hasKind(SpanKind.CLIENT),
+      buildConnectionAttributesMatcher(conn)));
   }
 
   @Test
@@ -108,19 +142,22 @@ public class TestAsyncRegionLocatorTracing {
       EnvironmentEdgeManager.currentTime());
     conn.getLocator().clearCache(sn);
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
-    assertEquals(StatusCode.OK, span.getStatus().getStatusCode());
-    assertEquals(sn.toString(), span.getAttributes().get(TraceUtil.SERVER_NAME_KEY));
+    assertThat(span, allOf(
+      hasStatusWithCode(StatusCode.OK),
+      hasKind(SpanKind.CLIENT),
+      buildConnectionAttributesMatcher(conn),
+      hasAttributes(containsEntry("db.hbase.server.name", sn.getServerName()))));
   }
 
   @Test
   public void testClearCacheTableName() {
     conn.getLocator().clearCache(TableName.META_TABLE_NAME);
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
-    assertEquals(StatusCode.OK, span.getStatus().getStatusCode());
-    assertEquals(TableName.META_TABLE_NAME.getNamespaceAsString(),
-      span.getAttributes().get(TraceUtil.NAMESPACE_KEY));
-    assertEquals(TableName.META_TABLE_NAME.getNameAsString(),
-      span.getAttributes().get(TraceUtil.TABLE_KEY));
+    assertThat(span, allOf(
+      hasStatusWithCode(StatusCode.OK),
+      hasKind(SpanKind.CLIENT),
+      buildConnectionAttributesMatcher(conn),
+      buildTableAttributesMatcher(TableName.META_TABLE_NAME)));
   }
 
   @Test
@@ -128,15 +165,14 @@ public class TestAsyncRegionLocatorTracing {
     conn.getLocator().getRegionLocation(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW,
       RegionLocateType.CURRENT, TimeUnit.SECONDS.toNanos(1)).join();
     SpanData span = waitSpan("AsyncRegionLocator.getRegionLocation");
-    assertEquals(StatusCode.OK, span.getStatus().getStatusCode());
-    assertEquals(TableName.META_TABLE_NAME.getNamespaceAsString(),
-      span.getAttributes().get(TraceUtil.NAMESPACE_KEY));
-    assertEquals(TableName.META_TABLE_NAME.getNameAsString(),
-      span.getAttributes().get(TraceUtil.TABLE_KEY));
-    List<String> regionNames = span.getAttributes().get(TraceUtil.REGION_NAMES_KEY);
-    assertEquals(1, regionNames.size());
-    assertEquals(locs.getDefaultRegionLocation().getRegion().getRegionNameAsString(),
-      regionNames.get(0));
+    assertThat(span, allOf(
+      hasStatusWithCode(StatusCode.OK),
+      hasKind(SpanKind.CLIENT),
+      buildConnectionAttributesMatcher(conn),
+      buildTableAttributesMatcher(TableName.META_TABLE_NAME),
+      hasAttributes(
+        containsEntryWithStringValuesOf("db.hbase.regions",
+          locs.getDefaultRegionLocation().getRegion().getRegionNameAsString()))));
   }
 
   @Test
@@ -144,16 +180,16 @@ public class TestAsyncRegionLocatorTracing {
     conn.getLocator().getRegionLocations(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW,
       RegionLocateType.CURRENT, false, TimeUnit.SECONDS.toNanos(1)).join();
     SpanData span = waitSpan("AsyncRegionLocator.getRegionLocations");
-    assertEquals(StatusCode.OK, span.getStatus().getStatusCode());
-    assertEquals(TableName.META_TABLE_NAME.getNamespaceAsString(),
-      span.getAttributes().get(TraceUtil.NAMESPACE_KEY));
-    assertEquals(TableName.META_TABLE_NAME.getNameAsString(),
-      span.getAttributes().get(TraceUtil.TABLE_KEY));
-    List<String> regionNames = span.getAttributes().get(TraceUtil.REGION_NAMES_KEY);
-    assertEquals(3, regionNames.size());
-    for (int i = 0; i < 3; i++) {
-      assertEquals(locs.getRegionLocation(i).getRegion().getRegionNameAsString(),
-        regionNames.get(i));
-    }
+    String[] expectedRegions = Arrays.stream(locs.getRegionLocations())
+      .map(HRegionLocation::getRegion)
+      .map(RegionInfo::getRegionNameAsString)
+      .toArray(String[]::new);
+    assertThat(span, allOf(
+      hasStatusWithCode(StatusCode.OK),
+      hasKind(SpanKind.CLIENT),
+      buildConnectionAttributesMatcher(conn),
+      buildTableAttributesMatcher(TableName.META_TABLE_NAME),
+      hasAttributes(
+        containsEntryWithStringValuesOf("db.hbase.regions", containsInAnyOrder(expectedRegions)))));
   }
 }

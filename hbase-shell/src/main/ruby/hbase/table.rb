@@ -119,6 +119,9 @@ EOF
       @name = @table.getName.getNameAsString
       @shell = shell
       @converters = {}
+      @timestamp_format_epoch = table.getConfiguration.getBoolean(
+          HConstants::SHELL_TIMESTAMP_FORMAT_EPOCH_KEY,
+          HConstants::DEFAULT_SHELL_TIMESTAMP_FORMAT_EPOCH)
     end
 
     def close
@@ -205,7 +208,7 @@ EOF
 
       # create scan to get table names using prefix
       scan = org.apache.hadoop.hbase.client.Scan.new
-      scan.setRowPrefixFilter(prefix.to_java_bytes)
+      scan.setStartStopRowForPrefixScan(prefix.to_java_bytes)
       # Run the scanner to get all rowkeys
       scanner = @table.getScanner(scan)
       # Create a list to store all deletes
@@ -533,7 +536,7 @@ EOF
                end
 
         # This will overwrite any startrow/stoprow settings
-        scan.setRowPrefixFilter(rowprefixfilter.to_java_bytes) if rowprefixfilter
+        scan.setStartStopRowForPrefixScan(rowprefixfilter.to_java_bytes) if rowprefixfilter
 
         # Clear converters from last scan.
         @converters.clear
@@ -751,8 +754,12 @@ EOF
     end
 
     def toLocalDateTime(millis)
-      instant = java.time.Instant.ofEpochMilli(millis)
-      return java.time.LocalDateTime.ofInstant(instant, java.time.ZoneId.systemDefault()).toString
+      if @timestamp_format_epoch
+        return millis
+      else
+        instant = java.time.Instant.ofEpochMilli(millis)
+        return java.time.LocalDateTime.ofInstant(instant, java.time.ZoneId.systemDefault()).toString
+      end
     end
 
     # Make a String of the passed kv

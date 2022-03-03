@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Optional;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -44,20 +45,21 @@ public abstract class ModifyTableDescriptorProcedure
 
   private static final Logger LOG = LoggerFactory.getLogger(ModifyTableDescriptorProcedure.class);
 
-  private TableDescriptor unmodifiedTableDescriptor;
+  private TableName tableName;
+
   private TableDescriptor modifiedTableDescriptor;
 
   protected ModifyTableDescriptorProcedure() {
   }
 
-  protected ModifyTableDescriptorProcedure(MasterProcedureEnv env, TableDescriptor unmodified) {
+  protected ModifyTableDescriptorProcedure(MasterProcedureEnv env, TableName tableName) {
     super(env);
-    this.unmodifiedTableDescriptor = unmodified;
+    this.tableName = Objects.requireNonNull(tableName);
   }
 
   @Override
   public TableName getTableName() {
-    return unmodifiedTableDescriptor.getTableName();
+    return tableName;
   }
 
   @Override
@@ -82,7 +84,12 @@ public abstract class ModifyTableDescriptorProcedure
     try {
       switch (state) {
         case MODIFY_TABLE_DESCRIPTOR_PREPARE:
-          Optional<TableDescriptor> modified = modify(env, unmodifiedTableDescriptor);
+          TableDescriptor current = env.getMasterServices().getTableDescriptors().get(tableName);
+          if (current == null) {
+            LOG.info("Table {} does not exist, skip modifying", tableName);
+            return Flow.NO_MORE_STATE;
+          }
+          Optional<TableDescriptor> modified = modify(env, current);
           if (modified.isPresent()) {
             modifiedTableDescriptor = modified.get();
             setNextState(ModifyTableDescriptorState.MODIFY_TABLE_DESCRIPTOR_UPDATE);
@@ -106,6 +113,15 @@ public abstract class ModifyTableDescriptorProcedure
       }
     }
     return Flow.HAS_MORE_STATE;
+  }
+
+  @Override
+  protected boolean holdLock(MasterProcedureEnv env) {
+    // here we want to make sure that our modification result will not be overwrite by other MTPs,
+    // so we set holdLock to true. Since we do not need to schedule any sub procedures, especially
+    // no remote procedures, so it is OK for us a hold the lock all the time, it will not hurt the
+    // availability too much.
+    return true;
   }
 
   @Override
@@ -141,7 +157,7 @@ public abstract class ModifyTableDescriptorProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     ModifyTableDescriptorStateData.Builder builder = ModifyTableDescriptorStateData.newBuilder()
-      .setUnmodifiedTableSchema(ProtobufUtil.toTableSchema(unmodifiedTableDescriptor));
+      .setTableName(ProtobufUtil.toProtoTableName(tableName));
     if (modifiedTableDescriptor != null) {
       builder.setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor));
     }
@@ -153,7 +169,7 @@ public abstract class ModifyTableDescriptorProcedure
     super.deserializeStateData(serializer);
     ModifyTableDescriptorStateData data =
       serializer.deserialize(ModifyTableDescriptorStateData.class);
-    unmodifiedTableDescriptor = ProtobufUtil.toTableDescriptor(data.getUnmodifiedTableSchema());
+    tableName = ProtobufUtil.toTableName(data.getTableName());
     if (data.hasModifiedTableSchema()) {
       modifiedTableDescriptor = ProtobufUtil.toTableDescriptor(data.getModifiedTableSchema());
     }

@@ -49,12 +49,14 @@ import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.filter.FilterAllFilter;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MetricsUserAggregateFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.AfterClass;
@@ -80,6 +82,18 @@ public class TestClientClusterMetrics {
   private static final TableName TABLE_NAME = TableName.valueOf("test");
   private static final byte[] CF = Bytes.toBytes("cf");
 
+  // We need to promote the visibility of tryRegionServerReport for this test
+  public static class MyRegionServer
+      extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
+    public MyRegionServer(Configuration conf) throws IOException, InterruptedException {
+      super(conf);
+    }
+    @Override
+    public void tryRegionServerReport(long reportStartTime, long reportEndTime)
+        throws IOException {
+      super.tryRegionServerReport(reportStartTime, reportEndTime);
+    }
+  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -87,6 +101,7 @@ public class TestClientClusterMetrics {
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, MyObserver.class.getName());
     UTIL = new HBaseTestingUtil(conf);
     StartTestingClusterOption option = StartTestingClusterOption.builder()
+        .rsClass(TestClientClusterMetrics.MyRegionServer.class)
         .numMasters(MASTERS).numRegionServers(SLAVES).numDataNodes(SLAVES).build();
     UTIL.startMiniCluster(option);
     CLUSTER = UTIL.getHBaseCluster();
@@ -305,7 +320,8 @@ public class TestClientClusterMetrics {
     Assert.assertEquals(MASTERS - 1, metrics.getBackupMasterNames().size());
   }
 
-  @Test public void testUserMetrics() throws Exception {
+  @Test
+  public void testUserMetrics() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     // If metrics for users is not enabled, this test doesn't  make sense.
     if (!conf.getBoolean(MetricsUserAggregateFactory.METRIC_USER_ENABLED_CONF,
@@ -391,6 +407,48 @@ public class TestClientClusterMetrics {
       }
     }
     UTIL.deleteTable(TABLE_NAME);
+  }
+
+  @Test
+  public void testServerTasks() throws Exception {
+    // TaskMonitor is a singleton per VM, so will be shared among all minicluster "servers",
+    // so we only need to look at the first live server's results to find it.
+    final String testTaskName = "TEST TASK";
+    TaskMonitor.get().createStatus(testTaskName).setStatus("Testing 1... 2... 3...");
+    // Of course, first we must trigger regionserver reports.
+    final long now = EnvironmentEdgeManager.currentTime();
+    final long last = now - 1000; // fake a period, or someone might div by zero
+    for (RegionServerThread rs: CLUSTER.getRegionServerThreads()) {
+      ((MyRegionServer)rs.getRegionServer()).tryRegionServerReport(last, now);
+    }
+    // Get status now
+    ClusterMetrics clusterMetrics = ADMIN.getClusterMetrics(EnumSet.of(Option.TASKS));
+    // The test task will be in the master metrics list
+    boolean found = false;
+    for (ServerTask task: clusterMetrics.getMasterTasks()) {
+      if (testTaskName.equals(task.getDescription())) {
+        // Found it
+        found = true;
+        break;
+      }
+    }
+    Assert.assertTrue("Expected task not found in master task list", found);
+    // Get the tasks information (carried in server metrics)
+    found = false;
+    for (ServerMetrics serverMetrics: clusterMetrics.getLiveServerMetrics().values()) {
+      if (serverMetrics.getTasks() != null) {
+        for (ServerTask task: serverMetrics.getTasks()) {
+          if (testTaskName.equals(task.getDescription())) {
+            // Found it
+            found = true;
+            break;
+          }
+        }
+      }
+    }
+    // We will fall through here if getClusterMetrics(TASKS) did not correctly process the
+    // task list.
+    Assert.assertTrue("Expected task not found in server load", found);
   }
 
   private RegionMetrics getMetaMetrics() throws IOException {

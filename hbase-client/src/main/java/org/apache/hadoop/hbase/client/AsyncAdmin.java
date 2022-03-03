@@ -184,6 +184,13 @@ public interface AsyncAdmin {
   CompletableFuture<Void> modifyTable(TableDescriptor desc);
 
   /**
+   * Change the store file tracker of the given table.
+   * @param tableName the table you want to change
+   * @param dstSFT the destination store file tracker
+   */
+  CompletableFuture<Void> modifyTableStoreFileTracker(TableName tableName, String dstSFT);
+
+  /**
    * Deletes a table.
    * @param tableName name of table to delete
    */
@@ -251,6 +258,15 @@ public interface AsyncAdmin {
    */
   CompletableFuture<Void> modifyColumnFamily(TableName tableName,
       ColumnFamilyDescriptor columnFamily);
+
+  /**
+   * Change the store file tracker of the given table's given family.
+   * @param tableName the table you want to change
+   * @param family the family you want to change
+   * @param dstSFT the destination store file tracker
+   */
+  CompletableFuture<Void> modifyColumnFamilyStoreFileTracker(TableName tableName, byte[] family,
+    String dstSFT);
 
   /**
    * Create a new namespace.
@@ -895,8 +911,20 @@ public interface AsyncAdmin {
    * @param tableName name of the table where the snapshot will be restored
    * @param restoreAcl <code>true</code> to restore acl of snapshot
    */
+  default CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName,
+      boolean restoreAcl) {
+    return cloneSnapshot(snapshotName, tableName, restoreAcl, null);
+  }
+
+  /**
+   * Create a new table by cloning the snapshot content.
+   * @param snapshotName name of the snapshot to be cloned
+   * @param tableName name of the table where the snapshot will be restored
+   * @param restoreAcl <code>true</code> to restore acl of snapshot
+   * @param customSFT specify the StroreFileTracker used for the table
+   */
   CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName,
-      boolean restoreAcl);
+      boolean restoreAcl, String customSFT);
 
   /**
    * List completed snapshots.

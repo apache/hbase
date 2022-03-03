@@ -38,7 +38,9 @@
 include Java
 
 # Some goodies for hirb. Should these be left up to the user's discretion?
-require 'irb/completion'
+if $stdin.tty?
+  require 'irb/completion'
+end
 require 'pathname'
 require 'getoptlong'
 
@@ -78,62 +80,60 @@ def add_to_configuration(c, arg)
   c
 end
 
-opts = GetoptLong.new(
-  [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
-  [ '--debug', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--noninteractive', '-n', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--top-level-defs', GetoptLong::OPTIONAL_ARGUMENT ],
-  [ '--Dkey=value', '-D', GetoptLong::NO_ARGUMENT ]
-)
+conf_from_cli = nil
 
-found = []
+# strip out any config definitions that won't work with GetoptLong
+D_ARG = '-D'.freeze
+ARGV.delete_if do |arg|
+  if arg.start_with?(D_ARG) && arg.include?('=')
+    conf_from_cli = add_to_configuration(conf_from_cli, arg[2..-1])
+    true
+  else
+    false
+  end
+end
+
+opts = GetoptLong.new(
+  ['--help', '-h', GetoptLong::NO_ARGUMENT],
+  ['--debug', '-d', GetoptLong::NO_ARGUMENT],
+  ['--noninteractive', '-n', GetoptLong::NO_ARGUMENT],
+  ['--top-level-defs', GetoptLong::NO_ARGUMENT],
+  ['-D', GetoptLong::REQUIRED_ARGUMENT],
+  ['--return-values', '-r', GetoptLong::NO_ARGUMENT]
+)
+opts.ordering = GetoptLong::REQUIRE_ORDER
+
 script2run = nil
 log_level = org.apache.log4j.Level::ERROR
 @shell_debug = false
 interactive = true
+full_backtrace = false
 top_level_definitions = false
-_configuration = nil
-D_ARG = '-D'.freeze
 
 opts.each do |opt, arg|
-  case opt || arg
-  when '--help' || '-h'
+  case opt
+  when '--help'
     puts cmdline_help
+    exit
   when D_ARG
-    argValue = ARGV.shift || (raise "#{D_ARG} takes a 'key=value' parameter")
-    _configuration = add_to_configuration(_configuration, argValue)
-    found.push(arg)
-    found.push(argValue)
-  when arg.start_with?(D_ARG)
-    _configuration = add_to_configuration(_configuration, arg[2..-1])
-    found.push(arg)
-  when '--debug'|| '-d'
+    conf_from_cli = add_to_configuration(conf_from_cli, arg)
+  when '--debug'
     log_level = org.apache.log4j.Level::DEBUG
-    $fullBackTrace = true
+    full_backtrace = true
     @shell_debug = true
-    found.push(arg)
     puts 'Setting DEBUG log level...'
-   when '--noninteractive'||  '-n'
-     interactive = false
-     found.push(arg)
-   when '--return-values' || 'r'
-     warn '[INFO] the -r | --return-values option is ignored. we always behave '\
+  when '--noninteractive'
+    interactive = false
+  when '--return-values'
+    warn '[INFO] the -r | --return-values option is ignored. we always behave '\
            'as though it was given.'
-     found.push(arg)
-   when '--top-level-defs'
-     top_level_definitions = true
-   else
-      # Presume it a script. Save it off for running later below
-      # after we've set up some environment.
-      script2run = arg
-      found.push(arg)
-      # Presume that any other args are meant for the script.
+  when '--top-level-defs'
+    top_level_definitions = true
   end
 end
 
+script2run = ARGV.shift unless ARGV.empty?
 
-# Delete all processed args
-found.each { |arg| ARGV.delete(arg) }
 # Make sure debug flag gets back to IRB
 ARGV.unshift('-d') if @shell_debug
 
@@ -151,7 +151,7 @@ require 'hbase_shell'
 require 'shell/formatter'
 
 # Setup the HBase module.  Create a configuration.
-@hbase = _configuration.nil? ? Hbase::Hbase.new : Hbase::Hbase.new(_configuration)
+@hbase = conf_from_cli.nil? ? Hbase::Hbase.new : Hbase::Hbase.new(conf_from_cli)
 
 # Setup console
 @shell = Shell::Shell.new(@hbase, interactive)
@@ -188,61 +188,39 @@ end
 # instance variables (@hbase and @shell) onto Ruby's top-level receiver object known as "main".
 @shell.export_all(self) if top_level_definitions
 
+require 'irb'
+require 'irb/ext/change-ws'
+require 'irb/hirb'
+
+# Configure IRB
+IRB.setup(nil)
+IRB.conf[:PROMPT][:CUSTOM] = {
+  PROMPT_I: '%N:%03n:%i> ',
+  PROMPT_S: '%N:%03n:%i%l ',
+  PROMPT_C: '%N:%03n:%i* ',
+  RETURN: "=> %s\n"
+}
+
+IRB.conf[:IRB_NAME] = 'hbase'
+IRB.conf[:AP_NAME] = 'hbase'
+IRB.conf[:PROMPT_MODE] = :CUSTOM
+IRB.conf[:BACK_TRACE_LIMIT] = 0 unless full_backtrace
+
+# Create a workspace we'll use across sessions.
+workspace = @shell.get_workspace
+
 # If script2run, try running it.  If we're in interactive mode, will go on to run the shell unless
 # script calls 'exit' or 'exit 0' or 'exit errcode'.
-require 'shell/hbase_loader'
 if script2run
-  ::Shell::Shell.exception_handler(!$fullBackTrace) { @shell.eval_io(Hbase::Loader.file_for_load(script2run), filename = script2run) }
+  ::Shell::Shell.exception_handler(!full_backtrace) do
+    IRB::HIRB.new(workspace, IRB::HBaseLoader.file_for_load(script2run)).run
+  end
+  exit @shell.exit_code unless @shell.exit_code.nil?
 end
-
-# If we are not running interactively, evaluate standard input
-::Shell::Shell.exception_handler(!$fullBackTrace) { @shell.eval_io(STDIN) } unless interactive
 
 if interactive
   # Output a banner message that tells users where to go for help
   @shell.print_banner
-
-  require 'irb'
-  require 'irb/ext/change-ws'
-  require 'irb/hirb'
-
-  module IRB
-    # Override of the default IRB.start
-    def self.start(ap_path = nil)
-      $0 = File.basename(ap_path, '.rb') if ap_path
-
-      IRB.setup(ap_path)
-      IRB.conf[:PROMPT][:CUSTOM] = {
-        :PROMPT_I => "%N:%03n:%i> ",
-        :PROMPT_S => "%N:%03n:%i%l ",
-        :PROMPT_C => "%N:%03n:%i* ",
-        :RETURN => "=> %s\n"
-      }
-
-      @CONF[:IRB_NAME] = 'hbase'
-      @CONF[:AP_NAME] = 'hbase'
-      @CONF[:PROMPT_MODE] = :CUSTOM
-      @CONF[:BACK_TRACE_LIMIT] = 0 unless $fullBackTrace
-
-      hirb = if @CONF[:SCRIPT]
-               HIRB.new(nil, @CONF[:SCRIPT])
-             else
-               HIRB.new
-             end
-
-      shl = TOPLEVEL_BINDING.receiver.instance_variable_get :'@shell'
-      hirb.context.change_workspace shl.get_workspace
-
-      @CONF[:IRB_RC].call(hirb.context) if @CONF[:IRB_RC]
-      # Storing our current HBase IRB Context as the main context is imperative for several reasons,
-      # including auto-completion.
-      @CONF[:MAIN_CONTEXT] = hirb.context
-
-      catch(:IRB_EXIT) do
-        hirb.eval_input
-      end
-    end
-  end
-
-  IRB.start
 end
+IRB::HIRB.new(workspace).run
+exit @shell.exit_code unless interactive || @shell.exit_code.nil?

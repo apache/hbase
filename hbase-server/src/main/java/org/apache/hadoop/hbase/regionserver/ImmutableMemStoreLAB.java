@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -31,13 +33,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class ImmutableMemStoreLAB implements MemStoreLAB {
 
-  private final AtomicInteger openScannerCount = new AtomicInteger();
-  private volatile boolean closed = false;
+  private final RefCnt refCnt;
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   private final List<MemStoreLAB> mslabs;
 
   public ImmutableMemStoreLAB(List<MemStoreLAB> mslabs) {
     this.mslabs = mslabs;
+    this.refCnt = RefCnt.create(() -> {
+      closeMSLABs();
+    });
   }
 
   @Override
@@ -85,47 +90,43 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
 
   @Override
   public void close() {
-    // 'openScannerCount' here tracks the scanners opened on segments which directly refer to this
-    // MSLAB. The individual MSLABs this refers also having its own 'openScannerCount'. The usage of
+    // 'refCnt' here tracks the scanners opened on segments which directly refer to this
+    // MSLAB. The individual MSLABs this refers also having its own 'refCnt'. The usage of
     // the variable in close() and decScannerCount() is as as that in HeapMemstoreLAB. Here the
     // close just delegates the call to the individual MSLABs. The actual return of the chunks to
     // MSLABPool will happen within individual MSLABs only (which is at the leaf level).
     // Say an ImmutableMemStoreLAB is created over 2 HeapMemStoreLABs at some point and at that time
-    // both of them were referred by ongoing scanners. So they have > 0 'openScannerCount'. Now over
-    // the new Segment some scanners come in and this MSLABs 'openScannerCount' also goes up and
+    // both of them were referred by ongoing scanners. So they have > 0 'refCnt'. Now over
+    // the new Segment some scanners come in and this MSLABs 'refCnt' also goes up and
     // then come down on finish of scanners. Now a close() call comes to this Immutable MSLAB. As
-    // it's 'openScannerCount' is zero it will call close() on both of the Heap MSLABs. Say by that
+    // it's 'refCnt' is zero it will call close() on both of the Heap MSLABs. Say by that
     // time the old scanners on one of the MSLAB got over where as on the other, still an old
     // scanner is going on. The call close() on that MSLAB will not close it immediately but will
-    // just mark it for closure as it's 'openScannerCount' still > 0. Later once the old scan is
+    // just decrease it's 'refCnt' and it's 'refCnt' still > 0. Later once the old scan is
     // over, the decScannerCount() call will do the actual close and return of the chunks.
-    this.closed = true;
+    if (!this.closed.compareAndSet(false, true)) {
+      return;
+    }
     // When there are still on going scanners over this MSLAB, we will defer the close until all
-    // scanners finish. We will just mark it for closure. See #decScannerCount(). This will be
-    // called at end of every scan. When it is marked for closure and scanner count reached 0, we
-    // will do the actual close then.
-    checkAndCloseMSLABs(openScannerCount.get());
+    // scanners finish. We will just decrease it's 'refCnt'. See #decScannerCount(). This will be
+    // called at end of every scan. When it's 'refCnt' reached 0, we will do the actual close then.
+    this.refCnt.release();
   }
 
-  private void checkAndCloseMSLABs(int openScanners) {
-    if (openScanners == 0) {
-      for (MemStoreLAB mslab : this.mslabs) {
-        mslab.close();
-      }
+  private void closeMSLABs() {
+    for (MemStoreLAB mslab : this.mslabs) {
+      mslab.close();
     }
   }
 
   @Override
   public void incScannerCount() {
-    this.openScannerCount.incrementAndGet();
+    this.refCnt.retain();
   }
 
   @Override
   public void decScannerCount() {
-    int count = this.openScannerCount.decrementAndGet();
-    if (this.closed) {
-      checkAndCloseMSLABs(count);
-    }
+    this.refCnt.release();
   }
 
   @Override
@@ -136,6 +137,18 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
   @Override
   public boolean isOffHeap() {
     return ChunkCreator.getInstance().isOffheap();
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  int getRefCntValue() {
+    return this.refCnt.refCnt();
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  boolean isClosed() {
+    return this.closed.get();
   }
 
 

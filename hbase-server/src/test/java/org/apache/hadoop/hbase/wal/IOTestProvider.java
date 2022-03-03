@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 // imports for things that haven't moved from regionserver.wal yet.
+import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -212,7 +213,8 @@ public class IOTestProvider implements WALProvider {
         LOG.info("creating new writer instance.");
         final ProtobufLogWriter writer = new IOTestWriter();
         try {
-          writer.init(fs, path, conf, false, this.blocksize);
+          writer.init(fs, path, conf, false, this.blocksize,
+              StreamSlowMonitor.create(conf, path.getName()));
         } catch (CommonFSUtils.StreamLacksCapabilityException exception) {
           throw new IOException("Can't create writer instance because underlying FileSystem " +
               "doesn't support needed stream capabilities.", exception);
@@ -240,7 +242,8 @@ public class IOTestProvider implements WALProvider {
 
     @Override
     public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable,
-        long blocksize) throws IOException, CommonFSUtils.StreamLacksCapabilityException {
+        long blocksize, StreamSlowMonitor monitor) throws IOException,
+        CommonFSUtils.StreamLacksCapabilityException {
       Collection<String> operations = conf.getStringCollection(ALLOWED_OPERATIONS);
       if (operations.isEmpty() || operations.contains(AllowedOperations.all.name())) {
         doAppends = doSyncs = true;
@@ -252,7 +255,7 @@ public class IOTestProvider implements WALProvider {
       }
       LOG.info("IOTestWriter initialized with appends " + (doAppends ? "enabled" : "disabled") +
           " and syncs " + (doSyncs ? "enabled" : "disabled"));
-      super.init(fs, path, conf, overwritable, blocksize);
+      super.init(fs, path, conf, overwritable, blocksize, monitor);
     }
 
     @Override

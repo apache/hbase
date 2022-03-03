@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +30,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -40,10 +43,11 @@ import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure.CreateHdfsRegions;
-import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
@@ -72,6 +76,7 @@ public class CloneSnapshotProcedure
   private TableDescriptor tableDescriptor;
   private SnapshotDescription snapshot;
   private boolean restoreAcl;
+  private String customSFT;
   private List<RegionInfo> newRegions = null;
   private Map<String, Pair<String, String> > parentsToChildrenPairMap = new HashMap<>();
 
@@ -96,12 +101,19 @@ public class CloneSnapshotProcedure
    * @param snapshot snapshot to clone from
    */
   public CloneSnapshotProcedure(final MasterProcedureEnv env,
+    final TableDescriptor tableDescriptor, final SnapshotDescription snapshot,
+    final boolean restoreAcl) {
+    this(env, tableDescriptor, snapshot, restoreAcl, null);
+  }
+
+  public CloneSnapshotProcedure(final MasterProcedureEnv env,
       final TableDescriptor tableDescriptor, final SnapshotDescription snapshot,
-      final boolean restoreAcl) {
+      final boolean restoreAcl, final String customSFT) {
     super(env);
     this.tableDescriptor = tableDescriptor;
     this.snapshot = snapshot;
     this.restoreAcl = restoreAcl;
+    this.customSFT = customSFT;
 
     getMonitorStatus();
   }
@@ -139,6 +151,7 @@ public class CloneSnapshotProcedure
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_WRITE_FS_LAYOUT);
           break;
         case CLONE_SNAPSHOT_WRITE_FS_LAYOUT:
+          updateTableDescriptorWithSFT();
           newRegions = createFilesystemLayout(env, tableDescriptor, newRegions);
           env.getMasterServices().getTableDescriptors().update(tableDescriptor, true);
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_ADD_TO_META);
@@ -201,6 +214,37 @@ public class CloneSnapshotProcedure
       }
     }
     return Flow.HAS_MORE_STATE;
+  }
+
+  /**
+   * If a StoreFileTracker is specified we strip the TableDescriptor from previous SFT config
+   * and set the specified SFT on the table level
+   */
+  private void updateTableDescriptorWithSFT() {
+    if (StringUtils.isEmpty(customSFT)){
+      return;
+    }
+
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
+    builder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, customSFT);
+    for (ColumnFamilyDescriptor family : tableDescriptor.getColumnFamilies()){
+      ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(family);
+      cfBuilder.setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL, null);
+      cfBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, null);
+      builder.modifyColumnFamily(cfBuilder.build());
+    }
+    tableDescriptor = builder.build();
+  }
+
+  private void validateSFT() {
+    if (StringUtils.isEmpty(customSFT)){
+      return;
+    }
+
+    //if customSFT is invalid getTrackerClass will throw a RuntimeException
+    Configuration sftConfig = new Configuration();
+    sftConfig.set(StoreFileTrackerFactory.TRACKER_IMPL, customSFT);
+    StoreFileTrackerFactory.getTrackerClass(sftConfig);
   }
 
   @Override
@@ -271,6 +315,8 @@ public class CloneSnapshotProcedure
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setSnapshot(this.snapshot)
         .setTableSchema(ProtobufUtil.toTableSchema(tableDescriptor));
+
+    cloneSnapshotMsg.setRestoreAcl(restoreAcl);
     if (newRegions != null) {
       for (RegionInfo hri: newRegions) {
         cloneSnapshotMsg.addRegionInfo(ProtobufUtil.toRegionInfo(hri));
@@ -290,6 +336,9 @@ public class CloneSnapshotProcedure
         cloneSnapshotMsg.addParentToChildRegionsPairList(parentToChildrenPair);
       }
     }
+    if (!StringUtils.isEmpty(customSFT)){
+      cloneSnapshotMsg.setCustomSFT(customSFT);
+    }
     serializer.serialize(cloneSnapshotMsg.build());
   }
 
@@ -303,6 +352,9 @@ public class CloneSnapshotProcedure
     setUser(MasterProcedureUtil.toUserInfo(cloneSnapshotMsg.getUserInfo()));
     snapshot = cloneSnapshotMsg.getSnapshot();
     tableDescriptor = ProtobufUtil.toTableDescriptor(cloneSnapshotMsg.getTableSchema());
+    if (cloneSnapshotMsg.hasRestoreAcl()) {
+      restoreAcl = cloneSnapshotMsg.getRestoreAcl();
+    }
     if (cloneSnapshotMsg.getRegionInfoCount() == 0) {
       newRegions = null;
     } else {
@@ -322,6 +374,9 @@ public class CloneSnapshotProcedure
             parentToChildrenPair.getChild2RegionName()));
       }
     }
+    if (!StringUtils.isEmpty(cloneSnapshotMsg.getCustomSFT())){
+      customSFT = cloneSnapshotMsg.getCustomSFT();
+    }
     // Make sure that the monitor status is set up
     getMonitorStatus();
   }
@@ -335,6 +390,8 @@ public class CloneSnapshotProcedure
     if (env.getMasterServices().getTableDescriptors().exists(tableName)) {
       throw new TableExistsException(tableName);
     }
+
+    validateSFT();
   }
 
   /**
@@ -453,56 +510,25 @@ public class CloneSnapshotProcedure
     List<RegionInfo> newRegions,
     final CreateHdfsRegions hdfsRegionHandler) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tempdir = mfs.getTempDir();
 
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
-    final Path tempTableDir = CommonFSUtils.getTableDir(tempdir, tableDescriptor.getTableName());
-    if (CommonFSUtils.isExists(mfs.getFileSystem(), tempTableDir)) {
+    final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(),
+      tableDescriptor.getTableName());
+    if (CommonFSUtils.isExists(mfs.getFileSystem(), tableDir)) {
       // if the region dirs exist, will cause exception and unlimited retry (see HBASE-24546)
-      LOG.warn("temp table dir already exists on disk: {}, will be deleted.", tempTableDir);
-      CommonFSUtils.deleteDirectory(mfs.getFileSystem(), tempTableDir);
+      LOG.warn("temp table dir already exists on disk: {}, will be deleted.", tableDir);
+      CommonFSUtils.deleteDirectory(mfs.getFileSystem(), tableDir);
     }
-    ((FSTableDescriptors) (env.getMasterServices().getTableDescriptors()))
-      .createTableDescriptorForTableDirectory(tempTableDir,
-        TableDescriptorBuilder.newBuilder(tableDescriptor).build(), false);
+    ((FSTableDescriptors)(env.getMasterServices().getTableDescriptors()))
+      .createTableDescriptorForTableDirectory(tableDir,
+              TableDescriptorBuilder.newBuilder(tableDescriptor).build(), false);
 
     // 2. Create Regions
     newRegions = hdfsRegionHandler.createHdfsRegions(
-      env, tempdir, tableDescriptor.getTableName(), newRegions);
+      env, mfs.getRootDir(), tableDescriptor.getTableName(), newRegions);
 
-    // 3. Move Table temp directory to the hbase root location
-    CreateTableProcedure.moveTempDirectoryToHBaseRoot(env, tableDescriptor, tempTableDir);
-    // Move Table temp mob directory to the hbase root location
-    Path tempMobTableDir = MobUtils.getMobTableDir(tempdir, tableDescriptor.getTableName());
-    if (mfs.getFileSystem().exists(tempMobTableDir)) {
-      moveTempMobDirectoryToHBaseRoot(mfs, tableDescriptor, tempMobTableDir);
-    }
     return newRegions;
-  }
-
-  /**
-   * Move table temp mob directory to the hbase root location
-   * @param mfs The master file system
-   * @param tableDescriptor The table to operate on
-   * @param tempMobTableDir The temp mob directory of table
-   * @throws IOException If failed to move temp mob dir to hbase root dir
-   */
-  private void moveTempMobDirectoryToHBaseRoot(final MasterFileSystem mfs,
-      final TableDescriptor tableDescriptor, final Path tempMobTableDir) throws IOException {
-    FileSystem fs = mfs.getFileSystem();
-    final Path tableMobDir =
-        MobUtils.getMobTableDir(mfs.getRootDir(), tableDescriptor.getTableName());
-    if (!fs.delete(tableMobDir, true) && fs.exists(tableMobDir)) {
-      throw new IOException("Couldn't delete mob table " + tableMobDir);
-    }
-    if (!fs.exists(tableMobDir.getParent())) {
-      fs.mkdirs(tableMobDir.getParent());
-    }
-    if (!fs.rename(tempMobTableDir, tableMobDir)) {
-      throw new IOException("Unable to move mob table from temp=" + tempMobTableDir
-          + " to hbase root=" + tableMobDir);
-    }
   }
 
   /**
@@ -519,6 +545,15 @@ public class CloneSnapshotProcedure
         new RestoreSnapshotHelper.RestoreMetaChanges(
                 tableDescriptor, parentsToChildrenPairMap);
     metaChanges.updateMetaParentRegions(env.getMasterServices().getConnection(), newRegions);
+  }
+
+  /**
+   * Exposed for Testing: HBASE-26462
+   */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  public boolean getRestoreAcl() {
+    return restoreAcl;
   }
 
 }

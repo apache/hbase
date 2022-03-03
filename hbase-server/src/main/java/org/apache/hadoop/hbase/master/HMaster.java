@@ -80,6 +80,8 @@ import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ServerTask;
+import org.apache.hadoop.hbase.ServerTaskBuilder;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -131,6 +133,7 @@ import org.apache.hadoop.hbase.master.http.MasterRedirectServlet;
 import org.apache.hadoop.hbase.master.http.MasterStatusServlet;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
+import org.apache.hadoop.hbase.master.migrate.RollingUpgradeChore;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerManager;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
@@ -195,6 +198,8 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotNotifierFactory;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.ModifyColumnFamilyStoreFileTrackerProcedure;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.ModifyTableStoreFileTrackerProcedure;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -360,6 +365,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   private RSGroupBasedLoadBalancer balancer;
   private BalancerChore balancerChore;
+  private static boolean disableBalancerChoreForTest = false;
   private RegionNormalizerManager regionNormalizerManager;
   private ClusterStatusChore clusterStatusChore;
   private ClusterStatusPublisher clusterStatusPublisherChore = null;
@@ -376,6 +382,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private ReplicationBarrierCleaner replicationBarrierCleaner;
   private MobFileCleanerChore mobFileCleanerChore;
   private MobFileCompactionChore mobFileCompactionChore;
+  private RollingUpgradeChore rollingUpgradeChore;
   // used to synchronize the mobCompactionStates
   private final IdLock mobCompactionLock = new IdLock();
   // save the information of mob compactions in tables.
@@ -430,6 +437,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   // Cached clusterId on stand by masters to serve clusterID requests from clients.
   private final CachedClusterId cachedClusterId;
+
+  public static final String WARMUP_BEFORE_MOVE = "hbase.master.warmup.before.move";
+  private static final boolean DEFAULT_WARMUP_BEFORE_MOVE = true;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -789,7 +799,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         // done with in a one row put, which means if we have data in catalog family then we can
         // make sure that the migration is done.
         LOG.info("The {} family in master local region already has data in it, skip migrating...",
-          HConstants.CATALOG_FAMILY);
+          HConstants.CATALOG_FAMILY_STR);
         return;
       }
     }
@@ -1094,7 +1104,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     this.clusterStatusChore = new ClusterStatusChore(this, balancer);
     getChoreService().scheduleChore(clusterStatusChore);
     this.balancerChore = new BalancerChore(this);
-    getChoreService().scheduleChore(balancerChore);
+    if (!disableBalancerChoreForTest) {
+      getChoreService().scheduleChore(balancerChore);
+    }
     if (regionNormalizerManager != null) {
       getChoreService().scheduleChore(regionNormalizerManager.getRegionNormalizerChore());
     }
@@ -1222,6 +1234,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       LOG.debug("Balancer post startup initialization complete, took " + (
           (EnvironmentEdgeManager.currentTime() - start) / 1000) + " seconds");
     }
+
+    this.rollingUpgradeChore = new RollingUpgradeChore(this);
+    getChoreService().scheduleChore(rollingUpgradeChore);
   }
 
   private void createMissingCFsInMetaDuringUpgrade(
@@ -1713,6 +1728,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     shutdownChore(snapshotCleanerChore);
     shutdownChore(hbckChore);
     shutdownChore(regionsRecoveryChore);
+    shutdownChore(rollingUpgradeChore);
   }
 
   /**
@@ -1844,6 +1860,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   public BalanceResponse balance(BalanceRequest request) throws IOException {
+    checkInitialized();
+
     BalanceResponse.Builder responseBuilder = BalanceResponse.newBuilder();
 
     if (loadBalancerTracker == null
@@ -2186,11 +2204,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
       TransitRegionStateProcedure proc =
         this.assignmentManager.createMoveRegionProcedure(rp.getRegionInfo(), rp.getDestination());
-      // Warmup the region on the destination before initiating the move.
-      // A region server could reject the close request because it either does not
-      // have the specified region or the region is being split.
-      warmUpRegion(rp.getDestination(), hri);
-
+      if (conf.getBoolean(WARMUP_BEFORE_MOVE, DEFAULT_WARMUP_BEFORE_MOVE)) {
+        // Warmup the region on the destination before initiating the move.
+        // A region server could reject the close request because it either does not
+        // have the specified region or the region is being split.
+        LOG.info(getClientIdAuditPrefix() + " move " + rp + ", warming up region on " +
+          rp.getDestination());
+        warmUpRegion(rp.getDestination(), hri);
+      }
       LOG.info(getClientIdAuditPrefix() + " move " + rp + ", running balancer");
       Future<byte[]> future = ProcedureSyncWait.submitProcedure(this.procedureExecutor, proc);
       try {
@@ -2446,6 +2467,33 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }, nonceGroup, nonce, true);
   }
 
+
+  @Override
+  public long modifyColumnStoreFileTracker(TableName tableName, byte[] family, String dstSFT,
+    long nonceGroup, long nonce) throws IOException {
+    checkInitialized();
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+
+        @Override
+        protected void run() throws IOException {
+          String sft = getMaster().getMasterCoprocessorHost()
+            .preModifyColumnFamilyStoreFileTracker(tableName, family, dstSFT);
+          LOG.info("{} modify column {} store file tracker of table {} to {}",
+            getClientIdAuditPrefix(), Bytes.toStringBinary(family), tableName, sft);
+          submitProcedure(new ModifyColumnFamilyStoreFileTrackerProcedure(
+            procedureExecutor.getEnvironment(), tableName, family, sft));
+          getMaster().getMasterCoprocessorHost().postModifyColumnFamilyStoreFileTracker(tableName,
+            family, dstSFT);
+        }
+
+        @Override
+        protected String getDescription() {
+          return "ModifyColumnFamilyStoreFileTrackerProcedure";
+        }
+      });
+  }
+
   @Override
   public long deleteColumn(final TableName tableName, final byte[] columnName,
       final long nonceGroup, final long nonce) throws IOException {
@@ -2611,8 +2659,33 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   }
 
-  public long restoreSnapshot(final SnapshotDescription snapshotDesc,
-      final long nonceGroup, final long nonce, final boolean restoreAcl) throws IOException {
+  @Override
+  public long modifyTableStoreFileTracker(TableName tableName, String dstSFT, long nonceGroup,
+    long nonce) throws IOException {
+    checkInitialized();
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+
+        @Override
+        protected void run() throws IOException {
+          String sft = getMaster().getMasterCoprocessorHost()
+            .preModifyTableStoreFileTracker(tableName, dstSFT);
+          LOG.info("{} modify table store file tracker of table {} to {}", getClientIdAuditPrefix(),
+            tableName, sft);
+          submitProcedure(new ModifyTableStoreFileTrackerProcedure(
+            procedureExecutor.getEnvironment(), tableName, sft));
+          getMaster().getMasterCoprocessorHost().postModifyTableStoreFileTracker(tableName, sft);
+        }
+
+        @Override
+        protected String getDescription() {
+          return "ModifyTableStoreFileTrackerProcedure";
+        }
+      });
+  }
+
+  public long restoreSnapshot(final SnapshotDescription snapshotDesc, final long nonceGroup,
+    final long nonce, final boolean restoreAcl, final String customSFT) throws IOException {
     checkInitialized();
     getSnapshotManager().checkSnapshotSupport();
 
@@ -2621,18 +2694,19 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     getClusterSchema().getNamespace(dstTable.getNamespaceAsString());
 
     return MasterProcedureUtil.submitProcedure(
-        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
-      @Override
-      protected void run() throws IOException {
+      new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
           setProcId(
-            getSnapshotManager().restoreOrCloneSnapshot(snapshotDesc, getNonceKey(), restoreAcl));
-      }
+            getSnapshotManager().restoreOrCloneSnapshot(snapshotDesc, getNonceKey(), restoreAcl,
+              customSFT));
+        }
 
-      @Override
-      protected String getDescription() {
-        return "RestoreSnapshotProcedure";
-      }
-    });
+        @Override
+        protected String getDescription() {
+          return "RestoreSnapshotProcedure";
+        }
+      });
   }
 
   private void checkTableExists(final TableName tableName)
@@ -2668,16 +2742,39 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       options = EnumSet.allOf(Option.class);
     }
 
+    // TASKS and/or LIVE_SERVERS will populate this map, which will be given to the builder if
+    // not null after option processing completes.
+    Map<ServerName, ServerMetrics> serverMetricsMap = null;
+
     for (Option opt : options) {
       switch (opt) {
         case HBASE_VERSION: builder.setHBaseVersion(VersionInfo.getVersion()); break;
         case CLUSTER_ID: builder.setClusterId(getClusterId()); break;
         case MASTER: builder.setMasterName(getServerName()); break;
         case BACKUP_MASTERS: builder.setBackerMasterNames(getBackupMasters()); break;
+        case TASKS: {
+          // Master tasks
+          builder.setMasterTasks(TaskMonitor.get().getTasks().stream()
+            .map(task -> ServerTaskBuilder.newBuilder()
+              .setDescription(task.getDescription())
+              .setStatus(task.getStatus())
+              .setState(ServerTask.State.valueOf(task.getState().name()))
+              .setStartTime(task.getStartTime())
+              .setCompletionTime(task.getCompletionTimestamp())
+              .build())
+            .collect(Collectors.toList()));
+          // TASKS is also synonymous with LIVE_SERVERS for now because task information for
+          // regionservers is carried in ServerLoad.
+          // Add entries to serverMetricsMap for all live servers, if we haven't already done so
+          if (serverMetricsMap == null) {
+            serverMetricsMap = getOnlineServers();
+          }
+          break;
+        }
         case LIVE_SERVERS: {
-          if (serverManager != null) {
-            builder.setLiveServerMetrics(serverManager.getOnlineServers().entrySet().stream()
-              .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue())));
+          // Add entries to serverMetricsMap for all live servers, if we haven't already done so
+          if (serverMetricsMap == null) {
+            serverMetricsMap = getOnlineServers();
           }
           break;
         }
@@ -2739,7 +2836,22 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         }
       }
     }
+
+    if (serverMetricsMap != null) {
+      builder.setLiveServerMetrics(serverMetricsMap);
+    }
+
     return builder.build();
+  }
+
+  private Map<ServerName, ServerMetrics> getOnlineServers() {
+    if (serverManager != null) {
+      final Map<ServerName, ServerMetrics> map = new HashMap<>();
+      serverManager.getOnlineServers().entrySet()
+        .forEach(e -> map.put(e.getKey(), e.getValue()));
+      return map;
+    }
+    return null;
   }
 
   /**
@@ -3965,7 +4077,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
     allowedOnPath = ".*/src/test/.*")
-  MasterRegion getMasterRegion() {
+  public MasterRegion getMasterRegion() {
     return masterRegion;
   }
 
@@ -4026,4 +4138,23 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   public Collection<ServerName> getLiveRegionServers() {
     return regionServerTracker.getRegionServers();
   }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  void setLoadBalancer(RSGroupBasedLoadBalancer loadBalancer) {
+    this.balancer = loadBalancer;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  void setAssignmentManager(AssignmentManager assignmentManager) {
+    this.assignmentManager = assignmentManager;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  static void setDisableBalancerChoreForTest(boolean disable) {
+    disableBalancerChoreForTest = disable;
+  }
+
 }

@@ -18,48 +18,52 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.HRegion.COMPACTION_AFTER_BULKLOAD_ENABLE;
+
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.hamcrest.MockitoHamcrest.argThat;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 @Category(SmallTests.class)
 public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
-  private final RegionServerServices regionServerServices = mock(RegionServerServices.class);
-  private final CompactionRequester compactionRequester = mock(CompactSplit.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCompactionAfterBulkLoad.class);
+
+  private final RegionServerServices regionServerServices = mock(RegionServerServices.class);
+  public static AtomicInteger called = new AtomicInteger(0);
+
+  public TestCompactionAfterBulkLoad(boolean useFileBasedSFT) {
+    super(useFileBasedSFT);
+  }
 
   @Override
   protected HRegion testRegionWithFamiliesAndSpecifiedTableName(TableName tableName,
@@ -79,7 +83,9 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
   }
 
   @Test
-  public void shouldRequestCompactionAfterBulkLoad() throws IOException {
+  public void shouldRequestCompactAllStoresAfterBulkLoad() throws IOException {
+    final CompactSplit compactSplit = new TestCompactSplit(HBaseConfiguration.create());
+    called.set(0);
     List<Pair<byte[], String>> familyPaths = new ArrayList<>();
     // enough hfile to request compaction
     for (int i = 0; i < 5; i++) {
@@ -88,7 +94,7 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
     try {
       conf.setBoolean(COMPACTION_AFTER_BULKLOAD_ENABLE, true);
       when(regionServerServices.getConfiguration()).thenReturn(conf);
-      when(regionServerServices.getCompactionRequestor()).thenReturn(compactionRequester);
+      when(regionServerServices.getCompactionRequestor()).thenReturn(compactSplit);
       when(log.appendMarker(any(), any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
           .thenAnswer(new Answer() {
             @Override
@@ -103,14 +109,77 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
             }
           });
 
-      Mockito.doNothing().when(compactionRequester).requestCompaction(any(), any(), any(), anyInt(),
-        any(), any());
-      testRegionWithFamilies(family1, family2, family3).bulkLoadHFiles(familyPaths, false, null);
-      // invoke three times for 3 families
-      verify(compactionRequester, times(3)).requestCompaction(isA(HRegion.class), isA(HStore.class),
-        isA(String.class), anyInt(), eq(CompactionLifeCycleTracker.DUMMY), eq(null));
+      HRegion region = testRegionWithFamilies(family1, family2, family3);
+      region.bulkLoadHFiles(familyPaths, false, null);
+      assertEquals(3, called.get());
     } finally {
       conf.setBoolean(COMPACTION_AFTER_BULKLOAD_ENABLE, false);
     }
   }
+
+  @Test
+  public void testAvoidRepeatedlyRequestCompactAfterBulkLoad() throws IOException {
+    final CompactSplit compactSplit = new TestFamily1UnderCompact(HBaseConfiguration.create());
+    called.set(0);
+    List<Pair<byte[], String>> familyPaths = new ArrayList<>();
+    // enough hfile to request compaction
+    for (int i = 0; i < 5; i++) {
+      familyPaths.addAll(withFamilyPathsFor(family1, family2, family3));
+    }
+    try {
+      conf.setBoolean(COMPACTION_AFTER_BULKLOAD_ENABLE, true);
+      when(regionServerServices.getConfiguration()).thenReturn(conf);
+      when(regionServerServices.getCompactionRequestor()).thenReturn(compactSplit);
+      when(log.appendMarker(any(), any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
+        .thenAnswer(new Answer() {
+          @Override
+          public Object answer(InvocationOnMock invocation) {
+            WALKeyImpl walKey = invocation.getArgument(1);
+            MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
+            if (mvcc != null) {
+              MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
+              walKey.setWriteEntry(we);
+            }
+            return 01L;
+          }
+        });
+
+      HRegion region = testRegionWithFamilies(family1, family2, family3);
+      region.bulkLoadHFiles(familyPaths, false, null);
+      // invoke three times for 2 families
+      assertEquals(2, called.get());
+    } finally {
+      conf.setBoolean(COMPACTION_AFTER_BULKLOAD_ENABLE, false);
+    }
+  }
+
+  private class TestCompactSplit extends CompactSplit {
+
+    TestCompactSplit(Configuration conf) {
+      super(conf);
+    }
+
+    @Override
+    protected void requestCompactionInternal(HRegion region, HStore store, String why, int priority,
+      boolean selectNow, CompactionLifeCycleTracker tracker,
+      CompactionCompleteTracker completeTracker, User user) throws IOException {
+      called.addAndGet(1);
+    }
+  }
+
+  private class TestFamily1UnderCompact extends TestCompactSplit {
+
+    TestFamily1UnderCompact(Configuration conf) {
+      super(conf);
+    }
+
+    @Override
+    public boolean isUnderCompaction(final HStore s) {
+      if (s.getColumnFamilyName().equals(Bytes.toString(family1))) {
+        return true;
+      }
+      return super.isUnderCompaction(s);
+    }
+  }
+
 }

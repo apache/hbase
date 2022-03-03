@@ -81,6 +81,9 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Progressable;
@@ -704,6 +707,38 @@ public final class FSUtils {
   }
 
   /**
+   * Compute HDFS block distribution of a given HdfsDataInputStream. All HdfsDataInputStreams
+   * are backed by a series of LocatedBlocks, which are fetched periodically from the namenode.
+   * This method retrieves those blocks from the input stream and uses them to calculate
+   * HDFSBlockDistribution.
+   *
+   * The underlying method in DFSInputStream does attempt to use locally cached blocks, but
+   * may hit the namenode if the cache is determined to be incomplete. The method also involves
+   * making copies of all LocatedBlocks rather than return the underlying blocks themselves.
+   */
+  static public HDFSBlocksDistribution computeHDFSBlocksDistribution(
+    HdfsDataInputStream inputStream) throws IOException {
+    List<LocatedBlock> blocks = inputStream.getAllBlocks();
+    HDFSBlocksDistribution blocksDistribution = new HDFSBlocksDistribution();
+    for (LocatedBlock block : blocks) {
+      String[] hosts = getHostsForLocations(block);
+      long len = block.getBlockSize();
+      StorageType[] storageTypes = block.getStorageTypes();
+      blocksDistribution.addHostsAndBlockWeight(hosts, len, storageTypes);
+    }
+    return blocksDistribution;
+  }
+
+  private static String[] getHostsForLocations(LocatedBlock block) {
+    DatanodeInfo[] locations = block.getLocations();
+    String[] hosts = new String[locations.length];
+    for (int i = 0; i < hosts.length; i++) {
+      hosts[i] = locations[i].getHostName();
+    }
+    return hosts;
+  }
+
+  /**
    * Compute HDFS blocks distribution of a given file, or a portion of the file
    * @param fs file system
    * @param status file status of the file
@@ -1056,28 +1091,65 @@ public final class FSUtils {
    * @return List of paths to valid family directories in region dir.
    * @throws IOException
    */
-  public static List<Path> getFamilyDirs(final FileSystem fs, final Path regionDir) throws IOException {
+  public static List<Path> getFamilyDirs(final FileSystem fs, final Path regionDir)
+      throws IOException {
     // assumes we are in a region dir.
-    FileStatus[] fds = fs.listStatus(regionDir, new FamilyDirFilter(fs));
-    List<Path> familyDirs = new ArrayList<>(fds.length);
-    for (FileStatus fdfs: fds) {
-      Path fdPath = fdfs.getPath();
-      familyDirs.add(fdPath);
-    }
-    return familyDirs;
+    return getFilePaths(fs, regionDir, new FamilyDirFilter(fs));
   }
 
-  public static List<Path> getReferenceFilePaths(final FileSystem fs, final Path familyDir) throws IOException {
-    List<FileStatus> fds = listStatusWithStatusFilter(fs, familyDir, new ReferenceFileFilter(fs));
-    if (fds == null) {
-      return Collections.emptyList();
-    }
-    List<Path> referenceFiles = new ArrayList<>(fds.size());
+  public static List<Path> getReferenceFilePaths(final FileSystem fs, final Path familyDir)
+      throws IOException {
+    return getFilePaths(fs, familyDir, new ReferenceFileFilter(fs));
+  }
+
+  public static List<Path> getReferenceAndLinkFilePaths(final FileSystem fs, final Path familyDir)
+      throws IOException {
+    return getFilePaths(fs, familyDir, new ReferenceAndLinkFileFilter(fs));
+  }
+
+  private static List<Path> getFilePaths(final FileSystem fs, final Path dir,
+      final PathFilter pathFilter) throws IOException {
+    FileStatus[] fds = fs.listStatus(dir, pathFilter);
+    List<Path> files = new ArrayList<>(fds.length);
     for (FileStatus fdfs: fds) {
       Path fdPath = fdfs.getPath();
-      referenceFiles.add(fdPath);
+      files.add(fdPath);
     }
-    return referenceFiles;
+    return files;
+  }
+
+  public static int getRegionReferenceAndLinkFileCount(final FileSystem fs, final Path p) {
+    int result = 0;
+    try {
+      for (Path familyDir : getFamilyDirs(fs, p)) {
+        result += getReferenceAndLinkFilePaths(fs, familyDir).size();
+      }
+    } catch (IOException e) {
+      LOG.warn("Error Counting reference files.", e);
+    }
+    return result;
+  }
+
+  public static class ReferenceAndLinkFileFilter implements PathFilter {
+
+    private final FileSystem fs;
+
+    public ReferenceAndLinkFileFilter(FileSystem fs) {
+      this.fs = fs;
+    }
+
+    @Override
+    public boolean accept(Path rd) {
+      try {
+        // only files can be references.
+        return !fs.getFileStatus(rd).isDirectory() && (StoreFileInfo.isReference(rd) ||
+          HFileLink.isHFileLink(rd));
+      } catch (IOException ioe) {
+        // Maybe the file was moved or the fs was disconnected.
+        LOG.warn("Skipping file " + rd +" due to IOException", ioe);
+        return false;
+      }
+    }
   }
 
   /**

@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.util.Order.ASCENDING;
 import static org.apache.hadoop.hbase.util.Order.DESCENDING;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.nio.charset.Charset;
@@ -309,10 +308,6 @@ public class OrderedBytes {
 
   public static final Charset UTF8 = Charset.forName("UTF-8");
   private static final byte TERM = 0x00;
-  private static final BigDecimal E8 = BigDecimal.valueOf(1e8);
-  private static final BigDecimal E32 = BigDecimal.valueOf(1e32);
-  private static final BigDecimal EN2 = BigDecimal.valueOf(1e-2);
-  private static final BigDecimal EN10 = BigDecimal.valueOf(1e-10);
 
   /**
    * Max precision guaranteed to fit into a {@code long}.
@@ -560,8 +555,8 @@ public class OrderedBytes {
     byte[] a = src.getBytes();
     final int start = src.getPosition(), offset = src.getOffset(), remaining = src.getRemaining();
     Order ord = comp ? DESCENDING : ASCENDING;
-    BigDecimal m = BigDecimal.ZERO;
-    e--;
+    BigDecimal m;
+    StringBuilder sb = new StringBuilder();
     for (int i = 0;; i++) {
       if (i > remaining) {
         // we've exceeded this range's window
@@ -570,18 +565,23 @@ public class OrderedBytes {
             "Read exceeds range before termination byte found. offset: " + offset + " position: "
                 + (start + i));
       }
+      // one byte -> 2 digits
       // base-100 digits are encoded as val * 2 + 1 except for the termination digit.
-      m = m.add( // m +=
-        new BigDecimal(BigInteger.ONE, e * -2).multiply( // 100 ^ p * [decoded digit]
-          BigDecimal.valueOf((ord.apply(a[offset + start + i]) & 0xff) / 2)));
-      e--;
+      int twoDigits = (ord.apply(a[offset + start + i]) & 0xff) / 2;
+      sb.append(String.format("%02d", twoDigits));
       // detect termination digit
-      if ((ord.apply(a[offset + start + i]) & 1) == 0) {
+      // Besides, as we will normalise the return value at last,
+      // we only need to decode at most MAX_PRECISION + 2 digits here.
+      if ((ord.apply(a[offset + start + i]) & 1) == 0 || sb.length() > MAX_PRECISION + 1) {
         src.setPosition(start + i + 1);
         break;
       }
     }
-    return normalize(m);
+    m = new BigDecimal(sb.toString());
+    int stepsMoveLeft = sb.charAt(0) != '0' ? m.precision() : m.precision() + 1;
+    stepsMoveLeft -= e * 2;
+
+    return normalize(m.movePointLeft(stepsMoveLeft));
   }
 
   /**
@@ -632,7 +632,7 @@ public class OrderedBytes {
     byte[] a = dst.getBytes();
     boolean isNeg = val.signum() == -1;
     final int offset = dst.getOffset(), start = dst.getPosition();
-    int e = 0, d, startM;
+    int e = 0, startM;
 
     if (isNeg) { /* Small negative number: 0x14, -E, ~M */
       dst.put(NEG_SMALL);
@@ -641,21 +641,17 @@ public class OrderedBytes {
     }
 
     // normalize abs(val) to determine E
-    while (abs.compareTo(EN10) < 0) { abs = abs.movePointRight(8); e += 4; }
-    while (abs.compareTo(EN2) < 0) { abs = abs.movePointRight(2); e++; }
+    int zerosBeforeFirstNonZero = abs.scale() - abs.precision();
+    int lengthToMoveRight = zerosBeforeFirstNonZero % 2 ==
+      0 ? zerosBeforeFirstNonZero : zerosBeforeFirstNonZero - 1;
+    e = lengthToMoveRight / 2;
+    abs = abs.movePointRight(lengthToMoveRight);
 
     putVaruint64(dst, e, !isNeg); // encode appropriate E value.
 
     // encode M by peeling off centimal digits, encoding x as 2x+1
     startM = dst.getPosition();
-    // TODO: 18 is an arbitrary encoding limit. Reevaluate once we have a better handling of
-    // numeric scale.
-    for (int i = 0; i < 18 && abs.compareTo(BigDecimal.ZERO) != 0; i++) {
-      abs = abs.movePointRight(2);
-      d = abs.intValue();
-      dst.put((byte) ((2 * d + 1) & 0xff));
-      abs = abs.subtract(BigDecimal.valueOf(d));
-    }
+    encodeToCentimal(dst, abs);
     // terminal digit should be 2x
     a[offset + dst.getPosition() - 1] = (byte) (a[offset + dst.getPosition() - 1] & 0xfe);
     if (isNeg) {
@@ -707,7 +703,7 @@ public class OrderedBytes {
     byte[] a = dst.getBytes();
     boolean isNeg = val.signum() == -1;
     final int start = dst.getPosition(), offset = dst.getOffset();
-    int e = 0, d, startM;
+    int e = 0, startM;
 
     if (isNeg) { /* Large negative number: 0x08, ~E, ~M */
       dst.put(NEG_LARGE);
@@ -716,9 +712,10 @@ public class OrderedBytes {
     }
 
     // normalize abs(val) to determine E
-    while (abs.compareTo(E32) >= 0 && e <= 350) { abs = abs.movePointLeft(32); e +=16; }
-    while (abs.compareTo(E8) >= 0 && e <= 350) { abs = abs.movePointLeft(8); e+= 4; }
-    while (abs.compareTo(BigDecimal.ONE) >= 0 && e <= 350) { abs = abs.movePointLeft(2); e++; }
+    int integerDigits = abs.precision() - abs.scale();
+    int lengthToMoveLeft = integerDigits % 2 == 0 ? integerDigits : integerDigits + 1;
+    e = lengthToMoveLeft / 2;
+    abs = abs.movePointLeft(lengthToMoveLeft);
 
     // encode appropriate header byte and/or E value.
     if (e > 10) { /* large number, write out {~,}E */
@@ -733,14 +730,7 @@ public class OrderedBytes {
 
     // encode M by peeling off centimal digits, encoding x as 2x+1
     startM = dst.getPosition();
-    // TODO: 18 is an arbitrary encoding limit. Reevaluate once we have a better handling of
-    // numeric scale.
-    for (int i = 0; i < 18 && abs.compareTo(BigDecimal.ZERO) != 0; i++) {
-      abs = abs.movePointRight(2);
-      d = abs.intValue();
-      dst.put((byte) (2 * d + 1));
-      abs = abs.subtract(BigDecimal.valueOf(d));
-    }
+    encodeToCentimal(dst, abs);
     // terminal digit should be 2x
     a[offset + dst.getPosition() - 1] = (byte) (a[offset + dst.getPosition() - 1] & 0xfe);
     if (isNeg) {
@@ -748,6 +738,33 @@ public class OrderedBytes {
       DESCENDING.apply(a, offset + startM, dst.getPosition() - startM);
     }
     return dst.getPosition() - start;
+  }
+
+  /**
+   * Encode a value val in [0.01, 1.0) into Centimals.
+   * Util function for {@link OrderedBytes#encodeNumericLarge(PositionedByteRange, BigDecimal)
+   * and {@link OrderedBytes#encodeNumericSmall(PositionedByteRange, BigDecimal)}
+   * @param dst The destination to which encoded digits are written.
+   * @param val A BigDecimal after the normalization. The value must be in [0.01, 1.0).
+   */
+  private static void encodeToCentimal(PositionedByteRange dst, BigDecimal val) {
+    // The input value val must be in [0.01, 1.0)
+    String stringOfAbs = val.stripTrailingZeros().toPlainString();
+    String value = stringOfAbs.substring(stringOfAbs.indexOf('.') + 1);
+    int d;
+
+    // If the first float digit is 0, we will encode one digit more than MAX_PRECISION
+    // We encode at most MAX_PRECISION significant digits into centimals,
+    // because the input value, has been already normalized.
+    int maxPrecision = value.charAt(0) == '0' ? MAX_PRECISION + 1 : MAX_PRECISION;
+    maxPrecision = Math.min(maxPrecision, value.length());
+    for (int i = 0; i < maxPrecision; i += 2) {
+      d = (value.charAt(i) - '0') * 10;
+      if (i + 1 < maxPrecision) {
+        d += (value.charAt(i + 1) - '0');
+      }
+      dst.put((byte) (2 * d + 1));
+    }
   }
 
   /**
@@ -790,6 +807,8 @@ public class OrderedBytes {
 
   /**
    * Encode a numerical value using the variable-length encoding.
+   * If the number of significant digits of the value exceeds the
+   * {@link OrderedBytes#MAX_PRECISION}, the exceeding part will be lost.
    * @param dst The destination to which encoded digits are written.
    * @param val The value to encode.
    * @param ord The {@link Order} to respect while encoding {@code val}.

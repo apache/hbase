@@ -18,13 +18,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.nio.ByteBuffer;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
@@ -32,6 +32,8 @@ import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.nio.RefCnt;
+import org.apache.hadoop.hbase.regionserver.CompactingMemStore.IndexType;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,27 +43,28 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 /**
  * A memstore-local allocation buffer.
  * <p>
- * The MemStoreLAB is basically a bump-the-pointer allocator that allocates
- * big (2MB) byte[] chunks from and then doles it out to threads that request
- * slices into the array.
+ * The MemStoreLAB is basically a bump-the-pointer allocator that allocates big (2MB) byte[] chunks
+ * from and then doles it out to threads that request slices into the array.
  * <p>
- * The purpose of this class is to combat heap fragmentation in the
- * regionserver. By ensuring that all Cells in a given memstore refer
- * only to large chunks of contiguous memory, we ensure that large blocks
- * get freed up when the memstore is flushed.
+ * The purpose of this class is to combat heap fragmentation in the regionserver. By ensuring that
+ * all Cells in a given memstore refer only to large chunks of contiguous memory, we ensure that
+ * large blocks get freed up when the memstore is flushed.
  * <p>
- * Without the MSLAB, the byte array allocated during insertion end up
- * interleaved throughout the heap, and the old generation gets progressively
- * more fragmented until a stop-the-world compacting collection occurs.
+ * Without the MSLAB, the byte array allocated during insertion end up interleaved throughout the
+ * heap, and the old generation gets progressively more fragmented until a stop-the-world compacting
+ * collection occurs.
  * <p>
- * TODO: we should probably benchmark whether word-aligning the allocations
- * would provide a performance improvement - probably would speed up the
- * Bytes.toLong/Bytes.toInt calls in KeyValue, but some of those are cached
- * anyway.
- * The chunks created by this MemStoreLAB can get pooled at {@link ChunkCreator}.
- * When the Chunk comes from pool, it can be either an on heap or an off heap backed chunk. The chunks,
- * which this MemStoreLAB creates on its own (when no chunk available from pool), those will be
- * always on heap backed.
+ * TODO: we should probably benchmark whether word-aligning the allocations would provide a
+ * performance improvement - probably would speed up the Bytes.toLong/Bytes.toInt calls in KeyValue,
+ * but some of those are cached anyway. The chunks created by this MemStoreLAB can get pooled at
+ * {@link ChunkCreator}. When the Chunk comes from pool, it can be either an on heap or an off heap
+ * backed chunk. The chunks, which this MemStoreLAB creates on its own (when no chunk available from
+ * pool), those will be always on heap backed.
+ * <p>
+ * NOTE:if user requested to work with MSLABs (whether on- or off-heap), in
+ * {@link CompactingMemStore} ctor, the {@link CompactingMemStore#indexType} could only be
+ * {@link IndexType#CHUNK_MAP},that is to say the immutable segments using MSLABs are going to use
+ * {@link CellChunkMap} as their index.
  */
 @InterfaceAudience.Private
 public class MemStoreLABImpl implements MemStoreLAB {
@@ -77,16 +80,18 @@ public class MemStoreLABImpl implements MemStoreLAB {
   private final int dataChunkSize;
   private final int maxAlloc;
   private final ChunkCreator chunkCreator;
-  private final CompactingMemStore.IndexType idxType; // what index is used for corresponding segment
 
   // This flag is for closing this instance, its set when clearing snapshot of
   // memstore
-  private volatile boolean closed = false;
+  private final AtomicBoolean closed = new AtomicBoolean(false);;
   // This flag is for reclaiming chunks. Its set when putting chunks back to
   // pool
-  private AtomicBoolean reclaimed = new AtomicBoolean(false);
-  // Current count of open scanners which reading data from this MemStoreLAB
-  private final AtomicInteger openScannerCount = new AtomicInteger();
+  private final AtomicBoolean reclaimed = new AtomicBoolean(false);
+  /**
+   * Its initial value is 1, so it is one bigger than the current count of open scanners which
+   * reading data from this MemStoreLAB.
+   */
+  private final RefCnt refCnt;
 
   // Used in testing
   public MemStoreLABImpl() {
@@ -101,9 +106,10 @@ public class MemStoreLABImpl implements MemStoreLAB {
     Preconditions.checkArgument(maxAlloc <= dataChunkSize,
         MAX_ALLOC_KEY + " must be less than " + CHUNK_SIZE_KEY);
 
-    // if user requested to work with MSLABs (whether on- or off-heap), then the
-    // immutable segments are going to use CellChunkMap as their index
-    idxType = CompactingMemStore.IndexType.CHUNK_MAP;
+    this.refCnt = RefCnt.create(() -> {
+      recycleChunks();
+    });
+
   }
 
   @Override
@@ -124,9 +130,8 @@ public class MemStoreLABImpl implements MemStoreLAB {
   @Override
   public Cell forceCopyOfBigCellInto(Cell cell) {
     int size = Segment.getCellLength(cell);
-    size += ChunkCreator.SIZEOF_CHUNK_HEADER;
     Preconditions.checkArgument(size >= 0, "negative size");
-    if (size <= dataChunkSize) {
+    if (size + ChunkCreator.SIZEOF_CHUNK_HEADER <= dataChunkSize) {
       // Using copyCellInto for cells which are bigger than the original maxAlloc
       return copyCellInto(cell, dataChunkSize);
     } else {
@@ -260,17 +265,18 @@ public class MemStoreLABImpl implements MemStoreLAB {
    */
   @Override
   public void close() {
-    this.closed = true;
+    if (!this.closed.compareAndSet(false, true)) {
+      return;
+    }
     // We could put back the chunks to pool for reusing only when there is no
     // opening scanner which will read their data
-    int count  = openScannerCount.get();
-    if(count == 0) {
-      recycleChunks();
-    }
+    this.refCnt.release();
   }
 
-  int getOpenScannerCount() {
-    return this.openScannerCount.get();
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  int getRefCntValue() {
+    return this.refCnt.refCnt();
   }
 
   /**
@@ -278,7 +284,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
    */
   @Override
   public void incScannerCount() {
-    this.openScannerCount.incrementAndGet();
+    this.refCnt.retain();
   }
 
   /**
@@ -286,15 +292,13 @@ public class MemStoreLABImpl implements MemStoreLAB {
    */
   @Override
   public void decScannerCount() {
-    int count = this.openScannerCount.decrementAndGet();
-    if (this.closed && count == 0) {
-      recycleChunks();
-    }
+    this.refCnt.release();
   }
 
   private void recycleChunks() {
     if (reclaimed.compareAndSet(false, true)) {
       chunkCreator.putbackChunks(chunks);
+      chunks.clear();
     }
   }
 
@@ -334,7 +338,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
         if (c != null) {
           return c;
         }
-        c = this.chunkCreator.getChunk(idxType);
+        c = this.chunkCreator.getChunk();
         if (c != null) {
           // set the curChunk. No need of CAS as only one thread will be here
           currChunk.set(c);
@@ -410,13 +414,21 @@ public class MemStoreLABImpl implements MemStoreLAB {
     return pooledChunks;
   }
 
-  Integer getNumOfChunksReturnedToPool() {
+  Integer getNumOfChunksReturnedToPool(Set<Integer> chunksId) {
     int i = 0;
-    for (Integer id : this.chunks) {
+    for (Integer id : chunksId) {
       if (chunkCreator.isChunkInPool(id)) {
         i++;
       }
     }
     return i;
+  }
+
+  boolean isReclaimed() {
+    return reclaimed.get();
+  }
+
+  boolean isClosed() {
+    return closed.get();
   }
 }

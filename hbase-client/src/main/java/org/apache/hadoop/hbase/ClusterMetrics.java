@@ -162,6 +162,12 @@ public interface ClusterMetrics {
   Map<TableName, RegionStatesCount> getTableRegionStatesCount();
 
   /**
+   * Provide the list of master tasks
+   */
+  @Nullable
+  List<ServerTask> getMasterTasks();
+
+  /**
    * Kinds of ClusterMetrics
    */
   enum Option {
@@ -213,5 +219,9 @@ public interface ClusterMetrics {
      * metrics about table to no of regions status count
      */
     TABLE_TO_REGIONS_COUNT,
+    /**
+     * metrics about monitored tasks
+     */
+    TASKS,
   }
 }

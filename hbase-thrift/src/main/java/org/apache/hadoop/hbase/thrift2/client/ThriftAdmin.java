@@ -869,8 +869,8 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName, boolean cloneAcl)
-      throws IOException, TableExistsException, RestoreSnapshotException {
+  public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName, boolean cloneAcl,
+    String customSFT) throws IOException, TableExistsException, RestoreSnapshotException {
     throw new NotImplementedException("cloneSnapshotAsync not supported in ThriftAdmin");
   }
 
@@ -1296,5 +1296,19 @@ public class ThriftAdmin implements Admin {
       ServerType serverType, int limit, Map<String, Object> filterParams)
       throws IOException {
     throw new NotImplementedException("getLogEntries not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
+    String dstSFT) throws IOException {
+    throw new NotImplementedException(
+      "modifyColumnFamilyStoreFileTrackerAsync not supported in ThriftAdmin");
+  }
+
+  @Override
+  public Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
+    throws IOException {
+    throw new NotImplementedException(
+      "modifyTableStoreFileTrackerAsync not supported in ThriftAdmin");
   }
 }

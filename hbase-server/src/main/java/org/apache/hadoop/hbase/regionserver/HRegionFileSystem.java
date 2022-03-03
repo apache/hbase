@@ -17,16 +17,20 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.io.HFileLink.LINK_NAME_PATTERN;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Matcher;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -39,12 +43,17 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -53,7 +62,6 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -142,7 +150,7 @@ public class HRegionFileSystem {
   //  Temp Helpers
   // ===========================================================================
   /** @return {@link Path} to the region's temp directory, used for file creations */
-  Path getTempDir() {
+  public Path getTempDir() {
     return new Path(getRegionDir(), REGION_TEMP_DIR);
   }
 
@@ -237,11 +245,7 @@ public class HRegionFileSystem {
    * @param familyName Column Family Name
    * @return a set of {@link StoreFileInfo} for the specified family.
    */
-  public Collection<StoreFileInfo> getStoreFiles(final byte[] familyName) throws IOException {
-    return getStoreFiles(Bytes.toString(familyName));
-  }
-
-  public Collection<StoreFileInfo> getStoreFiles(final String familyName) throws IOException {
+  public List<StoreFileInfo> getStoreFiles(final String familyName) throws IOException {
     return getStoreFiles(familyName, true);
   }
 
@@ -251,7 +255,7 @@ public class HRegionFileSystem {
    * @param familyName Column Family Name
    * @return a set of {@link StoreFileInfo} for the specified family.
    */
-  public Collection<StoreFileInfo> getStoreFiles(final String familyName, final boolean validate)
+  public List<StoreFileInfo> getStoreFiles(final String familyName, final boolean validate)
       throws IOException {
     Path familyDir = getStoreDir(familyName);
     FileStatus[] files = CommonFSUtils.listStatus(this.fs, familyDir);
@@ -504,6 +508,10 @@ public class HRegionFileSystem {
    * @throws IOException
    */
   Path commitStoreFile(final Path buildPath, Path dstPath) throws IOException {
+    // rename is not necessary in case of direct-insert stores
+    if(buildPath.equals(dstPath)){
+      return dstPath;
+    }
     // buildPath exists, therefore not doing an exists() check.
     if (!rename(buildPath, dstPath)) {
       throw new IOException("Failed rename of " + buildPath + " to " + dstPath);
@@ -594,19 +602,41 @@ public class HRegionFileSystem {
    * to the proper location in the filesystem.
    *
    * @param regionInfo daughter {@link org.apache.hadoop.hbase.client.RegionInfo}
-   * @throws IOException
    */
-  public Path commitDaughterRegion(final RegionInfo regionInfo)
-      throws IOException {
+  public Path commitDaughterRegion(final RegionInfo regionInfo, List<Path> allRegionFiles,
+      MasterProcedureEnv env) throws IOException {
     Path regionDir = this.getSplitsDir(regionInfo);
     if (fs.exists(regionDir)) {
       // Write HRI to a file in case we need to recover hbase:meta
       Path regionInfoFile = new Path(regionDir, REGION_INFO_FILE);
       byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
+      HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
+        env.getMasterConfiguration(), fs, getTableDir(), regionInfo, false);
+      insertRegionFilesIntoStoreTracker(allRegionFiles, env, regionFs);
     }
-
     return regionDir;
+  }
+
+  private void insertRegionFilesIntoStoreTracker(List<Path> allFiles, MasterProcedureEnv env,
+      HRegionFileSystem regionFs) throws IOException {
+    TableDescriptor tblDesc = env.getMasterServices().getTableDescriptors().
+      get(regionInfo.getTable());
+    //we need to map trackers per store
+    Map<String, StoreFileTracker> trackerMap = new HashMap<>();
+    //we need to map store files per store
+    Map<String, List<StoreFileInfo>> fileInfoMap = new HashMap<>();
+    for(Path file : allFiles) {
+      String familyName = file.getParent().getName();
+      trackerMap.computeIfAbsent(familyName, t -> StoreFileTrackerFactory.create(conf, tblDesc,
+        tblDesc.getColumnFamily(Bytes.toBytes(familyName)), regionFs));
+      fileInfoMap.computeIfAbsent(familyName, l -> new ArrayList<>());
+      List<StoreFileInfo> infos = fileInfoMap.get(familyName);
+      infos.add(new StoreFileInfo(conf, fs, file, true));
+    }
+    for(Map.Entry<String, StoreFileTracker> entry : trackerMap.entrySet()) {
+      entry.getValue().add(fileInfoMap.get(entry.getKey()));
+    }
   }
 
   /**
@@ -645,7 +675,6 @@ public class HRegionFileSystem {
    *                    this method is invoked on the Master side, then the RegionSplitPolicy will
    *                    NOT have a reference to a Region.
    * @return Path to created reference.
-   * @throws IOException
    */
   public Path splitStoreFile(RegionInfo hri, String familyName, HStoreFile f, byte[] splitRow,
       boolean top, RegionSplitPolicy splitPolicy) throws IOException {
@@ -662,15 +691,17 @@ public class HRegionFileSystem {
       LOG.warn("Found an already existing split file for {}. Assuming this is a recovery.", p);
       return p;
     }
+    boolean createLinkFile = false;
     if (splitPolicy == null || !splitPolicy.skipStoreFileRangeCheck(familyName)) {
       // Check whether the split row lies in the range of the store file
       // If it is outside the range, return directly.
       f.initReader();
       try {
         Cell splitKey = PrivateCellUtil.createFirstOnRow(splitRow);
+        Optional<Cell> lastKey = f.getLastKey();
+        Optional<Cell> firstKey = f.getFirstKey();
         if (top) {
           //check if larger than last key.
-          Optional<Cell> lastKey = f.getLastKey();
           // If lastKey is null means storefile is empty.
           if (!lastKey.isPresent()) {
             return null;
@@ -678,9 +709,12 @@ public class HRegionFileSystem {
           if (f.getComparator().compare(splitKey, lastKey.get()) > 0) {
             return null;
           }
+          if (firstKey.isPresent() && f.getComparator().compare(splitKey, firstKey.get()) <= 0) {
+            LOG.debug("Will create HFileLink file for {}, top=true", f.getPath());
+            createLinkFile = true;
+          }
         } else {
           //check if smaller than first key
-          Optional<Cell> firstKey = f.getFirstKey();
           // If firstKey is null means storefile is empty.
           if (!firstKey.isPresent()) {
             return null;
@@ -688,9 +722,42 @@ public class HRegionFileSystem {
           if (f.getComparator().compare(splitKey, firstKey.get()) < 0) {
             return null;
           }
+          if (lastKey.isPresent() && f.getComparator().compare(splitKey, lastKey.get()) >= 0) {
+            LOG.debug("Will create HFileLink file for {}, top=false", f.getPath());
+            createLinkFile = true;
+          }
         }
       } finally {
         f.closeStoreFile(f.getCacheConf() != null ? f.getCacheConf().shouldEvictOnClose() : true);
+      }
+    }
+    if (createLinkFile) {
+      // create HFileLink file instead of Reference file for child
+      String hfileName = f.getPath().getName();
+      TableName linkedTable = regionInfoForFs.getTable();
+      String linkedRegion = regionInfoForFs.getEncodedName();
+      try {
+        if (HFileLink.isHFileLink(hfileName)) {
+          Matcher m = LINK_NAME_PATTERN.matcher(hfileName);
+          if (!m.matches()) {
+            throw new IllegalArgumentException(hfileName + " is not a valid HFileLink name!");
+          }
+          linkedTable = TableName.valueOf(m.group(1), m.group(2));
+          linkedRegion = m.group(3);
+          hfileName = m.group(4);
+        }
+        // must create back reference here
+        HFileLink.create(conf, fs, splitDir, familyName, hri.getTable().getNameAsString(),
+          hri.getEncodedName(), linkedTable, linkedRegion, hfileName, true);
+        Path path =
+          new Path(splitDir, HFileLink.createHFileLinkName(linkedTable, linkedRegion, hfileName));
+        LOG.info("Created linkFile:" + path.toString() + " for child: " + hri.getEncodedName()
+          + ", parent: " + regionInfoForFs.getEncodedName());
+        return path;
+      } catch (IOException e) {
+        // if create HFileLink file failed, then just skip the error and create Reference file
+        LOG.error("Create link file for " + hfileName + " for child " + hri.getEncodedName()
+          + "failed, will create Reference file", e);
       }
     }
     // A reference to the bottom half of the hsf store file.
@@ -758,13 +825,15 @@ public class HRegionFileSystem {
    * Commit a merged region, making it ready for use.
    * @throws IOException
    */
-  public void commitMergedRegion() throws IOException {
+  public void commitMergedRegion(List<Path> allMergedFiles, MasterProcedureEnv env)
+      throws IOException {
     Path regionDir = getMergesDir(regionInfoForFs);
     if (regionDir != null && fs.exists(regionDir)) {
       // Write HRI to a file in case we need to recover hbase:meta
       Path regionInfoFile = new Path(regionDir, REGION_INFO_FILE);
       byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
+      insertRegionFilesIntoStoreTracker(allMergedFiles, env, this);
     }
   }
 

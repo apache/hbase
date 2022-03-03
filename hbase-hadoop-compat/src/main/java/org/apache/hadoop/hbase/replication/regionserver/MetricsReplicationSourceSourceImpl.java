@@ -77,7 +77,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     this.keyPrefix = "source." + this.id + ".";
 
     ageOfLastShippedOpKey = this.keyPrefix + "ageOfLastShippedOp";
-    ageOfLastShippedOpHist = rms.getMetricsRegistry().getHistogram(ageOfLastShippedOpKey);
+    ageOfLastShippedOpHist = rms.getMetricsRegistry().newTimeHistogram(ageOfLastShippedOpKey);
 
     sizeOfLogQueueKey = this.keyPrefix + "sizeOfLogQueue";
     sizeOfLogQueueGauge = rms.getMetricsRegistry().getGauge(sizeOfLogQueueKey, 0L);

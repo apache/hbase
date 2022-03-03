@@ -211,11 +211,13 @@ public class TestIOFencing {
 
     @Override
     protected void refreshStoreSizeAndTotalBytes() throws IOException {
-      try {
-        r.compactionsWaiting.countDown();
-        r.compactionsBlocked.await();
-      } catch (InterruptedException ex) {
-        throw new IOException(ex);
+      if (r != null) {
+        try {
+          r.compactionsWaiting.countDown();
+          r.compactionsBlocked.await();
+        } catch (InterruptedException ex) {
+          throw new IOException(ex);
+        }
       }
       super.refreshStoreSizeAndTotalBytes();
     }
@@ -296,8 +298,8 @@ public class TestIOFencing {
         FAMILY, Lists.newArrayList(new Path("/a")), Lists.newArrayList(new Path("/b")),
         new Path("store_dir"));
       WALUtil.writeCompactionMarker(compactingRegion.getWAL(),
-          ((HRegion)compactingRegion).getReplicationScope(),
-        oldHri, compactionDescriptor, compactingRegion.getMVCC());
+        ((HRegion) compactingRegion).getReplicationScope(), oldHri, compactionDescriptor,
+        compactingRegion.getMVCC(), null);
 
       // Wait till flush has happened, otherwise there won't be multiple store files
       long startWaitTime = EnvironmentEdgeManager.currentTime();

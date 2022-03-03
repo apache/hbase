@@ -500,6 +500,31 @@ public interface Admin extends Abortable, Closeable {
       throws IOException;
 
   /**
+   * Change the store file tracker of the given table's given family.
+   * @param tableName the table you want to change
+   * @param family the family you want to change
+   * @param dstSFT the destination store file tracker
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void modifyColumnFamilyStoreFileTracker(TableName tableName, byte[] family, String dstSFT)
+    throws IOException {
+    get(modifyColumnFamilyStoreFileTrackerAsync(tableName, family, dstSFT), getSyncWaitTimeout(),
+      TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Change the store file tracker of the given table's given family.
+   * @param tableName the table you want to change
+   * @param family the family you want to change
+   * @param dstSFT the destination store file tracker
+   * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
+    String dstSFT) throws IOException;
+
+  /**
    * Get all the online regions on a region server.
    *
    * @return List of {@link RegionInfo}
@@ -1056,6 +1081,28 @@ public interface Admin extends Abortable, Closeable {
    *         operation to complete
    */
   Future<Void> modifyTableAsync(TableDescriptor td) throws IOException;
+
+  /**
+   * Change the store file tracker of the given table.
+   * @param tableName the table you want to change
+   * @param dstSFT the destination store file tracker
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void modifyTableStoreFileTracker(TableName tableName, String dstSFT) throws IOException {
+    get(modifyTableStoreFileTrackerAsync(tableName, dstSFT), getSyncWaitTimeout(),
+      TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Change the store file tracker of the given table.
+   * @param tableName the table you want to change
+   * @param dstSFT the destination store file tracker
+   * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
+    throws IOException;
 
   /**
    * Shuts down the HBase cluster.
@@ -1620,7 +1667,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IllegalArgumentException if the restore request is formatted incorrectly
    */
   void restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot, boolean restoreAcl)
-      throws IOException, RestoreSnapshotException;
+    throws IOException, RestoreSnapshotException;
 
   /**
    * Create a new table by cloning the snapshot content.
@@ -1633,7 +1680,25 @@ public interface Admin extends Abortable, Closeable {
    */
   default void cloneSnapshot(String snapshotName, TableName tableName)
       throws IOException, TableExistsException, RestoreSnapshotException {
-    cloneSnapshot(snapshotName, tableName, false);
+    cloneSnapshot(snapshotName, tableName, false, null);
+  }
+
+  /**
+   * Create a new table by cloning the snapshot content.
+   * @param snapshotName name of the snapshot to be cloned
+   * @param tableName name of the table where the snapshot will be restored
+   * @param restoreAcl <code>true</code> to clone acl into newly created table
+   * @param customSFT specify the StoreFileTracker used for the table
+   * @throws IOException if a remote or network exception occurs
+   * @throws TableExistsException if table to be created already exists
+   * @throws RestoreSnapshotException if snapshot failed to be cloned
+   * @throws IllegalArgumentException if the specified table has not a valid name
+   */
+  default void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl,
+    String customSFT)
+    throws IOException, TableExistsException, RestoreSnapshotException {
+    get(cloneSnapshotAsync(snapshotName, tableName, restoreAcl, customSFT), getSyncWaitTimeout(),
+      TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -1680,8 +1745,25 @@ public interface Admin extends Abortable, Closeable {
    * @throws RestoreSnapshotException if snapshot failed to be cloned
    * @throws IllegalArgumentException if the specified table has not a valid name
    */
-  Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName, boolean restoreAcl)
-      throws IOException, TableExistsException, RestoreSnapshotException;
+  default Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName,
+    boolean restoreAcl)
+      throws IOException, TableExistsException, RestoreSnapshotException {
+    return cloneSnapshotAsync(snapshotName, tableName, restoreAcl, null);
+  }
+
+  /**
+   * Create a new table by cloning the snapshot content.
+   * @param snapshotName name of the snapshot to be cloned
+   * @param tableName name of the table where the snapshot will be restored
+   * @param restoreAcl <code>true</code> to clone acl into newly created table
+   * @param customSFT specify the StroreFileTracker used for the table
+   * @throws IOException if a remote or network exception occurs
+   * @throws TableExistsException if table to be created already exists
+   * @throws RestoreSnapshotException if snapshot failed to be cloned
+   * @throws IllegalArgumentException if the specified table has not a valid name
+   */
+  Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName, boolean restoreAcl,
+    String customSFT) throws IOException, TableExistsException, RestoreSnapshotException;
 
   /**
    * Execute a distributed procedure on a cluster.

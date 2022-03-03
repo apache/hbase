@@ -20,10 +20,8 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -56,6 +54,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteTableState;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 @InterfaceAudience.Private
 public class DeleteTableProcedure
@@ -277,82 +276,58 @@ public class DeleteTableProcedure
       final boolean archive) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final FileSystem fs = mfs.getFileSystem();
-    final Path tempdir = mfs.getTempDir();
 
     final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), tableName);
-    final Path tempTableDir = CommonFSUtils.getTableDir(tempdir, tableName);
 
     if (fs.exists(tableDir)) {
-      // Ensure temp exists
-      if (!fs.exists(tempdir) && !fs.mkdirs(tempdir)) {
-        throw new IOException("HBase temp directory '" + tempdir + "' creation failure.");
-      }
-
-      // Ensure parent exists
-      if (!fs.exists(tempTableDir.getParent()) && !fs.mkdirs(tempTableDir.getParent())) {
-        throw new IOException("HBase temp directory '" + tempdir + "' creation failure.");
-      }
-
-      if (fs.exists(tempTableDir)) {
-        // TODO
-        // what's in this dir? something old? probably something manual from the user...
-        // let's get rid of this stuff...
-        FileStatus[] files = fs.listStatus(tempTableDir);
-        if (files != null && files.length > 0) {
-          List<Path> regionDirList = Arrays.stream(files)
-            .filter(FileStatus::isDirectory)
-            .map(FileStatus::getPath)
-            .collect(Collectors.toList());
-          HFileArchiver.archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(),
-            tempTableDir, regionDirList);
+      // Archive regions from FS (temp directory)
+      if (archive) {
+        List<Path> regionDirList = new ArrayList<>();
+        for (RegionInfo region : regions) {
+          if (RegionReplicaUtil.isDefaultReplica(region)) {
+            regionDirList.add(FSUtils.getRegionDirFromTableDir(tableDir, region));
+            List<RegionInfo> mergeRegions =
+                env.getAssignmentManager().getRegionStateStore().getMergeRegions(region);
+            if (!CollectionUtils.isEmpty(mergeRegions)) {
+              mergeRegions.stream().forEach(
+                r -> regionDirList.add(FSUtils.getRegionDirFromTableDir(tableDir, r)));
+            }
+          }
         }
-        fs.delete(tempTableDir, true);
+        HFileArchiver
+          .archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(), tableDir,
+            regionDirList);
+        if (!regionDirList.isEmpty()) {
+          LOG.debug("Archived {} regions", tableName);
+        }
       }
 
-      // Move the table in /hbase/.tmp
-      if (!fs.rename(tableDir, tempTableDir)) {
-        throw new IOException("Unable to move '" + tableDir + "' to temp '" + tempTableDir + "'");
+      // Archive mob data
+      Path mobTableDir =
+        CommonFSUtils.getTableDir(new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME), tableName);
+      Path regionDir = new Path(mobTableDir, MobUtils.getMobRegionInfo(tableName).getEncodedName());
+      if (fs.exists(regionDir)) {
+        HFileArchiver.archiveRegion(fs, mfs.getRootDir(), mobTableDir, regionDir);
       }
-    }
 
-    // Archive regions from FS (temp directory)
-    if (archive) {
-      List<Path> regionDirList = regions.stream().filter(RegionReplicaUtil::isDefaultReplica)
-        .map(region -> FSUtils.getRegionDirFromTableDir(tempTableDir, region))
-        .collect(Collectors.toList());
-      HFileArchiver.archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(), tempTableDir,
-        regionDirList);
-      if (!regionDirList.isEmpty()) {
-        LOG.debug("Archived {} regions", tableName);
+      // Delete table directory from FS
+      if (!fs.delete(tableDir, true) && fs.exists(tableDir)) {
+        throw new IOException("Couldn't delete " + tableDir);
       }
-    }
 
-    // Archive mob data
-    Path mobTableDir =
-      CommonFSUtils.getTableDir(new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME), tableName);
-    Path regionDir =
-            new Path(mobTableDir, MobUtils.getMobRegionInfo(tableName).getEncodedName());
-    if (fs.exists(regionDir)) {
-      HFileArchiver.archiveRegion(fs, mfs.getRootDir(), mobTableDir, regionDir);
-    }
-
-    // Delete table directory from FS (temp directory)
-    if (!fs.delete(tempTableDir, true) && fs.exists(tempTableDir)) {
-      throw new IOException("Couldn't delete " + tempTableDir);
-    }
-
-    // Delete the table directory where the mob files are saved
-    if (mobTableDir != null && fs.exists(mobTableDir)) {
-      if (!fs.delete(mobTableDir, true)) {
-        throw new IOException("Couldn't delete mob dir " + mobTableDir);
+      // Delete the table directory where the mob files are saved
+      if (mobTableDir != null && fs.exists(mobTableDir)) {
+        if (!fs.delete(mobTableDir, true)) {
+          throw new IOException("Couldn't delete mob dir " + mobTableDir);
+        }
       }
-    }
 
-    // Delete the directory on wal filesystem
-    FileSystem walFs = mfs.getWALFileSystem();
-    Path tableWALDir = CommonFSUtils.getWALTableDir(env.getMasterConfiguration(), tableName);
-    if (walFs.exists(tableWALDir) && !walFs.delete(tableWALDir, true)) {
-      throw new IOException("Couldn't delete table dir on wal filesystem" + tableWALDir);
+      // Delete the directory on wal filesystem
+      FileSystem walFs = mfs.getWALFileSystem();
+      Path tableWALDir = CommonFSUtils.getWALTableDir(env.getMasterConfiguration(), tableName);
+      if (walFs.exists(tableWALDir) && !walFs.delete(tableWALDir, true)) {
+        throw new IOException("Couldn't delete table dir on wal filesystem" + tableWALDir);
+      }
     }
   }
 

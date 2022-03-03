@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.codec;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -30,10 +30,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.codec.CellCodec;
-import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.codec.KeyValueCodec;
-import org.apache.hadoop.hbase.codec.MessageCodec;
 import org.apache.hadoop.hbase.io.CellOutputStream;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -96,10 +92,7 @@ public class CodecPerformance {
   }
 
   static void verifyCells(final Cell [] input, final Cell [] output) {
-    assertEquals(input.length, output.length);
-    for (int i = 0; i < input.length; i ++) {
-      input[i].equals(output[i]);
-    }
+    assertArrayEquals(input, output);
   }
 
   static void doCodec(final Codec codec, final Cell [] cells, final int cycles, final int count,

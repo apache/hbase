@@ -1742,11 +1742,8 @@ possible configurations would overwhelm and obscure the important.
     <value>false</value>
     <description>
       Whether asynchronous WAL replication to the secondary region replicas is enabled or not.
-      If this is enabled, a replication peer named "region_replica_replication" will be created
-      which will tail the logs and replicate the mutations to region replicas for tables that
-      have region replication > 1. If this is enabled once, disabling this replication also
-      requires disabling the replication peer using shell or Admin java class.
-      Replication to secondary region replicas works over standard inter-cluster replication.
+      We have a separated implementation for replicating the WAL without using the general
+      inter-cluster replication framework, so now we will not add any replication peers.
     </description>
   </property>
   <property>
@@ -2040,6 +2037,25 @@ possible configurations would overwhelm and obscure the important.
       Indicates whether active HMaster has ring buffer running for storing
       balancer rejection in FIFO manner with limited entries. The size of
       the ring buffer is indicated by config: hbase.master.balancer.rejection.queue.size
+    </description>
+  </property>
+  <property>
+    <name>hbase.locality.inputstream.derive.enabled</name>
+    <value>false</value>
+    <description>
+      If true, derive StoreFile locality metrics from the underlying DFSInputStream
+      backing reads for that StoreFile. This value will update as the DFSInputStream's
+      block locations are updated over time. Otherwise, locality is computed on StoreFile
+      open, and cached until the StoreFile is closed.
+    </description>
+  </property>
+  <property>
+    <name>hbase.locality.inputstream.derive.cache.period</name>
+    <value>60000</value>
+    <description>
+      If deriving StoreFile locality metrics from the underlying DFSInputStream, how
+      long should the derived values be cached for. The derivation process may involve
+      hitting the namenode, if the DFSInputStream's block list is incomplete.
     </description>
   </property>
 </configuration>

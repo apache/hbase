@@ -147,6 +147,16 @@ public abstract class AsyncRpcRetryingCaller<T> {
     return Optional.empty();
   }
 
+  // Sub classes can override this method to change the error type, to control the retry logic.
+  // For example, during rolling upgrading, if we call this newly added method, we will get a
+  // UnsupportedOperationException(wrapped by a DNRIOE), and sometimes we may want to fallback to
+  // use the old method first, so the sub class could change the exception type to something not a
+  // DNRIOE, so we will schedule a retry, and the next time the sub class could use old method to
+  // make the rpc call.
+  protected Throwable preProcessError(Throwable error) {
+    return error;
+  }
+
   protected final void onError(Throwable t, Supplier<String> errMsg,
       Consumer<Throwable> updateCachedLocation) {
     if (future.isDone()) {
@@ -156,7 +166,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
       LOG.debug("The future is already done, canceled={}, give up retrying", future.isCancelled());
       return;
     }
-    Throwable error = translateException(t);
+    Throwable error = preProcessError(translateException(t));
     // We use this retrying caller to open a scanner, as it is idempotent, but we may throw
     // ScannerResetException, which is a DoNotRetryIOException when opening a scanner as now we will
     // also fetch data when opening a scanner. The intention here is that if we hit a

@@ -18,7 +18,7 @@
 pipeline {
 
     agent {
-        label 'Hadoop'
+        label 'hbase'
     }
 
     options {
@@ -44,7 +44,7 @@ pipeline {
         ARCHIVE_PATTERN_LIST = 'TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump'
         // These tests currently have known failures. Once they burn down to 0, remove from here so that new problems will cause a failure.
         TESTS_FILTER = 'cc,checkstyle,javac,javadoc,pylint,shellcheck,whitespace,perlcritic,ruby-lint,rubocop,mvnsite'
-        EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase/job/HBase-Find-Flaky-Tests/job/${CHANGE_TARGET}/lastSuccessfulBuild/artifact/output/excludes"
+        EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase-Find-Flaky-Tests/job/${CHANGE_TARGET}/lastSuccessfulBuild/artifact/output/excludes"
 
         // a global view of paths. parallel stages can land on the same host concurrently, so each
         // stage works in its own subdirectory. there is an "output" under each of these
@@ -69,7 +69,7 @@ pipeline {
                 stage ('yetus general check') {
                     agent {
                         node {
-                            label 'Hadoop'
+                            label 'hbase'
                         }
                     }
                     environment {
@@ -140,14 +140,14 @@ pipeline {
                             if [ -d "${PATCHDIR}/branch-site" ]; then
                               echo "Remove ${PATCHDIR}/branch-site for saving space"
                               rm -rf "${PATCHDIR}/branch-site"
-                              python ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/branch-site" > "${PATCHDIR}/branch-site.html"
+                              python2 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/branch-site" > "${PATCHDIR}/branch-site.html"
                             else
                               echo "No branch-site, skipping"
                             fi
                             if [ -d "${PATCHDIR}/patch-site" ]; then
                               echo "Remove ${PATCHDIR}/patch-site for saving space"
                               rm -rf "${PATCHDIR}/patch-site"
-                              python ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/patch-site" > "${PATCHDIR}/patch-site.html"
+                              python2 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/patch-site" > "${PATCHDIR}/patch-site.html"
                             else
                               echo "No patch-site, skipping"
                             fi
@@ -192,7 +192,7 @@ pipeline {
                 stage ('yetus jdk8 Hadoop3 checks') {
                     agent {
                         node {
-                            label 'Hadoop'
+                            label 'hbase'
                         }
                     }
                     environment {
@@ -278,7 +278,7 @@ pipeline {
                             if [ -f "${PATCHDIR}/test_logs.zip" ]; then
                               echo "Remove ${PATCHDIR}/test_logs.zip for saving space"
                               rm -rf "${PATCHDIR}/test_logs.zip"
-                              python ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
+                              python2 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
                             else
                               echo "No test_logs.zip, skipping"
                             fi
@@ -323,7 +323,7 @@ pipeline {
                 stage ('yetus jdk11 hadoop3 checks') {
                     agent {
                         node {
-                            label 'Hadoop'
+                            label 'hbase'
                         }
                     }
                     environment {
@@ -409,7 +409,7 @@ pipeline {
                             if [ -f "${PATCHDIR}/test_logs.zip" ]; then
                               echo "Remove ${PATCHDIR}/test_logs.zip for saving space"
                               rm -rf "${PATCHDIR}/test_logs.zip"
-                              python ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
+                              python2 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
                             else
                               echo "No test_logs.zip, skipping"
                             fi

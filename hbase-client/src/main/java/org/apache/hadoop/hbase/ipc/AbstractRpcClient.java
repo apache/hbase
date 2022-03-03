@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.MetricsConnection;
+import org.apache.hadoop.hbase.client.trace.IpcClientSpanBuilder;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
 import org.apache.hadoop.hbase.net.Address;
@@ -395,11 +396,10 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   private Call callMethod(final Descriptors.MethodDescriptor md, final HBaseRpcController hrc,
     final Message param, Message returnType, final User ticket, final Address addr,
     final RpcCallback<Message> callback) {
-    Span span = TraceUtil.createClientSpan("RpcClient.callMethod")
-      .setAttribute(TraceUtil.RPC_SERVICE_KEY, md.getService().getName())
-      .setAttribute(TraceUtil.RPC_METHOD_KEY, md.getName())
-      .setAttribute(TraceUtil.REMOTE_HOST_KEY, addr.getHostName())
-      .setAttribute(TraceUtil.REMOTE_PORT_KEY, addr.getPort());
+    Span span = new IpcClientSpanBuilder()
+      .setMethodDescriptor(md)
+      .setRemoteAddress(addr)
+      .build();
     try (Scope scope = span.makeCurrent()) {
       final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
       cs.setStartTime(EnvironmentEdgeManager.currentTime());

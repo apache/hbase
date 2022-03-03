@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.ipc;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
-import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -30,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.server.trace.IpcServerSpanBuilder;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -88,14 +88,6 @@ public class CallRunner {
     this.rpcServer = null;
   }
 
-  private String getServiceName() {
-    return call.getService() != null ? call.getService().getDescriptorForType().getName() : "";
-  }
-
-  private String getMethodName() {
-    return call.getMethod() != null ? call.getMethod().getName() : "";
-  }
-
   public void run() {
     try {
       if (call.disconnectSince() >= 0) {
@@ -107,6 +99,7 @@ public class CallRunner {
       call.setStartTime(EnvironmentEdgeManager.currentTime());
       if (call.getStartTime() > call.getDeadline()) {
         RpcServer.LOG.warn("Dropping timed out call: " + call);
+        this.rpcServer.getMetrics().callTimedOut();
         return;
       }
       this.status.setStatus("Setting up call");
@@ -120,12 +113,7 @@ public class CallRunner {
       String error = null;
       Pair<Message, CellScanner> resultPair = null;
       RpcServer.CurCall.set(call);
-      String serviceName = getServiceName();
-      String methodName = getMethodName();
-      Span span = TraceUtil.getGlobalTracer().spanBuilder("RpcServer.callMethod")
-        .setParent(Context.current().with(((ServerCall<?>) call).getSpan())).startSpan()
-        .setAttribute(TraceUtil.RPC_SERVICE_KEY, serviceName)
-        .setAttribute(TraceUtil.RPC_METHOD_KEY, methodName);
+      Span span = new IpcServerSpanBuilder(call).build();
       try (Scope traceScope = span.makeCurrent()) {
         if (!this.rpcServer.isStarted()) {
           InetSocketAddress address = rpcServer.getListenerAddress();
@@ -220,6 +208,7 @@ public class CallRunner {
       call.setResponse(null, null, CALL_DROPPED_EXCEPTION, "Call dropped, server "
         + (address != null ? address : "(channel closed)") + " is overloaded, please retry.");
       call.sendResponseIfReady();
+      this.rpcServer.getMetrics().exception(CALL_DROPPED_EXCEPTION);
     } catch (ClosedChannelException cce) {
       InetSocketAddress address = rpcServer.getListenerAddress();
       RpcServer.LOG.warn(Thread.currentThread().getName() + ": caught a ClosedChannelException, " +

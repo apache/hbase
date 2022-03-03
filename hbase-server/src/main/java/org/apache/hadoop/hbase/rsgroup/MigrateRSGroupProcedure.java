@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.rsgroup;
 
 import java.io.IOException;
 import java.util.Optional;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -38,8 +39,8 @@ public class MigrateRSGroupProcedure extends ModifyTableDescriptorProcedure {
   public MigrateRSGroupProcedure() {
   }
 
-  public MigrateRSGroupProcedure(MasterProcedureEnv env, TableDescriptor unmodified) {
-    super(env, unmodified);
+  public MigrateRSGroupProcedure(MasterProcedureEnv env, TableName tableName) {
+    super(env, tableName);
   }
 
   @Override

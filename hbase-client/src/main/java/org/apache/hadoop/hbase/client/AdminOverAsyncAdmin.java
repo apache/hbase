@@ -230,8 +230,14 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Future<Void> modifyColumnFamilyAsync(TableName tableName,
-      ColumnFamilyDescriptor columnFamily) throws IOException {
+    ColumnFamilyDescriptor columnFamily) throws IOException {
     return admin.modifyColumnFamily(tableName, columnFamily);
+  }
+
+  @Override
+  public Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
+    String dstSFT) throws IOException {
+    return admin.modifyColumnFamilyStoreFileTracker(tableName, family, dstSFT);
   }
 
   @Override
@@ -476,6 +482,12 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
+    throws IOException {
+    return admin.modifyTableStoreFileTracker(tableName, dstSFT);
+  }
+
+  @Override
   public void shutdown() throws IOException {
     get(admin.shutdown());
   }
@@ -644,14 +656,15 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public void restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot, boolean restoreAcl)
-      throws IOException, RestoreSnapshotException {
+    throws IOException, RestoreSnapshotException {
     get(admin.restoreSnapshot(snapshotName, takeFailSafeSnapshot, restoreAcl));
   }
 
   @Override
   public Future<Void> cloneSnapshotAsync(String snapshotName, TableName tableName,
-      boolean restoreAcl) throws IOException, TableExistsException, RestoreSnapshotException {
-    return admin.cloneSnapshot(snapshotName, tableName, restoreAcl);
+    boolean restoreAcl, String customSFT)
+    throws IOException, TableExistsException, RestoreSnapshotException {
+    return admin.cloneSnapshot(snapshotName, tableName, restoreAcl, customSFT);
   }
 
   @Override

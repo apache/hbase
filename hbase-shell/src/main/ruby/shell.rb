@@ -100,6 +100,18 @@ module Shell
     @debug = false
     attr_accessor :debug
 
+    # keep track of the passed exit code. nil means never called.
+    @exit_code = nil
+    attr_accessor :exit_code
+
+    alias __exit__ exit
+    # exit the interactive shell and save that this
+    # happend via a call to exit
+    def exit(ret = 0)
+      @exit_code = ret
+      IRB.irb_exit(IRB.CurrentContext.irb, ret)
+    end
+
     def initialize(hbase, interactive = true)
       self.hbase = hbase
       self.interactive = interactive
@@ -302,31 +314,11 @@ For more on the HBase Shell, see http://hbase.apache.org/book.html
       # Install all the hbase commands, constants, and instance variables @shell and @hbase. This
       # will override names that conflict with IRB methods like "help".
       export_all(hbase_receiver)
+      # make it so calling exit will hit our pass-through rather than going directly to IRB
+      hbase_receiver.send :define_singleton_method, :exit, lambda { |rc = 0|
+        @shell.exit(rc)
+      }
       ::IRB::WorkSpace.new(hbase_receiver.get_binding)
-    end
-
-    ##
-    # Read from an instance of Ruby's IO class and evaluate each line within the shell's workspace
-    #
-    # Unlike Ruby's require or load, this method allows us to execute code with a custom binding. In
-    # this case, we are using the binding constructed with all the HBase shell constants and
-    # methods.
-    #
-    # @param [IO] io instance of Ruby's IO (or subclass like File) to read script from
-    # @param [String] filename to print in tracebacks
-    def eval_io(io, filename = 'stdin')
-      require 'irb/ruby-lex'
-      # Mixing HBaseIOExtensions into IO allows us to pass IO objects to RubyLex.
-      IO.include HBaseIOExtensions
-
-      workspace = get_workspace
-      scanner = RubyLex.new
-      scanner.set_input(io)
-
-      scanner.each_top_level_statement do |statement, linenum|
-        puts(workspace.evaluate(nil, statement, filename, linenum))
-      end
-      nil
     end
 
     ##
@@ -631,5 +623,14 @@ Shell.load_command_group(
     alter_rsgroup_config
     show_rsgroup_config
     get_namespace_rsgroup
+  ]
+)
+
+Shell.load_command_group(
+  'storefiletracker',
+  full_name: 'StoreFileTracker',
+  commands: %w[
+    change_sft
+    change_sft_all
   ]
 )

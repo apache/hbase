@@ -672,6 +672,12 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     @Override
+    public String getValue(String key) {
+      Bytes rval = values.get(new Bytes(Bytes.toBytes(key)));
+      return rval == null ? null : Bytes.toString(rval.get(), rval.getOffset(), rval.getLength());
+    }
+
+    @Override
     public Map<Bytes, Bytes> getValues() {
       return Collections.unmodifiableMap(values);
     }
