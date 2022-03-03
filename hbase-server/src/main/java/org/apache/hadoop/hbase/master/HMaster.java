@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.MasterStoppedException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
@@ -219,6 +220,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -389,7 +391,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   // the key is table name, the value is the number of compactions in that table.
   private Map<TableName, AtomicInteger> mobCompactionStates = Maps.newConcurrentMap();
 
-  MasterCoprocessorHost cpHost;
+  volatile MasterCoprocessorHost cpHost;
 
   private final boolean preLoadTableDescriptors;
 
@@ -4088,6 +4090,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     } catch (IOException e) {
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
+    // update region server coprocessor if the configuration has changed.
+    if (CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
+      CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY)) {
+      LOG.info("Update the master coprocessor(s) because the configuration has changed");
+      this.cpHost = new MasterCoprocessorHost(this, newConf);
+    }
   }
 
   @Override
@@ -4155,6 +4163,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       allowedOnPath = ".*/src/test/.*")
   static void setDisableBalancerChoreForTest(boolean disable) {
     disableBalancerChoreForTest = disable;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  public ConfigurationManager getConfigurationManager() {
+    return configurationManager;
   }
 
 }
