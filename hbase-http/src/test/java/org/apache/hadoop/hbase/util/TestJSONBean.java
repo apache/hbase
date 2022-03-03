@@ -59,7 +59,7 @@ public class TestJSONBean {
     MBeanInfo mbeanInfo = mock(MBeanInfo.class);
     when(mbeanInfo.getClassName()).thenReturn("testClassName");
     String[] attributeNames = new String[] {"intAttr", "nanAttr", "infinityAttr",
-      "strAttr", "boolAttr"};
+      "strAttr", "boolAttr", "test:Attr"};
     MBeanAttributeInfo[] attributeInfos = new MBeanAttributeInfo[attributeNames.length];
     for (int i = 0; i < attributeInfos.length; i++) {
       attributeInfos[i] = new MBeanAttributeInfo(attributeNames[i],
@@ -77,6 +77,7 @@ public class TestJSONBean {
       thenReturn(Double.POSITIVE_INFINITY);
     when(mbeanServer.getAttribute(any(), eq("strAttr"))).thenReturn("aString");
     when(mbeanServer.getAttribute(any(), eq("boolAttr"))).thenReturn(true);
+    when(mbeanServer.getAttribute(any(), eq("test:Attr"))).thenReturn("aString");
     return mbeanServer;
   }
 
@@ -92,7 +93,8 @@ public class TestJSONBean {
     pw.println("      \"nanAttr\": \"NaN\",");
     pw.println("      \"infinityAttr\": \"Infinity\",");
     pw.println("      \"strAttr\": \"aString\",");
-    pw.println("      \"boolAttr\": true");
+    pw.println("      \"boolAttr\": true,");
+    pw.println("      \"test:Attr\": aString");
     pw.println("    }");
     pw.println("  ]");
     pw.print("}");
