@@ -194,7 +194,8 @@ pipeline {
             ])
             // Publish JUnit results
             try {
-                junit "${env.SOURCEDIR}/**/target/surefire-reports/*.xml"
+                junit "${env.SOURCEDIR}/**/target/surefire-reports/*.xml",
+                  allowEmptyResults: true, skipPublishingChecks: true
             } catch(e) {
                 echo 'junit processing: ' + e.toString()
             }
