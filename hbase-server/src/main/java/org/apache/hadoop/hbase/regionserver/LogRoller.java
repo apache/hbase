@@ -143,7 +143,12 @@ public class LogRoller extends HasThread {
     while (!server.isStopped()) {
       long now = EnvironmentEdgeManager.currentTime();
       checkLowReplication(now);
-      if (!rollLog.get()) {
+      boolean rollLogLocal;
+      synchronized (rollLog) {
+        rollLogLocal = rollLog.get();
+        rollLog.set(false);
+      }
+      if (!rollLogLocal) {
         boolean periodic = false;
         for (RollController controller : wals.values()) {
           if (controller.needsPeriodicRoll(now)) {
@@ -154,11 +159,10 @@ public class LogRoller extends HasThread {
         if (!periodic) {
           synchronized (rollLog) {
             try {
-              if (!rollLog.get()) {
-                rollLog.wait(this.threadWakeFrequency);
-              }
+              rollLog.wait(this.threadWakeFrequency);
             } catch (InterruptedException e) {
               // Fall through
+              LOG.info("LogRoller interrupted ", e);
             }
           }
           continue;
@@ -199,11 +203,7 @@ public class LogRoller extends HasThread {
         LOG.error(msg, ex);
         server.abort(msg, ex);
       } finally {
-        try {
-          rollLog.set(false);
-        } finally {
-          rollLock.unlock();
-        }
+        rollLock.unlock();
       }
     }
     LOG.info("LogRoller exiting.");
@@ -266,8 +266,9 @@ public class LogRoller extends HasThread {
 
     public byte[][] rollWal(long now) throws IOException {
       this.lastRollTime = now;
-      byte[][] regionsToFlush = wal.rollWriter(true);
+      // reset the flag in front to avoid missing roll request before we return from rollWriter.
       this.rollRequest.set(false);
+      byte[][] regionsToFlush = wal.rollWriter(true);
       return regionsToFlush;
     }
 
