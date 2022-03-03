@@ -188,6 +188,7 @@ class AsyncClientScanner {
   private CompletableFuture<OpenScannerResponse> openScanner(int replicaId) {
     return conn.callerFactory.<OpenScannerResponse> single().table(tableName)
       .row(scan.getStartRow()).replicaId(replicaId).locateType(getLocateType(scan))
+      .priority(scan.getPriority())
       .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
       .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
       .pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
