@@ -200,7 +200,9 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   }
 
   public synchronized boolean requestSplit(final Region r) {
-    // don't split regions that are blocking
+    // Don't split regions that are blocking is the default behavior.
+    // But in some circumstances, split here is needed to prevent the region size from
+    // continuously growing, as well as the number of store files, see HBASE-26242.
     HRegion hr = (HRegion)r;
     try {
       if (shouldSplitRegion() && hr.getCompactPriority() >= PRIORITY_USER) {
@@ -218,14 +220,14 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     return false;
   }
 
-  public synchronized void requestSplit(final Region r, byte[] midKey) {
+  private synchronized void requestSplit(final Region r, byte[] midKey) {
     requestSplit(r, midKey, null);
   }
 
   /*
    * The User parameter allows the split thread to assume the correct user identity
    */
-  public synchronized void requestSplit(final Region r, byte[] midKey, User user) {
+  private synchronized void requestSplit(final Region r, byte[] midKey, User user) {
     if (midKey == null) {
       LOG.debug("Region " + r.getRegionInfo().getRegionNameAsString() +
         " not splittable because midkey=null");
@@ -487,9 +489,9 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   }
 
   private boolean shouldSplitRegion() {
-    if(server.getNumberOfOnlineRegions() > 0.9*regionSplitLimit) {
+    if (server.getNumberOfOnlineRegions() > 0.9 * regionSplitLimit) {
       LOG.warn("Total number of regions is approaching the upper limit " + regionSplitLimit + ". "
-          + "Please consider taking a look at http://hbase.apache.org/book.html#ops.regionmgt");
+        + "Please consider taking a look at http://hbase.apache.org/book.html#ops.regionmgt");
     }
     return (regionSplitLimit > server.getNumberOfOnlineRegions());
   }
@@ -657,11 +659,14 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
               this + "; duration=" + StringUtils.formatTimeDiff(now, start));
         if (completed) {
           // degenerate case: blocked regions require recursive enqueues
-          if (store.getCompactPriority() <= 0) {
+          if (region.getCompactPriority() < Store.PRIORITY_USER
+            && store.getCompactPriority() <= 0) {
             requestSystemCompaction(region, store, "Recursive enqueue");
           } else {
             // see if the compaction has caused us to exceed max region size
-            requestSplit(region);
+            if (!requestSplit(region) && store.getCompactPriority() <= 0) {
+              requestSystemCompaction(region, store, "Recursive enqueue");
+            }
           }
         }
       } catch (IOException ex) {
