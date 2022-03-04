@@ -220,6 +220,10 @@ public class MetaScanner {
   throws IOException {
     byte[] searchRow = HRegionInfo.createRegionName(userTableName, row, HConstants.NINES, false);
     Scan scan = Scan.createGetClosestRowOrBeforeReverseScan(searchRow);
+    // Adding a filter on CATALOG_FAMILY is necessary for compatibility
+    // with hbase 2.x and beyond, which adds additional column families.
+    // See HBASE-26797
+    scan.addFamily(HConstants.CATALOG_FAMILY);
     if (useMetaReplicas) {
       scan.setConsistency(Consistency.TIMELINE);
     }

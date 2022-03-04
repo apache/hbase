@@ -1287,6 +1287,11 @@ class ConnectionManager {
       s.setReversed(true);
       s.withStartRow(metaKey);
 
+      // Adding a filter on CATALOG_FAMILY is necessary for compatibility
+      // with hbase 2.x and beyond, which adds additional column families.
+      // See HBASE-26797
+      s.addFamily(HConstants.CATALOG_FAMILY);
+
       if (this.useMetaReplicas) {
         s.setConsistency(Consistency.TIMELINE);
       }
