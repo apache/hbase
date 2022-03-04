@@ -33,7 +33,6 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
@@ -102,8 +101,7 @@ public class TestTableRpcPriority {
       }
 
       @Override
-      public
-      RegionLocations locateRegion(TableName tableName, byte[] row, boolean useCache,
+      public RegionLocations locateRegion(TableName tableName, byte[] row, boolean useCache,
         boolean retry, int replicaId) throws IOException {
         RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
         ServerName serverName = ServerName.valueOf("rs", 16010, 12345);

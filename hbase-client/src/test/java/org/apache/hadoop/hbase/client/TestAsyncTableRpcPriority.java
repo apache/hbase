@@ -29,19 +29,17 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.atLeast;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Cell.Type;
@@ -54,21 +52,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.mockito.ArgumentMatcher;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
@@ -83,6 +66,19 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionActi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ResultOrException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.mockito.ArgumentMatcher;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * Confirm that we will set the priority in {@link HBaseRpcController} for several table operations.
@@ -477,23 +473,29 @@ public class TestAsyncTableRpcPriority {
     AtomicInteger scanNextCalled = new AtomicInteger(0);
     doAnswer(new Answer<Void>() {
 
+      @SuppressWarnings("FutureReturnValueIgnored")
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        threadPool.submit(() ->{
+        threadPool.submit(() -> {
           ScanRequest req = invocation.getArgument(1);
           RpcCallback<ScanResponse> done = invocation.getArgument(2);
           if (!req.hasScannerId()) {
             done.run(
-              ScanResponse.newBuilder().setScannerId(scannerId).setTtl(800).setMoreResultsInRegion(true).setMoreResults(true).build());
+                ScanResponse.newBuilder().setScannerId(scannerId).setTtl(800)
+                    .setMoreResultsInRegion(true).setMoreResults(true).build());
           } else {
             assertFalse("close scanner should not come in with scan priority " + scanPriority,
-              req.hasCloseScanner() && req.getCloseScanner());
+                req.hasCloseScanner() && req.getCloseScanner());
 
-              Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Type.Put).setRow(Bytes.toBytes(scanNextCalled.incrementAndGet()))
-                .setFamily(Bytes.toBytes("cf")).setQualifier(Bytes.toBytes("cq")).setValue(Bytes.toBytes("v")).build();
-              Result result = Result.create(Arrays.asList(cell));
-              done.run(
-                ScanResponse.newBuilder().setScannerId(scannerId).setTtl(800).setMoreResultsInRegion(true).setMoreResults(true).addResults(ProtobufUtil.toResult(result)).build());
+            Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+                .setType(Type.Put).setRow(Bytes.toBytes(scanNextCalled.incrementAndGet()))
+                .setFamily(Bytes.toBytes("cf")).setQualifier(Bytes.toBytes("cq"))
+                .setValue(Bytes.toBytes("v")).build();
+            Result result = Result.create(Arrays.asList(cell));
+            done.run(
+                ScanResponse.newBuilder().setScannerId(scannerId).setTtl(800)
+                    .setMoreResultsInRegion(true).setMoreResults(true)
+                    .addResults(ProtobufUtil.toResult(result)).build());
           }
         });
         return null;
@@ -502,14 +504,17 @@ public class TestAsyncTableRpcPriority {
 
     doAnswer(new Answer<Void>() {
 
+      @SuppressWarnings("FutureReturnValueIgnored")
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        threadPool.submit(() ->{
+        threadPool.submit(() -> {
           ScanRequest req = invocation.getArgument(1);
           RpcCallback<ScanResponse> done = invocation.getArgument(2);
           assertTrue("close request should have scannerId", req.hasScannerId());
-          assertEquals("close request's scannerId should match", scannerId, req.getScannerId());
-          assertTrue("close request should have closerScanner set", req.hasCloseScanner() && req.getCloseScanner());
+          assertEquals("close request's scannerId should match", scannerId,
+              req.getScannerId());
+          assertTrue("close request should have closerScanner set",
+              req.hasCloseScanner() && req.getCloseScanner());
 
           done.run(ScanResponse.getDefaultInstance());
         });
