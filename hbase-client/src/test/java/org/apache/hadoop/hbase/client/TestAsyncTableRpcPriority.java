@@ -29,7 +29,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -554,7 +558,8 @@ public class TestAsyncTableRpcPriority {
     testForTable(TableName.META_TABLE_NAME, renewFuture, Optional.empty());
   }
 
-  private void testForTable(TableName tableName, CompletableFuture<Void> renewFuture, Optional<Integer> priority) throws Exception {
+  private void testForTable(TableName tableName, CompletableFuture<Void> renewFuture,
+                            Optional<Integer> priority) throws Exception {
     Scan scan = new Scan().setCaching(1).setMaxResultSize(1);
     priority.ifPresent(scan::setPriority);
 
