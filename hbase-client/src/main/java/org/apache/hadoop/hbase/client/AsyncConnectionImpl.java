@@ -27,7 +27,6 @@ import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRI
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.SERVER_NAME_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
-
 import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.util.Optional;
@@ -37,7 +36,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -58,10 +56,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
@@ -405,13 +401,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
 
   @Override
   public Hbck getHbck(ServerName masterServer) {
-    return TraceUtil.trace(new Supplier<Hbck>() {
-
-      @Override
-      public Hbck get() {
-        return getHbckInternal(masterServer);
-      }
-    }, "AsyncConnection.getHbck");
+    return TraceUtil.trace(() -> getHbckInternal(masterServer), "AsyncConnection.getHbck");
   }
 
   @Override

@@ -157,14 +157,14 @@ public class HRegionLocator implements RegionLocator {
     return regions;
   }
 
-  private <T> T tracedLocationFuture(
-    TraceUtil.IOExceptionCallable<T> action,
-    Function<T, List<String>> getRegionNames,
+  private <R, T extends Throwable> R tracedLocationFuture(
+    TraceUtil.ThrowingCallable<R, T> action,
+    Function<R, List<String>> getRegionNames,
     Supplier<Span> spanSupplier
-  ) throws IOException {
+  ) throws T {
     final Span span = spanSupplier.get();
     try (Scope ignored = span.makeCurrent()) {
-      final T result = action.call();
+      final R result = action.call();
       final List<String> regionNames = getRegionNames.apply(result);
       if (!CollectionUtils.isEmpty(regionNames)) {
         span.setAttribute(REGION_NAMES_KEY, regionNames);
@@ -172,7 +172,7 @@ public class HRegionLocator implements RegionLocator {
       span.setStatus(StatusCode.OK);
       span.end();
       return result;
-    } catch (IOException e) {
+    } catch (Throwable e) {
       TraceUtil.setError(span, e);
       span.end();
       throw e;
