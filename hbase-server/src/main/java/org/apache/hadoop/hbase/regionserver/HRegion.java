@@ -266,6 +266,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String WAL_HSYNC_CONF_KEY = "hbase.wal.hsync";
   public static final boolean DEFAULT_WAL_HSYNC = false;
 
+  /** Config for allow split when file count greater than the configured blocking file count*/
+  public static final String SPLIT_IGNORE_BLOCKING_ENABLED_KEY =
+      "hbase.hregion.split.ignore.blocking.enabled";
+
   /**
    * This is for for using HRegion as a local storage, where we may put the recovered edits in a
    * special place. Once this is set, we will only replay the recovered edits under this directory
@@ -8900,6 +8904,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return The priority that this region should have in the compaction queue
    */
   public int getCompactPriority() {
+    if (conf.getBoolean(SPLIT_IGNORE_BLOCKING_ENABLED_KEY, false) && checkSplit().isPresent()) {
+      // if a region should split, split it before compact
+      return Store.PRIORITY_USER;
+    }
     return stores.values().stream().mapToInt(HStore::getCompactPriority).min()
         .orElse(Store.NO_PRIORITY);
   }
