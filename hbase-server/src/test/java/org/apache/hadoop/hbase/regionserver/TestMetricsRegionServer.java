@@ -251,7 +251,7 @@ public class TestMetricsRegionServer {
   }
 
   @Test
-  public void testServerQueryMeterSwitch() {
+  public void testTableQueryMeterSwitch() {
     TableName tn1 = TableName.valueOf("table1");
     // has been set disable in setUp()
     rsm.updateReadQueryMeter(tn1, 500L);
@@ -271,5 +271,14 @@ public class TestMetricsRegionServer {
     rsm.updateWriteQueryMeter(tn1, 500L);
     HELPER.assertGauge("ServerWriteQueryPerSecond_count", 500L, serverSource);
   }
+
+  @Test
+  public void testScannerMetrics() {
+    HELPER.assertCounter("scannerLeaseExpiredCount", 0, serverSource);
+    rsm.incrScannerLeaseExpired();
+    HELPER.assertCounter("scannerLeaseExpiredCount", 1, serverSource);
+    HELPER.assertGauge("activeScanners", 0, serverSource);
+  }
+
 }
 
