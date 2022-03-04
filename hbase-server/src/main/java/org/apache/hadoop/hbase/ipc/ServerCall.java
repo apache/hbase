@@ -40,12 +40,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
@@ -223,8 +221,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     return "callId: " + this.id + " service: " + serviceName +
         " methodName: " + ((this.md != null) ? this.md.getName() : "n/a") +
         " size: " + StringUtils.TraditionalBinaryPrefix.long2String(this.size, "", 1) +
-        " connection: " + connection.toString() +
-        " deadline: " + deadline;
+        " connection: " + connection + " deadline: " + deadline;
   }
 
   @Override
@@ -572,9 +569,5 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     } else {
       return response;
     }
-  }
-
-  public Span getSpan() {
-    return span;
   }
 }

@@ -25,7 +25,6 @@ import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.has
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasItem;
-import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
 import java.net.InetSocketAddress;
@@ -80,7 +79,7 @@ public class TestCallRunner {
     ServerCall<?> mockCall = Mockito.mock(ServerCall.class);
 
     TraceUtil.trace(() -> {
-      CallRunner cr = new CallRunner(mockRpcServer, mockCall, Span.current());
+      CallRunner cr = new CallRunner(mockRpcServer, mockCall);
       cr.setStatus(new MonitoredRPCHandlerImpl());
       cr.run();
     }, testName.getMethodName());
@@ -104,7 +103,7 @@ public class TestCallRunner {
     Mockito.when(mockCall.disconnectSince()).thenReturn(1L);
 
     TraceUtil.trace(() -> {
-      CallRunner cr = new CallRunner(mockRpcServer, mockCall, Span.current());
+      CallRunner cr = new CallRunner(mockRpcServer, mockCall);
       cr.setStatus(new MonitoredRPCHandlerImpl());
       cr.run();
     }, testName.getMethodName());
@@ -119,7 +118,7 @@ public class TestCallRunner {
     Mockito.when(mockCall.disconnectSince()).thenReturn(1L);
 
     TraceUtil.trace(() -> {
-      CallRunner cr = new CallRunner(mockRpcServer, mockCall, Span.current());
+      CallRunner cr = new CallRunner(mockRpcServer, mockCall);
       cr.setStatus(new MonitoredRPCHandlerImpl());
       cr.drop();
     }, testName.getMethodName());
@@ -149,7 +148,7 @@ public class TestCallRunner {
     Mockito.when(mockCall.disconnectSince()).thenReturn(-1L);
 
     TraceUtil.trace(() -> {
-      CallRunner cr = new CallRunner(mockRpcServer, mockCall, Span.current());
+      CallRunner cr = new CallRunner(mockRpcServer, mockCall);
       cr.setStatus(new MonitoredRPCHandlerImpl());
       cr.drop();
     }, testName.getMethodName());

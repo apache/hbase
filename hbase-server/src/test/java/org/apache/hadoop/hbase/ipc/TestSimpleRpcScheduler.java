@@ -781,7 +781,7 @@ public class TestSimpleRpcScheduler {
       }
     };
 
-    return new CallRunner(null, putCall, null) {
+    return new CallRunner(null, putCall) {
       @Override
       public void run() {
         if (sleepTime <= 0) {

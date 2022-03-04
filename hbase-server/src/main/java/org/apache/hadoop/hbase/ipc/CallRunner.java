@@ -61,10 +61,10 @@ public class CallRunner {
    * time we occupy heap.
    */
   // The constructor is shutdown so only RpcServer in this class can make one of these.
-  CallRunner(final RpcServerInterface rpcServer, final RpcCall call, final Span span) {
+  CallRunner(final RpcServerInterface rpcServer, final RpcCall call) {
     this.call = call;
     this.rpcServer = rpcServer;
-    this.span = span;
+    this.span = Span.current();
     // Add size of the call to queue size.
     if (call != null && rpcServer != null) {
       this.rpcServer.addCallSize(call.getSize());
@@ -160,7 +160,7 @@ public class CallRunner {
       CellScanner cells = resultPair != null ? resultPair.getSecond() : null;
       call.setResponse(param, cells, errorThrowable, error);
       call.sendResponseIfReady();
-      span.setStatus(StatusCode.OK);
+      // don't touch `span` here because its status and `end()` are managed in `call#setResponse()`
     } catch (OutOfMemoryError e) {
       TraceUtil.setError(span, e);
       if (this.rpcServer.getErrorHandler() != null

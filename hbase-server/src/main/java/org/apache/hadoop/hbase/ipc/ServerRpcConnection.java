@@ -717,7 +717,7 @@ abstract class ServerRpcConnection implements Closeable {
       ServerCall<?> call = createCall(id, this.service, md, header, param, cellScanner,
         totalRequestSize, this.addr, timeout, this.callCleanup);
 
-      if (this.rpcServer.scheduler.dispatch(new CallRunner(this.rpcServer, call, span))) {
+      if (this.rpcServer.scheduler.dispatch(new CallRunner(this.rpcServer, call))) {
         // unset span do that it's not closed in the finally block
         span = null;
       } else {
