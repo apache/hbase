@@ -131,6 +131,8 @@ public class KeyValueUtil {
     //Cell#getSerializedSize returns the serialized size of the Source cell, which may
     //not serialize all fields. We are constructing a KeyValue backing array here,
     //which does include all fields, and must allocate accordingly.
+    //TODO we could probably use Cell#getSerializedSize safely, the errors were
+    //caused by cells corrupted by use-after-free bugs
     int v1Length = length(cell.getRowLength(), cell.getFamilyLength(),
       cell.getQualifierLength(), cell.getValueLength(), cell.getTagsLength(), true);
     byte[] backingBytes = new byte[v1Length];
