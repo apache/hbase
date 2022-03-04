@@ -76,8 +76,8 @@ public class TestRegionReplicaReplicationError {
     }
 
     @Override
-    public ReplicateWALEntryResponse replay(RpcController controller,
-      ReplicateWALEntryRequest request) throws ServiceException {
+    public ReplicateWALEntryResponse replicateToReplica(RpcController controller,
+        ReplicateWALEntryRequest request) throws ServiceException {
       List<WALEntry> entries = request.getEntryList();
       if (CollectionUtils.isEmpty(entries)) {
         return ReplicateWALEntryResponse.getDefaultInstance();
@@ -93,9 +93,8 @@ public class TestRegionReplicaReplicationError {
       if (region.getRegionInfo().getReplicaId() == 1 && count.addAndGet(entries.size()) < 100) {
         throw new ServiceException("Inject error!");
       }
-      return super.replay(controller, request);
+      return super.replicateToReplica(controller, request);
     }
-
   }
 
   public static final class RSForTest
