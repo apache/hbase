@@ -663,7 +663,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public int getActiveScanners() {
-    return regionServer.getRpcServices().getScannersCount();
+    return regionServer.getRSRpcServices().getScannersCount();
   }
 
   /**
