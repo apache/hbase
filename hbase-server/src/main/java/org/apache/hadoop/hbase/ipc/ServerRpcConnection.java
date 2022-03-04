@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -94,7 +94,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TracingProtos.RPCTInfo;
     justification="False positive according to http://sourceforge.net/p/findbugs/bugs/1032/")
 @InterfaceAudience.Private
 abstract class ServerRpcConnection implements Closeable {
-  /**  */
+
+  private static final TextMapGetter<RPCTInfo> getter = new RPCTInfoGetter();
+
   protected final RpcServer rpcServer;
   // If the connection header has been read or not.
   protected boolean connectionHeaderRead = false;
@@ -616,22 +618,17 @@ abstract class ServerRpcConnection implements Closeable {
     ProtobufUtil.mergeFrom(builder, cis, headerSize);
     RequestHeader header = (RequestHeader) builder.build();
     offset += headerSize;
-    TextMapGetter<RPCTInfo> getter = new TextMapGetter<RPCTInfo>() {
-
-      @Override
-      public Iterable<String> keys(RPCTInfo carrier) {
-        return carrier.getHeadersMap().keySet();
-      }
-
-      @Override
-      public String get(RPCTInfo carrier, String key) {
-        return carrier.getHeadersMap().get(key);
-      }
-    };
     Context traceCtx = GlobalOpenTelemetry.getPropagators().getTextMapPropagator()
       .extract(Context.current(), header.getTraceInfo(), getter);
+
+    // n.b. Management of this Span instance is a little odd. Most exit paths from this try scope
+    // are early-exits due to error cases. There's only one success path, the asynchronous call to
+    // RpcScheduler#dispatch. The success path assumes ownership of the span, which is represented
+    // by null-ing out the reference in this scope. All other paths end the span. Thus, and in
+    // order to avoid accidentally orphaning the span, the call to Span#end happens in a finally
+    // block iff the span is non-null.
     Span span = TraceUtil.createRemoteSpan("RpcServer.process", traceCtx);
-    try (Scope scope = span.makeCurrent()) {
+    try (Scope ignored = span.makeCurrent()) {
       int id = header.getCallId();
       if (RpcServer.LOG.isTraceEnabled()) {
         RpcServer.LOG.trace("RequestHeader " + TextFormat.shortDebugString(header) +
@@ -648,6 +645,7 @@ abstract class ServerRpcConnection implements Closeable {
         callTooBig.setResponse(null, null, RpcServer.CALL_QUEUE_TOO_BIG_EXCEPTION,
           "Call queue is full on " + this.rpcServer.server.getServerName() +
             ", is hbase.ipc.server.max.callqueue.size too small?");
+        TraceUtil.setError(span, RpcServer.CALL_QUEUE_TOO_BIG_EXCEPTION);
         callTooBig.sendResponseIfReady();
         return;
       }
@@ -684,27 +682,30 @@ abstract class ServerRpcConnection implements Closeable {
           cellScanner = this.rpcServer.cellBlockBuilder.createCellScannerReusingBuffers(this.codec,
             this.compressionCodec, dup);
         }
-      } catch (Throwable t) {
+      } catch (Throwable thrown) {
         InetSocketAddress address = this.rpcServer.getListenerAddress();
         String msg = (address != null ? address : "(channel closed)") +
           " is unable to read call parameter from client " + getHostAddress();
-        RpcServer.LOG.warn(msg, t);
+        RpcServer.LOG.warn(msg, thrown);
 
-        this.rpcServer.metrics.exception(t);
+        this.rpcServer.metrics.exception(thrown);
 
-        // probably the hbase hadoop version does not match the running hadoop
-        // version
-        if (t instanceof LinkageError) {
-          t = new DoNotRetryIOException(t);
-        }
-        // If the method is not present on the server, do not retry.
-        if (t instanceof UnsupportedOperationException) {
-          t = new DoNotRetryIOException(t);
+        final Throwable responseThrowable;
+        if (thrown instanceof LinkageError) {
+          // probably the hbase hadoop version does not match the running hadoop version
+          responseThrowable = new DoNotRetryIOException(thrown);
+        } else if (thrown instanceof UnsupportedOperationException) {
+          // If the method is not present on the server, do not retry.
+          responseThrowable = new DoNotRetryIOException(thrown);
+        } else {
+          responseThrowable = thrown;
         }
 
         ServerCall<?> readParamsFailedCall = createCall(id, this.service, null, null, null, null,
           totalRequestSize, null, 0, this.callCleanup);
-        readParamsFailedCall.setResponse(null, null, t, msg + "; " + t.getMessage());
+        readParamsFailedCall.setResponse(null, null, responseThrowable, msg + "; "
+          + responseThrowable.getMessage());
+        TraceUtil.setError(span, responseThrowable);
         readParamsFailedCall.sendResponseIfReady();
         return;
       }
@@ -716,13 +717,21 @@ abstract class ServerRpcConnection implements Closeable {
       ServerCall<?> call = createCall(id, this.service, md, header, param, cellScanner,
         totalRequestSize, this.addr, timeout, this.callCleanup);
 
-      if (!this.rpcServer.scheduler.dispatch(new CallRunner(this.rpcServer, call))) {
+      if (this.rpcServer.scheduler.dispatch(new CallRunner(this.rpcServer, call))) {
+        // unset span do that it's not closed in the finally block
+        span = null;
+      } else {
         this.rpcServer.callQueueSizeInBytes.add(-1 * call.getSize());
         this.rpcServer.metrics.exception(RpcServer.CALL_QUEUE_TOO_BIG_EXCEPTION);
         call.setResponse(null, null, RpcServer.CALL_QUEUE_TOO_BIG_EXCEPTION,
           "Call queue is full on " + this.rpcServer.server.getServerName() +
             ", too many items queued ?");
+        TraceUtil.setError(span, RpcServer.CALL_QUEUE_TOO_BIG_EXCEPTION);
         call.sendResponseIfReady();
+      }
+    } finally {
+      if (span != null) {
+        span.end();
       }
     }
   }
