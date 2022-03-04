@@ -534,6 +534,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
         return;
       }
       LOG.info("Scanner lease {} expired {}", this.scannerName, rsh);
+      server.getMetrics().incrScannerLeaseExpired();
       RegionScanner s = rsh.s;
       HRegion region = null;
       try {

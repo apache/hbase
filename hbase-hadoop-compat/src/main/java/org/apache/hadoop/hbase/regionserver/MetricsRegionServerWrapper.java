@@ -559,4 +559,6 @@ public interface MetricsRegionServerWrapper {
   long getByteBuffAllocatorTotalBufferCount();
 
   long getByteBuffAllocatorUsedBufferCount();
+
+  int getActiveScanners();
 }
