@@ -171,7 +171,7 @@ public class InfoServer {
       return false;
     }
     String remoteUser = req.getRemoteUser();
-    if ("kerberos".equals(conf.get(HttpServer.HTTP_UI_AUTHENTICATION)) &&
+    if ("kerberos".equalsIgnoreCase(conf.get(HttpServer.HTTP_UI_AUTHENTICATION)) &&
         conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false) &&
         remoteUser != null) {
       return HttpServer.userHasAdministratorAccess(ctx, remoteUser);

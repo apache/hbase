@@ -125,7 +125,7 @@ class HFileArchiveManager {
    */
   private void disable(ZKWatcher zooKeeper, byte[] table) throws KeeperException {
     // ensure the latest state of the archive node is found
-    zooKeeper.sync(archiveZnode);
+    zooKeeper.syncOrTimeout(archiveZnode);
 
     // if the top-level archive node is gone, then we are done
     if (ZKUtil.checkExists(zooKeeper, archiveZnode) < 0) {
@@ -134,7 +134,7 @@ class HFileArchiveManager {
     // delete the table node, from the archive
     String tableNode = this.getTableNode(table);
     // make sure the table is the latest version so the delete takes
-    zooKeeper.sync(tableNode);
+    zooKeeper.syncOrTimeout(tableNode);
 
     LOG.debug("Attempting to delete table node:" + tableNode);
     ZKUtil.deleteNodeRecursively(zooKeeper, tableNode);

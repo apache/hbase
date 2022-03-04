@@ -21,6 +21,7 @@
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.thrift.ThriftServerRunner.ImplType"
+  import="org.apache.hadoop.hbase.util.JvmVersion"
   import="org.apache.hadoop.hbase.util.VersionInfo"
   import="java.util.Date"
 %>
@@ -91,6 +92,11 @@ String compact = conf.get("hbase.regionserver.thrift.compact", "false");
             <th>Value</th>
             <th>Description</th>
         </tr>
+      <tr>
+        <td>JVM Version</td>
+        <td><%= JvmVersion.getVersion() %></td>
+        <td>JVM vendor and version information</td>
+      </tr>
         <tr>
             <td>HBase Version</td>
             <td><%= VersionInfo.getVersion() %>, r<%= VersionInfo.getRevision() %></td>

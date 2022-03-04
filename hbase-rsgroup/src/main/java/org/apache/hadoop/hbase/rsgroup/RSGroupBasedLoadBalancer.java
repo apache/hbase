@@ -358,13 +358,14 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     }
 
     // Create the balancer
-    Class<? extends LoadBalancer> balancerKlass = config.getClass(HBASE_RSGROUP_LOADBALANCER_CLASS,
+    Class<? extends LoadBalancer> balancerClass = config.getClass(HBASE_RSGROUP_LOADBALANCER_CLASS,
         StochasticLoadBalancer.class, LoadBalancer.class);
-    if (balancerKlass.equals(this.getClass())) {
-      LOG.warn("The internal balancer of RSGroupBasedLoadBalancer cannot be itself, falling back to the default LoadBalancer class");
-      balancerKlass = LoadBalancerFactory.getDefaultLoadBalancerClass();
+    if (this.getClass().isAssignableFrom(balancerClass)) {
+      LOG.warn("The internal balancer of RSGroupBasedLoadBalancer cannot be itself, " +
+              "falling back to the default LoadBalancer class");
+      balancerClass = LoadBalancerFactory.getDefaultLoadBalancerClass();
     }
-    internalBalancer = ReflectionUtils.newInstance(balancerKlass, config);
+    internalBalancer = ReflectionUtils.newInstance(balancerClass, config);
     internalBalancer.setMasterServices(masterServices);
     internalBalancer.setClusterMetrics(clusterStatus);
     internalBalancer.setConf(config);

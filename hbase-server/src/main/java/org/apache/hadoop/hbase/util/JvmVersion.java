@@ -25,9 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Certain JVM versions are known to be unstable with HBase. This
- * class has a utility function to determine whether the current JVM
- * is known to be unstable.
+ * Utility class to get and check the current JVM version.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
@@ -38,10 +36,19 @@ public abstract class JvmVersion {
   }
 
   /**
-   * Return true if the current JVM is known to be unstable.
+   * Return true if the current JVM version is known to be unstable with HBase.
    */
   public static boolean isBadJvmVersion() {
     String version = System.getProperty("java.version");
     return version != null && BAD_JVM_VERSIONS.contains(version);
+  }
+
+  /**
+   * Return the current JVM version information.
+   */
+  public static String getVersion() {
+    return System.getProperty("java.vm.vendor", "UNKNOWN_VM_VENDOR") + ' ' +
+      System.getProperty("java.version", "UNKNOWN_JAVA_VERSION") + '-' +
+      System.getProperty("java.vm.version", "UNKNOWN_VM_VERSION");
   }
 }

@@ -42,7 +42,105 @@ public class UnsafeAvailChecker {
           Class<?> clazz = Class.forName(CLASS_NAME);
           Field f = clazz.getDeclaredField("theUnsafe");
           f.setAccessible(true);
-          return f.get(null) != null;
+          Object theUnsafe = f.get(null);
+          if (theUnsafe == null) {
+            LOG.warn("Could not get static instance from sun.misc.Unsafe");
+            return false;
+          }
+          // Check for availability of all methods used by UnsafeAccess
+          Method m;
+          try {
+            m = clazz.getDeclaredMethod("arrayBaseOffset", Class.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing arrayBaseOffset(Class)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("copyMemory", Object.class, long.class, Object.class,
+              long.class, long.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing copyMemory(Object,long,Object,long,long)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("getByte", Object.class, long.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing getByte(Object,long)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("getShort", long.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing getShort(long)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("getShort", Object.class, long.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing getShort(Object,long)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("getInt", long.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing getInt(long)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("getInt", Object.class, long.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing getInt(Object,long)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("getLong", long.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing getLong(long)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("getLong", Object.class, long.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing getLong(Object,long)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("putByte", long.class, byte.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing putByte(long,byte)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("putByte", Object.class, long.class, byte.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing putByte(Object,long,byte)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("putShort", long.class, short.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing putShort(long,short)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("putShort", Object.class, long.class, short.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing putShort(Object,long,short)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("putInt", long.class, int.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing putInt(long,int)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("putInt", Object.class, long.class, int.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing putInt(Object,long,int)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("putLong", long.class, long.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing putLong(long,long)");
+              return false;
+            }
+            m = clazz.getDeclaredMethod("putLong", Object.class, long.class, long.class);
+            if (m == null) {
+              LOG.warn("sun.misc.Unsafe is missing putLong(Object,long,long)");
+              return false;
+            }
+            // theUnsafe is accessible and all methods are available
+            return true;
+          } catch (Throwable e) {
+            LOG.warn("sun.misc.Unsafe is missing one or more required methods", e);
+          }
         } catch (Throwable e) {
           LOG.warn("sun.misc.Unsafe is not available/accessible", e);
         }
