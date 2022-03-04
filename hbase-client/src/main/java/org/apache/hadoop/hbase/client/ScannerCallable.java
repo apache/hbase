@@ -29,6 +29,7 @@ import java.io.InterruptedIOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -309,8 +311,16 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
       incRPCCallsMetrics(scanMetrics, isRegionServerRemote);
       ScanRequest request =
           RequestConverter.buildScanRequest(this.scannerId, 0, true, this.scanMetrics != null);
+      HBaseRpcController controller = rpcControllerFactory.newController();
+      // pull in the original priority, but then try to set to HIGH.
+      // it will take whatever is highest.
+      controller.setPriority(controller.getPriority());
+      controller.setPriority(HConstants.HIGH_QOS);
+      if (controller.hasCallTimeout()) {
+        controller.setCallTimeout(controller.getCallTimeout());
+      }
       try {
-        getStub().scan(getRpcController(), request);
+        getStub().scan(controller, request);
       } catch (Exception e) {
         throw ProtobufUtil.handleRemoteException(e);
       }
