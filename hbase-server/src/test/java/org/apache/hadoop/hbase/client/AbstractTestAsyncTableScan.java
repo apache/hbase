@@ -244,9 +244,6 @@ public abstract class AbstractTestAsyncTableScan {
     if (limit > 0) {
       count = Math.min(count, limit);
     }
-    if (scan.getBatch() > 0) {
-
-    }
     assertEquals(count, results.size());
     IntStream.range(0, count).forEach(i -> assertResultEquals(results.get(i), actualStart - i));
   }

@@ -37,6 +37,7 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -472,8 +473,9 @@ public class TestAsyncTableRpcPriority {
       any(ClientProtos.MultiRequest.class), any());
   }
 
-  private void mockScan(int scanPriority) {
+  private CompletableFuture<Void> mockScanReturnRenewFuture(int scanPriority) {
     int scannerId = 1;
+    CompletableFuture<Void> future = new CompletableFuture<>();
     AtomicInteger scanNextCalled = new AtomicInteger(0);
     doAnswer(new Answer<Void>() {
 
@@ -486,6 +488,10 @@ public class TestAsyncTableRpcPriority {
             done.run(
               ScanResponse.newBuilder().setScannerId(scannerId).setTtl(800).setMoreResultsInRegion(true).setMoreResults(true).build());
           } else {
+            if (req.hasRenew() && req.getRenew()) {
+              future.complete(null);
+            }
+
             assertFalse("close scanner should not come in with scan priority " + scanPriority,
               req.hasCloseScanner() && req.getCloseScanner());
 
@@ -516,78 +522,52 @@ public class TestAsyncTableRpcPriority {
         return null;
       }
     }).when(stub).scan(assertPriority(HIGH_QOS), assertScannerCloseRequest(), any());
+    return future;
   }
 
   @Test
-  public void testScan() throws IOException, InterruptedException {
-    mockScan(19);
-    try (ResultScanner scanner = conn.getTable(TableName.valueOf(name.getMethodName()))
-      .getScanner(new Scan().setCaching(1).setMaxResultSize(1).setPriority(19))) {
+  public void testScan() throws Exception {
+    CompletableFuture<Void> renewFuture = mockScanReturnRenewFuture(19);
+    testForTable(TableName.valueOf(name.getMethodName()), renewFuture, Optional.of(19));
+  }
+
+  @Test
+  public void testScanNormalTable() throws Exception {
+    CompletableFuture<Void> renewFuture = mockScanReturnRenewFuture(NORMAL_QOS);
+    testForTable(TableName.valueOf(name.getMethodName()), renewFuture, Optional.of(NORMAL_QOS));
+  }
+
+  @Test
+  public void testScanSystemTable() throws Exception {
+    CompletableFuture<Void> renewFuture = mockScanReturnRenewFuture(SYSTEMTABLE_QOS);
+    testForTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()),
+        renewFuture, Optional.empty());
+  }
+
+  @Test
+  public void testScanMetaTable() throws Exception {
+    CompletableFuture<Void> renewFuture = mockScanReturnRenewFuture(SYSTEMTABLE_QOS);
+    testForTable(TableName.META_TABLE_NAME, renewFuture, Optional.empty());
+  }
+
+  private void testForTable(TableName tableName, CompletableFuture<Void> renewFuture, Optional<Integer> priority) throws Exception {
+    Scan scan = new Scan().setCaching(1).setMaxResultSize(1);
+    priority.ifPresent(scan::setPriority);
+
+    try (ResultScanner scanner = conn.getTable(tableName).getScanner(scan)) {
       assertNotNull(scanner.next());
-      Thread.sleep(1000);
+      // wait for at least one renew to come in before closing
+      renewFuture.join();
     }
+
     // ensures the close thread has time to finish before asserting
     threadPool.shutdown();
     threadPool.awaitTermination(5, TimeUnit.SECONDS);
 
     // just verify that the calls happened. verification of priority occurred in the mocking
-    // open, next, then several renew lease
-    verify(stub, atLeast(3)).scan(any(), any(ScanRequest.class), any());
-    verify(stub, times(1)).scan(any(), assertScannerCloseRequest(), any());
-  }
-
-  @Test
-  public void testScanNormalTable() throws IOException, InterruptedException {
-    mockScan(NORMAL_QOS);
-    try (ResultScanner scanner = conn.getTable(TableName.valueOf(name.getMethodName()))
-      .getScanner(new Scan().setCaching(1).setMaxResultSize(1))) {
-      assertNotNull(scanner.next());
-      Thread.sleep(1000);
-    }
-    // ensures the close thread has time to finish before asserting
-    threadPool.shutdown();
-    threadPool.awaitTermination(5, TimeUnit.SECONDS);
-
-    // just verify that the calls happened. verification of priority occurred in the mocking
-    // open, next, then several renew lease
-    verify(stub, atLeast(3)).scan(any(), any(ScanRequest.class), any());
-    verify(stub, times(1)).scan(any(), assertScannerCloseRequest(), any());
-  }
-
-  @Test
-  public void testScanSystemTable() throws IOException, InterruptedException {
-    mockScan(SYSTEMTABLE_QOS);
-    try (ResultScanner scanner =
-      conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
-        .getScanner(new Scan().setCaching(1).setMaxResultSize(1))) {
-      assertNotNull(scanner.next());
-      Thread.sleep(1000);
-    }
-    // ensures the close thread has time to finish before asserting
-    threadPool.shutdown();
-    threadPool.awaitTermination(5, TimeUnit.SECONDS);
-
-    // just verify that the calls happened. verification of priority occurred in the mocking
-    // open, next, then several renew lease
-    verify(stub, atLeast(3)).scan(any(), any(ScanRequest.class), any());
-    verify(stub, times(1)).scan(any(), assertScannerCloseRequest(), any());
-  }
-
-  @Test
-  public void testScanMetaTable() throws IOException, InterruptedException {
-    mockScan(SYSTEMTABLE_QOS);
-    try (ResultScanner scanner = conn.getTable(TableName.META_TABLE_NAME)
-      .getScanner(new Scan().setCaching(1).setMaxResultSize(1))) {
-      assertNotNull(scanner.next());
-      Thread.sleep(1000);
-    }
-    // ensures the close thread has time to finish before asserting
-    threadPool.shutdown();
-    threadPool.awaitTermination(5, TimeUnit.SECONDS);
-
-    // just verify that the calls happened. verification of priority occurred in the mocking
-    // open, next, then several renew lease
-    verify(stub, atLeast(3)).scan(any(), any(ScanRequest.class), any());
+    // open, next, then one or more lease renewals, then close
+    verify(stub, atLeast(4)).scan(any(), any(ScanRequest.class), any());
+    // additionally, explicitly check for a close request
     verify(stub, times(1)).scan(any(), assertScannerCloseRequest(), any());
   }
 
