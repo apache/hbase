@@ -317,4 +317,8 @@ public class MetricsRegionServer {
       serverWriteQueryMeter.mark();
     }
   }
+
+  public void incrScannerLeaseExpired() {
+    serverSource.incrScannerLeaseExpired();
+  }
 }

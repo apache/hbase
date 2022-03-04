@@ -91,6 +91,8 @@ public class MetricsRegionServerSourceImpl
   private final MetricHistogram pausesWithGc;
   private final MetricHistogram pausesWithoutGc;
 
+  private final MutableFastCounter scannerLeaseExpiredCount;
+
   public MetricsRegionServerSourceImpl(MetricsRegionServerWrapper rsWrap) {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, rsWrap);
   }
@@ -179,6 +181,8 @@ public class MetricsRegionServerSourceImpl
       WARN_THRESHOLD_COUNT_DESC, 0L);
     pausesWithGc = getMetricsRegistry().newTimeHistogram(PAUSE_TIME_WITH_GC_KEY);
     pausesWithoutGc = getMetricsRegistry().newTimeHistogram(PAUSE_TIME_WITHOUT_GC_KEY);
+
+    scannerLeaseExpiredCount = getMetricsRegistry().newCounter(SCANNER_LEASE_EXPIRED_COUNT, SCANNER_LEASE_EXPIRED_COUNT_DESC, 0L);
   }
 
   @Override
@@ -320,6 +324,11 @@ public class MetricsRegionServerSourceImpl
       majorCompactionOutputSizeHisto.add(bytes);
       majorCompactedOutputBytes.incr(bytes);
     }
+  }
+
+  @Override
+  public void incrScannerLeaseExpired() {
+    scannerLeaseExpiredCount.incr();
   }
 
   /**
@@ -586,7 +595,9 @@ public class MetricsRegionServerSourceImpl
                 rsWrap.getByteBuffAllocatorTotalBufferCount())
             .addGauge(Interns.info(BYTE_BUFF_ALLOCATOR_USED_BUFFER_COUNT,
                 BYTE_BUFF_ALLOCATOR_USED_BUFFER_COUNT_DESC),
-                rsWrap.getByteBuffAllocatorUsedBufferCount());
+                rsWrap.getByteBuffAllocatorUsedBufferCount())
+            .addGauge(Interns.info(ACTIVE_SCANNERS, ACTIVE_SCANNERS_DESC),
+                rsWrap.getActiveScanners());
   }
 
   @Override

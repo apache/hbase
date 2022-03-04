@@ -251,6 +251,14 @@ public class TestMetricsRegionServer {
   }
 
   @Test
+  public void testScannerMetrics() {
+    HELPER.assertCounter("scannerLeaseExpiredCount", 0, serverSource);
+    rsm.incrScannerLeaseExpired();
+    HELPER.assertCounter("scannerLeaseExpiredCount", 1, serverSource);
+    HELPER.assertGauge("activeScanners", 0, serverSource);
+  }
+
+  @Test
   public void testTableQueryMeterSwitch() {
     TableName tn1 = TableName.valueOf("table1");
     Configuration conf = new Configuration(false);
