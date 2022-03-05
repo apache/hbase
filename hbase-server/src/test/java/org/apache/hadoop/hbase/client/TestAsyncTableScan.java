@@ -24,13 +24,13 @@ import java.util.function.Supplier;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 @RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
