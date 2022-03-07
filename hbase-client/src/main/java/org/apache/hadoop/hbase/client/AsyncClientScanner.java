@@ -75,7 +75,7 @@ class AsyncClientScanner {
 
   private final long pauseNs;
 
-  private final long pauseForCQTBENs;
+  private final long pauseNsForServerOverloaded;
 
   private final int maxAttempts;
 
@@ -90,7 +90,7 @@ class AsyncClientScanner {
   private final Span span;
 
   public AsyncClientScanner(Scan scan, AdvancedScanResultConsumer consumer, TableName tableName,
-      AsyncConnectionImpl conn, Timer retryTimer, long pauseNs, long pauseForCQTBENs,
+      AsyncConnectionImpl conn, Timer retryTimer, long pauseNs, long pauseNsForServerOverloaded,
       int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
     if (scan.getStartRow() == null) {
       scan.withStartRow(EMPTY_START_ROW, scan.includeStartRow());
@@ -104,7 +104,7 @@ class AsyncClientScanner {
     this.conn = conn;
     this.retryTimer = retryTimer;
     this.pauseNs = pauseNs;
-    this.pauseForCQTBENs = pauseForCQTBENs;
+    this.pauseNsForServerOverloaded = pauseNsForServerOverloaded;
     this.maxAttempts = maxAttempts;
     this.scanTimeoutNs = scanTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
@@ -198,7 +198,8 @@ class AsyncClientScanner {
         .setScan(scan).metrics(scanMetrics).consumer(consumer).resultCache(resultCache)
         .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
         .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
-        .pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
+        .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
+        .maxAttempts(maxAttempts)
         .startLogErrorsCnt(startLogErrorsCnt).start(resp.controller, resp.resp),
       (hasMore, error) -> {
         try (Scope ignored = span.makeCurrent()) {
@@ -232,7 +233,8 @@ class AsyncClientScanner {
         .priority(scan.getPriority())
         .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
         .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
-        .pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
+        .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
+        .maxAttempts(maxAttempts)
         .startLogErrorsCnt(startLogErrorsCnt).action(this::callOpenScanner).call();
     }
   }

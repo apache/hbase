@@ -35,8 +35,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -98,7 +98,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   private final long pauseNs;
 
-  private final long pauseForCQTBENs;
+  private final long pauseNsForServerOverloaded;
 
   private final int maxAttempts;
 
@@ -307,7 +307,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       Scan scan, ScanMetrics scanMetrics, long scannerId, ScanResultCache resultCache,
       AdvancedScanResultConsumer consumer, Interface stub, HRegionLocation loc,
       boolean isRegionServerRemote, int priority, long scannerLeaseTimeoutPeriodNs, long pauseNs,
-      long pauseForCQTBENs, int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs,
+      long pauseNsForServerOverloaded, int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs,
       int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
     this.scan = scan;
@@ -320,7 +320,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.regionServerRemote = isRegionServerRemote;
     this.scannerLeaseTimeoutPeriodNs = scannerLeaseTimeoutPeriodNs;
     this.pauseNs = pauseNs;
-    this.pauseForCQTBENs = pauseForCQTBENs;
+    this.pauseNsForServerOverloaded = pauseNsForServerOverloaded;
     this.maxAttempts = maxAttempts;
     this.scanTimeoutNs = scanTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
@@ -410,7 +410,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       return;
     }
     long delayNs;
-    long pauseNsToUse = error instanceof CallQueueTooBigException ? pauseForCQTBENs : pauseNs;
+    long pauseNsToUse = HBaseServerException.isServerOverloaded(error) ?
+      pauseNsForServerOverloaded : pauseNs;
     if (scanTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
       if (maxDelayNs <= 0) {

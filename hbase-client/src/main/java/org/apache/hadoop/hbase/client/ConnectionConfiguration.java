@@ -62,7 +62,7 @@ public class ConnectionConfiguration {
   // toggle for async/sync prefetch
   private final boolean clientScannerAsyncPrefetch;
 
-    /**
+  /**
    * Constructor
    * @param conf Configuration object
    */
@@ -206,5 +206,4 @@ public class ConnectionConfiguration {
   public int getRpcTimeout() {
     return rpcTimeout;
   }
-
 }

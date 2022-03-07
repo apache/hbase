@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
-
+import static org.junit.Assert.assertTrue;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -39,6 +39,23 @@ public class TestAsyncConnectionConfiguration {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestAsyncConnectionConfiguration.class);
+
+  @Test
+  public void itHandlesDeprecatedPauseForCQTBE() {
+    Configuration conf = new Configuration();
+    long timeoutMs = 1000;
+    conf.setLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, timeoutMs);
+    AsyncConnectionConfiguration config = new AsyncConnectionConfiguration(conf);
+
+    assertTrue(Configuration.isDeprecated(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE));
+    long expected = TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+    assertEquals(expected, config.getPauseNsForServerOverloaded());
+
+    conf = new Configuration();
+    conf.setLong(AsyncConnectionConfiguration.HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED, timeoutMs);
+    config = new AsyncConnectionConfiguration(conf);
+    assertEquals(expected, config.getPauseNsForServerOverloaded());
+  }
 
   @Test
   public void testDefaultReadWriteRpcTimeout() {
