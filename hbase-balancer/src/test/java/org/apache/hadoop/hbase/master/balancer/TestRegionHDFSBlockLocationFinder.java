@@ -209,7 +209,7 @@ public class TestRegionHDFSBlockLocationFinder {
   }
 
   @Test
-  public void testRefreshRegionsWithChangedLocality() {
+  public void testRefreshRegionsWithChangedLocality() throws InterruptedException {
     ServerName testServer = ServerName.valueOf("host-0", 12345, 12345);
     RegionInfo testRegion = REGIONS.get(0);
 
@@ -231,7 +231,9 @@ public class TestRegionHDFSBlockLocationFinder {
 
     finder.setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(),
       0.345f));
-
+    // there is no way to test whether the refresh for a guava cache is finished, so here we just
+    // add a one second sleep, usually this is enough for the refresh
+    Thread.sleep(1000);
     // locality changed just for our test region, so it should no longer be the same
     for (RegionInfo region : REGIONS) {
       HDFSBlocksDistribution hbd = finder.getBlockDistribution(region);
