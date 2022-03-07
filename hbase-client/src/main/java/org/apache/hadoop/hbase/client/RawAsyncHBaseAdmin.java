@@ -333,7 +333,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private final long pauseNs;
 
-  private final long pauseForCQTBENs;
+  private final long pauseNsForServerOverloaded;
 
   private final int maxAttempts;
 
@@ -349,15 +349,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     this.rpcTimeoutNs = builder.rpcTimeoutNs;
     this.operationTimeoutNs = builder.operationTimeoutNs;
     this.pauseNs = builder.pauseNs;
-    if (builder.pauseForCQTBENs < builder.pauseNs) {
+    if (builder.pauseNsForServerOverloaded < builder.pauseNs) {
       LOG.warn(
-        "Configured value of pauseForCQTBENs is {} ms, which is less than" +
+        "Configured value of pauseNsForServerOverloaded is {} ms, which is less than" +
           " the normal pause value {} ms, use the greater one instead",
-        TimeUnit.NANOSECONDS.toMillis(builder.pauseForCQTBENs),
+        TimeUnit.NANOSECONDS.toMillis(builder.pauseNsForServerOverloaded),
         TimeUnit.NANOSECONDS.toMillis(builder.pauseNs));
-      this.pauseForCQTBENs = builder.pauseNs;
+      this.pauseNsForServerOverloaded = builder.pauseNs;
     } else {
-      this.pauseForCQTBENs = builder.pauseForCQTBENs;
+      this.pauseNsForServerOverloaded = builder.pauseNsForServerOverloaded;
     }
     this.maxAttempts = builder.maxAttempts;
     this.startLogErrorsCnt = builder.startLogErrorsCnt;
@@ -368,7 +368,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return this.connection.callerFactory.<T> masterRequest()
       .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
       .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
-      .pause(pauseNs, TimeUnit.NANOSECONDS).pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS)
+      .pause(pauseNs, TimeUnit.NANOSECONDS)
+      .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
       .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt);
   }
 
@@ -376,7 +377,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return this.connection.callerFactory.<T> adminRequest()
       .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
       .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
-      .pause(pauseNs, TimeUnit.NANOSECONDS).pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS)
+      .pause(pauseNs, TimeUnit.NANOSECONDS)
+      .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
       .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt);
   }
 
@@ -3486,7 +3488,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return this.connection.callerFactory.<T> serverRequest()
       .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
       .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
-      .pause(pauseNs, TimeUnit.NANOSECONDS).pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS)
+      .pause(pauseNs, TimeUnit.NANOSECONDS)
+      .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
       .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt);
   }
 

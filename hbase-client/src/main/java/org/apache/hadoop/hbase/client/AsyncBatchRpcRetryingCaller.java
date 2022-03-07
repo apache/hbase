@@ -45,9 +45,9 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RetryImmediatelyException;
@@ -63,9 +63,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.io.netty.util.Timer;
-
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -104,7 +102,7 @@ class AsyncBatchRpcRetryingCaller<T> {
 
   private final long pauseNs;
 
-  private final long pauseForCQTBENs;
+  private final long pauseNsForServerOverloaded;
 
   private final int maxAttempts;
 
@@ -150,13 +148,14 @@ class AsyncBatchRpcRetryingCaller<T> {
   }
 
   public AsyncBatchRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
-      TableName tableName, List<? extends Row> actions, long pauseNs, long pauseForCQTBENs,
-      int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
+      TableName tableName, List<? extends Row> actions, long pauseNs,
+      long pauseNsForServerOverloaded, int maxAttempts, long operationTimeoutNs,
+      long rpcTimeoutNs, int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.tableName = tableName;
     this.pauseNs = pauseNs;
-    this.pauseForCQTBENs = pauseForCQTBENs;
+    this.pauseNsForServerOverloaded = pauseNsForServerOverloaded;
     this.maxAttempts = maxAttempts;
     this.operationTimeoutNs = operationTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
@@ -466,17 +465,17 @@ class AsyncBatchRpcRetryingCaller<T> {
       .collect(Collectors.toList());
     addError(copiedActions, error, serverName);
     tryResubmit(copiedActions.stream(), tries, error instanceof RetryImmediatelyException,
-      error instanceof CallQueueTooBigException);
+      HBaseServerException.isServerOverloaded(error));
   }
 
   private void tryResubmit(Stream<Action> actions, int tries, boolean immediately,
-      boolean isCallQueueTooBig) {
+      boolean isServerOverloaded) {
     if (immediately) {
       groupAndSend(actions, tries);
       return;
     }
     long delayNs;
-    long pauseNsToUse = isCallQueueTooBig ? pauseForCQTBENs : pauseNs;
+    long pauseNsToUse = isServerOverloaded ? pauseNsForServerOverloaded : pauseNs;
     if (operationTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
       if (maxDelayNs <= 0) {
