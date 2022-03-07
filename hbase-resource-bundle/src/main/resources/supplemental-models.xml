@@ -290,6 +290,21 @@ under the License.
       </licenses>
     </project>
   </supplement>
+  <supplement>
+    <project>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <version>1.1.8.4</version> <!-- Xerial started referring to the license incorrectly in 1.1.7.6+ -->
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+
   <!-- Hadoop is needed for versions < 2.7.1 -->
   <!-- /Hadoop -->
   <supplement>
@@ -1014,6 +1029,21 @@ Copyright 2010 FasterXML.com
       <groupId>net.java.dev.jna</groupId>
       <artifactId>jna</artifactId>
       <version>5.2.0</version>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+
+  <supplement>
+    <project> <!-- hadoop.profile=3.0 from hadoop-3.3.2+ -->
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.8.9</version> <!-- GSON started referring to the license incorrectly in 2.6+ -->
       <licenses>
         <license>
           <name>Apache License, Version 2.0</name>
