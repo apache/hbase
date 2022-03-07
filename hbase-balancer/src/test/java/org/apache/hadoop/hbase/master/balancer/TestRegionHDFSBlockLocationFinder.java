@@ -231,9 +231,17 @@ public class TestRegionHDFSBlockLocationFinder {
 
     finder.setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(),
       0.345f));
-    // there is no way to test whether the refresh for a guava cache is finished, so here we just
-    // add a one second sleep, usually this is enough for the refresh
-    Thread.sleep(1000);
+
+    // cache refresh happens in a background thread, so we need to wait for the value to
+    // update before running assertions.
+    long now = System.currentTimeMillis();
+    HDFSBlocksDistribution cached = cache.get(testRegion);
+    HDFSBlocksDistribution newValue;
+    do {
+      Thread.sleep(1_000);
+      newValue = finder.getBlockDistribution(testRegion);
+    } while (cached == newValue && System.currentTimeMillis() - now < 30_000);
+
     // locality changed just for our test region, so it should no longer be the same
     for (RegionInfo region : REGIONS) {
       HDFSBlocksDistribution hbd = finder.getBlockDistribution(region);
