@@ -99,7 +99,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     shutdownMiniDFSCluster();
   }
 
-  private static final Random RNG = new Random(); // This test depends on setSeed()
+  private static final Random RNG = new Random(); // This test depends on Random#setSeed
 
   static void writeAndVerify(FileSystem fs, Path f, AsyncFSOutput out)
     throws IOException, InterruptedException, ExecutionException {

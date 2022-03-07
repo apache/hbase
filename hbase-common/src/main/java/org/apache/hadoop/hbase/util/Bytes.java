@@ -2360,6 +2360,7 @@ public class Bytes implements Comparable<Bytes> {
     Arrays.fill(b, offset, offset + length, (byte) 0);
   }
 
+  // Pseudorandom random number generator, do not use SecureRandom here
   private static final Random RNG = new Random();
 
   /**

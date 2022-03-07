@@ -127,7 +127,7 @@ public class TestSeekOptimizations {
   private long totalSeekDiligent, totalSeekLazy;
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static final Random RNG = new Random();
+  private static final Random RNG = new Random(); // This test depends on Random#setSeed
 
   @Parameters
   public static final Collection<Object[]> parameters() {

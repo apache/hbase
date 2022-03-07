@@ -36,7 +36,7 @@ public class LoadTestKVGenerator {
   private static int logLimit = 10;
 
   /** A random number generator for determining value size */
-  private Random randomForValueSize = new Random();
+  private Random randomForValueSize = new Random();  // Seed may be set with Random#setSeed
 
   private final int minValueSize;
   private final int maxValueSize;
@@ -110,7 +110,7 @@ public class LoadTestKVGenerator {
         seed += bytesString.hashCode();
       }
     }
-    Random seededRandom = new Random(seed); // Random with specific seed needed here
+    Random seededRandom = new Random(seed);
     byte[] randomBytes = new byte[dataSize];
     seededRandom.nextBytes(randomBytes);
     return randomBytes;

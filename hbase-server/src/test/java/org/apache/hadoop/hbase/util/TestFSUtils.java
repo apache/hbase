@@ -562,7 +562,7 @@ public class TestFSUtils {
   // Below is taken from TestPread over in HDFS.
   static final int blockSize = 4096;
   static final long seed = 0xDEADBEEFL;
-  private Random rand = new Random(); // will be used with setSeed
+  private Random rand = new Random(); // This test depends on Random#setSeed
 
   private void pReadFile(FileSystem fileSys, Path name) throws IOException {
     FSDataInputStream stm = fileSys.open(name);

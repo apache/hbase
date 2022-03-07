@@ -110,7 +110,7 @@ public class TestHFileBlock {
   private static float CHANCE_TO_REPEAT = 0.6f;
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static final Random RNG = new Random();
+  private static final Random RNG = new Random(); // This test depends on Random#setSeed
   private FileSystem fs;
 
   private final boolean includesMemstoreTS;

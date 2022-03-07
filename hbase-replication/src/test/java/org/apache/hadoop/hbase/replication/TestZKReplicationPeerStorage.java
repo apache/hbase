@@ -61,7 +61,7 @@ public class TestZKReplicationPeerStorage {
       HBaseClassTestRule.forClass(TestZKReplicationPeerStorage.class);
 
   private static final HBaseZKTestingUtil UTIL = new HBaseZKTestingUtil();
-  private static final Random RNG = new Random();
+  private static final Random RNG = new Random(); // Seed may be set with Random#setSeed
   private static ZKReplicationPeerStorage STORAGE;
 
   @BeforeClass

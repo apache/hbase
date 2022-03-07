@@ -63,7 +63,7 @@ public class TestRegionHDFSBlockLocationFinder {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionHDFSBlockLocationFinder.class);
 
-  private static final Random RNG = new Random();
+  private static final Random RNG = new Random(); // This test depends on Random#setSeed
   private static TableDescriptor TD;
   private static List<RegionInfo> REGIONS;
 

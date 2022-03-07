@@ -90,7 +90,7 @@ public class TestHFileBlockIndex {
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileBlockIndex.class);
-  private static final Random RNG = new Random();
+  private static final Random RNG = new Random(); // This test depends on Random#setSeed
   private static final int NUM_DATA_BLOCKS = 1000;
   private static final HBaseTestingUtil TEST_UTIL =
       new HBaseTestingUtil();
