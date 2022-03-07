@@ -756,6 +756,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           default:
             throw new RuntimeException("UNEXPECTED");
         }
+
+        // when reaching the heartbeat cells, try to return from the loop.
+        if (kvsScanned % cellsPerHeartbeatCheck == 0) {
+          return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
+        }
       } while ((cell = this.heap.peek()) != null);
 
       if (count > 0) {
