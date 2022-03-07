@@ -1976,7 +1976,7 @@ public class AssignmentManager extends ZooKeeperListener {
       if (!failedToOpenRegions.isEmpty()) {
         for (HRegionInfo region : failedToOpenRegions) {
           if (!regionStates.isRegionOnline(region)) {
-            invokeAssign(region);
+            invokeAssign(region, false);
           }
         }
       }
