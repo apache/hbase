@@ -312,13 +312,19 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
       ScanRequest request =
           RequestConverter.buildScanRequest(this.scannerId, 0, true, this.scanMetrics != null);
       HBaseRpcController controller = rpcControllerFactory.newController();
-      // pull in the original priority, but then try to set to HIGH.
-      // it will take whatever is highest.
-      controller.setPriority(controller.getPriority());
-      controller.setPriority(HConstants.HIGH_QOS);
-      if (controller.hasCallTimeout()) {
-        controller.setCallTimeout(controller.getCallTimeout());
+
+      // Set fields from the original controller onto the close-specific controller
+      // We set the timeout and the priority -- we will overwrite the priority to HIGH
+      // below, but the controller will take whichever is highest.
+      if (getRpcController() instanceof HBaseRpcController) {
+        HBaseRpcController original = (HBaseRpcController) getRpcController();
+        controller.setPriority(original.getPriority());
+        if (original.hasCallTimeout()) {
+          controller.setCallTimeout(original.getCallTimeout());
+        }
       }
+      controller.setPriority(HConstants.HIGH_QOS);
+
       try {
         getStub().scan(controller, request);
       } catch (Exception e) {
