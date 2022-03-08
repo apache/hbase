@@ -27,7 +27,10 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * Helper class for coprocessor host when configuration changes.
  */
 @InterfaceAudience.Private
-public class CoprocessorConfigurationUtil {
+public final class CoprocessorConfigurationUtil {
+
+  private CoprocessorConfigurationUtil() {
+  }
 
   public static boolean checkConfigurationChange(Configuration oldConfig, Configuration newConfig,
     String... configurationKey) {
