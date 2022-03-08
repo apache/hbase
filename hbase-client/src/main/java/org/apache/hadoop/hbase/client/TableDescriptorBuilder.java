@@ -1335,7 +1335,8 @@ public class TableDescriptorBuilder {
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setRegionMemStoreReplication(boolean memstoreReplication) {
-      ModifyableTableDescriptor returnDesc = setValue(REGION_MEMSTORE_REPLICATION_KEY, Boolean.toString(memstoreReplication));
+      ModifyableTableDescriptor returnDesc =
+          setValue(REGION_MEMSTORE_REPLICATION_KEY, Boolean.toString(memstoreReplication));
       // If the memstore replication not setup, we do not have to wait for observing a flush event
       // from primary before starting to serve reads, because gaps from replication is not applicable
       if (!memstoreReplication) {
