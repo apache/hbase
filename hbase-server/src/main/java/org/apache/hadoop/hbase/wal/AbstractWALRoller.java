@@ -63,7 +63,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
   /**
    * Configure for the timeout of log rolling retry.
    */
-  protected static final String WAL_ROLL_WAIT_TIMEOUT = "hbase.regionserver.logroll.wait.timeout.ms";
+  public static final String WAL_ROLL_WAIT_TIMEOUT = "hbase.regionserver.logroll.wait.timeout.ms";
 
   /**
    * Configure for the max count of log rolling retry.

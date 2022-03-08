@@ -25,6 +25,8 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,6 +36,7 @@ import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutputHelper;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
+import org.apache.hadoop.hbase.wal.AbstractWALRoller;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -108,11 +111,16 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   }
 
   private OutputStream asyncOutputWrapper;
+  private long waitTimeout;
 
   public AsyncProtobufLogWriter(EventLoopGroup eventLoopGroup,
       Class<? extends Channel> channelClass) {
     this.eventLoopGroup = eventLoopGroup;
     this.channelClass = channelClass;
+    // Reuse WAL_ROLL_WAIT_TIMEOUT here to avoid an infinite wait if somehow a wait on a future
+    // never completes. The objective is the same. We want to propagate an exception to trigger
+    // an abort if we seem to be hung.
+    this.waitTimeout = conf.getLong(AbstractWALRoller.WAL_ROLL_WAIT_TIMEOUT, 30000);
   }
 
   /*
@@ -188,12 +196,12 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
     CompletableFuture<Long> future = new CompletableFuture<>();
     action.accept(future);
     try {
-      return future.get().longValue();
+      return future.get(waitTimeout, TimeUnit.MILLISECONDS).longValue();
     } catch (InterruptedException e) {
       InterruptedIOException ioe = new InterruptedIOException();
       ioe.initCause(e);
       throw ioe;
-    } catch (ExecutionException e) {
+    } catch (ExecutionException | TimeoutException e) {
       Throwables.propagateIfPossible(e.getCause(), IOException.class);
       throw new RuntimeException(e.getCause());
     }
