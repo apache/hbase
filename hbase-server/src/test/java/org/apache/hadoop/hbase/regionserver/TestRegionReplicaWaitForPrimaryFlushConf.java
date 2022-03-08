@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -34,7 +36,6 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorType;
-import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -51,9 +52,9 @@ import org.junit.experimental.categories.Category;
 public class TestRegionReplicaWaitForPrimaryFlushConf {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicateToReplica.class);
+      HBaseClassTestRule.forClass(TestRegionReplicaWaitForPrimaryFlushConf.class);
 
-  private static byte[] FAMILY = Bytes.toBytes("family");
+  private static final byte[] FAMILY = Bytes.toBytes("family_test");
 
   private TableName tableName;
 
@@ -75,8 +76,14 @@ public class TestRegionReplicaWaitForPrimaryFlushConf {
     HTU.shutdownMiniCluster();
   }
 
+  /**
+   * This test is for HBASE-26811,when
+   * {@link ServerRegionReplicaUtil#REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY} is false and set
+   * {@link TableDescriptorBuilder#setRegionMemStoreReplication} to true explicitly,the secondary
+   * replica would be disabled for read after open.
+   */
   @Test
-  public void test() throws Exception {
+  public void testSecondaryReplicaReadEnabled() throws Exception {
     tableName = name.getTableName();
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
         .setRegionReplication(2).setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
@@ -91,7 +98,7 @@ public class TestRegionReplicaWaitForPrimaryFlushConf {
       List<HRegion> onlineRegions = rs.getRegions(tableName);
       for (HRegion region : onlineRegions) {
         int replicaId = region.getRegionInfo().getReplicaId();
-        assertTrue(regionAndRegionServers.get(replicaId) == null);
+        assertNull(regionAndRegionServers.get(replicaId));
         regionAndRegionServers.set(replicaId, new Pair<HRegion, HRegionServer>(region, rs));
       }
     }
@@ -108,13 +115,10 @@ public class TestRegionReplicaWaitForPrimaryFlushConf {
     } catch (NullPointerException e) {
       assertTrue(e != null);
     }
-
     HRegion secondaryRegion = regionAndRegionServers.get(1).getFirst();
-    assertTrue(
-      !ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(secondaryRegion.conf));
-    secondaryRegion.startRegionOperation(Operation.SCAN);
-    secondaryRegion.closeRegionOperation(Operation.SCAN);
-
+    assertFalse(
+      ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(secondaryRegion.conf));
+    assertTrue(secondaryRegion.isReadsEnabled());
   }
 
 }

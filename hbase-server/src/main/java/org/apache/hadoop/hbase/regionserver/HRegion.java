@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.ROW_LOCK_READ_LOCK_KEY;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.opentelemetry.api.trace.Span;
 import java.io.EOFException;
@@ -8742,5 +8743,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public void addWriteRequestsCount(long writeRequestsCount) {
     this.writeRequestsCount.add(writeRequestsCount);
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  boolean isReadsEnabled() {
+    return this.writestate.readsEnabled;
   }
 }
