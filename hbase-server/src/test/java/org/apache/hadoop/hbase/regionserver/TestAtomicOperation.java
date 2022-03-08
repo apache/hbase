@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -612,7 +611,6 @@ public class TestAtomicOperation {
     protected final int numOps;
     protected final AtomicLong timeStamps;
     protected final AtomicInteger failures;
-    protected final Random r = new Random();
 
     public AtomicOperation(HRegion region, int numOps, AtomicLong timeStamps,
         AtomicInteger failures) {

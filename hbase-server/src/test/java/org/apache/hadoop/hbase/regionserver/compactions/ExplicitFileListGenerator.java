@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 
 /**
@@ -27,6 +26,7 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
  * This is great for testing edge cases.
  */
 class ExplicitFileListGenerator extends StoreFileListGenerator {
+
   /** The explicit files size lists to return. */
   private int[][] fileSizes = new int[][]{
       {1000, 350, 200, 100, 20, 10, 10},
@@ -46,10 +46,6 @@ class ExplicitFileListGenerator extends StoreFileListGenerator {
       {110, 18, 18, 18, 18, 9, 8, 7, 6, 5, 4, 3, 2, 1},
       {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15}
   };
-
-  ExplicitFileListGenerator() {
-    super(ExplicitFileListGenerator.class);
-  }
 
   @Override
   public final Iterator<List<HStoreFile>> iterator() {
@@ -72,4 +68,5 @@ class ExplicitFileListGenerator extends StoreFileListGenerator {
       }
     };
   }
+
 }

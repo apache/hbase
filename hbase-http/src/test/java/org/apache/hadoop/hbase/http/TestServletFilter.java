@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.http;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -114,12 +116,12 @@ public class TestServletFilter extends HttpServerFunctionalTest {
     final String hadooplogoURL = "/static/hadoop-logo.jpg";
 
     final String[] urls = {fsckURL, stacksURL, ajspURL, logURL, hadooplogoURL};
-    final Random ran = new Random();
+    final Random rand = ThreadLocalRandom.current();
     final int[] sequence = new int[50];
 
     //generate a random sequence and update counts
     for(int i = 0; i < sequence.length; i++) {
-      sequence[i] = ran.nextInt(urls.length);
+      sequence[i] = rand.nextInt(urls.length);
     }
 
     //access the urls as the sequence

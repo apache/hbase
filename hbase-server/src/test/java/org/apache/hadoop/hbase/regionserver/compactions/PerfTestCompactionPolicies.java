@@ -125,7 +125,6 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
       final int inMin,
       final float inRatio) throws IllegalAccessException, InstantiationException,
       NoSuchMethodException, InvocationTargetException {
-    super(PerfTestCompactionPolicies.class);
     this.fileGenClass = fileGenClass;
     this.max = inMmax;
     this.min = inMin;

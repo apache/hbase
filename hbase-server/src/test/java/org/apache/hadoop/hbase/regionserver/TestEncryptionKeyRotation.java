@@ -22,10 +22,10 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.security.Key;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -76,13 +76,12 @@ public class TestEncryptionKeyRotation {
 
   static {
     // Create the test encryption keys
-    SecureRandom rng = new SecureRandom();
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    rng.nextBytes(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm =
         conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     initialCFKey = new SecretKeySpec(keyBytes, algorithm);
-    rng.nextBytes(keyBytes);
+    Bytes.secureRandom(keyBytes);
     secondCFKey = new SecretKeySpec(keyBytes, algorithm);
   }
 

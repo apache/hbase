@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -43,8 +45,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** Unit tests to test retrieving table/region compaction state*/
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
@@ -54,9 +54,7 @@ public class TestCompactionState {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCompactionState.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestCompactionState.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private final static Random random = new Random();
 
   @Rule
   public TestName name = new TestName();
@@ -265,9 +263,10 @@ public class TestCompactionState {
       final int rows, final int flushes) throws IOException {
     List<Put> puts = new ArrayList<>(rows);
     byte[] qualifier = Bytes.toBytes("val");
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < flushes; i++) {
       for (int k = 0; k < rows; k++) {
-        byte[] row = Bytes.toBytes(random.nextLong());
+        byte[] row = Bytes.toBytes(rand.nextLong());
         Put p = new Put(row);
         for (int j = 0; j < families.length; ++j) {
           p.addColumn(families[j], qualifier, row);

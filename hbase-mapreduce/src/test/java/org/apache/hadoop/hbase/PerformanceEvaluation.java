@@ -45,6 +45,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -1526,7 +1527,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
   static class AsyncRandomReadTest extends AsyncTableTest {
     private final Consistency consistency;
     private ArrayList<Get> gets;
-    private Random rd = new Random();
 
     AsyncRandomReadTest(AsyncConnection con, TestOptions options, Status status) {
       super(con, options, status);
@@ -1540,7 +1540,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     boolean testRow(final int i, final long startTime) throws IOException, InterruptedException {
       if (opts.randomSleep > 0) {
-        Thread.sleep(rd.nextInt(opts.randomSleep));
+        Thread.sleep(ThreadLocalRandom.current().nextInt(opts.randomSleep));
       }
       Get get = new Get(getRandomRow(this.rand, opts.totalRows));
       for (int family = 0; family < opts.families; family++) {
@@ -1948,8 +1948,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
   static class RandomReadTest extends TableTest {
     private final Consistency consistency;
     private ArrayList<Get> gets;
-    private Random rd = new Random();
-    private long numOfReplyFromReplica = 0;
 
     RandomReadTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
@@ -1963,7 +1961,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     boolean testRow(final int i, final long startTime) throws IOException, InterruptedException {
       if (opts.randomSleep > 0) {
-        Thread.sleep(rd.nextInt(opts.randomSleep));
+        Thread.sleep(ThreadLocalRandom.current().nextInt(opts.randomSleep));
       }
       Get get = new Get(getRandomRow(this.rand, opts.totalRows));
       for (int family = 0; family < opts.families; family++) {

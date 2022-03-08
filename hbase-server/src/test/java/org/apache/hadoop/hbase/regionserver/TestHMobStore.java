@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
 
 import java.io.IOException;
 import java.security.Key;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -31,6 +30,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentSkipListSet;
+
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -484,9 +484,8 @@ public class TestHMobStore {
 
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
-    SecureRandom rng = new SecureRandom();
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    rng.nextBytes(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key cfKey = new SecretKeySpec(keyBytes, algorithm);
 

@@ -37,6 +37,8 @@ import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -155,11 +157,11 @@ public class TestPerformanceEvaluation {
     opts.setNumClientThreads(2);
     opts = PerformanceEvaluation.calculateRowsAndSize(opts);
     assertEquals(1000, opts.getPerClientRunRows());
-    Random random = new Random();
     // assuming we will get one before this loop expires
     boolean foundValue = false;
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 10000000; i++) {
-      int randomRow = PerformanceEvaluation.generateRandomRow(random, opts.totalRows);
+      int randomRow = PerformanceEvaluation.generateRandomRow(rand, opts.totalRows);
       if (randomRow > 1000) {
         foundValue = true;
         break;

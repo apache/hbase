@@ -26,8 +26,10 @@ import static org.junit.Assert.fail;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.security.SecureRandom;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -67,7 +69,6 @@ public class TestHFileEncryption {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileEncryption.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static final SecureRandom RNG = new SecureRandom();
 
   private static FileSystem fs;
   private static Encryption.Context cryptoContext;
@@ -90,7 +91,7 @@ public class TestHFileEncryption {
     assertNotNull(aes);
     cryptoContext.setCipher(aes);
     byte[] key = new byte[aes.getKeyLength()];
-    RNG.nextBytes(key);
+    Bytes.secureRandom(key);
     cryptoContext.setKey(key);
   }
 
@@ -135,8 +136,9 @@ public class TestHFileEncryption {
   public void testDataBlockEncryption() throws IOException {
     final int blocks = 10;
     final int[] blockSizes = new int[blocks];
+    final Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < blocks; i++) {
-      blockSizes[i] = (1024 + RNG.nextInt(1024 * 63)) / Bytes.SIZEOF_INT;
+      blockSizes[i] = (1024 + rand.nextInt(1024 * 63)) / Bytes.SIZEOF_INT;
     }
     for (Compression.Algorithm compression : HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS) {
       Path path = new Path(TEST_UTIL.getDataTestDir(), "block_v3_" + compression + "_AES");
@@ -271,12 +273,13 @@ public class TestHFileEncryption {
 
         // Test random seeks with pread
         LOG.info("Random seeking with " + fileContext);
+        Random rand = ThreadLocalRandom.current();
         reader = HFile.createReader(fs, path, cacheConf, true, conf);
         try {
           scanner = reader.getScanner(conf, false, true);
           assertTrue("Initial seekTo failed", scanner.seekTo());
           for (i = 0; i < 100; i++) {
-            KeyValue kv = testKvs.get(RNG.nextInt(testKvs.size()));
+            KeyValue kv = testKvs.get(rand.nextInt(testKvs.size()));
             assertEquals("Unable to find KV as expected: " + kv, 0, scanner.seekTo(kv));
           }
         } finally {

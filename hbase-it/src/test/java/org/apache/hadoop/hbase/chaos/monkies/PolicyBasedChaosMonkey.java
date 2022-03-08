@@ -26,13 +26,11 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.chaos.policies.Policy;
 import org.apache.hadoop.hbase.util.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -40,7 +38,6 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  */
 public class PolicyBasedChaosMonkey extends ChaosMonkey {
 
-  private static final Logger LOG = LoggerFactory.getLogger(PolicyBasedChaosMonkey.class);
   private static final long ONE_SEC = 1000;
   private static final long ONE_MIN = 60 * ONE_SEC;
 
@@ -93,7 +90,7 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
 
   /** Selects a random item from the given items */
   public static <T> T selectRandomItem(T[] items) {
-    return items[RandomUtils.nextInt(0, items.length)];
+    return items[ThreadLocalRandom.current().nextInt(items.length)];
   }
 
   /** Selects a random item from the given items with weights*/
@@ -103,7 +100,7 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
       totalWeight += pair.getSecond();
     }
 
-    int cutoff = RandomUtils.nextInt(0, totalWeight);
+    int cutoff = ThreadLocalRandom.current().nextInt(totalWeight);
     int cummulative = 0;
     T item = null;
 
@@ -127,7 +124,7 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
     List<T> originalItems = Arrays.asList(items);
     Collections.shuffle(originalItems);
 
-    int startIndex = RandomUtils.nextInt(0, items.length - selectedNumber);
+    int startIndex = ThreadLocalRandom.current().nextInt(items.length - selectedNumber);
     return originalItems.subList(startIndex, startIndex + selectedNumber);
   }
 

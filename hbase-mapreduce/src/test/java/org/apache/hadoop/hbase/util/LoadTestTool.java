@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -291,7 +290,7 @@ public class LoadTestTool extends AbstractHBaseTool {
         }
         if (cipher != null) {
           byte[] keyBytes = new byte[cipher.getKeyLength()];
-          new SecureRandom().nextBytes(keyBytes);
+          Bytes.secureRandom(keyBytes);
           columnDescBuilder.setEncryptionType(cipher.getName());
           columnDescBuilder.setEncryptionKey(
               EncryptionUtil.wrapKey(conf,

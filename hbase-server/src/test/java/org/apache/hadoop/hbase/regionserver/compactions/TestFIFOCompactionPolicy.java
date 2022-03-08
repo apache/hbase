@@ -21,8 +21,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -107,7 +105,7 @@ public class TestFIFOCompactionPolicy {
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 10; j++) {
         byte[] value = new byte[128 * 1024];
-        ThreadLocalRandom.current().nextBytes(value);
+        Bytes.random(value);
         table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
       admin.flush(tableName);

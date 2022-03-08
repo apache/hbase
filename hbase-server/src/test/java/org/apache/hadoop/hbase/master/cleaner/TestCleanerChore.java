@@ -22,7 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.junit.AfterClass;
@@ -536,13 +537,12 @@ public class TestCleanerChore {
   }
 
   private void createFiles(FileSystem fs, Path parentDir, int numOfFiles) throws IOException {
-    Random random = new Random();
     for (int i = 0; i < numOfFiles; i++) {
-      int xMega = 1 + random.nextInt(3); // size of each file is between 1~3M
+      int xMega = 1 + ThreadLocalRandom.current().nextInt(3); // size of each file is between 1~3M
       try (FSDataOutputStream fsdos = fs.create(new Path(parentDir, "file-" + i))) {
         for (int m = 0; m < xMega; m++) {
           byte[] M = new byte[1024 * 1024];
-          random.nextBytes(M);
+          Bytes.random(M);
           fsdos.write(M);
         }
       }

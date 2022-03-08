@@ -27,6 +27,7 @@ import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -46,7 +47,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 @Category(IntegrationTests.class)
@@ -60,7 +60,6 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
   private TableName tableName = TableName.valueOf(TABLE_NAME_DEFAULT);
   private byte[] familyName = Bytes.toBytes(COLUMN_FAMILY_DEFAULT);
   private IntegrationTestingUtility util;
-  private Random random = new Random();
   private Admin admin;
 
   public static void main(String[] args) throws Exception {
@@ -223,17 +222,18 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
   private LinkedBlockingQueue<Long> insertData() throws IOException, InterruptedException {
     LinkedBlockingQueue<Long> rowKeys = new LinkedBlockingQueue<>(25000);
     BufferedMutator ht = util.getConnection().getBufferedMutator(this.tableName);
+    Random rand = ThreadLocalRandom.current();
     byte[] value = new byte[300];
     for (int x = 0; x < 5000; x++) {
       Span span = TraceUtil.getGlobalTracer().spanBuilder("insertData").startSpan();
       try (Scope scope = span.makeCurrent()) {
         for (int i = 0; i < 5; i++) {
-          long rk = random.nextLong();
+          long rk = rand.nextLong();
           rowKeys.add(rk);
           Put p = new Put(Bytes.toBytes(rk));
           for (int y = 0; y < 10; y++) {
-            random.nextBytes(value);
-            p.addColumn(familyName, Bytes.toBytes(random.nextLong()), value);
+            Bytes.random(value);
+            p.addColumn(familyName, Bytes.toBytes(rand.nextLong()), value);
           }
           ht.mutate(p);
         }

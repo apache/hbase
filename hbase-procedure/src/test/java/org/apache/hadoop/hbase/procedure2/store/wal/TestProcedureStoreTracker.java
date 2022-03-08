@@ -21,7 +21,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -153,13 +154,12 @@ public class TestProcedureStoreTracker {
 
     final ProcedureStoreTracker tracker = new ProcedureStoreTracker();
 
-    Random rand = new Random(1);
     for (int i = 0; i < NRUNS; ++i) {
       assertTrue(tracker.isEmpty());
 
       int count = 0;
       while (count < NPROCEDURES) {
-        long procId = rand.nextLong();
+        long procId = ThreadLocalRandom.current().nextLong();
         if (procId < 1) {
           continue;
         }

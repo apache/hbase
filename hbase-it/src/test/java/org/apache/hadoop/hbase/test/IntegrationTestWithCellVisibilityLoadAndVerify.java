@@ -23,6 +23,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -56,7 +58,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
-
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
@@ -165,9 +166,10 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
         InterruptedException {
       String suffix = "/" + shortTaskId;
       int BLOCK_SIZE = (int) (recordsToWrite / 100);
+      Random rand = ThreadLocalRandom.current();
       for (long i = 0; i < recordsToWrite;) {
         for (long idx = 0; idx < BLOCK_SIZE && i < recordsToWrite; idx++, i++) {
-          int expIdx = rand.nextInt(BLOCK_SIZE) % VISIBILITY_EXPS_COUNT;
+          int expIdx = rand.nextInt(VISIBILITY_EXPS_COUNT);
           String exp = VISIBILITY_EXPS[expIdx];
           byte[] row = Bytes.add(Bytes.toBytes(i), Bytes.toBytes(suffix), Bytes.toBytes(exp));
           Put p = new Put(row);

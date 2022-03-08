@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -419,7 +420,7 @@ public class TestHFileCleaner {
 
   private void createFilesForTesting(int largeFileNum, int smallFileNum, FileSystem fs,
       Path archivedHfileDir) throws IOException {
-    final Random rand = new Random();
+    final Random rand = ThreadLocalRandom.current();
     final byte[] large = new byte[1024 * 1024];
     for (int i = 0; i < large.length; i++) {
       large[i] = (byte) rand.nextInt(128);

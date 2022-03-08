@@ -321,7 +321,7 @@ public class TestFSUtils {
     assertEquals(new FsPermission("700"), filePerm);
 
     // then that the correct file is created
-    Path p = new Path("target" + File.separator + htu.getRandomUUID().toString());
+    Path p = new Path("target" + File.separator + HBaseTestingUtil.getRandomUUID().toString());
     try {
       FSDataOutputStream out = FSUtils.create(conf, fs, p, filePerm, null);
       out.close();
@@ -340,7 +340,7 @@ public class TestFSUtils {
     conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
     FsPermission perms = CommonFSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // then that the correct file is created
-    String file = htu.getRandomUUID().toString();
+    String file = HBaseTestingUtil.getRandomUUID().toString();
     Path p = new Path(htu.getDataTestDir(), "temptarget" + File.separator + file);
     Path p1 = new Path(htu.getDataTestDir(), "temppath" + File.separator + file);
     try {
@@ -381,7 +381,7 @@ public class TestFSUtils {
     FileSystem fs = FileSystem.get(conf);
     Path testDir = htu.getDataTestDirOnTestFS("testArchiveFile");
 
-    String file = htu.getRandomUUID().toString();
+    String file = HBaseTestingUtil.getRandomUUID().toString();
     Path p = new Path(testDir, file);
 
     FSDataOutputStream out = fs.create(p);
@@ -395,7 +395,7 @@ public class TestFSUtils {
     mockEnv.setValue(expect);
     EnvironmentEdgeManager.injectEdge(mockEnv);
     try {
-      String dstFile = htu.getRandomUUID().toString();
+      String dstFile = HBaseTestingUtil.getRandomUUID().toString();
       Path dst = new Path(testDir , dstFile);
 
       assertTrue(CommonFSUtils.renameAndSetModifyTime(fs, p, dst));
@@ -477,7 +477,7 @@ public class TestFSUtils {
           conf.get(HConstants.WAL_STORAGE_POLICY, HConstants.DEFAULT_WAL_STORAGE_POLICY);
       CommonFSUtils.setStoragePolicy(fs, testDir, storagePolicy);
 
-      String file =htu.getRandomUUID().toString();
+      String file = HBaseTestingUtil.getRandomUUID().toString();
       Path p = new Path(testDir, file);
       WriteDataToHDFS(fs, p, 4096);
       HFileSystem hfs = new HFileSystem(fs);
@@ -492,7 +492,7 @@ public class TestFSUtils {
       } else {
         Assert.assertEquals(policy, policySet);
       }
-      // will assert existance before deleting.
+      // will assert existence before deleting.
       cleanupFile(fs, testDir);
     } finally {
       cluster.shutdown();
@@ -562,11 +562,12 @@ public class TestFSUtils {
   // Below is taken from TestPread over in HDFS.
   static final int blockSize = 4096;
   static final long seed = 0xDEADBEEFL;
+  private Random rand = new Random(); // This test depends on Random#setSeed
 
   private void pReadFile(FileSystem fileSys, Path name) throws IOException {
     FSDataInputStream stm = fileSys.open(name);
     byte[] expected = new byte[12 * blockSize];
-    Random rand = new Random(seed);
+    rand.setSeed(seed);
     rand.nextBytes(expected);
     // do a sanity check. Read first 4K bytes
     byte[] actual = new byte[4096];

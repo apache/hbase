@@ -32,7 +32,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -90,15 +89,15 @@ public class TestHFileScannerImplReferenceCount {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestHFileScannerImplReferenceCount.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
+  private static final Random RNG = new Random(9713312); // Just a fixed seed.
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
   private static final byte[] SUFFIX = randLongBytes();
   private static final int CELL_COUNT = 1000;
 
   private static byte[] randLongBytes() {
-    Random rand = new Random();
     byte[] keys = new byte[30];
-    rand.nextBytes(keys);
+    Bytes.random(keys);
     return keys;
   }
 
@@ -166,12 +165,10 @@ public class TestHFileScannerImplReferenceCount {
     try (HFile.Writer writer =
         new HFile.WriterFactory(conf, new CacheConfig(conf)).withPath(fs, hfilePath)
             .withFileContext(context).create()) {
-      Random rand = new Random(9713312); // Just a fixed seed.
       for (int i = 0; i < cellCount; ++i) {
         byte[] keyBytes = Bytes.add(Bytes.toBytes(i), SUFFIX);
-
         // A random-length random value.
-        byte[] valueBytes = RandomKeyValueUtil.randomValue(rand);
+        byte[] valueBytes = RandomKeyValueUtil.randomValue(RNG);
         KeyValue keyValue =
             new KeyValue(keyBytes, FAMILY, QUALIFIER, HConstants.LATEST_TIMESTAMP, valueBytes);
         if (firstCell == null) {

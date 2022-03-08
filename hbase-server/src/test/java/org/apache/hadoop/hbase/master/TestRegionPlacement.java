@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
@@ -63,7 +64,6 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
@@ -193,13 +193,13 @@ public class TestRegionPlacement {
       throws IOException, InterruptedException, KeeperException {
     ServerName serverToKill = null;
     int killIndex = 0;
-    Random random = new Random(EnvironmentEdgeManager.currentTime());
+    Random rand = ThreadLocalRandom.current();
     ServerName metaServer = TEST_UTIL.getHBaseCluster().getServerHoldingMeta();
     LOG.debug("Server holding meta " + metaServer);
     boolean isNamespaceServer = false;
     do {
       // kill a random non-meta server carrying at least one region
-      killIndex = random.nextInt(SLAVES);
+      killIndex = rand.nextInt(SLAVES);
       serverToKill = TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getServerName();
       Collection<HRegion> regs =
           TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getOnlineRegionsLocalContext();
@@ -259,10 +259,10 @@ public class TestRegionPlacement {
     int rows = 100;
     int cols = 100;
     float[][] matrix = new float[rows][cols];
-    Random random = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < rows; i++) {
       for (int j = 0; j < cols; j++) {
-        matrix[i][j] = random.nextFloat();
+        matrix[i][j] = rand.nextFloat();
       }
     }
 
@@ -283,7 +283,7 @@ public class TestRegionPlacement {
     // the same values on the original matrix.
     int[] transformedIndices = new int[rows];
     for (int i = 0; i < rows; i++) {
-      transformedIndices[i] = random.nextInt(cols);
+      transformedIndices[i] = rand.nextInt(cols);
     }
     int[] invertedTransformedIndices = rm.invertIndices(transformedIndices);
     float[] transformedValues = new float[rows];

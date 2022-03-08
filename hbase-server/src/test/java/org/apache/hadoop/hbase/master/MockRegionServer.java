@@ -27,9 +27,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Random;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Abortable;
@@ -154,7 +155,6 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   private final ServerName sn;
   private final ZKWatcher zkw;
   private final Configuration conf;
-  private final Random random = new Random();
 
   /**
    * Map of regions to map of rows and {@link Result}. Used as data source when
@@ -251,7 +251,7 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   public long openScanner(byte[] regionName, Scan scan) throws IOException {
-    long scannerId = this.random.nextLong();
+    long scannerId = ThreadLocalRandom.current().nextLong();
     this.scannersAndOffsets.put(scannerId, new RegionNameAndIndex(regionName));
     return scannerId;
   }

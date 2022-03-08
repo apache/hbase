@@ -23,7 +23,8 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Date;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -41,8 +42,6 @@ public class TestMobFileName {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobFileName.class);
 
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-
   private String uuid;
   private Date date;
   private String dateStr;
@@ -51,11 +50,10 @@ public class TestMobFileName {
 
   @Before
   public void setUp() {
-    Random random = new Random();
-    uuid = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "");
+    uuid = HBaseTestingUtil.getRandomUUID().toString().replaceAll("-", "");
     date = new Date();
     dateStr = MobUtils.formatDate(date);
-    startKey = Bytes.toBytes(random.nextInt());
+    startKey = Bytes.toBytes(ThreadLocalRandom.current().nextInt());
   }
 
   @Test

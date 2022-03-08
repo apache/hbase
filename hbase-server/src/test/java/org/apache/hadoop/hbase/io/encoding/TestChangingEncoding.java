@@ -25,6 +25,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -254,7 +256,7 @@ public class TestChangingEncoding {
   @Test
   public void testCrazyRandomChanges() throws Exception {
     prepareTest("RandomChanges");
-    Random rand = new Random(2934298742974297L);
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 10; ++i) {
       int encodingOrdinal = rand.nextInt(DataBlockEncoding.values().length);
       DataBlockEncoding encoding = DataBlockEncoding.values()[encodingOrdinal];

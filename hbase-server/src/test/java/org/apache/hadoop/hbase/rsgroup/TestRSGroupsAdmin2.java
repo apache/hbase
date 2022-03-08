@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -612,7 +613,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     // create table
     // randomly set a region state to SPLITTING to make move abort
     Pair<ServerName, RegionStateNode> gotPair =
-      createTableWithRegionSplitting(newGroup, new Random().nextInt(8) + 4);
+      createTableWithRegionSplitting(newGroup, ThreadLocalRandom.current().nextInt(8) + 4);
     RegionStateNode rsn = gotPair.getSecond();
     ServerName srcServer = rsn.getRegionLocation();
 
@@ -651,8 +652,9 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     final byte[] familyNameBytes = Bytes.toBytes("f");
     TableName table1 = TableName.valueOf(tableName.getNameAsString() + "_1");
     TableName table2 = TableName.valueOf(tableName.getNameAsString() + "_2");
-    TEST_UTIL.createMultiRegionTable(table1, familyNameBytes, new Random().nextInt(12) + 4);
-    TEST_UTIL.createMultiRegionTable(table2, familyNameBytes, new Random().nextInt(12) + 4);
+    Random rand = ThreadLocalRandom.current();
+    TEST_UTIL.createMultiRegionTable(table1, familyNameBytes, rand.nextInt(12) + 4);
+    TEST_UTIL.createMultiRegionTable(table2, familyNameBytes, rand.nextInt(12) + 4);
 
     // randomly set a region state to SPLITTING to make move abort
     Pair<ServerName, RegionStateNode> gotPair =

@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -76,9 +75,8 @@ public class TestHFileWriterV3 {
       HBaseClassTestRule.forClass(TestHFileWriterV3.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileWriterV3.class);
-
-  private static final HBaseTestingUtil TEST_UTIL =
-      new HBaseTestingUtil();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private static final Random RNG = new Random(9713312); // Just a fixed seed.
 
   private Configuration conf;
   private FileSystem fs;
@@ -135,20 +133,17 @@ public class TestHFileWriterV3 {
       .withFileContext(context)
       .create();
 
-    Random rand = new Random(9713312); // Just a fixed seed.
     List<KeyValue> keyValues = new ArrayList<>(entryCount);
-
     for (int i = 0; i < entryCount; ++i) {
-      byte[] keyBytes = RandomKeyValueUtil.randomOrderedKey(rand, i);
-
+      byte[] keyBytes = RandomKeyValueUtil.randomOrderedKey(RNG, i);
       // A random-length random value.
-      byte[] valueBytes = RandomKeyValueUtil.randomValue(rand);
+      byte[] valueBytes = RandomKeyValueUtil.randomValue(RNG);
       KeyValue keyValue = null;
       if (useTags) {
         ArrayList<Tag> tags = new ArrayList<>();
-        for (int j = 0; j < 1 + rand.nextInt(4); j++) {
+        for (int j = 0; j < 1 + RNG.nextInt(4); j++) {
           byte[] tagBytes = new byte[16];
-          rand.nextBytes(tagBytes);
+          RNG.nextBytes(tagBytes);
           tags.add(new ArrayBackedTag((byte) 1, tagBytes));
         }
         keyValue = new KeyValue(keyBytes, null, null, HConstants.LATEST_TIMESTAMP,

@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -125,16 +127,14 @@ public class TestJoinedScanners {
 
     long rows_to_insert = 1000;
     int insert_batch = 20;
-    long time = System.nanoTime();
-    Random rand = new Random(time);
 
     LOG.info("Make " + Long.toString(rows_to_insert) + " rows, total size = " + Float
       .toString(rows_to_insert * valueWidth / 1024 / 1024) + " MB");
 
+    long time = System.nanoTime();
+    Random rand = ThreadLocalRandom.current();
     byte[] val_large = new byte[valueWidth];
-
     List<Put> puts = new ArrayList<>();
-
     for (long i = 0; i < rows_to_insert; i++) {
       Put put = new Put(Bytes.toBytes(Long.toString(i)));
       if (rand.nextInt(100) <= selectionRatio) {
