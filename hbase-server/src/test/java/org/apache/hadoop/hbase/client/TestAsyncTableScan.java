@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
@@ -29,6 +30,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 @RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
@@ -55,16 +57,74 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
   }
 
   @Override
-  protected List<Result> doScan(Scan scan) throws Exception {
+  protected List<Result> doScan(Scan scan, int closeAfter) throws Exception {
     AsyncTable<ScanResultConsumer> table =
       ASYNC_CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
-    SimpleScanResultConsumer consumer = new SimpleScanResultConsumer();
-    table.scan(scan, consumer);
-    List<Result> results = consumer.getAll();
+    List<Result> results;
+    if (closeAfter > 0) {
+      // these tests batch settings with the sample data result in each result being
+      // split in two. so we must allow twice the expected results in order to reach
+      // our true limit. see convertFromBatchResult for details.
+      if (scan.getBatch() > 0) {
+        closeAfter = closeAfter * 2;
+      }
+      LimitedScanResultConsumer consumer = new LimitedScanResultConsumer(closeAfter);
+      table.scan(scan, consumer);
+      results = consumer.getAll();
+    } else {
+      SimpleScanResultConsumer consumer = new SimpleScanResultConsumer();
+      table.scan(scan, consumer);
+      results = consumer.getAll();
+    }
     if (scan.getBatch() > 0) {
       results = convertFromBatchResult(results);
     }
     return results;
+  }
+
+  private static class LimitedScanResultConsumer implements ScanResultConsumer {
+
+    private final int limit;
+
+    public LimitedScanResultConsumer(int limit) {
+      this.limit = limit;
+    }
+
+    private final List<Result> results = new ArrayList<>();
+
+    private Throwable error;
+
+    private boolean finished = false;
+
+    @Override
+    public synchronized boolean onNext(Result result) {
+      results.add(result);
+      return results.size() < limit;
+    }
+
+    @Override
+    public synchronized void onError(Throwable error) {
+      this.error = error;
+      finished = true;
+      notifyAll();
+    }
+
+    @Override
+    public synchronized void onComplete() {
+      finished = true;
+      notifyAll();
+    }
+
+    public synchronized List<Result> getAll() throws Exception {
+      while (!finished) {
+        wait();
+      }
+      if (error != null) {
+        Throwables.propagateIfPossible(error, Exception.class);
+        throw new Exception(error);
+      }
+      return results;
+    }
   }
 
 }
