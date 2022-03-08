@@ -22,8 +22,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
-import org.apache.commons.lang3.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.junit.Assert;
@@ -64,15 +65,15 @@ public class UnbalanceKillAndRebalanceAction extends Action {
     ClusterMetrics status = this.cluster.getClusterMetrics();
     List<ServerName> victimServers = new LinkedList<>(status.getLiveServerMetrics().keySet());
     Set<ServerName> killedServers = new HashSet<>();
-
     int liveCount = (int)Math.ceil(FRC_SERVERS_THAT_HOARD_AND_LIVE * victimServers.size());
     int deadCount = (int)Math.ceil(FRC_SERVERS_THAT_HOARD_AND_DIE * victimServers.size());
     Assert.assertTrue(
         "There are not enough victim servers: " + victimServers.size(),
         liveCount + deadCount < victimServers.size());
+    Random rand = ThreadLocalRandom.current();
     List<ServerName> targetServers = new ArrayList<>(liveCount);
     for (int i = 0; i < liveCount + deadCount; ++i) {
-      int victimIx = RandomUtils.nextInt(0, victimServers.size());
+      int victimIx = rand.nextInt(victimServers.size());
       targetServers.add(victimServers.remove(victimIx));
     }
     unbalanceRegions(status, victimServers, targetServers, HOARD_FRC_OF_REGIONS);

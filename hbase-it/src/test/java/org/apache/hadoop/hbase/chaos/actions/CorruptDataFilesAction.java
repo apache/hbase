@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
-import org.apache.commons.lang3.RandomUtils;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -56,15 +57,15 @@ public class CorruptDataFilesAction extends Action {
     Path rootDir = CommonFSUtils.getRootDir(getConf());
     Path defaultDir = rootDir.suffix("/data/default");
     RemoteIterator<LocatedFileStatus> iterator =  fs.listFiles(defaultDir, true);
+    Random rand = ThreadLocalRandom.current();
     while (iterator.hasNext()){
       LocatedFileStatus status = iterator.next();
       if(!HFile.isHFileFormat(fs, status.getPath())){
         continue;
       }
-      if(RandomUtils.nextFloat(0, 100) > chance){
+      if ((100 * rand.nextFloat()) > chance){
         continue;
       }
-
       FSDataOutputStream out = fs.create(status.getPath(), true);
       try {
         out.write(0);

@@ -22,8 +22,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -136,14 +136,13 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
    *         value denotes delete state.
    */
   private List<Integer> shuffleProcWriteSequence() {
-    Random rand = new Random();
     List<Integer> procStatesSequence = new ArrayList<>();
     Set<Integer> toBeDeletedProcs = new HashSet<>();
     // Add n + 1 entries of the proc id for insert + updates. If proc is chosen for delete, add
     // extra entry which is marked -ve in the loop after shuffle.
     for (int procId  = 1; procId <= numProcs; ++procId) {
       procStatesSequence.addAll(Collections.nCopies(updatesPerProc + 1, procId));
-      if (rand.nextFloat() < deleteProcsFraction) {
+      if (ThreadLocalRandom.current().nextFloat() < deleteProcsFraction) {
         procStatesSequence.add(procId);
         toBeDeletedProcs.add(procId);
       }

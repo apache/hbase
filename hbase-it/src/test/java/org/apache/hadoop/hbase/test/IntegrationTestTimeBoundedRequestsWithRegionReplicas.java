@@ -23,9 +23,9 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -331,7 +331,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
       @Override
       protected long getNextKeyToRead() {
         // always read a random key, assuming that the writer has finished writing all keys
-        long key = startKey + Math.abs(RandomUtils.nextLong())
+        long key = startKey + ThreadLocalRandom.current().nextLong(Long.MAX_VALUE)
             % (endKey - startKey);
         return key;
       }

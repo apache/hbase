@@ -23,7 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.math.BigInteger;
 import java.util.Arrays;
-import java.util.Random;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -81,9 +81,8 @@ public class TestLRUDictionary {
 
   @Test
   public void testBasic() {
-    Random rand = new Random();
     byte[] testBytes = new byte[10];
-    rand.nextBytes(testBytes);
+    Bytes.random(testBytes);
 
     // Verify that our randomly generated array doesn't exist in the dictionary
     assertEquals(-1, testee.findEntry(testBytes, 0, testBytes.length));

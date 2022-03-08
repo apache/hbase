@@ -27,7 +27,6 @@ import java.io.UncheckedIOException;
 import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.NavigableMap;
-import java.util.Random;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -36,6 +35,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
@@ -582,12 +582,10 @@ public abstract class TestAssignmentManagerBase {
   }
 
   protected class RandRsExecutor extends NoopRsExecutor {
-    private final Random rand = new Random();
-
     @Override
     public ExecuteProceduresResponse sendRequest(ServerName server, ExecuteProceduresRequest req)
         throws IOException {
-      switch (rand.nextInt(5)) {
+      switch (ThreadLocalRandom.current().nextInt(5)) {
         case 0:
           throw new ServerNotRunningYetException("wait on server startup");
         case 1:
@@ -606,7 +604,7 @@ public abstract class TestAssignmentManagerBase {
       RegionInfo hri = ProtobufUtil.toRegionInfo(openReq.getRegion());
       long previousOpenSeqNum =
         am.getRegionStates().getOrCreateRegionStateNode(hri).getOpenSeqNum();
-      switch (rand.nextInt(3)) {
+      switch (ThreadLocalRandom.current().nextInt(3)) {
         case 0:
           LOG.info("Return OPENED response");
           sendTransitionReport(server, openReq.getRegion(), TransitionCode.OPENED,
@@ -637,7 +635,7 @@ public abstract class TestAssignmentManagerBase {
     protected CloseRegionResponse execCloseRegion(ServerName server, byte[] regionName)
         throws IOException {
       CloseRegionResponse.Builder resp = CloseRegionResponse.newBuilder();
-      boolean closed = rand.nextBoolean();
+      boolean closed = ThreadLocalRandom.current().nextBoolean();
       if (closed) {
         RegionInfo hri = am.getRegionInfo(regionName);
         sendTransitionReport(server, ProtobufUtil.toRegionInfo(hri), TransitionCode.CLOSED, -1);

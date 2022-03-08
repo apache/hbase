@@ -39,6 +39,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -280,16 +282,15 @@ public class TestHFile  {
     StoreFileWriter sfw =
         new StoreFileWriter.Builder(conf, fs).withOutputDir(storeFileParentDir)
           .withFileContext(meta).build();
-
     final int rowLen = 32;
-    Random RNG = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 1000; ++i) {
-      byte[] k = RandomKeyValueUtil.randomOrderedKey(RNG, i);
-      byte[] v = RandomKeyValueUtil.randomValue(RNG);
-      int cfLen = RNG.nextInt(k.length - rowLen + 1);
+      byte[] k = RandomKeyValueUtil.randomOrderedKey(rand, i);
+      byte[] v = RandomKeyValueUtil.randomValue(rand);
+      int cfLen = rand.nextInt(k.length - rowLen + 1);
       KeyValue kv =
           new KeyValue(k, 0, rowLen, k, rowLen, cfLen, k, rowLen + cfLen,
-              k.length - rowLen - cfLen, RNG.nextLong(), generateKeyType(RNG), v, 0, v.length);
+              k.length - rowLen - cfLen, rand.nextLong(), generateKeyType(rand), v, 0, v.length);
       sfw.append(kv);
     }
 

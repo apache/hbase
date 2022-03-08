@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
@@ -49,14 +49,13 @@ public class ChangeBloomFilterAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    final Random random = new Random();
     final BloomType[] bloomArray = BloomType.values();
     final int bloomArraySize = bloomArray.length;
 
     getLogger().info("Performing action: Change bloom filter on all columns of table " + tableName);
 
     modifyAllTableColumns(tableName, (columnName, columnBuilder) -> {
-      BloomType bloomType = bloomArray[random.nextInt(bloomArraySize)];
+      BloomType bloomType = bloomArray[ThreadLocalRandom.current().nextInt(bloomArraySize)];
       getLogger().debug("Performing action: About to set bloom filter type to "
           + bloomType + " on column " + columnName + " of table " + tableName);
       columnBuilder.setBloomFilterType(bloomType);

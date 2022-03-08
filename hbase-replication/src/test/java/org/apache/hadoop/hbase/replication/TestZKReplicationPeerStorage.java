@@ -59,7 +59,7 @@ public class TestZKReplicationPeerStorage {
       HBaseClassTestRule.forClass(TestZKReplicationPeerStorage.class);
 
   private static final HBaseZKTestingUtility UTIL = new HBaseZKTestingUtility();
-
+  private static final Random RNG = new Random(); // Seed may be set with Random#setSeed
   private static ZKReplicationPeerStorage STORAGE;
 
   @BeforeClass
@@ -96,12 +96,12 @@ public class TestZKReplicationPeerStorage {
   }
 
   private ReplicationPeerConfig getConfig(int seed) {
-    Random rand = new Random(seed);
-    return ReplicationPeerConfig.newBuilder().setClusterKey(Long.toHexString(rand.nextLong()))
-        .setReplicationEndpointImpl(Long.toHexString(rand.nextLong()))
-        .setNamespaces(randNamespaces(rand)).setExcludeNamespaces(randNamespaces(rand))
-        .setTableCFsMap(randTableCFs(rand)).setReplicateAllUserTables(rand.nextBoolean())
-        .setBandwidth(rand.nextInt(1000)).build();
+    RNG.setSeed(seed);
+    return ReplicationPeerConfig.newBuilder().setClusterKey(Long.toHexString(RNG.nextLong()))
+        .setReplicationEndpointImpl(Long.toHexString(RNG.nextLong()))
+        .setNamespaces(randNamespaces(RNG)).setExcludeNamespaces(randNamespaces(RNG))
+        .setTableCFsMap(randTableCFs(RNG)).setReplicateAllUserTables(RNG.nextBoolean())
+        .setBandwidth(RNG.nextInt(1000)).build();
   }
 
   private void assertSetEquals(Set<String> expected, Set<String> actual) {

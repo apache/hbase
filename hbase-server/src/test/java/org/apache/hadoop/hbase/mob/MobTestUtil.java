@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mob;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -41,10 +42,10 @@ public class MobTestUtil {
 
   protected static String generateRandomString(int demoLength) {
     String base = "abcdefghijklmnopqrstuvwxyz";
-    Random random = new Random();
+    Random rand = ThreadLocalRandom.current();
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < demoLength; i++) {
-      int number = random.nextInt(base.length());
+      int number = rand.nextInt(base.length());
       sb.append(base.charAt(number));
     }
     return sb.toString();

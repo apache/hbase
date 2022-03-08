@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
+
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 import javax.management.MBeanServerConnection;
@@ -99,7 +101,7 @@ public class TestMetaTableMetrics {
     UTIL.getConfiguration().set("hbase.coprocessor.region.classes",
       MetaTableMetrics.class.getName());
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 10; i++) {
       do {
         int sign = i % 2 == 0 ? 1 : -1;

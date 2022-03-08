@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -53,7 +53,6 @@ public class AdaptiveMemStoreCompactionStrategy extends MemStoreCompactionStrate
   private double compactionThreshold;
   private double initialCompactionProbability;
   private double compactionProbability;
-  private Random rand = new Random();
   private double numCellsInVersionedList = 0;
   private boolean compacted = false;
 
@@ -66,9 +65,10 @@ public class AdaptiveMemStoreCompactionStrategy extends MemStoreCompactionStrate
     resetStats();
   }
 
-  @Override public Action getAction(VersionedSegmentsList versionedList) {
+  @Override
+  public Action getAction(VersionedSegmentsList versionedList) {
     if (versionedList.getEstimatedUniquesFrac() < 1.0 - compactionThreshold) {
-      double r = rand.nextDouble();
+      double r = ThreadLocalRandom.current().nextDouble();
       if(r < compactionProbability) {
         numCellsInVersionedList = versionedList.getNumOfCells();
         compacted = true;

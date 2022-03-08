@@ -19,8 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.Arrays;
-import java.util.Random;
-
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -33,12 +32,12 @@ public final class PerClientRandomNonceGenerator implements NonceGenerator {
 
   private static final PerClientRandomNonceGenerator INST = new PerClientRandomNonceGenerator();
 
-  private final Random rdm = new Random();
   private final long clientId;
 
   private PerClientRandomNonceGenerator() {
     byte[] clientIdBase = ClientIdGenerator.generateClientId();
-    this.clientId = (((long) Arrays.hashCode(clientIdBase)) << 32) + rdm.nextInt();
+    this.clientId = (((long) Arrays.hashCode(clientIdBase)) << 32) +
+      ThreadLocalRandom.current().nextInt();
   }
 
   @Override
@@ -50,7 +49,7 @@ public final class PerClientRandomNonceGenerator implements NonceGenerator {
   public long newNonce() {
     long result = HConstants.NO_NONCE;
     do {
-      result = rdm.nextLong();
+      result = ThreadLocalRandom.current().nextLong();
     } while (result == HConstants.NO_NONCE);
     return result;
   }

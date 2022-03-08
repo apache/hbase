@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
-
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -29,12 +28,12 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -56,7 +55,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
-
 
 /**
  * Testcase for HBASE-26679, here we introduce a separate test class and not put the testcase in
@@ -191,7 +189,7 @@ public class TestFanOutOneBlockAsyncDFSOutputHang extends AsyncFSTestBase {
       });
 
       byte[] b = new byte[10];
-      ThreadLocalRandom.current().nextBytes(b);
+      Bytes.random(b);
       OUT.write(b, 0, b.length);
       CompletableFuture<Long> future = OUT.flush(false);
       /**

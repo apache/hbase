@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -87,8 +86,6 @@ public class TestRecoveredEditsReplayAndAbort {
   public static Configuration CONF ;
   private static FileSystem FILESYSTEM;
   private HRegion region = null;
-
-  private final Random random = new Random();
 
   @Before
   public void setup() throws IOException {
@@ -163,7 +160,7 @@ public class TestRecoveredEditsReplayAndAbort {
           WALEdit edit = new WALEdit();
           // 200KB kv
           byte[] value = new byte[200 * 1024];
-          random.nextBytes(value);
+          Bytes.random(value);
           edit.add(
               new KeyValue(row, fam1, Bytes.toBytes(j), time, KeyValue.Type.Put,
                   value));

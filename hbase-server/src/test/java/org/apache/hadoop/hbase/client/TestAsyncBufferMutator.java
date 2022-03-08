@@ -32,7 +32,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -47,7 +46,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 
@@ -80,7 +78,7 @@ public class TestAsyncBufferMutator {
     TEST_UTIL.createTable(TABLE_NAME, CF);
     TEST_UTIL.createMultiRegionTable(MULTI_REGION_TABLE_NAME, CF);
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    ThreadLocalRandom.current().nextBytes(VALUE);
+    Bytes.random(VALUE);
   }
 
   @AfterClass
