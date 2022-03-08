@@ -23,9 +23,9 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -189,10 +189,7 @@ public void cleanUpCluster() throws Exception {
     protected BufferedMutator mutator;
     protected Configuration conf;
     protected int numBackReferencesPerRow;
-
     protected String shortTaskId;
-
-    protected Random rand = new Random();
     protected Counter rowsWritten, refsWritten;
 
     @Override
@@ -229,8 +226,8 @@ public void cleanUpCluster() throws Exception {
 
       String suffix = "/" + shortTaskId;
       byte[] row = Bytes.add(new byte[8], Bytes.toBytes(suffix));
-
       int BLOCK_SIZE = (int)(recordsToWrite / 100);
+      Random rand = ThreadLocalRandom.current();
 
       for (long i = 0; i < recordsToWrite;) {
         long blockStart = i;

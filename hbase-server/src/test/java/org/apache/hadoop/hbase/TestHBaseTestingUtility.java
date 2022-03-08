@@ -428,7 +428,7 @@ public class TestHBaseTestingUtility {
     when(portChecker.available(anyInt())).thenReturn(true);
 
     HBaseTestingUtility.PortAllocator portAllocator =
-      new HBaseTestingUtility.PortAllocator(random, portChecker);
+      new HBaseTestingUtility.PortAllocator(portChecker);
 
     int port1 = portAllocator.randomFreePort();
     int port2 = portAllocator.randomFreePort();

@@ -23,10 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -258,7 +256,8 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
           return null;
         }
         ArrayList<String> namespaceList = new ArrayList<>(namespaceMap.keySet());
-        String randomKey = namespaceList.get(RandomUtils.nextInt(0, namespaceList.size()));
+        String randomKey = namespaceList.get(ThreadLocalRandom.current()
+          .nextInt(namespaceList.size()));
         NamespaceDescriptor randomNsd = namespaceMap.get(randomKey);
         // remove from namespaceMap
         namespaceMap.remove(randomKey);
@@ -307,12 +306,12 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
     private NamespaceDescriptor createNamespaceDesc() {
       String namespaceName = "itnamespace" + String.format("%010d",
-        RandomUtils.nextInt());
+        ThreadLocalRandom.current().nextInt());
       NamespaceDescriptor nsd = NamespaceDescriptor.create(namespaceName).build();
 
       nsd.setConfiguration(
         nsTestConfigKey,
-        String.format("%010d", RandomUtils.nextInt()));
+        String.format("%010d", ThreadLocalRandom.current().nextInt()));
       return nsd;
     }
   }
@@ -332,7 +331,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         NamespaceDescriptor modifiedNsd = NamespaceDescriptor.create(namespaceName).build();
         String nsValueNew;
         do {
-          nsValueNew = String.format("%010d", RandomUtils.nextInt());
+          nsValueNew = String.format("%010d", ThreadLocalRandom.current().nextInt());
         } while (selected.getConfigurationValue(nsTestConfigKey).equals(nsValueNew));
         modifiedNsd.setConfiguration(nsTestConfigKey, nsValueNew);
         admin.modifyNamespace(modifiedNsd);
@@ -398,8 +397,8 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
           return null;
         }
         ArrayList<TableName> tableList = new ArrayList<>(tableMap.keySet());
-        TableName randomKey = tableList.get(RandomUtils.nextInt(0, tableList.size()));
-        TableDescriptor randomTd = tableMap.remove(randomKey);
+        TableName key = tableList.get(ThreadLocalRandom.current().nextInt(tableList.size()));
+        TableDescriptor randomTd = tableMap.remove(key);
         return randomTd;
       }
     }
@@ -437,8 +436,9 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     }
 
     private TableDescriptor createTableDesc() {
-      String tableName = String.format("ittable-%010d", RandomUtils.nextInt());
-      String familyName = "cf-" + Math.abs(RandomUtils.nextInt());
+      String tableName = String.format("ittable-%010d",
+        ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
+      String familyName = "cf-" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
       return TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
           .setColumnFamily(ColumnFamilyDescriptorBuilder.of(familyName))
           .build();
@@ -582,8 +582,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         LOG.info("No column families in table: " + td);
         return null;
       }
-      ColumnFamilyDescriptor randomCfd = families[RandomUtils.nextInt(0, families.length)];
-      return randomCfd;
+      return families[ThreadLocalRandom.current().nextInt(families.length)];
     }
   }
 
@@ -600,7 +599,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
       try {
         ColumnFamilyDescriptor cfd = createFamilyDesc();
         if (selected.hasColumnFamily(cfd.getName())){
-          LOG.info(new String(cfd.getName()) + " already exists in table "
+          LOG.info(Bytes.toString(cfd.getName()) + " already exists in table "
               + selected.getTableName());
           return;
         }
@@ -625,7 +624,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     }
 
     private ColumnFamilyDescriptor createFamilyDesc() {
-      String familyName = String.format("cf-%010d", RandomUtils.nextInt());
+      String familyName = String.format("cf-%010d", ThreadLocalRandom.current().nextInt());
       return ColumnFamilyDescriptorBuilder.of(familyName);
     }
   }
@@ -644,7 +643,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
       }
 
       Admin admin = connection.getAdmin();
-      int versions = RandomUtils.nextInt(0, 10) + 3;
+      int versions = ThreadLocalRandom.current().nextInt(10) + 3;
       try {
         TableName tableName = selected.getTableName();
         LOG.info("Altering versions of column family: " + columnDesc + " to: " + versions +
@@ -700,7 +699,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         // possible DataBlockEncoding ids
         DataBlockEncoding[] possibleIds = {DataBlockEncoding.NONE, DataBlockEncoding.PREFIX,
                 DataBlockEncoding.DIFF, DataBlockEncoding.FAST_DIFF, DataBlockEncoding.ROW_INDEX_V1};
-        short id = possibleIds[RandomUtils.nextInt(0, possibleIds.length)].getId();
+        short id = possibleIds[ThreadLocalRandom.current().nextInt(possibleIds.length)].getId();
         LOG.info("Altering encoding of column family: " + columnDesc + " to: " + id +
             " in table: " + tableName);
 
@@ -788,17 +787,18 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         int average_rows = 1;
         int numRows = average_rows * numRegions;
         LOG.info("Adding " + numRows + " rows to table: " + selected);
+        byte[] value = new byte[10];
         for (int i = 0; i < numRows; i++){
           // nextInt(Integer.MAX_VALUE)) to return positive numbers only
           byte[] rowKey = Bytes.toBytes(
-              "row-" + String.format("%010d", RandomUtils.nextInt()));
+              "row-" + String.format("%010d", ThreadLocalRandom.current().nextInt()));
           ColumnFamilyDescriptor cfd = selectFamily(selected);
           if (cfd == null){
             return;
           }
           byte[] family = cfd.getName();
-          byte[] qualifier = Bytes.toBytes("col-" + RandomUtils.nextInt() % 10);
-          byte[] value = Bytes.toBytes("val-" + RandomStringUtils.randomAlphanumeric(10));
+          byte[] qualifier = Bytes.toBytes("col-" + ThreadLocalRandom.current().nextInt(10));
+          Bytes.random(value);
           Put put = new Put(rowKey);
           put.addColumn(family, qualifier, value);
           table.put(put);
@@ -842,7 +842,8 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     public void run() {
       while (running.get()) {
         // select random action
-        ACTION selectedAction = ACTION.values()[RandomUtils.nextInt() % ACTION.values().length];
+        ACTION selectedAction =
+          ACTION.values()[ThreadLocalRandom.current().nextInt(ACTION.values().length)];
         this.action = selectedAction;
         LOG.info("Performing Action: " + selectedAction);
 
@@ -875,7 +876,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
             break;
           case DELETE_TABLE:
             // reduce probability of deleting table to 20%
-            if (RandomUtils.nextInt(0, 100) < 20) {
+            if (ThreadLocalRandom.current().nextInt(100) < 20) {
               new DeleteTableAction().perform();
             }
             break;
@@ -884,7 +885,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
             break;
           case DELETE_COLUMNFAMILY:
             // reduce probability of deleting column family to 20%
-            if (RandomUtils.nextInt(0, 100) < 20) {
+            if (ThreadLocalRandom.current().nextInt(100) < 20) {
               new DeleteColumnFamilyAction().perform();
             }
             break;

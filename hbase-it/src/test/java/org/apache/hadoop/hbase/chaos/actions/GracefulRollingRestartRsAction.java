@@ -21,7 +21,8 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.commons.lang3.RandomUtils;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.RegionMover;
 import org.apache.hadoop.util.Shell;
@@ -47,10 +48,9 @@ public class GracefulRollingRestartRsAction extends RestartActionBaseAction {
   public void perform() throws Exception {
     getLogger().info("Performing action: Rolling restarting non-master region servers");
     List<ServerName> selectedServers = selectServers();
-
     getLogger().info("Disabling balancer to make unloading possible");
     setBalancer(false, true);
-
+    Random rand = ThreadLocalRandom.current();
     for (ServerName server : selectedServers) {
       String rsName = server.getAddress().toString();
       try (RegionMover rm =
@@ -64,7 +64,7 @@ public class GracefulRollingRestartRsAction extends RestartActionBaseAction {
       } catch (Shell.ExitCodeException e) {
         getLogger().info("Problem restarting but presume successful; code={}", e.getExitCode(), e);
       }
-      sleep(RandomUtils.nextInt(0, (int)sleepTime));
+      sleep(rand.nextInt((int)sleepTime));
     }
     getLogger().info("Enabling balancer");
     setBalancer(true, true);

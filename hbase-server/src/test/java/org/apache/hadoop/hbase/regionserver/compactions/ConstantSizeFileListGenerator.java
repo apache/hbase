@@ -31,10 +31,6 @@ class ConstantSizeFileListGenerator extends StoreFileListGenerator {
   /** How many mb's mock storefiles should be. */
   private static final int FILESIZE = 5;
 
-  ConstantSizeFileListGenerator() {
-    super(ConstantSizeFileListGenerator.class);
-  }
-
   @Override
   public final Iterator<List<HStoreFile>> iterator() {
     return new Iterator<List<HStoreFile>>() {
@@ -61,4 +57,5 @@ class ConstantSizeFileListGenerator extends StoreFileListGenerator {
       }
     };
   }
+
 }

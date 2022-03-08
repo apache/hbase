@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
-
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -49,7 +48,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
-
 
 /**
  * Testcase for HBASE-26679, here we introduce a separate test class and not put the testcase in

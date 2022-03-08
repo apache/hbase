@@ -26,8 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SplitAllRegionOfTableAction extends Action {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(SplitAllRegionOfTableAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SplitAllRegionOfTableAction.class);
   private static final int DEFAULT_MAX_SPLITS = 3;
   private static final String MAX_SPLIT_KEY = "hbase.chaosmonkey.action.maxFullTableSplits";
 
@@ -38,7 +37,6 @@ public class SplitAllRegionOfTableAction extends Action {
   public SplitAllRegionOfTableAction(TableName tableName) {
     this.tableName = tableName;
   }
-
 
   public void init(ActionContext context) throws IOException {
     super.init(context);
@@ -57,8 +55,6 @@ public class SplitAllRegionOfTableAction extends Action {
     if (context.isStopping()) {
       return;
     }
-
-
     // Don't always split. This should allow splitting of a full table later in the run
     if (ThreadLocalRandom.current().nextDouble()
         < (((double) splits) / ((double) maxFullTableSplits)) / ((double) 2)) {

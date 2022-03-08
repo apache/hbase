@@ -20,13 +20,10 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 
 class SemiConstantSizeFileListGenerator extends StoreFileListGenerator {
-  SemiConstantSizeFileListGenerator() {
-    super(SemiConstantSizeFileListGenerator.class);
-  }
 
   @Override
   public Iterator<List<HStoreFile>> iterator() {
@@ -43,7 +40,7 @@ class SemiConstantSizeFileListGenerator extends StoreFileListGenerator {
         count += 1;
         ArrayList<HStoreFile> files = new ArrayList<>(NUM_FILES_GEN);
         for (int i = 0; i < NUM_FILES_GEN; i++) {
-          files.add(createMockStoreFile(random.nextInt(5) + 30));
+          files.add(createMockStoreFile(ThreadLocalRandom.current().nextInt(5) + 30));
         }
         return files;
       }
@@ -54,4 +51,5 @@ class SemiConstantSizeFileListGenerator extends StoreFileListGenerator {
       }
     };
   }
+
 }

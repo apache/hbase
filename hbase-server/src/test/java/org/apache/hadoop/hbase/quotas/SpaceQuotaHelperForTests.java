@@ -26,7 +26,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -513,14 +512,13 @@ public class SpaceQuotaHelperForTests {
       long bytesToWrite = sizeInBytes;
       long rowKeyId = 0L;
       final StringBuilder sb = new StringBuilder();
-      final Random r = new Random();
       while (bytesToWrite > 0L) {
         sb.setLength(0);
         sb.append(Long.toString(rowKeyId));
         // Use the reverse counter as the rowKey to get even spread across all regions
         Put p = new Put(Bytes.toBytes(sb.reverse().toString()));
         byte[] value = new byte[SIZE_PER_VALUE];
-        r.nextBytes(value);
+        Bytes.random(value);
         p.addColumn(Bytes.toBytes(F1), qual, value);
         updates.add(p);
 

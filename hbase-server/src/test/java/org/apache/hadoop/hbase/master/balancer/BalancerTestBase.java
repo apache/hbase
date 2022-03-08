@@ -440,10 +440,9 @@ public class BalancerTestBase {
   protected List<RegionInfo> createRegions(int numRegions, TableName tableName) {
     List<RegionInfo> regions = new ArrayList<>(numRegions);
     byte[] start = new byte[16];
+    Bytes.random(start);
     byte[] end = new byte[16];
-    Random rand = ThreadLocalRandom.current();
-    rand.nextBytes(start);
-    rand.nextBytes(end);
+    Bytes.random(end);
     for (int i = 0; i < numRegions; i++) {
       Bytes.putInt(start, 0, numRegions << 1);
       Bytes.putInt(end, 0, (numRegions << 1) + 1);
@@ -460,10 +459,9 @@ public class BalancerTestBase {
   protected List<RegionInfo> randomRegions(int numRegions, int numTables) {
     List<RegionInfo> regions = new ArrayList<>(numRegions);
     byte[] start = new byte[16];
+    Bytes.random(start);
     byte[] end = new byte[16];
-    Random rand = ThreadLocalRandom.current();
-    rand.nextBytes(start);
-    rand.nextBytes(end);
+    Bytes.random(end);
     for (int i = 0; i < numRegions; i++) {
       if (!regionQueue.isEmpty()) {
         regions.add(regionQueue.poll());
@@ -471,8 +469,8 @@ public class BalancerTestBase {
       }
       Bytes.putInt(start, 0, numRegions << 1);
       Bytes.putInt(end, 0, (numRegions << 1) + 1);
-      TableName tableName =
-          TableName.valueOf("table" + (numTables > 0 ? rand.nextInt(numTables) : i));
+      TableName tableName = TableName.valueOf("table" +
+        (numTables > 0 ? ThreadLocalRandom.current().nextInt(numTables) : i));
       RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
           .setStartKey(start)
           .setEndKey(end)
@@ -487,15 +485,13 @@ public class BalancerTestBase {
   protected List<RegionInfo> uniformRegions(int numRegions) {
     List<RegionInfo> regions = new ArrayList<>(numRegions);
     byte[] start = new byte[16];
+    Bytes.random(start);
     byte[] end = new byte[16];
-    Random rand = ThreadLocalRandom.current();
-    rand.nextBytes(start);
-    rand.nextBytes(end);
+    Bytes.random(end);
     for (int i = 0; i < numRegions; i++) {
       Bytes.putInt(start, 0, numRegions << 1);
       Bytes.putInt(end, 0, (numRegions << 1) + 1);
-      TableName tableName =
-              TableName.valueOf("table" + i);
+      TableName tableName = TableName.valueOf("table" + i);
       RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
           .setStartKey(start)
           .setEndKey(end)

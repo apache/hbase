@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -80,7 +81,6 @@ public class CreateRandomStoreFile {
   private Options options = new Options();
 
   private int keyPrefixLen, keyLen, rowLen, cfLen, valueLen;
-  private Random rand;
 
   /**
    * Runs the tools.
@@ -207,13 +207,12 @@ public class CreateRandomStoreFile {
             .withFileContext(meta)
             .build();
 
-    rand = new Random();
     LOG.info("Writing " + numKV + " key/value pairs");
     for (long i = 0; i < numKV; ++i) {
       sfw.append(generateKeyValue(i));
     }
 
-    int numMetaBlocks = rand.nextInt(10) + 1;
+    int numMetaBlocks = ThreadLocalRandom.current().nextInt(10) + 1;
     LOG.info("Writing " + numMetaBlocks + " meta blocks");
     for (int metaI = 0; metaI < numMetaBlocks; ++metaI) {
       sfw.getHFileWriter().appendMetaBlock(generateString(),
@@ -246,13 +245,13 @@ public class CreateRandomStoreFile {
   }
 
   private int nextInRange(int range) {
-    return rand.nextInt(2 * range + 1) - range;
+    return ThreadLocalRandom.current().nextInt(2 * range + 1) - range;
   }
 
   public KeyValue generateKeyValue(long i) {
     byte[] k = generateKey(i);
     byte[] v = generateValue();
-
+    Random rand = ThreadLocalRandom.current();
     return new KeyValue(
         k, 0, rowLen,
         k, rowLen, cfLen,
@@ -279,6 +278,7 @@ public class CreateRandomStoreFile {
   }
 
   private String generateString() {
+    Random rand = ThreadLocalRandom.current();
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < rand.nextInt(10); ++i) {
       sb.append((char) ('A' + rand.nextInt(26)));
@@ -287,6 +287,7 @@ public class CreateRandomStoreFile {
   }
 
   private byte[] generateKey(long i) {
+    Random rand = ThreadLocalRandom.current();
     byte[] k = new byte[Math.max(keyPrefixLen, keyLen
         + nextInRange(LEN_VARIATION))];
     for (int pos = keyPrefixLen - 1; pos >= 0; --pos) {
@@ -300,6 +301,7 @@ public class CreateRandomStoreFile {
   }
 
   private byte[] generateValue() {
+    Random rand = ThreadLocalRandom.current();
     byte[] v = new byte[Math.max(1, valueLen + nextInRange(LEN_VARIATION))];
     for (int i = 0; i < v.length; ++i) {
       v[i] = (byte) rand.nextInt(256);

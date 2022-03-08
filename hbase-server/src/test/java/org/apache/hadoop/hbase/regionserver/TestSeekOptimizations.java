@@ -116,7 +116,6 @@ public class TestSeekOptimizations {
   private HRegion region;
   private Put put;
   private Delete del;
-  private Random rand;
   private Set<Long> putTimestamps = new HashSet<>();
   private Set<Long> delTimestamps = new HashSet<>();
   private List<Cell> expectedKVs = new ArrayList<>();
@@ -127,6 +126,7 @@ public class TestSeekOptimizations {
   private long totalSeekDiligent, totalSeekLazy;
 
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private static final Random RNG = new Random(); // This test depends on Random#setSeed
 
   @Parameters
   public static final Collection<Object[]> parameters() {
@@ -141,7 +141,7 @@ public class TestSeekOptimizations {
 
   @Before
   public void setUp() {
-    rand = new Random(91238123L);
+    RNG.setSeed(91238123L);
     expectedKVs.clear();
     TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
   }
@@ -348,7 +348,7 @@ public class TestSeekOptimizations {
   }
 
   private long randLong(long n) {
-    long l = rand.nextLong();
+    long l = RNG.nextLong();
     if (l == Long.MIN_VALUE)
       l = Long.MAX_VALUE;
     return Math.abs(l) % n;
@@ -411,7 +411,7 @@ public class TestSeekOptimizations {
         int tsRemaining = putTimestampList.length;
         del = new Delete(rowBytes);
         for (long ts : putTimestampList) {
-          if (rand.nextInt(tsRemaining) < numToDel) {
+          if (RNG.nextInt(tsRemaining) < numToDel) {
             delAtTimestamp(qual, ts);
             putTimestamps.remove(ts);
             --numToDel;

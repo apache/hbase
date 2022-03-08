@@ -23,9 +23,7 @@ import static org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader.WAL_TRA
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.Key;
-import java.security.SecureRandom;
 import java.util.concurrent.atomic.AtomicLong;
-import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -109,11 +107,8 @@ public abstract class AbstractProtobufLogWriter {
         throw new RuntimeException("Cipher '" + cipherName + "' is not available");
       }
 
-      // Generate an encryption key for this WAL
-      SecureRandom rng = new SecureRandom();
-      byte[] keyBytes = new byte[cipher.getKeyLength()];
-      rng.nextBytes(keyBytes);
-      Key key = new SecretKeySpec(keyBytes, cipher.getName());
+      // Generate a random encryption key for this WAL
+      Key key = cipher.getRandomKey();
       builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(EncryptionUtil.wrapKey(conf,
           conf.get(HConstants.CRYPTO_WAL_KEY_NAME_CONF_KEY,
               conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,

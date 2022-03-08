@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import java.io.IOException;
-import java.util.Random;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -196,7 +195,6 @@ public class TestParallelPut {
     private final HRegion region;
     private final int threadNumber;
     private final int numOps;
-    private final Random rand = new Random();
     byte [] rowkey = null;
 
     public Putter(HRegion region, int threadNumber, int numOps) {
@@ -215,7 +213,7 @@ public class TestParallelPut {
       // iterate for the specified number of operations
       for (int i=0; i<numOps; i++) {
         // generate random bytes
-        rand.nextBytes(value);
+        Bytes.random(value);
 
         // put the randombytes and verify that we can read it. This is one
         // way of ensuring that rwcc manipulation in HRegion.put() is fine.
