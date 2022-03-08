@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -379,7 +378,7 @@ public class TestMobStoreCompaction {
 
   private byte[] makeDummyData(int size) {
     byte[] dummyData = new byte[size];
-    new Random().nextBytes(dummyData);
+    Bytes.random(dummyData);
     return dummyData;
   }
 

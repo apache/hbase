@@ -34,13 +34,13 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -54,7 +54,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
@@ -69,13 +68,9 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     HBaseClassTestRule.forClass(TestFanOutOneBlockAsyncDFSOutput.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFanOutOneBlockAsyncDFSOutput.class);
-
   private static DistributedFileSystem FS;
-
   private static EventLoopGroup EVENT_LOOP_GROUP;
-
   private static Class<? extends Channel> CHANNEL_CLASS;
-
   private static int READ_TIMEOUT_MS = 2000;
 
   @Rule
@@ -98,14 +93,16 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     shutdownMiniDFSCluster();
   }
 
+  private static final Random RNG = new Random(); // This test depends on Random#setSeed
+
   static void writeAndVerify(FileSystem fs, Path f, AsyncFSOutput out)
     throws IOException, InterruptedException, ExecutionException {
     List<CompletableFuture<Long>> futures = new ArrayList<>();
     byte[] b = new byte[10];
-    Random rand = new Random(12345);
     // test pipelined flush
+    RNG.setSeed(12345);
     for (int i = 0; i < 10; i++) {
-      rand.nextBytes(b);
+      RNG.nextBytes(b);
       out.write(b);
       futures.add(out.flush(false));
       futures.add(out.flush(false));
@@ -117,11 +114,11 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     out.close();
     assertEquals(b.length * 10, fs.getFileStatus(f).getLen());
     byte[] actual = new byte[b.length];
-    rand.setSeed(12345);
+    RNG.setSeed(12345);
     try (FSDataInputStream in = fs.open(f)) {
       for (int i = 0; i < 10; i++) {
         in.readFully(actual);
-        rand.nextBytes(b);
+        RNG.nextBytes(b);
         assertArrayEquals(b, actual);
       }
       assertEquals(-1, in.read());
@@ -144,7 +141,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
       false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
     byte[] b = new byte[10];
-    ThreadLocalRandom.current().nextBytes(b);
+    Bytes.random(b);
     out.write(b, 0, b.length);
     out.flush(false).get();
     // restart one datanode which causes one connection broken
@@ -224,7 +221,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
       false, (short) 3, 1024 * 1024 * 1024, eventLoop, CHANNEL_CLASS);
     byte[] b = new byte[50 * 1024 * 1024];
-    ThreadLocalRandom.current().nextBytes(b);
+    Bytes.random(b);
     out.write(b);
     out.flush(false);
     assertEquals(b.length, out.flush(false).get().longValue());

@@ -30,13 +30,12 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.codec.Codec;
@@ -88,7 +87,6 @@ public class IntegrationTestRpcClient {
   }
 
   class Cluster {
-    Random random = new Random();
     ReadWriteLock lock = new ReentrantReadWriteLock();
     HashMap<InetSocketAddress, RpcServer> rpcServers = new HashMap<>();
     List<RpcServer> serverList = new ArrayList<>();
@@ -134,7 +132,7 @@ public class IntegrationTestRpcClient {
           return;
         }
         int size = rpcServers.size();
-        int rand = random.nextInt(size);
+        int rand = ThreadLocalRandom.current().nextInt(size);
         rpcServer = serverList.remove(rand);
         InetSocketAddress address = rpcServer.getListenerAddress();
         if (address == null) {
@@ -176,7 +174,7 @@ public class IntegrationTestRpcClient {
       lock.readLock().lock();
       try {
         int size = rpcServers.size();
-        int rand = random.nextInt(size);
+        int rand = ThreadLocalRandom.current().nextInt(size);
         return serverList.get(rand);
       } finally {
         lock.readLock().unlock();
@@ -186,7 +184,6 @@ public class IntegrationTestRpcClient {
 
   static class MiniChaosMonkey extends Thread {
     AtomicBoolean running = new  AtomicBoolean(true);
-    Random random = new Random();
     AtomicReference<Exception> exception = new AtomicReference<>(null);
     Cluster cluster;
 
@@ -197,7 +194,7 @@ public class IntegrationTestRpcClient {
     @Override
     public void run() {
       while (running.get()) {
-        if (random.nextBoolean()) {
+        if (ThreadLocalRandom.current().nextBoolean()) {
           //start a server
           try {
             cluster.startServer();
@@ -238,7 +235,6 @@ public class IntegrationTestRpcClient {
     Cluster cluster;
     String id;
     long numCalls = 0;
-    Random random = new Random();
 
     public SimpleClient(Cluster cluster, AbstractRpcClient<?> rpcClient, String id) {
       this.cluster = cluster;
@@ -250,7 +246,7 @@ public class IntegrationTestRpcClient {
     @Override
     public void run() {
       while (running.get()) {
-        boolean isBigPayload = random.nextBoolean();
+        boolean isBigPayload = ThreadLocalRandom.current().nextBoolean();
         String message = isBigPayload ? BIG_PAYLOAD : id + numCalls;
         EchoRequestProto param = EchoRequestProto.newBuilder().setMessage(message).build();
         EchoResponseProto ret;

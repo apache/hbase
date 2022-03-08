@@ -21,6 +21,8 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -71,7 +73,7 @@ public class TestFastLongHistogram {
     // assumes the uniform distribution
     FastLongHistogram hist = new FastLongHistogram(100, 0, 100);
 
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
 
     for (int n = 0; n < 10; n++) {
       for (int i = 0; i < 900; i++) {

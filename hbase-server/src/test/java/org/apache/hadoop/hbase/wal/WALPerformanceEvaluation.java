@@ -33,6 +33,7 @@ import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
@@ -167,7 +168,6 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     public void run() {
       byte[] key = new byte[keySize];
       byte[] value = new byte[valueSize];
-      Random rand = new Random(Thread.currentThread().getId());
       WAL wal = region.getWAL();
 
       try (TraceScope threadScope = TraceUtil.createTrace("WALPerfEval." + Thread.currentThread().getName())) {
@@ -177,7 +177,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
           assert Tracer.getCurrentSpan() == threadScope.getSpan() : "Span leak detected.";
           try (TraceScope loopScope = TraceUtil.createTrace("runLoopIter" + i)) {
             long now = System.nanoTime();
-            Put put = setupPut(rand, key, value, numFamilies);
+            Put put = setupPut(ThreadLocalRandom.current(), key, value, numFamilies);
             WALEdit walEdit = new WALEdit();
             walEdit.add(put.getFamilyCellMap());
             RegionInfo hri = region.getRegionInfo();

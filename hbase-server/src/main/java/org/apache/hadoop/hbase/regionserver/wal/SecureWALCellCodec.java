@@ -22,7 +22,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.security.SecureRandom;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -151,7 +150,7 @@ public class SecureWALCellCodec extends WALCellCodec {
       @Override
       protected byte[] initialValue() {
         byte[] iv = new byte[encryptor.getIvLength()];
-        new SecureRandom().nextBytes(iv);
+        Bytes.secureRandom(iv);
         return iv;
       }
     };

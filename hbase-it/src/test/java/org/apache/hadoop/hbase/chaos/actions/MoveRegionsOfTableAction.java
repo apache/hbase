@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import org.apache.commons.lang3.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -93,9 +93,10 @@ public class MoveRegionsOfTableAction extends Action {
     return serversList.toArray(new ServerName[0]);
   }
 
-  static void moveRegion(Admin admin, ServerName [] servers, RegionInfo regionInfo, Logger logger) {
+  static void moveRegion(Admin admin, ServerName [] servers, RegionInfo regionInfo,
+      Logger logger) {
     try {
-      ServerName destServerName = servers[RandomUtils.nextInt(0, servers.length)];
+      ServerName destServerName = servers[ThreadLocalRandom.current().nextInt(servers.length)];
       logger.debug("Moving {} to {}", regionInfo.getRegionNameAsString(), destServerName);
       admin.move(regionInfo.getEncodedNameAsBytes(), destServerName);
     } catch (Exception ex) {

@@ -19,9 +19,8 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.Random;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -200,11 +199,10 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   private class AddProcsWorker extends Thread {
     @Override
     public void run() {
-      final Random rand = new Random(System.currentTimeMillis());
       long procId = procIds.incrementAndGet();
       int index;
       while (procId <= numOps) {
-        index = rand.nextInt(ops.length);
+        index = ThreadLocalRandom.current().nextInt(ops.length);
         procedureScheduler.addBack(ops[index].newProcedure(procId));
         procId = procIds.incrementAndGet();
       }

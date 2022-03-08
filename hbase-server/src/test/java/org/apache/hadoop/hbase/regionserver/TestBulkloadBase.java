@@ -28,8 +28,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -53,13 +51,11 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
-
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
@@ -69,7 +65,6 @@ public class TestBulkloadBase {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected final WAL log = mock(WAL.class);
   protected final Configuration conf = HBaseConfiguration.create();
-  private final Random random = new Random();
   private final byte[] randomBytes = new byte[100];
   protected final byte[] family1 = Bytes.toBytes("family1");
   protected final byte[] family2 = Bytes.toBytes("family2");
@@ -80,7 +75,7 @@ public class TestBulkloadBase {
 
   @Before
   public void before() throws IOException {
-    random.nextBytes(randomBytes);
+    Bytes.random(randomBytes);
   }
 
   protected Pair<byte[], String> withMissingHFileForFamily(byte[] family) {

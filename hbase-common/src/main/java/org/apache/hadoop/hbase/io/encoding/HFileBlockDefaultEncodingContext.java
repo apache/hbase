@@ -17,11 +17,11 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.NONE;
+
 import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.SecureRandom;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -100,7 +100,7 @@ public class HFileBlockDefaultEncodingContext implements HFileBlockEncodingConte
     if (cryptoContext != Encryption.Context.NONE) {
       cryptoByteStream = new ByteArrayOutputStream();
       iv = new byte[cryptoContext.getCipher().getIvLength()];
-      new SecureRandom().nextBytes(iv);
+      Bytes.secureRandom(iv);
     }
 
     dummyHeader = Preconditions.checkNotNull(headerBytes,

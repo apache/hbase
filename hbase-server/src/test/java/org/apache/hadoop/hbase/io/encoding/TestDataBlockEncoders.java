@@ -30,6 +30,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
@@ -82,9 +84,7 @@ public class TestDataBlockEncoders {
       + DataBlockEncoding.ID_SIZE;
   static final byte[] HFILEBLOCK_DUMMY_HEADER = new byte[HConstants.HFILEBLOCK_HEADER_SIZE];
 
-  private RedundantKVGenerator generator = new RedundantKVGenerator();
-  private Random randomizer = new Random(42L);
-
+  private final RedundantKVGenerator generator = new RedundantKVGenerator();
   private final boolean includesMemstoreTS;
   private final boolean includesTags;
   private final boolean useOffheapData;
@@ -214,13 +214,14 @@ public class TestDataBlockEncoders {
     LOG.info("Testing it!");
     // test it!
     // try a few random seeks
+    Random rand = ThreadLocalRandom.current();
     for (boolean seekBefore : new boolean[] { false, true }) {
       for (int i = 0; i < NUM_RANDOM_SEEKS; ++i) {
         int keyValueId;
         if (!seekBefore) {
-          keyValueId = randomizer.nextInt(sampleKv.size());
+          keyValueId = rand.nextInt(sampleKv.size());
         } else {
-          keyValueId = randomizer.nextInt(sampleKv.size() - 1) + 1;
+          keyValueId = rand.nextInt(sampleKv.size() - 1) + 1;
         }
 
         KeyValue keyValue = sampleKv.get(keyValueId);

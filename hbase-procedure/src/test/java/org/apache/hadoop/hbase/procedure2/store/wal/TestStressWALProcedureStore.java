@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -97,12 +98,12 @@ public class TestStressWALProcedureStore {
   public void testInsertUpdateDelete() throws Exception {
     final long LAST_PROC_ID = 19999;
     final Thread[] thread = new Thread[PROCEDURE_STORE_SLOTS];
-    final AtomicLong procCounter = new AtomicLong((long)Math.round(Math.random() * 100));
+    final Random rand = ThreadLocalRandom.current();
+    final AtomicLong procCounter = new AtomicLong(rand.nextInt(100));
     for (int i = 0; i < thread.length; ++i) {
       thread[i] = new Thread() {
         @Override
         public void run() {
-          Random rand = new Random();
           TestProcedure proc;
           do {
             // After HBASE-15579 there may be gap in the procId sequence, trying to simulate that.

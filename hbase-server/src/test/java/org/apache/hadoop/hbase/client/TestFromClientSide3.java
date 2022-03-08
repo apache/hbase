@@ -91,7 +91,6 @@ public class TestFromClientSide3 {
     = new HBaseTestingUtility();
   private static final int WAITTABLE_MILLIS = 10000;
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
-  private static Random random = new Random();
   private static int SLAVES = 3;
   private static final byte[] ROW = Bytes.toBytes("testRow");
   private static final byte[] ANOTHERROW = Bytes.toBytes("anotherrow");
@@ -143,9 +142,10 @@ public class TestFromClientSide3 {
   private void randomCFPuts(Table table, byte[] row, byte[] family, int nPuts)
       throws Exception {
     Put put = new Put(row);
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < nPuts; i++) {
-      byte[] qualifier = Bytes.toBytes(random.nextInt());
-      byte[] value = Bytes.toBytes(random.nextInt());
+      byte[] qualifier = Bytes.toBytes(rand.nextInt());
+      byte[] value = Bytes.toBytes(rand.nextInt());
       put.addColumn(family, qualifier, value);
     }
     table.put(put);
@@ -285,7 +285,7 @@ public class TestFromClientSide3 {
         ClusterConnection connection = (ClusterConnection) TEST_UTIL.getConnection();
 
         // Create 3 store files.
-        byte[] row = Bytes.toBytes(random.nextInt());
+        byte[] row = Bytes.toBytes(ThreadLocalRandom.current().nextInt());
         performMultiplePutAndFlush((HBaseAdmin) admin, table, row, FAMILY, 3, 100);
 
         try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {

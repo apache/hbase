@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -362,8 +363,7 @@ public class TestRegionReplicas {
       };
 
       Runnable flusherCompactor = new Runnable() {
-        Random random = new Random();
-        @Override
+        Random random = ThreadLocalRandom.current();
         public void run() {
           try {
             while (running.get()) {
@@ -382,10 +382,10 @@ public class TestRegionReplicas {
       };
 
       Runnable reader = new Runnable() {
-        Random random = new Random();
         @Override
         public void run() {
           try {
+            Random random = ThreadLocalRandom.current();
             while (running.get()) {
               // whether to do a close and open
               if (random.nextInt(10) == 0) {
