@@ -192,7 +192,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
     this.asyncOutputWrapper = new OutputStreamWrapper(output);
   }
 
-  private long write(Consumer<CompletableFuture<Long>> action) throws IOException {
+  private long writeWALMetadata(Consumer<CompletableFuture<Long>> action) throws IOException {
     CompletableFuture<Long> future = new CompletableFuture<>();
     action.accept(future);
     try {
@@ -209,7 +209,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   protected long writeMagicAndWALHeader(byte[] magic, WALHeader header) throws IOException {
-    return write(future -> {
+    return writeWALMetadata(future -> {
       output.write(magic);
       try {
         header.writeDelimitedTo(asyncOutputWrapper);
@@ -229,7 +229,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   protected long writeWALTrailerAndMagic(WALTrailer trailer, byte[] magic) throws IOException {
-    return write(future -> {
+    return writeWALMetadata(future -> {
       try {
         trailer.writeTo(asyncOutputWrapper);
       } catch (IOException e) {
