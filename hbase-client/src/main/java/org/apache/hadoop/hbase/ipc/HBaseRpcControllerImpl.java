@@ -262,4 +262,11 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
       action.run(false);
     }
   }
+
+  @Override public String toString() {
+    return "HBaseRpcControllerImpl{" + "callTimeout=" + callTimeout + ", done=" + done
+      + ", cancelled=" + cancelled + ", cancellationCbs=" + cancellationCbs + ", exception="
+      + exception + ", regionInfo=" + regionInfo + ", priority=" + priority + ", cellScanner="
+      + cellScanner + '}';
+  }
 }
