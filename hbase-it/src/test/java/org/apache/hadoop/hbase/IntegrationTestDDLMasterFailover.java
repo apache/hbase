@@ -260,7 +260,8 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
           return null;
         }
         ArrayList<String> namespaceList = new ArrayList<>(namespaceMap.keySet());
-        String randomKey = namespaceList.get(ThreadLocalRandom.current().nextInt(namespaceList.size()));
+        String randomKey = namespaceList.get(ThreadLocalRandom.current()
+          .nextInt(namespaceList.size()));
         NamespaceDescriptor randomNsd = namespaceMap.get(randomKey);
         // remove from namespaceMap
         namespaceMap.remove(randomKey);
@@ -439,8 +440,9 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     }
 
     private TableDescriptor createTableDesc() {
-      String tableName = String.format("ittable-%010d", ThreadLocalRandom.current().nextInt());
-      String familyName = "cf-" + Math.abs(ThreadLocalRandom.current().nextInt());
+      String tableName = String.format("ittable-%010d",
+        ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
+      String familyName = "cf-" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
       return TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
           .setColumnFamily(ColumnFamilyDescriptorBuilder.of(familyName))
           .build();
@@ -601,7 +603,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
       try {
         ColumnFamilyDescriptor cfd = createFamilyDesc();
         if (selected.hasColumnFamily(cfd.getName())){
-          LOG.info(new String(cfd.getName()) + " already exists in table "
+          LOG.info(Bytes.toString(cfd.getName()) + " already exists in table "
               + selected.getTableName());
           return;
         }
@@ -799,7 +801,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
             return;
           }
           byte[] family = cfd.getName();
-          byte[] qualifier = Bytes.toBytes("col-" + ThreadLocalRandom.current().nextInt() % 10);
+          byte[] qualifier = Bytes.toBytes("col-" + ThreadLocalRandom.current().nextInt(10));
           Bytes.random(value);
           Put put = new Put(rowKey);
           put.addColumn(family, qualifier, value);

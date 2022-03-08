@@ -1955,7 +1955,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     throws IOException {
     for (int i = 0; i < totalRows; i++) {
       byte[] row = new byte[rowSize];
-      Bytes.random(row);;
+      Bytes.random(row);
       Put put = new Put(row);
       put.addColumn(f, new byte[] { 0 }, new byte[] { 0 });
       t.put(put);

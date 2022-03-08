@@ -91,8 +91,8 @@ public final class PrefetchExecutor {
       long delay;
       if (prefetchDelayMillis > 0) {
         delay = (long)((prefetchDelayMillis * (1.0f - (prefetchDelayVariation/2))) +
-        (prefetchDelayMillis * (prefetchDelayVariation/2) *
-            ThreadLocalRandom.current().nextFloat()));
+          (prefetchDelayMillis * (prefetchDelayVariation/2) *
+          ThreadLocalRandom.current().nextFloat()));
       } else {
         delay = 0;
       }

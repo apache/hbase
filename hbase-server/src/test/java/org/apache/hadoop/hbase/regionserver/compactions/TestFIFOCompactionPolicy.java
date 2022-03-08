@@ -105,7 +105,7 @@ public class TestFIFOCompactionPolicy {
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 10; j++) {
         byte[] value = new byte[128 * 1024];
-        Bytes.random(value);;
+        Bytes.random(value);
         table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
       admin.flush(tableName);
