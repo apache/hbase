@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import java.util.Random;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -55,7 +54,6 @@ public class TestMobDataBlockEncoding {
   private static Admin admin;
   private static HColumnDescriptor hcd;
   private static HTableDescriptor desc;
-  private static Random random = new Random();
   private static long defaultThreshold = 10;
 
   @BeforeClass
@@ -91,7 +89,7 @@ public class TestMobDataBlockEncoding {
    */
   private static byte[] generateMobValue(int size) {
     byte[] mobVal = new byte[size];
-    random.nextBytes(mobVal);
+    Bytes.random(mobVal);
     return mobVal;
   }
 

@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -29,19 +28,13 @@ import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -51,17 +44,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.BindException;
-import java.net.ServerSocket;
-import java.util.Random;
-import java.util.UUID;
 
 /**
  * Tests for failedBulkLoad logic to make sure staged files are returned to their original location
@@ -74,15 +56,12 @@ public class TestSecureBulkloadListener {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSecureBulkloadListener.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestSecureBulkloadListener.class);
-
   @ClassRule
   public static TemporaryFolder testFolder = new TemporaryFolder();
   private Configuration conf;
   private MiniDFSCluster cluster;
   private HBaseTestingUtility htu;
   private DistributedFileSystem dfs;
-  private final Random random = new Random();
   private final byte[] randomBytes = new byte[100];
   private static final String host1 = "host1";
   private static final String host2 = "host2";
@@ -96,7 +75,7 @@ public class TestSecureBulkloadListener {
 
   @Before
   public void setUp() throws Exception {
-    random.nextBytes(randomBytes);
+    Bytes.random(randomBytes);
     htu = new HBaseTestingUtility();
     htu.getConfiguration().setInt("dfs.blocksize", 1024);// For the test with multiple blocks
     htu.getConfiguration().setInt("dfs.replication", 3);

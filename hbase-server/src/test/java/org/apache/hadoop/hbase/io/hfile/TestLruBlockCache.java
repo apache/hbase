@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -132,7 +133,7 @@ public class TestLruBlockCache {
 
     // Make sure eviction thread has entered run method
     while (!evictionThread.isEnteringRun()) {
-      Thread.sleep(1);
+      Thread.sleep(10);
     }
 
     // Add all the blocks
@@ -879,9 +880,9 @@ public class TestLruBlockCache {
 
   private CachedItem [] generateRandomBlocks(int numBlocks, long maxSize) {
     CachedItem [] blocks = new CachedItem[numBlocks];
-    Random r = new Random();
+    Random rand = ThreadLocalRandom.current();
     for(int i=0;i<numBlocks;i++) {
-      blocks[i] = new CachedItem("block" + i, r.nextInt((int)maxSize)+1);
+      blocks[i] = new CachedItem("block" + i, rand.nextInt((int)maxSize)+1);
     }
     return blocks;
   }

@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -137,7 +137,6 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
    * Thread that does random full-row writes into a table.
    */
   public static class AtomicityWriter extends RepeatingTestThread {
-    Random rand = new Random();
     byte data[] = new byte[10];
     byte[][] targetRows;
     byte[][] targetFamilies;
@@ -157,10 +156,9 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
     @Override
     public void doAnAction() throws Exception {
       // Pick a random row to write into
-      byte[] targetRow = targetRows[rand.nextInt(targetRows.length)];
+      byte[] targetRow = targetRows[ThreadLocalRandom.current().nextInt(targetRows.length)];
       Put p = new Put(targetRow);
-      rand.nextBytes(data);
-
+      Bytes.random(data);
       for (byte[] family : targetFamilies) {
         for (int i = 0; i < NUM_COLS_TO_CHECK; i++) {
           byte qualifier[] = Bytes.toBytes("col" + i);

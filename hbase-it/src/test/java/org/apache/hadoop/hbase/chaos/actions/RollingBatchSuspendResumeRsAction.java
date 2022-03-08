@@ -22,7 +22,8 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import org.apache.commons.lang3.RandomUtils;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.util.Threads;
@@ -66,10 +67,9 @@ public class RollingBatchSuspendResumeRsAction extends Action {
     getLogger().info("Performing action: Rolling batch restarting {}% of region servers",
       (int) (ratio * 100));
     List<ServerName> selectedServers = selectServers();
-
     Queue<ServerName> serversToBeSuspended = new LinkedList<>(selectedServers);
     Queue<ServerName> suspendedServers = new LinkedList<>();
-
+    Random rand = ThreadLocalRandom.current();
     // loop while there are servers to be suspended or suspended servers to be resumed
     while ((!serversToBeSuspended.isEmpty() || !suspendedServers.isEmpty()) && !context
         .isStopping()) {
@@ -84,7 +84,7 @@ public class RollingBatchSuspendResumeRsAction extends Action {
         action = SuspendOrResume.RESUME;
       } else {
         // do a coin toss
-        action = RandomUtils.nextBoolean() ? SuspendOrResume.SUSPEND : SuspendOrResume.RESUME;
+        action = rand.nextBoolean() ? SuspendOrResume.SUSPEND : SuspendOrResume.RESUME;
       }
 
       ServerName server;

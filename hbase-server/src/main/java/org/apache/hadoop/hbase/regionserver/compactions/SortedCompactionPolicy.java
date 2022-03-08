@@ -23,7 +23,6 @@ import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -34,6 +33,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 public abstract class SortedCompactionPolicy extends CompactionPolicy {
 
   private static final Logger LOG = LoggerFactory.getLogger(SortedCompactionPolicy.class);
+
+  private static final Random RNG = new Random();
 
   public SortedCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo) {
     super(conf, storeConfigInfo);
@@ -110,11 +111,6 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
       throws IOException;
 
   /**
-   * Used calculation jitter
-   */
-  private final Random random = new Random();
-
-  /**
    * @param filesToCompact
    * @return When to run next major compaction
    */
@@ -137,14 +133,12 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
     // deterministic jitter avoids a major compaction storm on restart
     OptionalInt seed = StoreUtils.getDeterministicRandomSeed(filesToCompact);
     if (seed.isPresent()) {
-      // Synchronized to ensure one user of random instance at a time.
-      double rnd;
-      synchronized (this) {
-        this.random.setSeed(seed.getAsInt());
-        rnd = this.random.nextDouble();
-      }
       long jitter = Math.round(period * jitterPct);
-      return period + jitter - Math.round(2L * jitter * rnd);
+      // Synchronized to ensure one user of random instance at a time.
+      synchronized (RNG) {
+        RNG.setSeed(seed.getAsInt());
+        return period + jitter - Math.round(2L * jitter * RNG.nextDouble());
+      }
     } else {
       return 0L;
     }

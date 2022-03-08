@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -78,7 +77,6 @@ public class TestMobStoreScanner {
   private static Admin admin;
   private static HColumnDescriptor hcd;
   private static HTableDescriptor desc;
-  private static Random random = new Random();
   private static long defaultThreshold = 10;
   private FileSystem fs;
   private Configuration conf;
@@ -122,7 +120,7 @@ public class TestMobStoreScanner {
    */
   private static byte[] generateMobValue(int size) {
     byte[] mobVal = new byte[size];
-    random.nextBytes(mobVal);
+    Bytes.random(mobVal);
     return mobVal;
   }
 

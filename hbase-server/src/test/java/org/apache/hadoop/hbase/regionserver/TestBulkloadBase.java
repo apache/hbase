@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
@@ -75,7 +74,6 @@ public class TestBulkloadBase {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected final WAL log = mock(WAL.class);
   protected final Configuration conf = HBaseConfiguration.create();
-  private final Random random = new Random();
   private final byte[] randomBytes = new byte[100];
   protected final byte[] family1 = Bytes.toBytes("family1");
   protected final byte[] family2 = Bytes.toBytes("family2");
@@ -98,7 +96,7 @@ public class TestBulkloadBase {
 
   @Before
   public void before() throws IOException {
-    random.nextBytes(randomBytes);
+    Bytes.random(randomBytes);
     if(useFileBasedSFT) {
       conf.set(StoreFileTrackerFactory.TRACKER_IMPL,
         "org.apache.hadoop.hbase.regionserver.storefiletracker.FileBasedStoreFileTracker");

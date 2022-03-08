@@ -26,8 +26,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -582,12 +582,12 @@ public class TestMasterReplication {
 
   @SuppressWarnings("resource")
   private void startMiniClusters(int numClusters) throws Exception {
-    Random random = new Random();
     utilities = new HBaseTestingUtility[numClusters];
     configurations = new Configuration[numClusters];
     for (int i = 0; i < numClusters; i++) {
       Configuration conf = new Configuration(baseConfiguration);
-      conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/" + i + random.nextInt());
+      conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/" + i +
+        ThreadLocalRandom.current().nextInt());
       HBaseTestingUtility utility = new HBaseTestingUtility(conf);
       if (i == 0) {
         utility.startMiniZKCluster();

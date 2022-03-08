@@ -32,6 +32,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
@@ -152,8 +154,7 @@ public abstract class TestMultiColumnScanner {
     // that column.
     Map<String, Long> lastDelTimeMap = new HashMap<>();
 
-    Random rand = new Random(29372937L);
-
+    Random rand = ThreadLocalRandom.current();
     for (int iFlush = 0; iFlush < NUM_FLUSHES; ++iFlush) {
       for (String qual : qualifiers) {
         // This is where we decide to include or not include this column into

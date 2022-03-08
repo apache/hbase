@@ -28,7 +28,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -97,7 +97,7 @@ public class TestEntityLocks {
     admin = getAdmin();
     lockReqArgCaptor = ArgumentCaptor.forClass(LockRequest.class);
     lockHeartbeatReqArgCaptor = ArgumentCaptor.forClass(LockHeartbeatRequest.class);
-    procId = new Random().nextLong();
+    procId = ThreadLocalRandom.current().nextLong();
   }
 
   private boolean waitLockTimeOut(EntityLock lock, long maxWaitTimeMillis) {

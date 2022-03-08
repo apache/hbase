@@ -24,7 +24,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -38,8 +38,6 @@ import org.junit.experimental.categories.Category;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestByteBufferArray {
-
-  private static final Random RANDOM = new Random(EnvironmentEdgeManager.currentTime());
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -87,7 +85,7 @@ public class TestByteBufferArray {
 
   private ByteBuff createByteBuff(int len) {
     assert len >= 0;
-    int pos = len == 0 ? 0 : RANDOM.nextInt(len);
+    int pos = len == 0 ? 0 : ThreadLocalRandom.current().nextInt(len);
     ByteBuff b = ByteBuff.wrap(ByteBuffer.allocate(2 * len));
     b.position(pos).limit(pos + len);
     return b;
