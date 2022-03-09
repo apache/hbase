@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
@@ -126,9 +127,18 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     return loc;
   }
 
-  protected final RegionLocations getRegionLocations(boolean reload, byte[] row)
+  /**
+   * Fetch region locations for the row. Since this is for prepare, we always useCache.
+   * This is because we can be sure that RpcRetryingCaller will have cleared the cache
+   * in error handling if this is a retry.
+   *
+   * @param row the row to look up region location for
+   */
+  protected final RegionLocations getRegionLocationsForPrepare(byte[] row)
     throws IOException {
-    return RpcRetryingCallerWithReadReplicas.getRegionLocations(!reload, id, getConnection(),
+    // always use cache, because cache will have been cleared if necessary
+    // in the try/catch before retrying
+    return RpcRetryingCallerWithReadReplicas.getRegionLocations(true, id, getConnection(),
       getTableName(), row);
   }
 
@@ -140,7 +150,13 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     if (Thread.interrupted()) {
       throw new InterruptedIOException();
     }
-    RegionLocations rl = getRegionLocations(reload, getRow());
+
+    if (reload && getTableName() != null && !getTableName().equals(TableName.META_TABLE_NAME)
+      && getConnection().isTableDisabled(getTableName())) {
+      throw new TableNotEnabledException(getTableName().getNameAsString() + " is disabled.");
+    }
+
+    RegionLocations rl = getRegionLocationsForPrepare(getRow());
     location = getLocationForReplica(rl);
     ServerName dest = location.getServerName();
     setStub(super.getConnection().getClient(dest));
