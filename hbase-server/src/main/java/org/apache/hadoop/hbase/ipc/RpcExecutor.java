@@ -33,12 +33,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
@@ -49,7 +51,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
  * Runs the CallRunners passed here via {@link #dispatch(CallRunner)}. Subclass and add particular
  * scheduling behavior.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
+@InterfaceStability.Evolving
 public abstract class RpcExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(RpcExecutor.class);
 
