@@ -31,6 +31,7 @@ import java.util.function.Consumer;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutputHelper;
@@ -120,7 +121,10 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
     // Reuse WAL_ROLL_WAIT_TIMEOUT here to avoid an infinite wait if somehow a wait on a future
     // never completes. The objective is the same. We want to propagate an exception to trigger
     // an abort if we seem to be hung.
-    this.waitTimeout = conf.getLong(AbstractWALRoller.WAL_ROLL_WAIT_TIMEOUT, 30000);
+    if (this.conf == null) {
+      this.conf = HBaseConfiguration.create();
+    }
+    this.waitTimeout = this.conf.getLong(AbstractWALRoller.WAL_ROLL_WAIT_TIMEOUT, 30000);
   }
 
   /*
