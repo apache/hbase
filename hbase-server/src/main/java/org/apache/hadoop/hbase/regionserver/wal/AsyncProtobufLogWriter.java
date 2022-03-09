@@ -124,7 +124,8 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
     if (this.conf == null) {
       this.conf = HBaseConfiguration.create();
     }
-    this.waitTimeout = this.conf.getLong(AbstractWALRoller.WAL_ROLL_WAIT_TIMEOUT, 30000);
+    this.waitTimeout = this.conf.getLong(AbstractWALRoller.WAL_ROLL_WAIT_TIMEOUT,
+      AbstractWALRoller.DEFAULT_WAL_ROLL_WAIT_TIMEOUT);
   }
 
   /*
