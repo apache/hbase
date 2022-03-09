@@ -27,13 +27,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -65,7 +63,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -488,7 +485,7 @@ public class TestMetaTableAccessor {
     }
 
     @Override
-    public boolean dispatch(CallRunner task) throws IOException, InterruptedException {
+    public boolean dispatch(CallRunner task) {
       int priority = task.getRpcCall().getPriority();
 
       if (priority > HConstants.QOS_THRESHOLD) {
