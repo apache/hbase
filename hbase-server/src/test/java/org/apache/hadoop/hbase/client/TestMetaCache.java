@@ -162,6 +162,70 @@ public class TestMetaCache {
   }
 
   @Test
+  public void testClearsCacheOnScanException() throws Exception {
+    ((FakeRSRpcServices)badRS.getRSRpcServices()).setExceptionInjector(
+      new RoundRobinExceptionInjector());
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.set("hbase.client.retries.number", "1");
+
+    try (ConnectionImplementation conn =
+      (ConnectionImplementation) ConnectionFactory.createConnection(conf);
+      Table table = conn.getTable(TABLE_NAME)) {
+
+      byte[] row = Bytes.toBytes("row2");
+
+      Put put = new Put(row);
+      put.addColumn(FAMILY, QUALIFIER, Bytes.toBytes(10));
+
+      Scan scan = new Scan();
+      scan.withStartRow(row);
+      scan.setLimit(1);
+      scan.setCaching(1);
+
+      populateCache(table, row);
+      assertNotNull(conn.getCachedLocation(TABLE_NAME, row));
+      assertTrue(executeUntilCacheClearingException(table, scan));
+      assertNull(conn.getCachedLocation(TABLE_NAME, row));
+
+      // repopulate cache so we can test with reverse scan too
+      populateCache(table, row);
+      assertNotNull(conn.getCachedLocation(TABLE_NAME, row));
+
+      // run with reverse scan
+      scan.setReversed(true);
+      assertTrue(executeUntilCacheClearingException(table, scan));
+      assertNull(conn.getCachedLocation(TABLE_NAME, row));
+    }
+  }
+
+  private void populateCache(Table table, byte[] row) {
+    for (int i = 0; i < 50; i++) {
+      try {
+        table.get(new Get(row));
+        return;
+      } catch (Exception e) {
+        // pass, we just want this to succeed so that region location will be cached
+      }
+    }
+  }
+
+  private boolean executeUntilCacheClearingException(Table table, Scan scan) {
+    for (int i = 0; i < 50; i++) {
+      try {
+        try (ResultScanner scanner = table.getScanner(scan)) {
+          scanner.next();
+        }
+      } catch (Exception ex) {
+        // Only keep track of the last exception that updated the meta cache
+        if (ClientExceptionsUtil.isMetaClearingException(ex)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  @Test
   public void testCacheClearingOnCallQueueTooBig() throws Exception {
     ((FakeRSRpcServices)badRS.getRSRpcServices()).setExceptionInjector(
         new CallQueueTooBigExceptionInjector());
