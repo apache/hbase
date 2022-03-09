@@ -62,6 +62,10 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class StoreHotnessProtector {
   private static final Logger LOG = LoggerFactory.getLogger(StoreHotnessProtector.class);
+
+  // We want to log just once so that users are aware of this tool
+  private static volatile boolean loggedDisableMessage;
+
   private volatile int parallelPutToStoreThreadLimit;
 
   private volatile int parallelPreparePutToStoreThreadLimit;
@@ -94,7 +98,9 @@ public class StoreHotnessProtector {
         conf.getInt(PARALLEL_PUT_STORE_THREADS_LIMIT_MIN_COLUMN_COUNT,
             DEFAULT_PARALLEL_PUT_STORE_THREADS_LIMIT_MIN_COLUMN_NUM);
 
-    if (!isEnable()) {
+    if (!isEnable() && !loggedDisableMessage) {
+      loggedDisableMessage = true;
+
       LOG.info("StoreHotnessProtector is disabled. Set {} > 0 to enable, "
           + "which may help mitigate load under heavy write pressure.",
         PARALLEL_PUT_STORE_THREADS_LIMIT);
