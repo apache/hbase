@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -53,7 +52,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 
@@ -90,7 +88,7 @@ public class TestAsyncClientPauseForCallQueueTooBig {
     }
 
     @Override
-    public boolean dispatch(CallRunner callTask) throws InterruptedException {
+    public boolean dispatch(CallRunner callTask) {
       if (FAIL) {
         MethodDescriptor method = callTask.getRpcCall().getMethod();
         // this is for test scan, where we will send a open scanner first and then a next, and we
