@@ -33,10 +33,12 @@ import java.util.HashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hbase.thirdparty.io.netty.util.internal.StringUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
@@ -51,7 +53,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.Strings;
  * Runs the CallRunners passed here via {@link #dispatch(CallRunner)}. Subclass and add particular
  * scheduling behavior.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
+@InterfaceStability.Evolving
 public abstract class RpcExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(RpcExecutor.class);
 
