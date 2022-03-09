@@ -343,12 +343,25 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     }
   }
 
-  private void syncCompleted(AsyncWriter writer, long processedTxid, long startTimeNs) {
+  private void syncCompleted(long epochWhenSync, AsyncWriter writer, long processedTxid,
+      long startTimeNs) {
     highestSyncedTxid.set(processedTxid);
+    boolean epochChanged = false;
+    consumeLock.lock();
+    try {
+      int currentEpochAndState = epochAndState;
+      if (epoch(currentEpochAndState) != epochWhenSync) {
+        epochChanged = true;
+      }
+    } finally {
+      consumeLock.unlock();
+    }
     for (Iterator<FSWALEntry> iter = unackedAppends.iterator(); iter.hasNext();) {
       FSWALEntry entry = iter.next();
       if (entry.getTxid() <= processedTxid) {
-        entry.release();
+        if (!epochChanged) {
+          entry.release();
+        }
         iter.remove();
       } else {
         break;
@@ -399,7 +412,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       if (error != null) {
         syncFailed(epoch, error);
       } else {
-        syncCompleted(writer, currentHighestProcessedAppendTxid, startTimeNs);
+        syncCompleted(epoch, writer, currentHighestProcessedAppendTxid, startTimeNs);
       }
     }, consumeExecutor);
   }
