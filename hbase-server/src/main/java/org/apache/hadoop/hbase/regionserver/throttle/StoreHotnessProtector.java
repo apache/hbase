@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +62,10 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class StoreHotnessProtector {
   private static final Logger LOG = LoggerFactory.getLogger(StoreHotnessProtector.class);
+
+  // We want to log just once so that users are aware of this tool
+  private static volatile boolean loggedDisableMessage;
+
   private volatile int parallelPutToStoreThreadLimit;
 
   private volatile int parallelPreparePutToStoreThreadLimit;
@@ -70,7 +73,7 @@ public class StoreHotnessProtector {
       "hbase.region.store.parallel.put.limit";
   public final static String PARALLEL_PREPARE_PUT_STORE_MULTIPLIER =
       "hbase.region.store.parallel.prepare.put.multiplier";
-  private final static int DEFAULT_PARALLEL_PUT_STORE_THREADS_LIMIT = 10;
+  private final static int DEFAULT_PARALLEL_PUT_STORE_THREADS_LIMIT = 0;
   private volatile int parallelPutToStoreThreadLimitCheckMinColumnCount;
   public final static String PARALLEL_PUT_STORE_THREADS_LIMIT_MIN_COLUMN_COUNT =
       "hbase.region.store.parallel.put.limit.min.column.count";
@@ -95,6 +98,13 @@ public class StoreHotnessProtector {
         conf.getInt(PARALLEL_PUT_STORE_THREADS_LIMIT_MIN_COLUMN_COUNT,
             DEFAULT_PARALLEL_PUT_STORE_THREADS_LIMIT_MIN_COLUMN_NUM);
 
+    if (!isEnable() && !loggedDisableMessage) {
+      loggedDisableMessage = true;
+
+      LOG.info("StoreHotnessProtector is disabled. Set {} > 0 to enable, "
+          + "which may help mitigate load under heavy write pressure.",
+        PARALLEL_PUT_STORE_THREADS_LIMIT);
+    }
   }
 
   public void update(Configuration conf) {
