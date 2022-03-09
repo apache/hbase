@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -29,6 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -90,7 +90,7 @@ public class MasterFifoRpcScheduler extends FifoRpcScheduler {
   }
 
   @Override
-  public boolean dispatch(final CallRunner task) throws IOException, InterruptedException {
+  public boolean dispatch(final CallRunner task) {
     String method = getCallMethod(task);
     if (rsReportExecutor != null && method != null && method.equals(REGION_SERVER_REPORT)) {
       return executeRpcCall(rsReportExecutor, rsReportQueueSize, task);
