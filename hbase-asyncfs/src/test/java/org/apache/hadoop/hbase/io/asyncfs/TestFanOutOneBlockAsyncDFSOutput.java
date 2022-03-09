@@ -220,6 +220,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
       assertEquals(2, output.getPipeline().length);
     } finally {
       CLUSTER.restartDataNode(dnProp);
+      CLUSTER.triggerBlockReports();
     }
   }
 
@@ -250,6 +251,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
       assertEquals(1, excludeDatanodeManager.getExcludeDNs().size());
     } finally {
       CLUSTER.restartDataNode(dnProp);
+      CLUSTER.triggerBlockReports();
     }
   }
 
