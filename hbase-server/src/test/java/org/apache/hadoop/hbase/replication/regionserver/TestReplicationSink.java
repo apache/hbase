@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
 
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -357,10 +357,10 @@ public class TestReplicationSink {
     final String hfilePrefix = "hfile-";
 
     // 1. Generate 25 hfile ranges
-    Random rng = new SecureRandom();
+    Random rand = ThreadLocalRandom.current();
     Set<Integer> numbers = new HashSet<>();
     while (numbers.size() < 50) {
-      numbers.add(rng.nextInt(1000));
+      numbers.add(rand.nextInt(1000));
     }
     List<Integer> numberList = new ArrayList<>(numbers);
     Collections.sort(numberList);

@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.master.balancer;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -57,7 +59,7 @@ public class TestBalancerStatusTagInJMXMetrics extends BalancerTestBase {
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     conf = UTIL.getConfiguration();
-    Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 10; i++) {
       do {
         int sign = i % 2 == 0 ? 1 : -1;

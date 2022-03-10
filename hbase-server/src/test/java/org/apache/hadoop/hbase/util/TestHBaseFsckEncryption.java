@@ -22,7 +22,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.security.Key;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import javax.crypto.spec.SecretKeySpec;
@@ -80,9 +79,8 @@ public class TestHBaseFsckEncryption {
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
 
     // Create the test encryption key
-    SecureRandom rng = new SecureRandom();
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    rng.nextBytes(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm =
         conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     cfKey = new SecretKeySpec(keyBytes,algorithm);

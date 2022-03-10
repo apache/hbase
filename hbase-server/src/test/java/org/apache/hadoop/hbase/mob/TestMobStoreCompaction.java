@@ -30,8 +30,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -373,7 +373,7 @@ public class TestMobStoreCompaction {
 
   private byte[] makeDummyData(int size) {
     byte[] dummyData = new byte[size];
-    new Random().nextBytes(dummyData);
+    Bytes.random(dummyData);
     return dummyData;
   }
 

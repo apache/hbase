@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -83,7 +84,7 @@ public class TestIdReadWriteLockWithObjectPool {
     @Override
     public Boolean call() throws Exception {
       Thread.currentThread().setName(clientId);
-      Random rand = new Random();
+      Random rand = ThreadLocalRandom.current();
       long endTime = EnvironmentEdgeManager.currentTime() + NUM_SECONDS * 1000;
       while (EnvironmentEdgeManager.currentTime() < endTime) {
         long id = rand.nextInt(NUM_IDS);

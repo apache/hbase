@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.HIGH_QOS;
 import static org.apache.hadoop.hbase.HConstants.NORMAL_QOS;
 import static org.apache.hadoop.hbase.HConstants.SYSTEMTABLE_QOS;
 import static org.apache.hadoop.hbase.NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -33,8 +37,13 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Cell.Type;
@@ -59,9 +68,7 @@ import org.junit.rules.TestName;
 import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
@@ -91,6 +98,8 @@ public class TestAsyncTableRpcPriority {
 
   private ClientService.Interface stub;
 
+  private ExecutorService threadPool;
+
   private AsyncConnection conn;
 
   @Rule
@@ -98,34 +107,9 @@ public class TestAsyncTableRpcPriority {
 
   @Before
   public void setUp() throws IOException {
+    this.threadPool = Executors.newSingleThreadExecutor();
     stub = mock(ClientService.Interface.class);
-    AtomicInteger scanNextCalled = new AtomicInteger(0);
-    doAnswer(new Answer<Void>() {
 
-      @Override
-      public Void answer(InvocationOnMock invocation) throws Throwable {
-        ScanRequest req = invocation.getArgument(1);
-        RpcCallback<ScanResponse> done = invocation.getArgument(2);
-        if (!req.hasScannerId()) {
-          done.run(ScanResponse.newBuilder().setScannerId(1).setTtl(800)
-            .setMoreResultsInRegion(true).setMoreResults(true).build());
-        } else {
-          if (req.hasCloseScanner() && req.getCloseScanner()) {
-            done.run(ScanResponse.getDefaultInstance());
-          } else {
-            Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Type.Put)
-              .setRow(Bytes.toBytes(scanNextCalled.incrementAndGet()))
-              .setFamily(Bytes.toBytes("cf")).setQualifier(Bytes.toBytes("cq"))
-              .setValue(Bytes.toBytes("v")).build();
-            Result result = Result.create(Arrays.asList(cell));
-            done.run(
-              ScanResponse.newBuilder().setScannerId(1).setTtl(800).setMoreResultsInRegion(true)
-                .setMoreResults(true).addResults(ProtobufUtil.toResult(result)).build());
-          }
-        }
-        return null;
-      }
-    }).when(stub).scan(any(HBaseRpcController.class), any(ScanRequest.class), any());
     doAnswer(new Answer<Void>() {
 
       @Override
@@ -214,6 +198,16 @@ public class TestAsyncTableRpcPriority {
       @Override
       public boolean matches(HBaseRpcController controller) {
         return controller.getPriority() == priority;
+      }
+    });
+  }
+
+  private ScanRequest assertScannerCloseRequest() {
+    return argThat(new ArgumentMatcher<ScanRequest>() {
+
+      @Override
+      public boolean matches(ScanRequest request) {
+        return request.hasCloseScanner() && request.getCloseScanner();
       }
     });
   }
@@ -478,53 +472,113 @@ public class TestAsyncTableRpcPriority {
       any(ClientProtos.MultiRequest.class), any());
   }
 
-  @Test
-  public void testScan() throws IOException, InterruptedException {
-    try (ResultScanner scanner = conn.getTable(TableName.valueOf(name.getMethodName()))
-      .getScanner(new Scan().setCaching(1).setMaxResultSize(1).setPriority(19))) {
-      assertNotNull(scanner.next());
-      Thread.sleep(1000);
-    }
-    Thread.sleep(1000);
-    // open, next, several renew lease, and then close
-    verify(stub, atLeast(4)).scan(assertPriority(19), any(ScanRequest.class), any());
+  private CompletableFuture<Void> mockScanReturnRenewFuture(int scanPriority) {
+    int scannerId = 1;
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    AtomicInteger scanNextCalled = new AtomicInteger(0);
+    doAnswer(new Answer<Void>() {
+
+      @SuppressWarnings("FutureReturnValueIgnored")
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        threadPool.submit(() -> {
+          ScanRequest req = invocation.getArgument(1);
+          RpcCallback<ScanResponse> done = invocation.getArgument(2);
+          if (!req.hasScannerId()) {
+            done.run(ScanResponse.newBuilder()
+                .setScannerId(scannerId).setTtl(800)
+                .setMoreResultsInRegion(true).setMoreResults(true)
+                .build());
+          } else {
+            if (req.hasRenew() && req.getRenew()) {
+              future.complete(null);
+            }
+
+            assertFalse("close scanner should not come in with scan priority " + scanPriority,
+                req.hasCloseScanner() && req.getCloseScanner());
+
+            Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+                .setType(Type.Put).setRow(Bytes.toBytes(scanNextCalled.incrementAndGet()))
+                .setFamily(Bytes.toBytes("cf")).setQualifier(Bytes.toBytes("cq"))
+                .setValue(Bytes.toBytes("v")).build();
+            Result result = Result.create(Arrays.asList(cell));
+            done.run(
+                ScanResponse.newBuilder()
+                    .setScannerId(scannerId).setTtl(800).setMoreResultsInRegion(true)
+                    .setMoreResults(true).addResults(ProtobufUtil.toResult(result))
+                    .build());
+          }
+        });
+        return null;
+      }
+    }).when(stub).scan(assertPriority(scanPriority), any(ScanRequest.class), any());
+
+    doAnswer(new Answer<Void>() {
+
+      @SuppressWarnings("FutureReturnValueIgnored")
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        threadPool.submit(() ->{
+          ScanRequest req = invocation.getArgument(1);
+          RpcCallback<ScanResponse> done = invocation.getArgument(2);
+          assertTrue("close request should have scannerId", req.hasScannerId());
+          assertEquals("close request's scannerId should match", scannerId, req.getScannerId());
+          assertTrue("close request should have closerScanner set",
+              req.hasCloseScanner() && req.getCloseScanner());
+
+          done.run(ScanResponse.getDefaultInstance());
+        });
+        return null;
+      }
+    }).when(stub).scan(assertPriority(HIGH_QOS), assertScannerCloseRequest(), any());
+    return future;
   }
 
   @Test
-  public void testScanNormalTable() throws IOException, InterruptedException {
-    try (ResultScanner scanner = conn.getTable(TableName.valueOf(name.getMethodName()))
-      .getScanner(new Scan().setCaching(1).setMaxResultSize(1))) {
-      assertNotNull(scanner.next());
-      Thread.sleep(1000);
-    }
-    Thread.sleep(1000);
-    // open, next, several renew lease, and then close
-    verify(stub, atLeast(4)).scan(assertPriority(NORMAL_QOS), any(ScanRequest.class), any());
+  public void testScan() throws Exception {
+    CompletableFuture<Void> renewFuture = mockScanReturnRenewFuture(19);
+    testForTable(TableName.valueOf(name.getMethodName()), renewFuture, Optional.of(19));
   }
 
   @Test
-  public void testScanSystemTable() throws IOException, InterruptedException {
-    try (ResultScanner scanner =
-      conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
-        .getScanner(new Scan().setCaching(1).setMaxResultSize(1))) {
-      assertNotNull(scanner.next());
-      Thread.sleep(1000);
-    }
-    Thread.sleep(1000);
-    // open, next, several renew lease, and then close
-    verify(stub, atLeast(4)).scan(assertPriority(SYSTEMTABLE_QOS), any(ScanRequest.class), any());
+  public void testScanNormalTable() throws Exception {
+    CompletableFuture<Void> renewFuture = mockScanReturnRenewFuture(NORMAL_QOS);
+    testForTable(TableName.valueOf(name.getMethodName()), renewFuture, Optional.of(NORMAL_QOS));
   }
 
   @Test
-  public void testScanMetaTable() throws IOException, InterruptedException {
-    try (ResultScanner scanner = conn.getTable(TableName.META_TABLE_NAME)
-      .getScanner(new Scan().setCaching(1).setMaxResultSize(1))) {
+  public void testScanSystemTable() throws Exception {
+    CompletableFuture<Void> renewFuture = mockScanReturnRenewFuture(SYSTEMTABLE_QOS);
+    testForTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()),
+        renewFuture, Optional.empty());
+  }
+
+  @Test
+  public void testScanMetaTable() throws Exception {
+    CompletableFuture<Void> renewFuture = mockScanReturnRenewFuture(SYSTEMTABLE_QOS);
+    testForTable(TableName.META_TABLE_NAME, renewFuture, Optional.empty());
+  }
+
+  private void testForTable(TableName tableName, CompletableFuture<Void> renewFuture,
+                            Optional<Integer> priority) throws Exception {
+    Scan scan = new Scan().setCaching(1).setMaxResultSize(1);
+    priority.ifPresent(scan::setPriority);
+
+    try (ResultScanner scanner = conn.getTable(tableName).getScanner(scan)) {
       assertNotNull(scanner.next());
-      Thread.sleep(1000);
+      // wait for at least one renew to come in before closing
+      renewFuture.join();
     }
-    Thread.sleep(1000);
-    // open, next, several renew lease, and then close
-    verify(stub, atLeast(4)).scan(assertPriority(SYSTEMTABLE_QOS), any(ScanRequest.class), any());
+
+    // ensures the close thread has time to finish before asserting
+    threadPool.shutdown();
+    threadPool.awaitTermination(5, TimeUnit.SECONDS);
+
+    // just verify that the calls happened. verification of priority occurred in the mocking
+    // open, next, then one or more lease renewals, then close
+    verify(stub, atLeast(4)).scan(any(), any(ScanRequest.class), any());
+    // additionally, explicitly check for a close request
+    verify(stub, times(1)).scan(any(), assertScannerCloseRequest(), any());
   }
 
   @Test

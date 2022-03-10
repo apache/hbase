@@ -29,6 +29,8 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -519,7 +521,7 @@ public class RegionPlacementMaintainer implements Closeable {
     public RandomizedMatrix(int rows, int cols) {
       this.rows = rows;
       this.cols = cols;
-      Random random = new Random();
+      Random random = ThreadLocalRandom.current();
       rowTransform = new int[rows];
       rowInverse = new int[rows];
       for (int i = 0; i < rows; i++) {

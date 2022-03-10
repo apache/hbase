@@ -135,7 +135,7 @@ public class EncryptionTest {
         byte[] iv = null;
         if (context.getCipher().getIvLength() > 0) {
           iv = new byte[context.getCipher().getIvLength()];
-          Bytes.random(iv);
+          Bytes.secureRandom(iv);
         }
         byte[] plaintext = new byte[1024];
         Bytes.random(plaintext);

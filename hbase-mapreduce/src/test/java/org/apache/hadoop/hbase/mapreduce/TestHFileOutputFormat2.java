@@ -44,6 +44,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
@@ -102,7 +103,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.TestHRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
-import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
@@ -207,14 +207,13 @@ public class TestHFileOutputFormat2  {
 
       int taskId = context.getTaskAttemptID().getTaskID().getId();
       assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
-      Random random = new Random();
       byte[] key;
       for (int j = 0; j < tables.length; ++j) {
         for (int i = 0; i < ROWSPERSPLIT; i++) {
-          random.nextBytes(keyBytes);
+          Bytes.random(keyBytes);
           // Ensure that unique tasks generate unique keys
           keyBytes[keyLength - 1] = (byte) (taskId & 0xFF);
-          random.nextBytes(valBytes);
+          Bytes.random(valBytes);
           key = keyBytes;
           if (multiTableMapper) {
             key = MultiTableHFileOutputFormat.createCompositeKey(tables[j].getName(), keyBytes);
@@ -277,14 +276,13 @@ public class TestHFileOutputFormat2  {
       int taskId = context.getTaskAttemptID().getTaskID().getId();
       assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
 
-      Random random = new Random();
       byte[] key;
       for (int j = 0; j < tables.length; ++j) {
         for (int i = 0; i < ROWSPERSPLIT; i++) {
-          random.nextBytes(keyBytes);
+          Bytes.random(keyBytes);
           // Ensure that unique tasks generate unique keys
           keyBytes[keyLength - 1] = (byte) (taskId & 0xFF);
-          random.nextBytes(valBytes);
+          Bytes.random(valBytes);
           key = keyBytes;
           if (multiTableMapper) {
             key = MultiTableHFileOutputFormat.createCompositeKey(tables[j].getName(), keyBytes);
@@ -565,7 +563,7 @@ public class TestHFileOutputFormat2  {
   }
 
   private byte [][] generateRandomStartKeys(int numKeys) {
-    Random random = new Random();
+    Random random = ThreadLocalRandom.current();
     byte[][] ret = new byte[numKeys][];
     // first region start key is always empty
     ret[0] = HConstants.EMPTY_BYTE_ARRAY;
@@ -577,7 +575,7 @@ public class TestHFileOutputFormat2  {
   }
 
   private byte[][] generateRandomSplitKeys(int numKeys) {
-    Random random = new Random();
+    Random random = ThreadLocalRandom.current();
     byte[][] ret = new byte[numKeys][];
     for (int i = 0; i < numKeys; i++) {
       ret[i] =
@@ -1254,13 +1252,10 @@ public class TestHFileOutputFormat2  {
     int taskId = context.getTaskAttemptID().getTaskID().getId();
     assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
     final byte [] qualifier = Bytes.toBytes("data");
-    Random random = new Random();
     for (int i = 0; i < numRows; i++) {
-
       Bytes.putInt(keyBytes, 0, i);
-      random.nextBytes(valBytes);
+      Bytes.random(valBytes);
       ImmutableBytesWritable key = new ImmutableBytesWritable(keyBytes);
-
       for (byte[] family : families) {
         Cell kv = new KeyValue(keyBytes, family, qualifier, valBytes);
         writer.write(key, kv);

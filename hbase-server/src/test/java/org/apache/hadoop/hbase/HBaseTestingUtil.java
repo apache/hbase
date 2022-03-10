@@ -49,6 +49,7 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
@@ -150,9 +151,7 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
-
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -1954,10 +1953,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   public void loadRandomRows(final Table t, final byte[] f, int rowSize, int totalRows)
     throws IOException {
-    Random r = new Random();
-    byte[] row = new byte[rowSize];
     for (int i = 0; i < totalRows; i++) {
-      r.nextBytes(row);
+      byte[] row = new byte[rowSize];
+      Bytes.random(row);
       Put put = new Put(row);
       put.addColumn(f, new byte[] { 0 }, new byte[] { 0 });
       t.put(put);
@@ -2693,7 +2691,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       // There are chances that before we get the region for the table from an RS the region may
       // be going for CLOSE. This may be because online schema change is enabled
       if (regCount > 0) {
-        idx = random.nextInt(regCount);
+        idx = ThreadLocalRandom.current().nextInt(regCount);
         // if we have just tried this region, there is no need to try again
         if (attempted.contains(idx)) {
           continue;
@@ -3297,7 +3295,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public static String randomMultiCastAddress() {
-    return "226.1.1." + random.nextInt(254);
+    return "226.1.1." + ThreadLocalRandom.current().nextInt(254);
   }
 
   public static void waitForHostPort(String host, int port) throws IOException {

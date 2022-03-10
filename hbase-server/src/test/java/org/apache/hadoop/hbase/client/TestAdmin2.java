@@ -31,7 +31,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -579,9 +579,7 @@ public class TestAdmin2 extends TestAdminBase {
 
   @Test
   public void testAbortProcedureFail() throws Exception {
-    Random randomGenerator = new Random();
-    long procId = randomGenerator.nextLong();
-
+    long procId = ThreadLocalRandom.current().nextLong();
     boolean abortResult = ADMIN.abortProcedure(procId, true);
     assertFalse(abortResult);
   }

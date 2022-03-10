@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
@@ -223,7 +224,7 @@ public class TestEndToEndSplitTransaction {
     @Override
     public void run() {
       try {
-        Random random = new Random();
+        Random random = ThreadLocalRandom.current();
         for (int i = 0; i < 5; i++) {
           List<RegionInfo> regions = MetaTableAccessor.getTableRegions(connection, tableName, true);
           if (regions.isEmpty()) {

@@ -317,7 +317,7 @@ public final class Encryption {
    */
   private static byte[] generateSecretKey(String algorithm, int keyLengthBytes, char[] password) {
     byte[] salt = new byte[keyLengthBytes];
-    Bytes.random(salt);
+    Bytes.secureRandom(salt);
     PBEKeySpec spec = new PBEKeySpec(password, salt, 10000, keyLengthBytes*8);
     try {
       return SecretKeyFactory.getInstance(algorithm).generateSecret(spec).getEncoded();

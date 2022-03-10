@@ -20,14 +20,11 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 
 class SpikyFileListGenerator extends StoreFileListGenerator {
-
-  SpikyFileListGenerator() {
-    super(SpikyFileListGenerator.class);
-  }
 
   @Override
   public Iterator<List<HStoreFile>> iterator() {
@@ -43,10 +40,11 @@ class SpikyFileListGenerator extends StoreFileListGenerator {
       public List<HStoreFile> next() {
         count += 1;
         ArrayList<HStoreFile> files = new ArrayList<>(NUM_FILES_GEN);
+        Random rand = ThreadLocalRandom.current();
         for (int x = 0; x < NUM_FILES_GEN; x++) {
-          int fileSize = random.nextInt(5) + 1;
+          int fileSize = rand.nextInt(5) + 1;
           if ( x % 10 == 0) {
-            fileSize = random.nextInt(5) + 50;
+            fileSize = rand.nextInt(5) + 50;
           }
           files.add(createMockStoreFile(fileSize));
         }
@@ -58,4 +56,5 @@ class SpikyFileListGenerator extends StoreFileListGenerator {
       }
     };
   }
+
 }

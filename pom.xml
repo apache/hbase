@@ -1232,7 +1232,7 @@
             </configuration>
           </execution>
           <execution>
-            <id>banned-log4j</id>
+            <id>banned-other-logging-framework</id>
             <goals>
               <goal>enforce</goal>
             </goals>
@@ -1240,28 +1240,14 @@
               <rules>
                 <bannedDependencies>
                   <excludes>
-                    <exclude>log4j:log4j</exclude>
-                  </excludes>
-                  <message>
-                    We do not allow log4j dependencies as now we use log4j2
-                  </message>
-                </bannedDependencies>
-              </rules>
-            </configuration>
-          </execution>
-          <execution>
-            <id>banned-slf4j-log4j12</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <bannedDependencies>
-                  <excludes>
+                    <exclude>log4j:*</exclude>
                     <exclude>org.slf4j:slf4j-log4j12</exclude>
+                    <exclude>ch.qos.reload4j:*</exclude>
+                    <exclude>org.slf4j:slf4j-reload4j</exclude>
+                    <exclude>ch.qos.logback:*</exclude>
                   </excludes>
                   <message>
-                    We do not allow slf4j-log4j12 dependency as now we use log4j-slf4j-impl
+                    We do not allow other logging frameworks as now we use log4j2
                   </message>
                 </bannedDependencies>
               </rules>

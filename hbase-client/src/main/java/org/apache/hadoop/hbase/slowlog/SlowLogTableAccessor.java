@@ -22,7 +22,8 @@ package org.apache.hadoop.hbase.slowlog;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -48,8 +49,6 @@ import org.slf4j.LoggerFactory;
 public class SlowLogTableAccessor {
 
   private static final Logger LOG = LoggerFactory.getLogger(SlowLogTableAccessor.class);
-
-  private static final Random RANDOM = new Random();
 
   private static Connection connection;
 
@@ -139,7 +138,7 @@ public class SlowLogTableAccessor {
     String lastFiveDig =
       hashcode.substring((hashcode.length() > 5) ? (hashcode.length() - 5) : 0);
     if (lastFiveDig.startsWith("-")) {
-      lastFiveDig = String.valueOf(RANDOM.nextInt(99999));
+      lastFiveDig = String.valueOf(ThreadLocalRandom.current().nextInt(99999));
     }
     final long currentTime = EnvironmentEdgeManager.currentTime();
     final String timeAndHashcode = currentTime + lastFiveDig;

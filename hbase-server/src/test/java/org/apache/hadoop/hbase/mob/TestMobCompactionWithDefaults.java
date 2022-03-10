@@ -24,7 +24,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -139,13 +138,11 @@ public class TestMobCompactionWithDefaults {
   }
 
   private void loadData(TableName tableName, int num) {
-
-    Random r = new Random();
     LOG.info("Started loading {} rows into {}", num, tableName);
     try (final Table table = HTU.getConnection().getTable(tableName)) {
       for (int i = 0; i < num; i++) {
         byte[] key = new byte[32];
-        r.nextBytes(key);
+        Bytes.random(key);
         Put p = new Put(key);
         p.addColumn(fam, qualifier, mobVal);
         table.put(p);

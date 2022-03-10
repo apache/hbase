@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.mob;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.Random;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -176,7 +175,7 @@ public class TestExpiredMobFileCleaner {
 
   private byte[] makeDummyData(int size) {
     byte [] dummyData = new byte[size];
-    new Random().nextBytes(dummyData);
+    Bytes.random(dummyData);
     return dummyData;
   }
 }

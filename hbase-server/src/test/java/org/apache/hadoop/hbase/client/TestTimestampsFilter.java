@@ -43,8 +43,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Run tests related to {@link TimestampsFilter} using HBase client APIs.
@@ -58,7 +56,6 @@ public class TestTimestampsFilter {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestTimestampsFilter.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestTimestampsFilter.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule

@@ -66,6 +66,7 @@ public class TestLazyDataBlockDecompression {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLazyDataBlockDecompression.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private static final Random RNG = new Random(9713312); // Just a fixed seed.
 
   private FileSystem fs;
 
@@ -101,14 +102,12 @@ public class TestLazyDataBlockDecompression {
         .withFileContext(cxt)
         .create();
 
-    // write a bunch of random kv's
-    Random rand = new Random(9713312); // some seed.
+    // write a bunch of random kvs
     final byte[] family = Bytes.toBytes("f");
     final byte[] qualifier = Bytes.toBytes("q");
-
     for (int i = 0; i < entryCount; i++) {
-      byte[] keyBytes = RandomKeyValueUtil.randomOrderedKey(rand, i);
-      byte[] valueBytes = RandomKeyValueUtil.randomValue(rand);
+      byte[] keyBytes = RandomKeyValueUtil.randomOrderedKey(RNG, i);
+      byte[] valueBytes = RandomKeyValueUtil.randomValue(RNG);
       // make a real keyvalue so that hfile tool can examine it
       writer.append(new KeyValue(keyBytes, family, qualifier, valueBytes));
     }

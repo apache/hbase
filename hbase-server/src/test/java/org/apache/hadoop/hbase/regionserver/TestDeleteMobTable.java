@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.Random;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -59,7 +59,6 @@ public class TestDeleteMobTable {
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static byte[] FAMILY = Bytes.toBytes("family");
   private final static byte[] QF = Bytes.toBytes("qualifier");
-  private static Random random = new Random();
 
   @Rule
   public TestName name = new TestName();
@@ -83,7 +82,7 @@ public class TestDeleteMobTable {
    */
   private static byte[] generateMobValue(int size) {
     byte[] mobVal = new byte[size];
-    random.nextBytes(mobVal);
+    Bytes.random(mobVal);
     return mobVal;
   }
 

@@ -41,7 +41,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -111,6 +110,7 @@ public class TestHFileBlock {
   private static float CHANCE_TO_REPEAT = 0.6f;
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private static final Random RNG = new Random(); // This test depends on Random#setSeed
   private FileSystem fs;
 
   private final boolean includesMemstoreTS;
@@ -182,9 +182,9 @@ public class TestHFileBlock {
   static int writeTestKeyValues(HFileBlock.Writer hbw, int seed, boolean includesMemstoreTS,
       boolean useTag) throws IOException {
     List<KeyValue> keyValues = new ArrayList<>();
-    Random randomizer = new Random(42L + seed); // just any fixed number
 
     // generate keyValues
+    RNG.setSeed(42); // just any fixed number
     for (int i = 0; i < NUM_KEYVALUES; ++i) {
       byte[] row;
       long timestamp;
@@ -193,35 +193,35 @@ public class TestHFileBlock {
       byte[] value;
 
       // generate it or repeat, it should compress well
-      if (0 < i && randomizer.nextFloat() < CHANCE_TO_REPEAT) {
-        row = CellUtil.cloneRow(keyValues.get(randomizer.nextInt(keyValues.size())));
+      if (0 < i && RNG.nextFloat() < CHANCE_TO_REPEAT) {
+        row = CellUtil.cloneRow(keyValues.get(RNG.nextInt(keyValues.size())));
       } else {
         row = new byte[FIELD_LENGTH];
-        randomizer.nextBytes(row);
+        RNG.nextBytes(row);
       }
       if (0 == i) {
         family = new byte[FIELD_LENGTH];
-        randomizer.nextBytes(family);
+        RNG.nextBytes(family);
       } else {
         family = CellUtil.cloneFamily(keyValues.get(0));
       }
-      if (0 < i && randomizer.nextFloat() < CHANCE_TO_REPEAT) {
-        qualifier = CellUtil.cloneQualifier(keyValues.get(randomizer.nextInt(keyValues.size())));
+      if (0 < i && RNG.nextFloat() < CHANCE_TO_REPEAT) {
+        qualifier = CellUtil.cloneQualifier(keyValues.get(RNG.nextInt(keyValues.size())));
       } else {
         qualifier = new byte[FIELD_LENGTH];
-        randomizer.nextBytes(qualifier);
+        RNG.nextBytes(qualifier);
       }
-      if (0 < i && randomizer.nextFloat() < CHANCE_TO_REPEAT) {
-        value = CellUtil.cloneValue(keyValues.get(randomizer.nextInt(keyValues.size())));
+      if (0 < i && RNG.nextFloat() < CHANCE_TO_REPEAT) {
+        value = CellUtil.cloneValue(keyValues.get(RNG.nextInt(keyValues.size())));
       } else {
         value = new byte[FIELD_LENGTH];
-        randomizer.nextBytes(value);
+        RNG.nextBytes(value);
       }
-      if (0 < i && randomizer.nextFloat() < CHANCE_TO_REPEAT) {
+      if (0 < i && RNG.nextFloat() < CHANCE_TO_REPEAT) {
         timestamp = keyValues.get(
-            randomizer.nextInt(keyValues.size())).getTimestamp();
+          RNG.nextInt(keyValues.size())).getTimestamp();
       } else {
-        timestamp = randomizer.nextLong();
+        timestamp = RNG.nextLong();
       }
       if (!useTag) {
         keyValues.add(new KeyValue(row, family, qualifier, timestamp, value));
@@ -238,7 +238,7 @@ public class TestHFileBlock {
     for (KeyValue kv : keyValues) {
       totalSize += kv.getLength();
       if (includesMemstoreTS) {
-        long memstoreTS = randomizer.nextLong();
+        long memstoreTS = RNG.nextLong();
         kv.setSequenceId(memstoreTS);
         totalSize += WritableUtils.getVIntSize(memstoreTS);
       }

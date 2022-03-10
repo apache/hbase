@@ -94,6 +94,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -252,6 +253,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /** Parameter name for compaction after bulkload */
   public static final String COMPACTION_AFTER_BULKLOAD_ENABLE =
       "hbase.compaction.after.bulkload.enable";
+
+  /** Config for allow split when file count greater than the configured blocking file count*/
+  public static final String SPLIT_IGNORE_BLOCKING_ENABLED_KEY =
+      "hbase.hregion.split.ignore.blocking.enabled";
 
   /**
    * This is for for using HRegion as a local storage, where we may put the recovered edits in a
@@ -7867,7 +7872,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // See more details in HBASE-26036.
       for (Cell cell : tmp) {
         results.add(cell instanceof ByteBufferExtendedCell ?
-          ((ByteBufferExtendedCell) cell).deepClone(): cell);
+            KeyValueUtil.copyToNewKeyValue(cell) : cell);
       }
     }
 
@@ -8241,6 +8246,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return The priority that this region should have in the compaction queue
    */
   public int getCompactPriority() {
+    if (checkSplit().isPresent() && conf.getBoolean(SPLIT_IGNORE_BLOCKING_ENABLED_KEY, false)) {
+      // if a region should split, split it before compact
+      return Store.PRIORITY_USER;
+    }
     return stores.values().stream().mapToInt(HStore::getCompactPriority).min()
         .orElse(Store.NO_PRIORITY);
   }

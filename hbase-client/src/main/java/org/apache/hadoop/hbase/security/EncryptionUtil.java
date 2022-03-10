@@ -22,7 +22,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.Key;
 import java.security.KeyException;
-import java.security.SecureRandom;
 import java.util.Properties;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
@@ -37,7 +36,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.EncryptionProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
@@ -49,8 +47,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 @InterfaceStability.Evolving
 public final class EncryptionUtil {
   static private final Logger LOG = LoggerFactory.getLogger(EncryptionUtil.class);
-
-  static private final SecureRandom RNG = new SecureRandom();
 
   /**
    * Private constructor to keep this class from being instantiated.
@@ -96,7 +92,7 @@ public final class EncryptionUtil {
     byte[] iv = null;
     if (cipher.getIvLength() > 0) {
       iv = new byte[cipher.getIvLength()];
-      RNG.nextBytes(iv);
+      Bytes.secureRandom(iv);
       builder.setIv(UnsafeByteOperations.unsafeWrap(iv));
     }
     byte[] keyBytes = key.getEncoded();
@@ -286,7 +282,7 @@ public final class EncryptionUtil {
    * @throws IOException if create CryptoAES failed
    */
   public static CryptoAES createCryptoAES(RPCProtos.CryptoCipherMeta cryptoCipherMeta,
-                               Configuration conf) throws IOException {
+      Configuration conf) throws IOException {
     Properties properties = new Properties();
     // the property for cipher class
     properties.setProperty(CryptoCipherFactory.CLASSES_KEY,
