@@ -8610,6 +8610,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY)) {
       LOG.info("Update the system coprocessors because the configuration has changed");
+      decorateRegionConfiguration(conf);
       this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
     }
   }
