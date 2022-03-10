@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
@@ -148,32 +147,6 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     return controller;
   }
 
-  protected final HRegionLocation getLocationForReplica(RegionLocations locs)
-      throws HBaseIOException {
-    HRegionLocation loc = id < locs.size() ? locs.getRegionLocation(id) : null;
-    if (loc == null || loc.getServerName() == null) {
-      // With this exception, there will be a retry. The location can be null for a replica
-      // when the table is created or after a split.
-      throw new HBaseIOException("There is no location for replica id #" + id);
-    }
-    return loc;
-  }
-
-  /**
-   * Fetch region locations for the row. Since this is for prepare, we always useCache.
-   * This is because we can be sure that RpcRetryingCaller will have cleared the cache
-   * in error handling if this is a retry.
-   *
-   * @param row the row to look up region location for
-   */
-  protected final RegionLocations getRegionLocationsForPrepare(byte[] row)
-    throws IOException {
-    // always use cache, because cache will have been cleared if necessary
-    // in the try/catch before retrying
-    return RpcRetryingCallerWithReadReplicas.getRegionLocations(true, id, getConnection(),
-      getTableName(), row);
-  }
-
   /**
    * @param reload force reload of server location
    * @throws IOException
@@ -183,14 +156,14 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     if (Thread.interrupted()) {
       throw new InterruptedIOException();
     }
-
-    if (reload && getTableName() != null && !getTableName().equals(TableName.META_TABLE_NAME)
-      && getConnection().isTableDisabled(getTableName())) {
-      throw new TableNotEnabledException(getTableName().getNameAsString() + " is disabled.");
+    RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(!reload,
+        id, getConnection(), getTableName(), getRow());
+    location = id < rl.size() ? rl.getRegionLocation(id) : null;
+    if (location == null || location.getServerName() == null) {
+      // With this exception, there will be a retry. The location can be null for a replica
+      //  when the table is created or after a split.
+      throw new HBaseIOException("There is no location for replica id #" + id);
     }
-
-    RegionLocations rl = getRegionLocationsForPrepare(getRow());
-    location = getLocationForReplica(rl);
     ServerName dest = location.getServerName();
     setStub(super.getConnection().getClient(dest));
     if (!instantiated || reload) {

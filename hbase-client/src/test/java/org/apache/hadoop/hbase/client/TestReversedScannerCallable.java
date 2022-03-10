@@ -17,22 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -42,89 +32,64 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 @Category({ ClientTests.class, SmallTests.class })
 public class TestReversedScannerCallable {
 
-  private static final TableName TABLE_NAME = TableName.valueOf("TestReversedScannerCallable");
-
-  private static final String HOSTNAME = "localhost";
-  private static final ServerName SERVERNAME = ServerName.valueOf(HOSTNAME, 60030, 123);
-  private static final byte[] ROW = Bytes.toBytes("row1");
-  private static final Scan DEFAULT_SCAN = new Scan().withStartRow(ROW, true).setReversed(true);
-
   @Mock
   private ClusterConnection connection;
+  @Mock
+  private Scan scan;
   @Mock
   private RpcControllerFactory rpcFactory;
   @Mock
   private RegionLocations regionLocations;
-  @Mock
-  private HRegionLocation regionLocation;
+
+  private final byte[] ROW = Bytes.toBytes("row1");
 
   @Before
   public void setUp() throws Exception {
-    when(connection.getConfiguration()).thenReturn(new Configuration());
-    when(regionLocations.size()).thenReturn(1);
-    when(regionLocations.getRegionLocation(0)).thenReturn(regionLocation);
-    when(regionLocation.getHostname()).thenReturn(HOSTNAME);
-    when(regionLocation.getServerName()).thenReturn(SERVERNAME);
+    byte[] ROW_BEFORE = ConnectionUtils.createCloseRowBefore(ROW);
+    HRegionLocation regionLocation = Mockito.mock(HRegionLocation.class);
+    ServerName serverName = Mockito.mock(ServerName.class);
+    HRegionInfo regionInfo = Mockito.mock(HRegionInfo.class);
+
+    Mockito.when(connection.getConfiguration()).thenReturn(new Configuration());
+    Mockito.when(regionLocations.size()).thenReturn(1);
+    Mockito.when(regionLocations.getRegionLocation(0)).thenReturn(regionLocation);
+    Mockito.when(regionLocation.getHostname()).thenReturn("localhost");
+    Mockito.when(regionLocation.getRegionInfo()).thenReturn(regionInfo);
+    Mockito.when(regionLocation.getServerName()).thenReturn(serverName);
+    Mockito.when(regionInfo.containsRow(ROW_BEFORE)).thenReturn(true);
+    Mockito.when(scan.includeStartRow()).thenReturn(true);
+    Mockito.when(scan.getStartRow()).thenReturn(ROW);
   }
 
   @Test
-  public void testPrepareAlwaysUsesCache() throws Exception {
-    when(connection.locateRegion(TABLE_NAME, ROW, true, true, 0))
-      .thenReturn(regionLocations);
+  public void testPrepareDoesNotUseCache() throws Exception {
+    TableName tableName = TableName.valueOf("MyTable");
+    Mockito.when(connection.relocateRegion(tableName, ROW, 0)).thenReturn(regionLocations);
 
     ReversedScannerCallable callable =
-      new ReversedScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null, rpcFactory, 0);
-    callable.prepare(false);
+        new ReversedScannerCallable(connection, tableName, scan, null, rpcFactory);
     callable.prepare(true);
 
-    verify(connection, times(2)).locateRegion(TABLE_NAME, ROW, true, true, 0);
+    Mockito.verify(connection).relocateRegion(tableName, ROW, 0);
   }
 
   @Test
-  public void testHandleDisabledTable() throws IOException {
-    when(connection.isTableDisabled(TABLE_NAME)).thenReturn(true);
-
-    ReversedScannerCallable callable =
-        new ReversedScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null, rpcFactory, 0);
-
-    try {
-      callable.prepare(true);
-      fail("should have thrown TableNotEnabledException");
-    } catch (TableNotEnabledException e) {
-      // pass
-    }
-  }
-
-  @Test
-  public void testUpdateSearchKeyCacheLocation() throws IOException {
-    byte[] regionName = HRegionInfo.createRegionName(TABLE_NAME,
-        ConnectionUtils.createCloseRowBefore(ConnectionUtils.MAX_BYTE_ARRAY), "123", false);
-    HRegionInfo mockRegionInfo = mock(HRegionInfo.class);
-    when(mockRegionInfo.containsRow(ConnectionUtils.MAX_BYTE_ARRAY)).thenReturn(true);
-    when(mockRegionInfo.getEndKey()).thenReturn(HConstants.EMPTY_END_ROW);
-    when(mockRegionInfo.getRegionName()).thenReturn(regionName);
-    when(regionLocation.getRegionInfo()).thenReturn(mockRegionInfo);
-
-    IOException testThrowable = new IOException("test throwable");
-
-    when(connection.locateRegion(TABLE_NAME, ConnectionUtils.MAX_BYTE_ARRAY, true, true, 0))
+  public void testPrepareUsesCache() throws Exception {
+    TableName tableName = TableName.valueOf("MyTable");
+    Mockito.when(connection.locateRegion(tableName, ROW, true, true, 0))
         .thenReturn(regionLocations);
 
-    Scan scan = new Scan().setReversed(true);
     ReversedScannerCallable callable =
-        new ReversedScannerCallable(connection, TABLE_NAME, scan, null, rpcFactory, 0);
-
+        new ReversedScannerCallable(connection, tableName, scan, null, rpcFactory);
     callable.prepare(false);
 
-    callable.throwable(testThrowable, true);
-
-    verify(connection).updateCachedLocations(TABLE_NAME, regionName,
-      ConnectionUtils.MAX_BYTE_ARRAY, testThrowable, SERVERNAME);
+    Mockito.verify(connection).locateRegion(tableName, ROW, true, true, 0);
   }
 }
