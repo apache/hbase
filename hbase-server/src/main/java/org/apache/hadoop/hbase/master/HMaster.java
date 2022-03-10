@@ -728,7 +728,18 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     this.splitOrMergeTracker = new SplitOrMergeTracker(zooKeeper, conf, this);
     this.splitOrMergeTracker.start();
 
-    loadRsGroupInfoManager();
+    // This is for backwards compatible. We do not need the CP for rs group now but if user want to
+    // load it, we need to enable rs group.
+    String[] cpClasses = conf.getStrings(MasterCoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    if (cpClasses != null) {
+      for (String cpClass : cpClasses) {
+        if (RSGroupAdminEndpoint.class.getName().equals(cpClass)) {
+          RSGroupUtil.enableRSGroup(conf);
+          break;
+        }
+      }
+    }
+    this.rsGroupInfoManager = RSGroupInfoManager.create(this);
 
     this.replicationPeerManager = ReplicationPeerManager.create(zooKeeper, conf, clusterId);
 
@@ -968,7 +979,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     if (!maintenanceMode) {
       status.setStatus("Initializing master coprocessors");
-      initializeCoprocessorHost();
+      initializeCoprocessorHost(conf);
     } else {
       // start an in process region server for carrying system regions
       maintenanceRegionServer =
@@ -4077,12 +4088,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
       CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) && !maintenanceMode) {
       LOG.info("Update the master coprocessor(s) because the configuration has changed");
-      try {
-        loadRsGroupInfoManager();
-      } catch (IOException ioe) {
-        throw new RuntimeException("Failed when reloading RSGroupInfoManager", ioe);
-      }
-      initializeCoprocessorHost();
+      initializeCoprocessorHost(newConf);
     }
   }
 
@@ -4159,28 +4165,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return configurationManager;
   }
 
-  private void initializeCoprocessorHost() {
+  private void initializeCoprocessorHost(Configuration conf) {
     // Add the Observer to delete quotas on table deletion before starting all CPs by
     // default with quota support, avoiding if user specifically asks to not load this Observer.
     if (QuotaUtil.isQuotaEnabled(conf)) {
       updateConfigurationForQuotasObserver(conf);
     }
     // initialize master side coprocessors before we start handling requests
-    this.cpHost = new MasterCoprocessorHost(this, this.conf);
+    this.cpHost = new MasterCoprocessorHost(this, conf);
   }
 
-  private void loadRsGroupInfoManager() throws IOException {
-    // This is for backwards compatible. We do not need the CP for rs group now but if user want to
-    // load it, we need to enable rs group.
-    String[] cpClasses = conf.getStrings(MasterCoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-    if (cpClasses != null) {
-      for (String cpClass : cpClasses) {
-        if (RSGroupAdminEndpoint.class.getName().equals(cpClass)) {
-          RSGroupUtil.enableRSGroup(conf);
-          break;
-        }
-      }
-    }
-    this.rsGroupInfoManager = RSGroupInfoManager.create(this);
-  }
 }

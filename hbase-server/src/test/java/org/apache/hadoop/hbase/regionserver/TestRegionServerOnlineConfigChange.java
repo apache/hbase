@@ -291,6 +291,7 @@ public class TestRegionServerOnlineConfigChange {
   public void testCoprocessorConfigurationOnlineChangeOnMaster() {
     assertNull(hMaster.getMasterCoprocessorHost().findCoprocessor(JMXListener.class.getName()));
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
+    assertFalse(hMaster.isInMaintenanceMode());
     hMaster.getConfigurationManager().notifyAllObservers(conf);
     assertNotNull(
       hMaster.getMasterCoprocessorHost().findCoprocessor(JMXListener.class.getName()));
