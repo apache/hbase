@@ -332,6 +332,7 @@ set HBASE_OPTS=%HBASE_OPTS% -Djava.util.logging.config.class="org.apache.hadoop.
 if not defined HBASE_ROOT_LOGGER (
   set HBASE_ROOT_LOGGER=INFO,console
 )
+
 set HBASE_OPTS=%HBASE_OPTS% -Dhbase.root.logger="%HBASE_ROOT_LOGGER%"
 
 if defined JAVA_LIBRARY_PATH (
@@ -348,6 +349,7 @@ if not defined HBASE_SECURITY_LOGGER (
     set HBASE_SECURITY_LOGGER=INFO,DRFAS
   )
 )
+
 set HBASE_OPTS=%HBASE_OPTS% -Dhbase.security.logger="%HBASE_SECURITY_LOGGER%"
 
 set HEAP_SETTINGS=%JAVA_HEAP_MAX% %JAVA_OFFHEAP_MAX%
