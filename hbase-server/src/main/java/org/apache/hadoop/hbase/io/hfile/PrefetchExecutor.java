@@ -19,13 +19,13 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
@@ -71,8 +71,6 @@ public final class PrefetchExecutor {
     });
   }
 
-  private static final Random RNG = new Random();
-
   // TODO: We want HFile, which is where the blockcache lives, to handle
   // prefetching of file blocks but the Store level is where path convention
   // knowledge should be contained
@@ -93,7 +91,8 @@ public final class PrefetchExecutor {
       long delay;
       if (prefetchDelayMillis > 0) {
         delay = (long)((prefetchDelayMillis * (1.0f - (prefetchDelayVariation/2))) +
-        (prefetchDelayMillis * (prefetchDelayVariation/2) * RNG.nextFloat()));
+          (prefetchDelayMillis * (prefetchDelayVariation/2) *
+          ThreadLocalRandom.current().nextFloat()));
       } else {
         delay = 0;
       }

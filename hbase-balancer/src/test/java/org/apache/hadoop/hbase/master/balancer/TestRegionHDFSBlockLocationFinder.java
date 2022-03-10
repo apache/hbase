@@ -63,8 +63,8 @@ public class TestRegionHDFSBlockLocationFinder {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionHDFSBlockLocationFinder.class);
 
+  private static final Random RNG = new Random(); // This test depends on Random#setSeed
   private static TableDescriptor TD;
-
   private static List<RegionInfo> REGIONS;
 
   private RegionHDFSBlockLocationFinder finder;
@@ -72,10 +72,10 @@ public class TestRegionHDFSBlockLocationFinder {
   private static HDFSBlocksDistribution generate(RegionInfo region) {
     HDFSBlocksDistribution distribution = new HDFSBlocksDistribution();
     int seed = region.hashCode();
-    Random rand = new Random(seed);
-    int size = 1 + rand.nextInt(10);
+    RNG.setSeed(seed);
+    int size = 1 + RNG.nextInt(10);
     for (int i = 0; i < size; i++) {
-      distribution.addHostsAndBlockWeight(new String[] { "host-" + i }, 1 + rand.nextInt(100));
+      distribution.addHostsAndBlockWeight(new String[] { "host-" + i }, 1 + RNG.nextInt(100));
     }
     return distribution;
   }
@@ -209,7 +209,7 @@ public class TestRegionHDFSBlockLocationFinder {
   }
 
   @Test
-  public void testRefreshRegionsWithChangedLocality() {
+  public void testRefreshRegionsWithChangedLocality() throws InterruptedException {
     ServerName testServer = ServerName.valueOf("host-0", 12345, 12345);
     RegionInfo testRegion = REGIONS.get(0);
 
@@ -231,6 +231,16 @@ public class TestRegionHDFSBlockLocationFinder {
 
     finder.setClusterMetrics(getMetricsWithLocality(testServer, testRegion.getRegionName(),
       0.345f));
+
+    // cache refresh happens in a background thread, so we need to wait for the value to
+    // update before running assertions.
+    long now = System.currentTimeMillis();
+    HDFSBlocksDistribution cached = cache.get(testRegion);
+    HDFSBlocksDistribution newValue;
+    do {
+      Thread.sleep(1_000);
+      newValue = finder.getBlockDistribution(testRegion);
+    } while (cached == newValue && System.currentTimeMillis() - now < 30_000);
 
     // locality changed just for our test region, so it should no longer be the same
     for (RegionInfo region : REGIONS) {

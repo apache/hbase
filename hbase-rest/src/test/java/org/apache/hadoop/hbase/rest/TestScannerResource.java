@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -95,7 +97,7 @@ public class TestScannerResource {
 
   static int insertData(Configuration conf, TableName tableName, String column, double prob)
       throws IOException {
-    Random rng = new Random();
+    Random rng = ThreadLocalRandom.current();
     byte[] k = new byte[3];
     byte [][] famAndQf = CellUtil.parseColumn(Bytes.toBytes(column));
     List<Put> puts = new ArrayList<>();

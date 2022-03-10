@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
@@ -87,7 +88,6 @@ public class TestMemStoreLAB {
    */
   @Test
   public void testLABRandomAllocation() {
-    Random rand = new Random();
     MemStoreLAB mslab = new MemStoreLABImpl();
     int expectedOff = 0;
     ByteBuffer lastBuffer = null;
@@ -95,6 +95,7 @@ public class TestMemStoreLAB {
     // 100K iterations by 0-1K alloc -> 50MB expected
     // should be reasonable for unit test and also cover wraparound
     // behavior
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 100000; i++) {
       int valSize = rand.nextInt(3);
       KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
@@ -144,10 +145,9 @@ public class TestMemStoreLAB {
       allocations.add(allocsByThisThread);
 
       TestThread t = new MultithreadedTestUtil.RepeatingTestThread(ctx) {
-        private Random r = new Random();
         @Override
         public void doAnAction() throws Exception {
-          int valSize = r.nextInt(3);
+          int valSize = ThreadLocalRandom.current().nextInt(3);
           KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
           int size = kv.getSerializedSize();
           ByteBufferKeyValue newCell = (ByteBufferKeyValue) mslab.copyCellInto(kv);

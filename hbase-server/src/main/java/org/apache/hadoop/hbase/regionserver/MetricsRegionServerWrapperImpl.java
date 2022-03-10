@@ -672,6 +672,11 @@ class MetricsRegionServerWrapperImpl
     return mobFileCacheHitRatio * 100;
   }
 
+  @Override
+  public int getActiveScanners() {
+    return regionServer.getRpcServices().getScannersCount();
+  }
+
   /**
    * This is the runnable that will be executed on the executor every PERIOD number of seconds
    * It will take metrics/numbers from all of the regions and use them to compute point in

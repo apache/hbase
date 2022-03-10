@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * This class is used for testing only. The main purpose is to emulate
  * random failures during MOB compaction process.
@@ -80,7 +81,6 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
   public static AtomicLong totalMajorCompactions = new AtomicLong();
 
   static double failureProb = 0.1d;
-  static Random rnd = new Random();
 
   public FaultyMobStoreCompactor(Configuration conf, HStore store) {
     super(conf, store);
@@ -108,7 +108,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
     boolean mustFail = false;
     if (compactMOBs) {
       mobCounter.incrementAndGet();
-      double dv = rnd.nextDouble();
+      double dv = ThreadLocalRandom.current().nextDouble();
       if (dv < failureProb) {
         mustFail = true;
         totalFailures.incrementAndGet();
@@ -150,7 +150,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
     long counter = 0;
     long countFailAt = -1;
     if (mustFail) {
-      countFailAt = rnd.nextInt(100); // randomly fail fast
+      countFailAt = ThreadLocalRandom.current().nextInt(100); // randomly fail fast
     }
 
     try {

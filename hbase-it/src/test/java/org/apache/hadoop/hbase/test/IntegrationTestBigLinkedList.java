@@ -22,18 +22,17 @@ import java.io.DataOutput;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -344,7 +343,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       static class GeneratorRecordReader extends RecordReader<BytesWritable,NullWritable> {
         private long count;
         private long numNodes;
-        private Random64 rand;
+        // Use Random64 to avoid issue described in HBASE-21256.
+        private Random64 rand = new Random64();
 
         @Override
         public void close() throws IOException {
@@ -371,15 +371,12 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         public void initialize(InputSplit arg0, TaskAttemptContext context)
             throws IOException, InterruptedException {
           numNodes = context.getConfiguration().getLong(GENERATOR_NUM_ROWS_PER_MAP_KEY, 25000000);
-          // Use Random64 to avoid issue described in HBASE-21256.
-          rand = new Random64();
         }
 
         @Override
         public boolean nextKeyValue() throws IOException, InterruptedException {
           return count++ < numNodes;
         }
-
       }
 
       @Override
@@ -457,6 +454,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       byte[] tinyValue = new byte[] { 't' };
       byte[] bigValue = null;
       Configuration conf;
+      // Use Random64 to avoid issue described in HBASE-21256.
+      private Random64 rand = new Random64();
 
       volatile boolean walkersStop;
       int numWalkers;
@@ -494,7 +493,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
             BIG_FAMILY_VALUE_SIZE_KEY, n, ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY, limit);
 
           bigValue = new byte[n];
-          ThreadLocalRandom.current().nextBytes(bigValue);
+          rand.nextBytes(bigValue);
           LOG.info("Create a bigValue with " + n + " bytes.");
         }
 
@@ -642,12 +641,10 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         ConcurrentWalker walker;
         Configuration conf;
         Context context;
-        Random rand;
 
         public ContinuousConcurrentWalker(Configuration conf, Context context) {
           this.conf = conf;
           this.context = context;
-          rand = new Random();
         }
 
         @Override
@@ -681,7 +678,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
             if (walkersStop) {
               throw new InterruptedException();
             }
-            return flushedLoops.get(rand.nextInt(flushedLoops.size()));
+            return flushedLoops.get(ThreadLocalRandom.current().nextInt(flushedLoops.size()));
           }
         }
       }
@@ -1773,7 +1770,6 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       if (cmd.hasOption('n')) {
         maxQueries = Long.parseLong(cmd.getOptionValue("n"));
       }
-      Random rand = new SecureRandom();
       boolean isSpecificStart = cmd.hasOption('s');
 
       byte[] startKey = isSpecificStart ? Bytes.toBytesBinary(cmd.getOptionValue('s')) : null;
@@ -1788,7 +1784,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       while (numQueries < maxQueries && (numQueries == 0 || !isSpecificStart)) {
         if (!isSpecificStart) {
           startKey = new byte[ROWKEY_LENGTH];
-          rand.nextBytes(startKey);
+          Bytes.random(startKey);
         }
         CINode node = findStartNode(table, startKey);
         if (node == null && isSpecificStart) {

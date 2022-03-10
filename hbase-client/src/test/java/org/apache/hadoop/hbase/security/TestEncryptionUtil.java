@@ -23,7 +23,7 @@ import static org.junit.Assert.fail;
 
 import java.security.Key;
 import java.security.KeyException;
-import java.security.SecureRandom;
+
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -110,7 +110,7 @@ public class TestEncryptionUtil {
 
     // generate a test key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    new SecureRandom().nextBytes(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key key = new SecretKeySpec(keyBytes, algorithm);
 
@@ -152,7 +152,7 @@ public class TestEncryptionUtil {
 
     // generate a test key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    new SecureRandom().nextBytes(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm =
       conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key key = new SecretKeySpec(keyBytes, algorithm);
@@ -189,7 +189,7 @@ public class TestEncryptionUtil {
 
     // generate a test key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    new SecureRandom().nextBytes(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key key = new SecretKeySpec(keyBytes, algorithm);
 
@@ -214,7 +214,7 @@ public class TestEncryptionUtil {
 
     // generate a test key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    new SecureRandom().nextBytes(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm =
       conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key key = new SecretKeySpec(keyBytes, algorithm);

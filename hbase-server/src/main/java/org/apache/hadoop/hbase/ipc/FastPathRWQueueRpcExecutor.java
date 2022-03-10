@@ -1,5 +1,4 @@
-/**
-
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,8 +26,6 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * RPC Executor that extends {@link RWQueueRpcExecutor} with fast-path feature, used in
@@ -37,7 +34,6 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public class FastPathRWQueueRpcExecutor extends RWQueueRpcExecutor {
-  private static final Logger LOG = LoggerFactory.getLogger(RWQueueRpcExecutor.class);
 
   private final Deque<FastPathRpcHandler> readHandlerStack = new ConcurrentLinkedDeque<>();
   private final Deque<FastPathRpcHandler> writeHandlerStack = new ConcurrentLinkedDeque<>();
@@ -60,7 +56,7 @@ public class FastPathRWQueueRpcExecutor extends RWQueueRpcExecutor {
   }
 
   @Override
-  public boolean dispatch(final CallRunner callTask) throws InterruptedException {
+  public boolean dispatch(final CallRunner callTask) {
     RpcCall call = callTask.getRpcCall();
     boolean shouldDispatchToWriteQueue = isWriteRequest(call.getHeader(), call.getParam());
     boolean shouldDispatchToScanQueue = shouldDispatchToScanQueue(callTask);

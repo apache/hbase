@@ -26,10 +26,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClusterInterface;
@@ -286,8 +287,9 @@ public abstract class Action {
       List<byte[]> regions = new LinkedList<>(serverLoad.getRegionMetrics().keySet());
       int victimRegionCount = (int)Math.ceil(fractionOfRegions * regions.size());
       getLogger().debug("Removing {} regions from {}", victimRegionCount, sn);
+      Random rand = ThreadLocalRandom.current();
       for (int i = 0; i < victimRegionCount; ++i) {
-        int victimIx = RandomUtils.nextInt(0, regions.size());
+        int victimIx = rand.nextInt(regions.size());
         String regionId = RegionInfo.encodeRegionName(regions.remove(victimIx));
         victimRegions.add(Bytes.toBytes(regionId));
       }
@@ -296,13 +298,14 @@ public abstract class Action {
     getLogger().info("Moving {} regions from {} servers to {} different servers",
       victimRegions.size(), fromServers.size(), toServers.size());
     Admin admin = this.context.getHBaseIntegrationTestingUtility().getAdmin();
+    Random rand = ThreadLocalRandom.current();
     for (byte[] victimRegion : victimRegions) {
       // Don't keep moving regions if we're
       // trying to stop the monkey.
       if (context.isStopping()) {
         break;
       }
-      int targetIx = RandomUtils.nextInt(0, toServers.size());
+      int targetIx = rand.nextInt(toServers.size());
       admin.move(victimRegion, toServers.get(targetIx));
     }
   }

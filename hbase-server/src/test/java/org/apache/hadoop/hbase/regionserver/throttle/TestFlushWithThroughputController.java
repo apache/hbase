@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -115,13 +114,12 @@ public class TestFlushWithThroughputController {
     // Internally, throughput is controlled after every cell write, so keep value size less for
     // better control.
     final int NUM_FLUSHES = 3, NUM_PUTS = 50, VALUE_SIZE = 200 * 1024;
-    Random rand = new Random();
     long duration = 0;
     for (int i = 0; i < NUM_FLUSHES; i++) {
       // Write about 10M (10 times of throughput rate) per iteration.
       for (int j = 0; j < NUM_PUTS; j++) {
         byte[] value = new byte[VALUE_SIZE];
-        rand.nextBytes(value);
+        Bytes.random(value);
         table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
       long startTime = System.nanoTime();
@@ -190,11 +188,10 @@ public class TestFlushWithThroughputController {
     assertTrue(regionServer.getFlushPressure() < pressure);
     Thread.sleep(5000);
     Table table = conn.getTable(tableName);
-    Random rand = new Random();
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 10; j++) {
         byte[] value = new byte[256 * 1024];
-        rand.nextBytes(value);
+        Bytes.random(value);
         table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
     }

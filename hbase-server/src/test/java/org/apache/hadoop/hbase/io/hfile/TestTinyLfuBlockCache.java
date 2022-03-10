@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -233,9 +234,9 @@ public class TestTinyLfuBlockCache {
 
   private CachedItem [] generateRandomBlocks(int numBlocks, long maxSize) {
     CachedItem [] blocks = new CachedItem[numBlocks];
-    Random r = new Random();
+    Random rand = ThreadLocalRandom.current();
     for(int i=0;i<numBlocks;i++) {
-      blocks[i] = new CachedItem("block" + i, r.nextInt((int)maxSize)+1);
+      blocks[i] = new CachedItem("block" + i, rand.nextInt((int)maxSize)+1);
     }
     return blocks;
   }

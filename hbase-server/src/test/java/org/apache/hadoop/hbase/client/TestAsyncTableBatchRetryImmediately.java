@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -71,7 +70,7 @@ public class TestAsyncTableBatchRetryImmediately {
     UTIL.startMiniCluster(1);
     Table table = UTIL.createTable(TABLE_NAME, FAMILY);
     UTIL.waitTableAvailable(TABLE_NAME);
-    ThreadLocalRandom.current().nextBytes(VALUE_PREFIX);
+    Bytes.random(VALUE_PREFIX);
     for (int i = 0; i < COUNT; i++) {
       table.put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUAL,
         Bytes.add(VALUE_PREFIX, Bytes.toBytes(i))));

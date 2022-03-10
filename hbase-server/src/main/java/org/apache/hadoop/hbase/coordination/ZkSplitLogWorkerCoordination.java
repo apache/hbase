@@ -24,10 +24,9 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
-
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -267,7 +266,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
 
       // after a successful submit, sleep a little bit to allow other RSs to grab the rest tasks
       try {
-        int sleepTime = RandomUtils.nextInt(0, 500) + 500;
+        int sleepTime = ThreadLocalRandom.current().nextInt(500) + 500;
         Thread.sleep(sleepTime);
       } catch (InterruptedException e) {
         LOG.warn("Interrupted while yielding for other region servers", e);

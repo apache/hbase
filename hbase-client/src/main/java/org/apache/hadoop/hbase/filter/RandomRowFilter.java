@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.util.Objects;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,7 +35,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferExce
  */
 @InterfaceAudience.Public
 public class RandomRowFilter extends FilterBase {
-  protected static final Random random = new Random();
 
   protected float chance;
   protected boolean filterOutRow;
@@ -98,7 +97,7 @@ public class RandomRowFilter extends FilterBase {
       filterOutRow = false;
     } else {
       // roll the dice
-      filterOutRow = !(random.nextFloat() < chance);
+      filterOutRow = !(ThreadLocalRandom.current().nextFloat() < chance);
     }
     return filterOutRow;
   }

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -31,11 +31,9 @@ import org.slf4j.LoggerFactory;
 public class TruncateTableAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(TruncateTableAction.class);
   private final TableName tableName;
-  private final Random random;
 
   public TruncateTableAction(String tableName) {
     this.tableName = TableName.valueOf(tableName);
-    this.random = new Random();
   }
 
   @Override protected Logger getLogger() {
@@ -52,7 +50,7 @@ public class TruncateTableAction extends Action {
       return;
     }
 
-    boolean preserveSplits = random.nextBoolean();
+    boolean preserveSplits = ThreadLocalRandom.current().nextBoolean();
     getLogger().info("Performing action: Truncate table {} preserve splits {}",
       tableName.getNameAsString(), preserveSplits);
     admin.truncateTable(tableName, preserveSplits);

@@ -25,14 +25,12 @@ import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.context.Context;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.client.trace.IpcClientSpanBuilder;
 import org.apache.hadoop.hbase.ipc.RpcCall;
-import org.apache.hadoop.hbase.ipc.ServerCall;
 import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RpcSystem;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -46,12 +44,10 @@ import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 @InterfaceAudience.Private
 public class IpcServerSpanBuilder implements Supplier<Span> {
 
-  private final RpcCall rpcCall;
   private String name;
   private final Map<AttributeKey<?>, Object> attributes = new HashMap<>();
 
   public IpcServerSpanBuilder(final RpcCall rpcCall) {
-    this.rpcCall = rpcCall;
     final String packageAndService = Optional.ofNullable(rpcCall.getService())
       .map(BlockingService::getDescriptorForType)
       .map(IpcClientSpanBuilder::getRpcPackageAndService)
@@ -86,7 +82,6 @@ public class IpcServerSpanBuilder implements Supplier<Span> {
       .spanBuilder(name)
       .setSpanKind(SpanKind.SERVER);
     attributes.forEach((k, v) -> builder.setAttribute((AttributeKey<? super Object>) k, v));
-    return builder.setParent(Context.current().with(((ServerCall<?>) rpcCall).getSpan()))
-      .startSpan();
+    return builder.startSpan();
   }
 }

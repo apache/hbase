@@ -25,8 +25,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
@@ -86,7 +86,6 @@ public abstract class MultiThreadedAction {
     private byte[][] columnFamilies = null;
     private int minColumnsPerKey;
     private int maxColumnsPerKey;
-    private final Random random = new Random();
 
     public DefaultDataGenerator(int minValueSize, int maxValueSize,
         int minColumnsPerKey, int maxColumnsPerKey, byte[]... columnFamilies) {
@@ -113,7 +112,8 @@ public abstract class MultiThreadedAction {
 
     @Override
     public byte[][] generateColumnsForCf(byte[] rowKey, byte[] cf) {
-      int numColumns = minColumnsPerKey + random.nextInt(maxColumnsPerKey - minColumnsPerKey + 1);
+      int numColumns = minColumnsPerKey +
+        ThreadLocalRandom.current().nextInt(maxColumnsPerKey - minColumnsPerKey + 1);
       byte[][] columns = new byte[numColumns][];
       for (int i = 0; i < numColumns; ++i) {
         columns[i] = Bytes.toBytes(Integer.toString(i));

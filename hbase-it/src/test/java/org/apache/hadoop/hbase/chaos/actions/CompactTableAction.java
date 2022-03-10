@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
-import org.apache.commons.lang3.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -54,7 +54,7 @@ public class CompactTableAction extends Action {
   public void perform() throws Exception {
     HBaseTestingUtil util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
-    boolean major = RandomUtils.nextInt(0, 100) < majorRatio;
+    boolean major = ThreadLocalRandom.current().nextInt(100) < majorRatio;
 
     getLogger().info("Performing action: Compact table " + tableName + ", major=" + major);
     try {

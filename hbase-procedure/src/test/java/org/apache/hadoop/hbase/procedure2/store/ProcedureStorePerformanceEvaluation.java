@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.procedure2.store;
 
 import java.io.IOException;
-import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
@@ -106,7 +106,7 @@ public abstract class ProcedureStorePerformanceEvaluation<T extends ProcedureSto
       syncType) : "sync argument can only accept one of these three values: hsync, hflush, nosync";
     stateSize = getOptionAsInt(cmd, STATE_SIZE_OPTION.getOpt(), DEFAULT_STATE_SIZE);
     SERIALIZED_STATE = new byte[stateSize];
-    new Random(12345).nextBytes(SERIALIZED_STATE);
+    Bytes.random(SERIALIZED_STATE);
   }
 
   private void setUpProcedureStore() throws IOException {

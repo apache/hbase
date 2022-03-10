@@ -60,10 +60,15 @@ public class TestAsyncTableScanAll extends AbstractTestAsyncTableScan {
   }
 
   @Override
-  protected List<Result> doScan(Scan scan) throws Exception {
+  protected List<Result> doScan(Scan scan, int closeAfter) throws Exception {
     List<Result> results = getTable.get().scanAll(scan).get();
     if (scan.getBatch() > 0) {
       results = convertFromBatchResult(results);
+    }
+    // we can't really close the scan early for scanAll, but to keep the assertions
+    // simple in AbstractTestAsyncTableScan we'll just sublist here instead.
+    if (closeAfter > 0 && closeAfter < results.size()) {
+      results = results.subList(0, closeAfter);
     }
     return results;
   }

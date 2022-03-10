@@ -28,6 +28,7 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configuration;
@@ -87,7 +88,6 @@ public class TestMemStoreChunkPool {
 
   @Test
   public void testReusingChunks() {
-    Random rand = new Random();
     MemStoreLAB mslab = new MemStoreLABImpl(conf);
     int expectedOff = 0;
     ByteBuffer lastBuffer = null;
@@ -95,6 +95,7 @@ public class TestMemStoreChunkPool {
     final byte[] cf = Bytes.toBytes("f");
     final byte[] q = Bytes.toBytes("q");
     // Randomly allocate some bytes
+    final Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 100; i++) {
       int valSize = rand.nextInt(1000);
       KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
