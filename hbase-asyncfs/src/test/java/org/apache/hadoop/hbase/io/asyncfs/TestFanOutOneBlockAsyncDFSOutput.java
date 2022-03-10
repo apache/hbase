@@ -211,6 +211,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
       assertEquals(2, output.getPipeline().length);
     } finally {
       CLUSTER.restartDataNode(dnProp);
+      CLUSTER.triggerBlockReports();
     }
   }
 
