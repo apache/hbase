@@ -62,8 +62,8 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
   /**
    * Configure for the timeout of log rolling retry.
    */
-  protected static final String WAL_ROLL_WAIT_TIMEOUT =
-    "hbase.regionserver.logroll.wait.timeout.ms";
+  public static final String WAL_ROLL_WAIT_TIMEOUT = "hbase.regionserver.logroll.wait.timeout.ms";
+  public static final long DEFAULT_WAL_ROLL_WAIT_TIMEOUT = 30000;
 
   /**
    * Configure for the max count of log rolling retry.
@@ -130,7 +130,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
     this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.checkLowReplicationInterval =
       conf.getLong("hbase.regionserver.hlog.check.lowreplication.interval", 30 * 1000);
-    this.rollWaitTimeout = conf.getLong(WAL_ROLL_WAIT_TIMEOUT, 30000);
+    this.rollWaitTimeout = conf.getLong(WAL_ROLL_WAIT_TIMEOUT, DEFAULT_WAL_ROLL_WAIT_TIMEOUT);
     // retry rolling does not have to be the default behavior, so the default value is 0 here
     this.maxRollRetry = conf.getInt(WAL_ROLL_RETRIES, 0);
   }
