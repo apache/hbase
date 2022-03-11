@@ -49,11 +49,9 @@
         <include>org.apache.hbase:hbase-metrics</include>
         <include>org.apache.hbase:hbase-metrics-api</include>
         <include>org.apache.hbase:hbase-procedure</include>
-        <include>org.apache.hbase:hbase-protocol</include>
         <include>org.apache.hbase:hbase-protocol-shaded</include>
         <include>org.apache.hbase:hbase-replication</include>
         <include>org.apache.hbase:hbase-rest</include>
-        <include>org.apache.hbase:hbase-rsgroup</include>
         <include>org.apache.hbase:hbase-server</include>
         <include>org.apache.hbase:hbase-shell</include>
         <include>org.apache.hbase:hbase-testing-util</include>
@@ -106,14 +104,11 @@
               <exclude>org.apache.hbase:hbase-shaded-mapreduce</exclude>
               <exclude>com.github.stephenc.findbugs:findbugs-annotations</exclude>
               <exclude>commons-logging:commons-logging</exclude>
-              <exclude>log4j:log4j</exclude>
-              <exclude>ch.qos.reload4j:reload4j</exclude>
               <exclude>org.apache.htrace:htrace-core4</exclude>
               <exclude>org.apache.htrace:htrace-core</exclude>
               <exclude>org.apache.yetus:audience-annotations</exclude>
-              <exclude>org.slf4j:slf4j-api</exclude>
-              <exclude>org.slf4j:slf4j-log4j12</exclude>
-              <exclude>org.slf4j:slf4j-reload4j</exclude>
+              <exclude>org.slf4j:*</exclude>
+              <exclude>org.apache.logging.log4j:*</exclude>
               <exclude>io.opentelemetry.javaagent:*</exclude>
             </excludes>
           </dependencySet>
@@ -207,14 +202,11 @@
       <includes>
         <include>com.github.stephenc.findbugs:findbugs-annotations</include>
         <include>commons-logging:commons-logging</include>
-        <include>ch.qos.reload4j:reload4j</include>
         <include>org.apache.htrace:htrace-core4</include>
         <include>org.apache.htrace:htrace-core</include>
         <include>org.apache.yetus:audience-annotations</include>
-        <include>org.slf4j:slf4j-api</include>
-        <include>org.slf4j:jcl-over-slf4j</include>
-        <include>org.slf4j:jul-to-slf4j</include>
-        <include>org.slf4j:slf4j-reload4j</include>
+        <include>org.slf4j:*</include>
+        <include>org.apache.logging.log4j:*</include>
         <include>io.opentelemetry:*</include>
       </includes>
     </dependencySet>
