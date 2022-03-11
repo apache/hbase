@@ -2230,18 +2230,13 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
     TableName tn = region.getTableDescriptor().getTableName();
     if (!ServerRegionReplicaUtil.isRegionReplicaReplicationEnabled(region.conf, tn) ||
-        !ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(region.conf)) {
-      region.setReadsEnabled(true);
-      return;
-    }
-
-    if (!region.getTableDescriptor().hasRegionMemStoreReplication()
-        && ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(region.conf)) {
-      // If the memstore replication not setup, we do not have to wait for observing a flush event
-      // from primary before starting to serve reads, because gaps from replication is not
-      // applicable,this logic is from
-      // TableDescriptorBuilder.ModifyableTableDescriptor.setRegionMemStoreReplication by
-      // HBASE-13063
+        !ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(region.conf) ||
+        // If the memstore replication not setup, we do not have to wait for observing a flush event
+        // from primary before starting to serve reads, because gaps from replication is not
+        // applicable,this logic is from
+        // TableDescriptorBuilder.ModifyableTableDescriptor.setRegionMemStoreReplication by
+        // HBASE-13063
+        !region.getTableDescriptor().hasRegionMemStoreReplication()) {
       region.setReadsEnabled(true);
       return;
     }
