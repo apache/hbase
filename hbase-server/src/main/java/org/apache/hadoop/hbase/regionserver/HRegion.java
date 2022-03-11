@@ -587,7 +587,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /** A result object from prepare flush cache stage */
-  static class PrepareFlushResult {
+  protected static class PrepareFlushResult {
     final FlushResultImpl result; // indicating a failure result from prepare
     final TreeMap<byte[], StoreFlushContext> storeFlushCtxs;
     final TreeMap<byte[], List<Path>> committedFiles;
@@ -729,7 +729,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private final StoreHotnessProtector storeHotnessProtector;
 
-  private Optional<RegionReplicationSink> regionReplicationSink = Optional.empty();
+  protected Optional<RegionReplicationSink> regionReplicationSink = Optional.empty();
 
   /**
    * HRegion constructor. This constructor should only be used for testing and

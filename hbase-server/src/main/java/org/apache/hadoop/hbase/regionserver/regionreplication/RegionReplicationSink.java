@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.regionreplication;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -204,7 +204,7 @@ public class RegionReplicationSink {
     this.failedReplicas = new IntHashSet(regionReplication - 1);
   }
 
-  private void onComplete(List<SinkEntry> sent,
+  void onComplete(List<SinkEntry> sent,
     Map<Integer, MutableObject<Throwable>> replica2Error) {
     long maxSequenceId = Long.MIN_VALUE;
     long toReleaseSize = 0;
@@ -214,31 +214,32 @@ public class RegionReplicationSink {
       toReleaseSize += entry.size;
     }
     manager.decrease(toReleaseSize);
-    Set<Integer> failed = new HashSet<>();
-    for (Map.Entry<Integer, MutableObject<Throwable>> entry : replica2Error.entrySet()) {
-      Integer replicaId = entry.getKey();
-      Throwable error = entry.getValue().getValue();
-      if (error != null) {
-        if (maxSequenceId > lastFlushedSequenceId) {
-          LOG.warn(
-            "Failed to replicate to secondary replica {} for {}, since the max sequence" +
-              " id of sunk entris is {}, which is greater than the last flush SN {}," +
-              " we will stop replicating for a while and trigger a flush",
-            replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
-          failed.add(replicaId);
-        } else {
-          LOG.warn(
-            "Failed to replicate to secondary replica {} for {}, since the max sequence" +
-              " id of sunk entris is {}, which is less than or equal to the last flush SN {}," +
-              " we will not stop replicating",
-            replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
-        }
-      }
-    }
     synchronized (entries) {
       pendingSize -= toReleaseSize;
-      if (!failed.isEmpty()) {
-        failedReplicas.addAll(failed);
+      boolean addFailedReplicas = false;
+      for (Map.Entry<Integer, MutableObject<Throwable>> entry : replica2Error.entrySet()) {
+        Integer replicaId = entry.getKey();
+        Throwable error = entry.getValue().getValue();
+        if (error != null) {
+          if (maxSequenceId > lastFlushedSequenceId) {
+            LOG.warn(
+              "Failed to replicate to secondary replica {} for {}, since the max sequence"
+                  + " id of sunk entris is {}, which is greater than the last flush SN {},"
+                  + " we will stop replicating for a while and trigger a flush",
+              replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
+            failedReplicas.add(replicaId);
+            addFailedReplicas = true;
+          } else {
+            LOG.warn(
+              "Failed to replicate to secondary replica {} for {}, since the max sequence"
+                  + " id of sunk entris is {}, which is less than or equal to the last flush SN {},"
+                  + " we will not stop replicating",
+              replicaId, primary, maxSequenceId, lastFlushedSequenceId, error);
+          }
+        }
+      }
+
+      if (addFailedReplicas) {
         flushRequester.requestFlush(maxSequenceId);
       }
       sending = false;
@@ -323,7 +324,7 @@ public class RegionReplicationSink {
     return storesFlushed.containsAll(tableDesc.getColumnFamilyNames());
   }
 
-  private Optional<FlushDescriptor> getStartFlushAllDescriptor(Cell metaCell) {
+  Optional<FlushDescriptor> getStartFlushAllDescriptor(Cell metaCell) {
     if (!CellUtil.matchingFamily(metaCell, WALEdit.METAFAMILY)) {
       return Optional.empty();
     }
@@ -446,6 +447,14 @@ public class RegionReplicationSink {
       while (!stopped) {
         entries.wait();
       }
+    }
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  IntHashSet getFailedReplicas() {
+    synchronized (entries) {
+      return this.failedReplicas;
     }
   }
 }
