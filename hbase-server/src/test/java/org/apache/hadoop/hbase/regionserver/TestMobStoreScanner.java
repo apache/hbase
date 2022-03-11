@@ -165,8 +165,15 @@ public class TestMobStoreScanner {
     byte[] bigValue = new byte[25*1024*1024];
 
     Put put = new Put(row1);
+    Bytes.random(bigValue);
     put.addColumn(family, qf1, bigValue);
+    table.put(put);
+    put = new Put(row1);
+    Bytes.random(bigValue);
     put.addColumn(family, qf2, bigValue);
+    table.put(put);
+    put = new Put(row1);
+    Bytes.random(bigValue);
     put.addColumn(family, qf3, bigValue);
     table.put(put);
 
