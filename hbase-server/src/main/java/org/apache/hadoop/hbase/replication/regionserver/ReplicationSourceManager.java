@@ -714,8 +714,10 @@ public class ReplicationSourceManager {
     for (ReplicationSourceInterface source : this.sources.values()) {
       source.terminate("Region server is closing");
     }
-    for (ReplicationSourceInterface source : this.oldsources) {
-      source.terminate("Region server is closing");
+    synchronized (oldsources) {
+      for (ReplicationSourceInterface source : this.oldsources) {
+        source.terminate("Region server is closing");
+      }
     }
   }
 
