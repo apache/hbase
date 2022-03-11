@@ -7055,7 +7055,7 @@ public class TestHRegion {
     // using small heart beat cells
     conf.setLong(StoreScanner.HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK, 2);
 
-    region = HBaseTestingUtil
+    region = HBaseTestingUtility
       .createRegionAndWAL(RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build(),
         TEST_UTIL.getDataTestDir(), conf, tableDescriptor);
     assertNotNull(region);

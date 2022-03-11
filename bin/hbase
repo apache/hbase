@@ -305,10 +305,13 @@ else
   # make it easier to check for shaded/not later on.
   shaded_jar=""
 fi
+# here we will add slf4j-api, commons-logging, jul-to-slf4j, jcl-over-slf4j
+# to classpath, as they are all logging bridges. Only exclude log4j* so we
+# will not actually log anything out. Add it later if necessary
 for f in "${HBASE_HOME}"/lib/client-facing-thirdparty/*.jar; do
   if [[ ! "${f}" =~ ^.*/htrace-core-3.*\.jar$ ]] && \
-     [ "${f}" != "htrace-core.jar$" ] && \
-     [[ ! "${f}" =~ ^.*/slf4j-log4j.*$ ]]; then
+     [[ "${f}" != "htrace-core.jar$" ]] && \
+     [[ ! "${f}" =~ ^.*/log4j.*$ ]]; then
     CLASSPATH="${CLASSPATH}:${f}"
   fi
 done
@@ -671,7 +674,7 @@ elif [ "$COMMAND" = "mapredcp" ] ; then
     for f in "${HBASE_HOME}"/lib/client-facing-thirdparty/*.jar; do
       if [[ ! "${f}" =~ ^.*/htrace-core-3.*\.jar$ ]] && \
          [ "${f}" != "htrace-core.jar$" ] && \
-         [[ ! "${f}" =~ ^.*/slf4j-log4j.*$ ]]; then
+         [[ ! "${f}" =~ ^.*/log4j.*$ ]]; then
         echo -n ":${f}"
       fi
     done
@@ -720,8 +723,8 @@ elif [ "$COMMAND" = "hbtop" ] ; then
     done
   fi
 
-  if [ -f "${HBASE_HOME}/conf/log4j-hbtop.properties" ] ; then
-    HBASE_HBTOP_OPTS="${HBASE_HBTOP_OPTS} -Dlog4j.configuration=file:${HBASE_HOME}/conf/log4j-hbtop.properties"
+  if [ -f "${HBASE_HOME}/conf/log4j2-hbtop.properties" ] ; then
+    HBASE_HBTOP_OPTS="${HBASE_HBTOP_OPTS} -Dlog4j2.configurationFile=file:${HBASE_HOME}/conf/log4j2-hbtop.properties"
   fi
   HBASE_OPTS="${HBASE_OPTS} ${HBASE_HBTOP_OPTS}"
 else
@@ -810,10 +813,9 @@ fi
 
 HEAP_SETTINGS="$JAVA_HEAP_MAX $JAVA_OFFHEAP_MAX"
 # by now if we're running a command it means we need logging
-for f in ${HBASE_HOME}/lib/client-facing-thirdparty/slf4j-log4j*.jar; do
+for f in ${HBASE_HOME}/lib/client-facing-thirdparty/log4j*.jar; do
   if [ -f "${f}" ]; then
     CLASSPATH="${CLASSPATH}:${f}"
-    break
   fi
 done
 

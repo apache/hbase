@@ -17,27 +17,26 @@
  */
 package org.apache.hadoop.hbase.logging;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.log4j.Appender;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.spi.LoggingEvent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.ArgumentCaptor;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * This should be in the hbase-logging module but the {@link HBaseClassTestRule} is in hbase-common
@@ -56,27 +55,42 @@ public class TestJul2Slf4j {
 
   private String loggerName = getClass().getName();
 
-  private Appender mockAppender;
+  private org.apache.logging.log4j.core.Appender mockAppender;
 
   @Before
   public void setUp() {
-    mockAppender = mock(Appender.class);
-    LogManager.getRootLogger().addAppender(mockAppender);
+    mockAppender = mock(org.apache.logging.log4j.core.Appender.class);
+    when(mockAppender.getName()).thenReturn("mockAppender");
+    when(mockAppender.isStarted()).thenReturn(true);
+    ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+      .getLogger(loggerName)).addAppender(mockAppender);
   }
 
   @After
   public void tearDown() {
-    LogManager.getRootLogger().removeAppender(mockAppender);
+    ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+      .getLogger(loggerName)).removeAppender(mockAppender);
   }
 
   @Test
   public void test() throws IOException {
+    AtomicReference<org.apache.logging.log4j.Level> level = new AtomicReference<>();
+    AtomicReference<String> msg = new AtomicReference<String>();
+    doAnswer(new Answer<Void>() {
+
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        org.apache.logging.log4j.core.LogEvent logEvent =
+          invocation.getArgument(0, org.apache.logging.log4j.core.LogEvent.class);
+        level.set(logEvent.getLevel());
+        msg.set(logEvent.getMessage().getFormattedMessage());
+        return null;
+      }
+    }).when(mockAppender).append(any(org.apache.logging.log4j.core.LogEvent.class));
     java.util.logging.Logger logger = java.util.logging.Logger.getLogger(loggerName);
     logger.info(loggerName);
-    ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
-    verify(mockAppender, times(1)).doAppend(captor.capture());
-    LoggingEvent loggingEvent = captor.getValue();
-    assertThat(loggingEvent.getLevel(), is(Level.INFO));
-    assertEquals(loggerName, loggingEvent.getRenderedMessage());
+    verify(mockAppender, times(1)).append(any(org.apache.logging.log4j.core.LogEvent.class));
+    assertEquals(org.apache.logging.log4j.Level.INFO, level.get());
+    assertEquals(loggerName, msg.get());
   }
 }

@@ -40,7 +40,6 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-shaded-client</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <!-- parent pom defines these for children. :( :( :( -->
     <dependency>
@@ -49,8 +48,18 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>ch.qos.reload4j</groupId>
-      <artifactId>reload4j</artifactId>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
       <scope>provided</scope>
     </dependency>
     <!-- Test dependencies -->
@@ -97,8 +106,7 @@
                   <excludes>
                     <!-- We leave logging stuff alone -->
                     <exclude>org.slf4j:*</exclude>
-                    <exclude>log4j:*</exclude>
-                    <exclude>ch.qos.reload4j:*</exclude>
+                    <exclude>org.apache.logging.log4j:*</exclude>
                     <exclude>commons-logging:*</exclude>
                     <!-- annotations that never change -->
                     <exclude>com.google.code.findbugs:*</exclude>

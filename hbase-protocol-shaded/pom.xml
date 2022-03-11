@@ -162,10 +162,9 @@
                   <exclude>com.google.j2objc:j2objc-annotations</exclude>
                   <exclude>org.codehaus.mojo:animal-sniffer-annotations</exclude>
                   <exclude>junit:junit</exclude>
-                  <exclude>log4j:log4j</exclude>
-                  <exclude>ch.qos.reload4j:*</exclude>
                   <exclude>commons-logging:commons-logging</exclude>
-                  <exclude>org.slf4j:slf4j-api</exclude>
+                  <exclude>org.slf4j:*</exclude>
+                  <exclude>org.apache.logging.log4j:*</exclude>
                   <exclude>org.apache.yetus:audience-annotations</exclude>
                   <exclude>com.github.stephenc.fingbugs:*</exclude>
                   <exclude>com.github.spotbugs:*</exclude>
