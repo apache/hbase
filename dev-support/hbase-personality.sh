@@ -144,7 +144,13 @@ function personality_modules
   # At a few points, hbase modules can run build, test, etc. in parallel
   # Let it happen. Means we'll use more CPU but should be for short bursts.
   # https://cwiki.apache.org/confluence/display/MAVEN/Parallel+builds+in+Maven+3
-  extra="--threads=2 -DHBasePatchProcess"
+  if [[ -n "${BUILD_THREAD}" ]]; then
+    extra="--threads=${BUILD_THREAD}"
+  else
+    extra="--threads=2"
+  fi
+
+  extra="${extra} -DHBasePatchProcess"
   if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
     extra="${extra} -Dhttps.protocols=TLSv1.2"
   fi
@@ -230,6 +236,15 @@ function personality_modules
     # Used by zombie detection stuff, even though we're not including that yet.
     if [ -n "${BUILD_ID}" ]; then
       extra="${extra} -Dbuild.id=${BUILD_ID}"
+    fi
+
+    # set forkCount
+    if [[ -n "${SUREFIRE_FIRST_PART_FORK_COUNT}" ]]; then
+      extra="${extra} -Dsurefire.firstPartForkCount=${SUREFIRE_FIRST_PART_FORK_COUNT}"
+    fi
+
+    if [[ -n "${SUREFIRE_SECOND_PART_FORK_COUNT}" ]]; then
+      extra="${extra} -Dsurefire.secondPartForkCount=${SUREFIRE_SECOND_PART_FORK_COUNT}"
     fi
 
     # If the set of changed files includes CommonFSUtils then add the hbase-server
