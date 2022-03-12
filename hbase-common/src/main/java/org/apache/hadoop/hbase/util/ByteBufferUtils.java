@@ -30,24 +30,23 @@ import java.util.Arrays;
 import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-import sun.nio.ch.DirectBuffer;
 
 /**
  * Utility functions for working with byte buffers, such as reading/writing
  * variable-length long numbers.
  */
-@SuppressWarnings("restriction")
 @InterfaceAudience.Private
 public final class ByteBufferUtils {
   // "Compressed integer" serialization helper constants.
   public final static int VALUE_MASK = 0x7f;
   public final static int NEXT_BIT_SHIFT = 7;
   public final static int NEXT_BIT_MASK = 1 << 7;
-  final static boolean UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
-  public final static boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+  final static boolean UNSAFE_AVAIL = HBasePlatformDependent.isUnsafeAvailable();
+  public final static boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
 
   private ByteBufferUtils() {
   }
@@ -78,11 +77,10 @@ public final class ByteBufferUtils {
 
     static Comparer getBestComparer() {
       try {
-        Class<?> theClass = Class.forName(UNSAFE_COMPARER_NAME);
+        Class<? extends Comparer> theClass =
+          Class.forName(UNSAFE_COMPARER_NAME).asSubclass(Comparer.class);
 
-        @SuppressWarnings("unchecked")
-        Comparer comparer = (Comparer) theClass.getConstructor().newInstance();
-        return comparer;
+        return theClass.getConstructor().newInstance();
       } catch (Throwable t) { // ensure we really catch *everything*
         return PureJavaComparer.INSTANCE;
       }
@@ -137,7 +135,7 @@ public final class ByteBufferUtils {
         long offset2Adj;
         Object refObj2 = null;
         if (buf2.isDirect()) {
-          offset2Adj = o2 + ((DirectBuffer)buf2).address();
+          offset2Adj = o2 + UnsafeAccess.directBufferAddress(buf2);
         } else {
           offset2Adj = o2 + buf2.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
           refObj2 = buf2.array();
@@ -151,13 +149,13 @@ public final class ByteBufferUtils {
         long offset1Adj, offset2Adj;
         Object refObj1 = null, refObj2 = null;
         if (buf1.isDirect()) {
-          offset1Adj = o1 + ((DirectBuffer) buf1).address();
+          offset1Adj = o1 + UnsafeAccess.directBufferAddress(buf1);
         } else {
           offset1Adj = o1 + buf1.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
           refObj1 = buf1.array();
         }
         if (buf2.isDirect()) {
-          offset2Adj = o2 + ((DirectBuffer) buf2).address();
+          offset2Adj = o2 + UnsafeAccess.directBufferAddress(buf2);
         } else {
           offset2Adj = o2 + buf2.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
           refObj2 = buf2.array();
@@ -175,12 +173,11 @@ public final class ByteBufferUtils {
 
     static Converter getBestConverter() {
       try {
-        Class<?> theClass = Class.forName(UNSAFE_CONVERTER_NAME);
+        Class<? extends Converter> theClass =
+          Class.forName(UNSAFE_CONVERTER_NAME).asSubclass(Converter.class);
 
         // yes, UnsafeComparer does implement Comparer<byte[]>
-        @SuppressWarnings("unchecked")
-        Converter converter = (Converter) theClass.getConstructor().newInstance();
-        return converter;
+        return theClass.getConstructor().newInstance();
       } catch (Throwable t) { // ensure we really catch *everything*
         return PureJavaConverter.INSTANCE;
       }
@@ -922,8 +919,8 @@ public final class ByteBufferUtils {
      * 64-bit.
      */
     for (i = 0; i < strideLimit; i += stride) {
-      long lw = UnsafeAccess.theUnsafe.getLong(obj1, o1 + (long) i);
-      long rw = UnsafeAccess.theUnsafe.getLong(obj2, o2 + (long) i);
+      long lw = HBasePlatformDependent.getLong(obj1, o1 + (long) i);
+      long rw = HBasePlatformDependent.getLong(obj2, o2 + (long) i);
       if (lw != rw) {
         if (!UnsafeAccess.LITTLE_ENDIAN) {
           return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
@@ -944,8 +941,8 @@ public final class ByteBufferUtils {
 
     // The epilogue to cover the last (minLength % stride) elements.
     for (; i < minLength; i++) {
-      int il = (UnsafeAccess.theUnsafe.getByte(obj1, o1 + i) & 0xFF);
-      int ir = (UnsafeAccess.theUnsafe.getByte(obj2, o2 + i) & 0xFF);
+      int il = (HBasePlatformDependent.getByte(obj1, o1 + i) & 0xFF);
+      int ir = (HBasePlatformDependent.getByte(obj2, o2 + i) & 0xFF);
       if (il != ir) {
         return il - ir;
       }

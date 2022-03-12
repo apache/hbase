@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.io.WritableUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -105,14 +107,14 @@ public class TestByteBufferUtils {
   }
 
   static void detectAvailabilityOfUnsafe() throws Exception {
-    if (ByteBufferUtils.UNSAFE_AVAIL != UnsafeAvailChecker.isAvailable()) {
-      setUnsafe(UNSAFE_AVAIL_NAME, UnsafeAvailChecker.isAvailable());
+    if (ByteBufferUtils.UNSAFE_AVAIL != HBasePlatformDependent.isUnsafeAvailable()) {
+      setUnsafe(UNSAFE_AVAIL_NAME, HBasePlatformDependent.isUnsafeAvailable());
     }
-    if (ByteBufferUtils.UNSAFE_UNALIGNED != UnsafeAvailChecker.unaligned()) {
-      setUnsafe(UNSAFE_UNALIGNED_NAME, UnsafeAvailChecker.unaligned());
+    if (ByteBufferUtils.UNSAFE_UNALIGNED != HBasePlatformDependent.unaligned()) {
+      setUnsafe(UNSAFE_UNALIGNED_NAME, HBasePlatformDependent.unaligned());
     }
-    assertEquals(ByteBufferUtils.UNSAFE_AVAIL, UnsafeAvailChecker.isAvailable());
-    assertEquals(ByteBufferUtils.UNSAFE_UNALIGNED, UnsafeAvailChecker.unaligned());
+    assertEquals(ByteBufferUtils.UNSAFE_AVAIL, HBasePlatformDependent.isUnsafeAvailable());
+    assertEquals(ByteBufferUtils.UNSAFE_UNALIGNED, HBasePlatformDependent.unaligned());
   }
 
   public TestByteBufferUtils(boolean useUnsafeIfPossible) throws Exception {
