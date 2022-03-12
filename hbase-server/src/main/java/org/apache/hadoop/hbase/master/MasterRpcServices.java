@@ -1664,12 +1664,25 @@ public class MasterRpcServices extends RSRpcServices implements
       // get the snapshot information
       SnapshotDescription snapshot = SnapshotDescriptionUtils.validate(
         request.getSnapshot(), master.getConfiguration());
-      master.snapshotManager.takeSnapshot(snapshot);
-
       // send back the max amount of time the client should wait for the snapshot to complete
       long waitTime = SnapshotDescriptionUtils.getMaxMasterTimeout(master.getConfiguration(),
         snapshot.getType(), SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
-      return SnapshotResponse.newBuilder().setExpectedTimeout(waitTime).build();
+
+      SnapshotResponse.Builder builder = SnapshotResponse.newBuilder().setExpectedTimeout(waitTime);
+
+      // If there is nonce group and nonce in the snapshot request, then the client can
+      // handle snapshot procedure procId. And if enable the snapshot procedure, we
+      // will do the snapshot work with proc-v2, otherwise we will fall back to zk proc.
+      if (request.hasNonceGroup() && request.hasNonce() &&
+        master.snapshotManager.snapshotProcedureEnabled()) {
+        long nonceGroup = request.getNonceGroup();
+        long nonce = request.getNonce();
+        long procId = master.snapshotManager.takeSnapshot(snapshot, nonceGroup, nonce);
+        return builder.setProcId(procId).build();
+      } else {
+        master.snapshotManager.takeSnapshot(snapshot);
+        return builder.build();
+      }
     } catch (ForeignException e) {
       throw new ServiceException(e.getCause());
     } catch (IOException e) {

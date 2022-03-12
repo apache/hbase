@@ -27,7 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface TableProcedureInterface {
   public enum TableOperationType {
-    CREATE, DELETE, DISABLE, EDIT, ENABLE, READ,
+    CREATE, DELETE, DISABLE, EDIT, ENABLE, READ, SNAPSHOT, REGION_SNAPSHOT,
     REGION_EDIT, REGION_SPLIT, REGION_MERGE, REGION_ASSIGN, REGION_UNASSIGN,
       REGION_GC, MERGED_REGIONS_GC/* region operations */
   };

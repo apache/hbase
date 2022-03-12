@@ -391,6 +391,8 @@ public class HRegionServer extends Thread implements
   protected InfoServer infoServer;
   private JvmPauseMonitor pauseMonitor;
 
+  private RSSnapshotVerifier rsSnapshotVerifier;
+
   /** region server process name */
   public static final String REGIONSERVER = "regionserver";
 
@@ -658,6 +660,8 @@ public class HRegionServer extends Thread implements
         blockCache = BlockCacheFactory.createBlockCache(conf);
         mobFileCache = new MobFileCache(conf);
       }
+
+      rsSnapshotVerifier = new RSSnapshotVerifier(conf);
 
       uncaughtExceptionHandler =
         (t, e) -> abort("Uncaught exception in executorService thread " + t.getName(), e);
@@ -2139,6 +2143,10 @@ public class HRegionServer extends Thread implements
       conf.getInt("hbase.regionserver.executor.claim.replication.queue.threads", 1);
     executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
         ExecutorType.RS_CLAIM_REPLICATION_QUEUE).setCorePoolSize(claimReplicationQueueThreads));
+    final int rsSnapshotOperationThreads =
+      conf.getInt("hbase.regionserver.executor.snapshot.operations.threads", 3);
+    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
+      ExecutorType.RS_SNAPSHOT_OPERATIONS).setCorePoolSize(rsSnapshotOperationThreads));
 
     Threads
       .setDaemonThreadRunning(this.walRoller, getName() + ".logRoller", uncaughtExceptionHandler);
@@ -4065,5 +4073,9 @@ public class HRegionServer extends Thread implements
   @InterfaceAudience.Private
   public BrokenStoreFileCleaner getBrokenStoreFileCleaner(){
     return brokenStoreFileCleaner;
+  }
+
+  RSSnapshotVerifier getRsSnapshotVerifier() {
+    return rsSnapshotVerifier;
   }
 }

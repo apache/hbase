@@ -56,6 +56,7 @@ class TableQueue extends Queue<TableName> {
         // we allow concurrent edit on the NS table
         return !proc.getTableName().equals(TableName.NAMESPACE_TABLE_NAME);
       case READ:
+      case SNAPSHOT:
         return false;
       // region operations are using the shared-lock on the table
       // and then they will grab an xlock on the region.
@@ -66,6 +67,7 @@ class TableQueue extends Queue<TableName> {
       case REGION_EDIT:
       case REGION_GC:
       case MERGED_REGIONS_GC:
+      case REGION_SNAPSHOT:
         return false;
       default:
         break;
