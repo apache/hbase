@@ -1512,6 +1512,7 @@
     </maven.build.timestamp.format>
     <buildDate>${maven.build.timestamp}</buildDate>
     <compileSource>1.8</compileSource>
+    <releaseTarget>8</releaseTarget>
     <!-- Build dependencies -->
     <maven.min.version>3.0.4</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
@@ -1544,8 +1545,8 @@
     <httpclient.version>4.5.3</httpclient.version>
     <httpcore.version>4.4.13</httpcore.version>
     <metrics-core.version>3.2.6</metrics-core.version>
-    <jackson.version>2.10.1</jackson.version>
-    <jackson.databind.version>2.10.1</jackson.databind.version>
+    <jackson.version>2.13.1</jackson.version>
+    <jackson.databind.version>2.13.1</jackson.databind.version>
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
@@ -1613,7 +1614,7 @@
     <snappy.version>1.1.8.4</snappy.version>
     <xz.version>1.9</xz.version>
     <zstd-jni.version>1.5.0-4</zstd-jni.version>
-    <hbase-thirdparty.version>4.0.1</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.0</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -2462,6 +2463,11 @@
         <version>${hbase-thirdparty.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-unsafe</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.sun.xml.ws</groupId>
           <artifactId>jaxws-ri</artifactId>
         <version>2.3.2</version>
@@ -2542,6 +2548,7 @@
         <jdk>[1.11,)</jdk>
       </activation>
       <properties>
+        <maven.compiler.release>${releaseTarget}</maven.compiler.release>
         <!-- TODO: replicate logic for windows support -->
         <argLine>--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED ${hbase-surefire.argLine}</argLine>
         <!-- We need a minimum HDFS version of 3.2.0 for HADOOP-12760 -->
