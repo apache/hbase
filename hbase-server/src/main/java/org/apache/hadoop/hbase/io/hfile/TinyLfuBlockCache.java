@@ -22,9 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -37,7 +34,6 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.slf4j.Logger;
@@ -54,15 +50,13 @@ import org.slf4j.LoggerFactory;
  * </ul>
  */
 @InterfaceAudience.Private
-public final class TinyLfuBlockCache implements FirstLevelBlockCache {
+public final class TinyLfuBlockCache extends FirstLevelBlockCache {
   private static final Logger LOG = LoggerFactory.getLogger(TinyLfuBlockCache.class);
 
   private static final String MAX_BLOCK_SIZE = "hbase.tinylfu.max.block.size";
   private static final long DEFAULT_MAX_BLOCK_SIZE = 16L * 1024L * 1024L;
-  private static final int STAT_THREAD_PERIOD_SECONDS = 5 * 60;
 
   private transient final Eviction<BlockCacheKey, Cacheable> policy;
-  private transient final ScheduledExecutorService statsThreadPool;
   private final long maxBlockSize;
   private final CacheStats stats;
 
@@ -81,7 +75,8 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
   public TinyLfuBlockCache(long maximumSizeInBytes, long avgBlockSize,
       Executor executor, Configuration conf) {
     this(maximumSizeInBytes, avgBlockSize,
-        conf.getLong(MAX_BLOCK_SIZE, DEFAULT_MAX_BLOCK_SIZE), executor);
+        conf.getLong(MAX_BLOCK_SIZE, DEFAULT_MAX_BLOCK_SIZE), executor,
+        conf.getBoolean(STAT_THREAD_ENABLE_KEY, STAT_THREAD_ENABLE_DEFAULT));
   }
 
   /**
@@ -92,8 +87,9 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
    * @param maxBlockSize maximum size of a block, in bytes
    * @param executor the cache's executor
    */
-  public TinyLfuBlockCache(long maximumSizeInBytes,
-      long avgBlockSize, long maxBlockSize, Executor executor) {
+  public TinyLfuBlockCache(long maximumSizeInBytes, long avgBlockSize, long maxBlockSize,
+      Executor executor, boolean statEnable) {
+    super(statEnable);
     this.cache = Caffeine.newBuilder()
         .executor(executor)
         .maximumWeight(maximumSizeInBytes)
@@ -105,11 +101,6 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
     this.maxBlockSize = maxBlockSize;
     this.policy = cache.policy().eviction().get();
     this.stats = new CacheStats(getClass().getSimpleName());
-
-    statsThreadPool = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
-        .setNameFormat("TinyLfuBlockCacheStatsExecutor").setDaemon(true).build());
-    statsThreadPool.scheduleAtFixedRate(this::logStats,
-        STAT_THREAD_PERIOD_SECONDS, STAT_THREAD_PERIOD_SECONDS, TimeUnit.SECONDS);
   }
 
   @Override
@@ -261,10 +252,10 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
 
   @Override
   public void shutdown() {
+    super.shutdown();
     if (victimCache != null) {
       victimCache.shutdown();
     }
-    statsThreadPool.shutdown();
   }
 
   @Override
@@ -280,7 +271,8 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
         .iterator();
   }
 
-  private void logStats() {
+  @Override
+  protected void logStats() {
     LOG.info(
         "totalSize=" + StringUtils.byteDesc(heapSize()) + ", " +
         "freeSize=" + StringUtils.byteDesc(getFreeSize()) + ", " +

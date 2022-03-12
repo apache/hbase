@@ -52,7 +52,8 @@ public class TestTinyLfuBlockCache {
     long maxSize = 1000000;
     long blockSize = calculateBlockSizeDefault(maxSize, 101);
 
-    TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize, Runnable::run);
+    TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize,
+      Runnable::run, false);
 
     CachedItem [] blocks = generateRandomBlocks(100, blockSize);
 
@@ -108,7 +109,8 @@ public class TestTinyLfuBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSizeDefault(maxSize, 10);
 
-    TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize, Runnable::run);
+    TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize,
+      Runnable::run, false);
 
     CachedItem [] blocks = generateFixedBlocks(11, blockSize, "block");
 
@@ -133,7 +135,8 @@ public class TestTinyLfuBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
 
-    TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize, Runnable::run);
+    TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize,
+      Runnable::run, false);
 
     CachedItem [] singleBlocks = generateFixedBlocks(20, blockSize, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
@@ -173,7 +176,8 @@ public class TestTinyLfuBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
 
-    TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize, Runnable::run);
+    TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize,
+      Runnable::run, false);
     CachedItem [] tooLong = generateFixedBlocks(10, 2 * blockSize, "long");
     CachedItem [] small = generateFixedBlocks(15, blockSize / 2, "small");
 
@@ -200,7 +204,8 @@ public class TestTinyLfuBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
 
-    TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize, Runnable::run);
+    TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize,
+      Runnable::run, false);
 
     CachedItem [] blocks = generateFixedBlocks(10, blockSize, "block");
 
