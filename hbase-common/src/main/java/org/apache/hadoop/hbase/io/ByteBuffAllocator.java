@@ -30,10 +30,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.UnsafeAccess;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.nio.ch.DirectBuffer;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
@@ -335,11 +335,8 @@ public class ByteBuffAllocator {
   public void clean() {
     while (!buffers.isEmpty()) {
       ByteBuffer b = buffers.poll();
-      if (b instanceof DirectBuffer) {
-        DirectBuffer db = (DirectBuffer) b;
-        if (db.cleaner() != null) {
-          db.cleaner().clean();
-        }
+      if (b.isDirect()) {
+        UnsafeAccess.freeDirectBuffer(b);
       }
     }
     this.usedBufCount.set(0);

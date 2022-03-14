@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -69,7 +70,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.misc.Signal;
 
 /**
  * Base class for hbase services, such as master or region server.
@@ -179,7 +179,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
    */
   private static void setupWindows(final Configuration conf, ConfigurationManager cm) {
     if (!SystemUtils.IS_OS_WINDOWS) {
-      Signal.handle(new Signal("HUP"), signal -> {
+      HBasePlatformDependent.handle("HUP", (number, name) -> {
         conf.reloadConfiguration();
         cm.notifyAllObservers(conf);
       });

@@ -1092,8 +1092,8 @@ public class MasterCoprocessorHost
   }
 
   public void preSnapshot(final SnapshotDescription snapshot,
-      final TableDescriptor hTableDescriptor) throws IOException {
-    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      final TableDescriptor hTableDescriptor, final User user) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.preSnapshot(this, snapshot, hTableDescriptor);
@@ -1102,8 +1102,8 @@ public class MasterCoprocessorHost
   }
 
   public void postSnapshot(final SnapshotDescription snapshot,
-      final TableDescriptor hTableDescriptor) throws IOException {
-    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      final TableDescriptor hTableDescriptor, final User user) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.postSnapshot(this, snapshot, hTableDescriptor);
