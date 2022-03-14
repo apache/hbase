@@ -52,6 +52,7 @@
               <exclude>com.sun.jersey:*</exclude>
               <exclude>com.sun.jersey.contribs:*</exclude>
               <exclude>jline:jline</exclude>
+              <exclude>junit:junit</exclude>
               <exclude>com.github.stephenc.findbugs:findbugs-annotations</exclude>
               <exclude>commons-logging:commons-logging</exclude>
               <exclude>log4j:log4j</exclude>
@@ -159,6 +160,8 @@
         <include>io.opentelemetry.javaagent:*</include>
       </includes>
     </dependencySet>
+
+
   </dependencySets>
 
 </assembly>

@@ -373,5 +373,9 @@
       <artifactId>opentelemetry-javaagent</artifactId>
       <classifier>all</classifier>
     </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
   </dependencies>
 </project>
