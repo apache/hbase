@@ -17,26 +17,35 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.zookeeper.KeeperException;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -187,6 +196,63 @@ public class TestSnapshotManager {
     } finally {
       fs.delete(testSnapshotDir, true);
     }
+  }
+
+  @Test
+  public void testDisableSnapshotAndNotDeleteBackReference() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, false);
+    SnapshotManager manager = getNewManager(conf);
+    String cleaners = conf.get(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
+    assertTrue(cleaners != null && cleaners.contains(HFileLinkCleaner.class.getName()));
+    Path rootDir = UTIL.getDataTestDir();
+    CommonFSUtils.setRootDir(conf, rootDir);
+
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableLinkName = TableName.valueOf(name.getMethodName() + "-link");
+    String hfileName = "1234567890";
+    String familyName = "cf";
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
+    RegionInfo hriLink = RegionInfoBuilder.newBuilder(tableLinkName).build();
+    Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
+    Path archiveStoreDir = HFileArchiveUtil.getStoreArchivePath(conf,
+      tableName, hri.getEncodedName(), familyName);
+
+    // Create hfile /hbase/table-link/region/cf/getEncodedName.HFILE(conf);
+    Path familyPath = getFamilyDirPath(archiveDir, tableName, hri.getEncodedName(), familyName);
+    Path hfilePath = new Path(familyPath, hfileName);
+    fs.createNewFile(hfilePath);
+    // Create link to hfile
+    Path familyLinkPath =
+      getFamilyDirPath(rootDir, tableLinkName, hriLink.getEncodedName(), familyName);
+    HFileLink.create(conf, fs, familyLinkPath, hri, hfileName);
+    Path linkBackRefDir = HFileLink.getBackReferencesDir(archiveStoreDir, hfileName);
+    assertTrue(fs.exists(linkBackRefDir));
+    FileStatus[] backRefs = fs.listStatus(linkBackRefDir);
+    assertEquals(1, backRefs.length);
+    Path linkBackRef = backRefs[0].getPath();
+
+    // Initialize cleaner
+    HFileCleaner cleaner = new HFileCleaner(10000, Mockito.mock(Stoppable.class), conf, fs,
+        archiveDir, DirScanPool.getHFileCleanerScanPool(conf));
+    // Link backref and HFile cannot be removed
+    cleaner.choreForTesting();
+    assertTrue(fs.exists(linkBackRef));
+    assertTrue(fs.exists(hfilePath));
+
+    fs.rename(CommonFSUtils.getTableDir(rootDir, tableLinkName),
+      CommonFSUtils.getTableDir(archiveDir, tableLinkName));
+    // Link backref can be removed
+    cleaner.choreForTesting();
+    assertFalse("Link should be deleted", fs.exists(linkBackRef));
+    // HFile can be removed
+    cleaner.choreForTesting();
+    assertFalse("HFile should be deleted", fs.exists(hfilePath));
+  }
+
+  private Path getFamilyDirPath(final Path rootDir, final TableName table, final String region,
+      final String family) {
+    return new Path(new Path(CommonFSUtils.getTableDir(rootDir, table), region), family);
   }
 
   private boolean isSnapshotSupported(final SnapshotManager manager) {

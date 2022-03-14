@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.snapshot;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
@@ -98,12 +97,10 @@ public final class MasterSnapshotVerifier {
   /**
    * Verify that the snapshot in the directory is a valid snapshot
    * @param snapshotDir snapshot directory to check
-   * @param snapshotServers {@link org.apache.hadoop.hbase.ServerName} of the servers
-   *        that are involved in the snapshot
    * @throws CorruptedSnapshotException if the snapshot is invalid
    * @throws IOException if there is an unexpected connection issue to the filesystem
    */
-  public void verifySnapshot(Path snapshotDir, Set<String> snapshotServers)
+  public void verifySnapshot(Path snapshotDir, boolean verifyRegions)
       throws CorruptedSnapshotException, IOException {
     SnapshotManifest manifest = SnapshotManifest.open(services.getConfiguration(), workingDirFs,
                                                       snapshotDir, snapshot);
@@ -114,7 +111,7 @@ public final class MasterSnapshotVerifier {
     verifyTableInfo(manifest);
 
     // check that each region is valid
-    verifyRegions(manifest);
+    verifyRegions(manifest, verifyRegions);
   }
 
   /**
@@ -154,7 +151,7 @@ public final class MasterSnapshotVerifier {
    * @param manifest snapshot manifest to inspect
    * @throws IOException if we can't reach hbase:meta or read the files from the FS
    */
-  private void verifyRegions(final SnapshotManifest manifest) throws IOException {
+  private void verifyRegions(SnapshotManifest manifest, boolean verifyRegions) throws IOException {
     List<RegionInfo> regions = services.getAssignmentManager().getTableRegions(tableName, false);
     // Remove the non-default regions
     RegionReplicaUtil.removeNonDefaultRegions(regions);
@@ -182,27 +179,30 @@ public final class MasterSnapshotVerifier {
     }
 
     // Verify RegionInfo
-    for (RegionInfo region : regions) {
-      SnapshotRegionManifest regionManifest = regionManifests.get(region.getEncodedName());
-      if (regionManifest == null) {
-        // could happen due to a move or split race.
-        String mesg = " No snapshot region directory found for region:" + region;
-        if (errorMsg.isEmpty()) errorMsg = mesg;
-        LOG.error(mesg);
-        continue;
+    if (verifyRegions) {
+      for (RegionInfo region : regions) {
+        SnapshotRegionManifest regionManifest = regionManifests.get(region.getEncodedName());
+        if (regionManifest == null) {
+          // could happen due to a move or split race.
+          String mesg = " No snapshot region directory found for region:" + region;
+          if (errorMsg.isEmpty()) {
+            errorMsg = mesg;
+          }
+          LOG.error(mesg);
+          continue;
+        }
+
+        verifyRegionInfo(region, regionManifest);
       }
-
-      verifyRegionInfo(region, regionManifest);
-    }
-
-    if (!errorMsg.isEmpty()) {
-      throw new CorruptedSnapshotException(errorMsg);
-    }
+      if (!errorMsg.isEmpty()) {
+        throw new CorruptedSnapshotException(errorMsg);
+      }
 
     // Verify Snapshot HFiles
     // Requires the root directory file system as HFiles are stored in the root directory
-    SnapshotReferenceUtil.verifySnapshot(services.getConfiguration(),
-      CommonFSUtils.getRootDirFileSystem(services.getConfiguration()), manifest);
+      SnapshotReferenceUtil.verifySnapshot(services.getConfiguration(),
+        CommonFSUtils.getRootDirFileSystem(services.getConfiguration()), manifest);
+    }
   }
 
   /**
