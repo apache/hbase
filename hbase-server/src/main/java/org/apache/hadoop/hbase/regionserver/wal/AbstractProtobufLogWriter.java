@@ -270,6 +270,9 @@ public abstract class AbstractProtobufLogWriter {
       short replication, long blockSize, StreamSlowMonitor monitor)
       throws IOException, StreamLacksCapabilityException;
 
+  /**
+   * simply close the output, do not need to write trailer like the Writer.close
+   */
   protected abstract void closeOutput();
 
   /**
