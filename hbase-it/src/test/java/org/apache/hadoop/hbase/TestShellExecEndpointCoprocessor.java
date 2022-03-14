@@ -56,7 +56,7 @@ public class TestShellExecEndpointCoprocessor {
 
   @Rule
   public final ConnectionRule connectionRule =
-    new ConnectionRule(miniClusterRule::createConnection);
+    ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
 
   @Test
   public void testShellExecUnspecified() {
@@ -69,7 +69,7 @@ public class TestShellExecEndpointCoprocessor {
   }
 
   private void testShellExecForeground(final Consumer<ShellExecRequest.Builder> consumer) {
-    final AsyncConnection conn = connectionRule.getConnection();
+    final AsyncConnection conn = connectionRule.getAsyncConnection();
     final AsyncAdmin admin = conn.getAdmin();
 
     final String command = "echo -n \"hello world\"";
@@ -87,7 +87,7 @@ public class TestShellExecEndpointCoprocessor {
 
   @Test
   public void testShellExecBackground() throws IOException {
-    final AsyncConnection conn = connectionRule.getConnection();
+    final AsyncConnection conn = connectionRule.getAsyncConnection();
     final AsyncAdmin admin = conn.getAdmin();
 
     final File testDataDir = ensureTestDataDirExists(miniClusterRule.getTestingUtility());
@@ -121,7 +121,7 @@ public class TestShellExecEndpointCoprocessor {
     final Path testDataDir = Optional.of(testingUtility)
       .map(HBaseTestingUtil::getDataTestDir)
       .map(Object::toString)
-      .map(val -> Paths.get(val))
+      .map(Paths::get)
       .orElseThrow(() -> new RuntimeException("Unable to locate temp directory path."));
     final File testDataDirFile = Files.createDirectories(testDataDir).toFile();
     assertTrue(testDataDirFile.exists());
