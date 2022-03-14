@@ -1156,10 +1156,13 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       conf.setStrings(HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS,
         logCleaners.toArray(new String[logCleaners.size()]));
     } else {
-      // Verify if cleaners are present
-      snapshotEnabled =
-        hfileCleaners.contains(SnapshotHFileCleaner.class.getName()) &&
-        hfileCleaners.contains(HFileLinkCleaner.class.getName());
+      // There may be restore tables if snapshot is enabled and then disabled, so add
+      // HFileLinkCleaner, see HBASE-26670 for more details.
+      hfileCleaners.add(HFileLinkCleaner.class.getName());
+      conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
+        hfileCleaners.toArray(new String[hfileCleaners.size()]));
+      // Verify if SnapshotHFileCleaner are present
+      snapshotEnabled = hfileCleaners.contains(SnapshotHFileCleaner.class.getName());
 
       // Warn if the cleaners are enabled but the snapshot.enabled property is false/not set.
       if (snapshotEnabled) {
