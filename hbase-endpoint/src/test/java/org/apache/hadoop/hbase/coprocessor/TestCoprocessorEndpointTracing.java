@@ -48,6 +48,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ConnectionRule;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MatcherPredicate;
@@ -106,7 +107,7 @@ public class TestCoprocessorEndpointTracing {
   private static final OpenTelemetryClassRule otelClassRule = OpenTelemetryClassRule.create();
   private static final MiniClusterRule miniclusterRule = MiniClusterRule.newBuilder()
     .setConfiguration(() -> {
-      final Configuration conf = new Configuration();
+      final Configuration conf = HBaseConfiguration.create();
       conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 5000);
       conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         ProtobufCoprocessorService.class.getName());
