@@ -20,6 +20,26 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.4.11 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-26603](https://issues.apache.org/jira/browse/HBASE-26603) | *Major* | **Cherry pick HBASE-26537 to branch-2.4**
+
+HBASE-15676 introduced a backwards incompatible change which makes it impossible to upgrade server first, then client, without potentially incorrect scanning results if FuzzyRowFilter is in use. This change corrects that problem by introducing a backwards compatible workaround.
+
+
+---
+
+* [HBASE-25709](https://issues.apache.org/jira/browse/HBASE-25709) | *Major* | **Close region may stuck when region is compacting and skipped most cells read**
+
+Both compacting scanners and user scanners should return promptly, when  there are many skipped cells.
+
+
+
 # HBASE  2.4.10 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.

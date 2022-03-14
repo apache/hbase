@@ -20,6 +20,57 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.4.11 - 2022-03-21
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26830](https://issues.apache.org/jira/browse/HBASE-26830) | Rewrite TestLruBlockCache to make it more stable |  Major | test |
+| [HBASE-26792](https://issues.apache.org/jira/browse/HBASE-26792) | Implement ScanInfo#toString |  Minor | regionserver |
+| [HBASE-26789](https://issues.apache.org/jira/browse/HBASE-26789) | Automatically add default security headers to http/rest if SSL enabled |  Major | REST, UI |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26670](https://issues.apache.org/jira/browse/HBASE-26670) | HFileLinkCleaner should be added even if snapshot is disabled |  Critical | snapshots |
+| [HBASE-26761](https://issues.apache.org/jira/browse/HBASE-26761) | TestMobStoreScanner (testGetMassive) can OOME |  Minor | mob, test |
+| [HBASE-26816](https://issues.apache.org/jira/browse/HBASE-26816) | Fix CME in ReplicationSourceManager |  Minor | Replication |
+| [HBASE-26715](https://issues.apache.org/jira/browse/HBASE-26715) | Blocked on SyncFuture in AsyncProtobufLogWriter#write |  Major | . |
+| [HBASE-26815](https://issues.apache.org/jira/browse/HBASE-26815) | TestFanOutOneBlockAsyncDFSOutput is flakey |  Major | test |
+| [HBASE-26783](https://issues.apache.org/jira/browse/HBASE-26783) | ScannerCallable doubly clears meta cache on retries |  Major | . |
+| [HBASE-25709](https://issues.apache.org/jira/browse/HBASE-25709) | Close region may stuck when region is compacting and skipped most cells read |  Major | Compaction |
+| [HBASE-26777](https://issues.apache.org/jira/browse/HBASE-26777) | BufferedDataBlockEncoder$OffheapDecodedExtendedCell.deepClone throws UnsupportedOperationException |  Major | regionserver |
+| [HBASE-26745](https://issues.apache.org/jira/browse/HBASE-26745) | MetricsStochasticBalancerSource metrics don't render in /jmx endpoint |  Minor | . |
+| [HBASE-26776](https://issues.apache.org/jira/browse/HBASE-26776) | RpcServer failure to SASL handshake always logs user "unknown" to audit log |  Major | security |
+| [HBASE-26772](https://issues.apache.org/jira/browse/HBASE-26772) | Shell suspended in background |  Minor | shell |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26603](https://issues.apache.org/jira/browse/HBASE-26603) | Cherry pick HBASE-26537 to branch-2.4 |  Major | . |
+| [HBASE-26824](https://issues.apache.org/jira/browse/HBASE-26824) | TestHBaseTestingUtil.testResolvePortConflict failing after HBASE-26582 |  Major | . |
+| [HBASE-26582](https://issues.apache.org/jira/browse/HBASE-26582) | Prune use of Random and SecureRandom objects |  Minor | . |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26839](https://issues.apache.org/jira/browse/HBASE-26839) | Fix compatibility issues in 2.4.11RC0 |  Minor | . |
+| [HBASE-26817](https://issues.apache.org/jira/browse/HBASE-26817) | Mark RpcExecutor as IA.LimitedPrivate COPROC and PHOENIX |  Major | compatibility |
+| [HBASE-26760](https://issues.apache.org/jira/browse/HBASE-26760) | LICENSE handling should not allow non-aggregated "apache-2.0" |  Minor | community |
+| [HBASE-26691](https://issues.apache.org/jira/browse/HBASE-26691) | Replacing log4j with reload4j for branch-2.x |  Critical | logging |
+| [HBASE-26788](https://issues.apache.org/jira/browse/HBASE-26788) | Disable Checks API callback from test results in PRs |  Major | build |
+| [HBASE-26622](https://issues.apache.org/jira/browse/HBASE-26622) | Update to error-prone 2.10 |  Major | . |
+
+
 ## Release 2.4.10 - 2022-03-04
 
 
