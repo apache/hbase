@@ -20,6 +20,70 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.4.11 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-26603](https://issues.apache.org/jira/browse/HBASE-26603) | *Major* | **Cherry pick HBASE-26537 to branch-2.4**
+
+HBASE-15676 introduced a backwards incompatible change which makes it impossible to upgrade server first, then client, without potentially incorrect scanning results if FuzzyRowFilter is in use. This change corrects that problem by introducing a backwards compatible workaround.
+
+
+---
+
+* [HBASE-25709](https://issues.apache.org/jira/browse/HBASE-25709) | *Major* | **Close region may stuck when region is compacting and skipped most cells read**
+
+Both compacting scanners and user scanners should return promptly, when  there are many skipped cells.
+
+
+
+# HBASE  2.4.10 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-26742](https://issues.apache.org/jira/browse/HBASE-26742) | *Major* | **Comparator of NOT\_EQUAL NULL is invalid for checkAndMutate**
+
+The semantics of checkAndPut for null(or empty) value comparator is changed, the old match is always true. 
+But we should consider that  EQUAL or NOT\_EQUAL for null check is a common usage, so the semantics of checkAndPut for matching null is correct now.
+There is rare use of LESS or GREATER null, so keep the semantics for them.
+
+
+---
+
+* [HBASE-26688](https://issues.apache.org/jira/browse/HBASE-26688) | *Major* | **Threads shared EMPTY\_RESULT may lead to unexpected client job down.**
+
+Result#advance with empty cell list will always return false but not raise NoSuchElementException when called multiple times.
+This is a behavior change so it is an 'incompatible change', but since it will not introduce any compile error and the old behavior is 'broken', so we also fix it for current release branches.
+
+
+---
+
+* [HBASE-26469](https://issues.apache.org/jira/browse/HBASE-26469) | *Critical* | **correct HBase shell exit behavior to match code passed to exit**
+
+<!-- markdown -->
+User input handling has been refactored to make use of IRB sessions directly and the HBase shell attempts to ensure user provided calls to exit are able to convey failure and success.
+
+Those scripting use of the HBase shell should be aware that the exit code may have changed:
+    * a 0 code, or no code, passed to a call to exit from stdin in non-interactive mode will now exit cleanly. in prior versions this would have exited with an error and non-zero exit code. (note that in HBase 2.4.x this call will still result in a non-zero exit code)
+    * for other combinations of passing in an initialization script or reading from stdin with using the non-interactive flag, the exit code being 0 or non-0 should now line up with releases prior to 2.4, which is a change in behavior compared to versions 2.4.0 - 2.4.9.
+
+Please see the issue details for a table of expected exit codes.
+
+
+---
+
+* [HBASE-26631](https://issues.apache.org/jira/browse/HBASE-26631) | *Major* | **Upgrade junit to 4.13.2**
+
+Upgrade junit to 4.13.2 for addressing CVE-2020-15250.
+
+
+
 # HBASE  2.4.9 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
