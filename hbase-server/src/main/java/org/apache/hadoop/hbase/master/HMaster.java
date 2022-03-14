@@ -979,6 +979,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     if (!maintenanceMode) {
       status.setStatus("Initializing master coprocessors");
+      setQuotasObserver(conf);
       initializeCoprocessorHost(conf);
     } else {
       // start an in process region server for carrying system regions
@@ -4084,6 +4085,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     } catch (IOException e) {
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
+    // append the quotas observer back to the master coprocessor key
+    setQuotasObserver(newConf);
     // update region server coprocessor if the configuration has changed.
     if (CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
       CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) && !maintenanceMode) {
@@ -4165,12 +4168,16 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return configurationManager;
   }
 
-  private void initializeCoprocessorHost(Configuration conf) {
+
+  private void setQuotasObserver(Configuration conf) {
     // Add the Observer to delete quotas on table deletion before starting all CPs by
     // default with quota support, avoiding if user specifically asks to not load this Observer.
     if (QuotaUtil.isQuotaEnabled(conf)) {
       updateConfigurationForQuotasObserver(conf);
     }
+  }
+
+  private void initializeCoprocessorHost(Configuration conf) {
     // initialize master side coprocessors before we start handling requests
     this.cpHost = new MasterCoprocessorHost(this, conf);
   }
