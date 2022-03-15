@@ -2272,8 +2272,10 @@ public interface Admin extends Abortable, Closeable {
    * @throws SnapshotCreationException if snapshot failed to be taken
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
-  void snapshot(SnapshotDescription snapshot)
-      throws IOException, SnapshotCreationException, IllegalArgumentException;
+  default void snapshot(SnapshotDescription snapshot)
+      throws IOException, SnapshotCreationException, IllegalArgumentException {
+    get(snapshotAsync(snapshot), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+  }
 
   /**
    * Take a snapshot without waiting for the server to complete that snapshot (asynchronous) Only a

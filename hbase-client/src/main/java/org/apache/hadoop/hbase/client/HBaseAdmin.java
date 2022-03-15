@@ -2513,86 +2513,50 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void snapshot(SnapshotDescription snapshotDesc)
-      throws IOException, SnapshotCreationException, IllegalArgumentException {
-    // actually take the snapshot
-    SnapshotProtos.SnapshotDescription snapshot =
-      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotDesc);
-    SnapshotResponse response = asyncSnapshot(snapshot);
-    final IsSnapshotDoneRequest request =
-        IsSnapshotDoneRequest.newBuilder().setSnapshot(snapshot).build();
-    IsSnapshotDoneResponse done = null;
-    long start = EnvironmentEdgeManager.currentTime();
-    long max = response.getExpectedTimeout();
-    long maxPauseTime = max / this.numRetries;
-    int tries = 0;
-    LOG.debug("Waiting a max of " + max + " ms for snapshot '" +
-        ClientSnapshotDescriptionUtils.toString(snapshot) + "'' to complete. (max " +
-        maxPauseTime + " ms per retry)");
-    while (tries == 0
-        || ((EnvironmentEdgeManager.currentTime() - start) < max && !done.getDone())) {
-      try {
-        // sleep a backoff <= pauseTime amount
-        long sleep = getPauseTime(tries++);
-        sleep = sleep > maxPauseTime ? maxPauseTime : sleep;
-        LOG.debug("(#" + tries + ") Sleeping: " + sleep +
-          "ms while waiting for snapshot completion.");
-        Thread.sleep(sleep);
-      } catch (InterruptedException e) {
-        throw (InterruptedIOException)new InterruptedIOException("Interrupted").initCause(e);
-      }
-      LOG.debug("Getting current status of snapshot from master...");
-      done = executeCallable(new MasterCallable<IsSnapshotDoneResponse>(getConnection(),
-          getRpcControllerFactory()) {
-        @Override
-        protected IsSnapshotDoneResponse rpcCall() throws Exception {
-          return master.isSnapshotDone(getRpcController(), request);
-        }
-      });
-    }
-    if (!done.getDone()) {
-      throw new SnapshotCreationException("Snapshot '" + snapshot.getName()
-          + "' wasn't completed in expectedTime:" + max + " ms", snapshotDesc);
+  public Future<Void> snapshotAsync(SnapshotDescription snapshotDesc)
+      throws IOException, SnapshotCreationException {
+    SnapshotResponse resp = asyncSnapshot(ProtobufUtil
+      .createHBaseProtosSnapshotDesc(snapshotDesc));
+    // This is for keeping compatibility with old implementation.
+    // If there is a procId field in the response, then the snapshot will be operated with a
+    // SnapshotProcedure, otherwise the snapshot will be coordinated by zk.
+    if (resp.hasProcId()) {
+      return new SnapshotFuture(this, snapshotDesc, resp.getProcId());
+    } else {
+      return new SnapshotFuture(this, snapshotDesc, null);
     }
   }
 
-  @Override
-  public Future<Void> snapshotAsync(SnapshotDescription snapshotDesc)
-      throws IOException, SnapshotCreationException {
-    asyncSnapshot(ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotDesc));
-    return new ProcedureFuture<Void>(this, null) {
+  private static final class SnapshotFuture extends TableFuture<Void> {
+    private final SnapshotDescription snapshotDesc;
 
-      @Override
-      protected Void waitOperationResult(long deadlineTs) throws IOException, TimeoutException {
-        waitForState(deadlineTs, new WaitForStateCallable() {
+    public SnapshotFuture(HBaseAdmin admin, SnapshotDescription snapshotDesc, Long procId) {
+      super(admin, snapshotDesc.getTableName(), procId);
+      this.snapshotDesc = snapshotDesc;
+    }
 
-          @Override
-          public void throwInterruptedException() throws InterruptedIOException {
-            throw new InterruptedIOException(
-              "Interrupted while waiting for taking snapshot" + snapshotDesc);
-          }
+    @Override
+    public String getOperationType() {
+      return "SNAPSHOT";
+    }
 
-          @Override
-          public void throwTimeoutException(long elapsedTime) throws TimeoutException {
-            throw new TimeoutException("Snapshot '" + snapshotDesc.getName() +
-              "' wasn't completed in expectedTime:" + elapsedTime + " ms");
-          }
-
-          @Override
-          public boolean checkState(int tries) throws IOException {
-            return isSnapshotFinished(snapshotDesc);
-          }
-        });
-        return null;
-      }
-    };
+    @Override
+    protected Void waitOperationResult(long deadlineTs) throws IOException, TimeoutException {
+      waitForState(deadlineTs, new TableWaitForStateCallable() {
+        @Override
+        public boolean checkState(int tries) throws IOException {
+          return getAdmin().isSnapshotFinished(snapshotDesc);
+        }
+      });
+      return null;
+    }
   }
 
   private SnapshotResponse asyncSnapshot(SnapshotProtos.SnapshotDescription snapshot)
       throws IOException {
     ClientSnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
     final SnapshotRequest request = SnapshotRequest.newBuilder().setSnapshot(snapshot)
-        .build();
+      .setNonceGroup(ng.newNonce()).setNonce(ng.newNonce()).build();
     // run the snapshot on the master
     return executeCallable(new MasterCallable<SnapshotResponse>(getConnection(),
         getRpcControllerFactory()) {
