@@ -99,6 +99,24 @@ public final class SpanDataMatchers {
     };
   }
 
+  public static Matcher<SpanData> hasParentSpanId(String parentSpanId) {
+    return hasParentSpanId(equalTo(parentSpanId));
+  }
+
+  public static Matcher<SpanData> hasParentSpanId(SpanData parent) {
+    return hasParentSpanId(parent.getSpanId());
+  }
+
+  public static Matcher<SpanData> hasParentSpanId(Matcher<String> matcher) {
+    return new FeatureMatcher<SpanData, String>(matcher, "SpanKind with a parentSpanId that",
+      "parentSpanId"
+    ) {
+      @Override protected String featureValueOf(SpanData item) {
+        return item.getParentSpanId();
+      }
+    };
+  }
+
   public static Matcher<SpanData> hasStatusWithCode(StatusCode statusCode) {
     final Matcher<StatusCode> matcher = is(equalTo(statusCode));
     return new TypeSafeMatcher<SpanData>() {

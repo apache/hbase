@@ -28,6 +28,7 @@ import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ConnectionRule;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniClusterRule;
 import org.apache.hadoop.hbase.ServerName;
@@ -72,8 +73,9 @@ public class TestApiV1ClusterMetricsResource {
       .build())
     .setConfiguration(() -> {
       // enable Master InfoServer and random port selection
-      final Configuration conf = new Configuration();
+      final Configuration conf = HBaseConfiguration.create();
       conf.setInt(HConstants.MASTER_INFO_PORT, 0);
+      conf.set("hbase.http.jersey.tracing.type", "ON_DEMAND");
       return conf;
     })
     .build();
@@ -148,6 +150,7 @@ public class TestApiV1ClusterMetricsResource {
   public void testGetRoot() {
     final String response = classRule.getTarget()
       .request(MediaType.APPLICATION_JSON_TYPE)
+      .header("X-Jersey-Tracing-Accept", true)
       .get(String.class);
     assertThat(response, allOf(
       containsString("\"hbase_version\":"),
@@ -160,6 +163,7 @@ public class TestApiV1ClusterMetricsResource {
   public void testGetRootHtml() {
     assertThrows(NotAcceptableException.class, () -> classRule.getTarget()
       .request(MediaType.TEXT_HTML_TYPE)
+      .header("X-Jersey-Tracing-Accept", true)
       .get(String.class));
   }
 
@@ -168,6 +172,7 @@ public class TestApiV1ClusterMetricsResource {
     final String response = classRule.getTarget()
       .path("live_servers")
       .request(MediaType.APPLICATION_JSON_TYPE)
+      .header("X-Jersey-Tracing-Accept", true)
       .get(String.class);
     assertThat(response, allOf(
       startsWith("{\"data\":["),
@@ -179,6 +184,7 @@ public class TestApiV1ClusterMetricsResource {
     assertThrows(NotAcceptableException.class, () -> classRule.getTarget()
       .path("live_servers")
       .request(MediaType.TEXT_HTML_TYPE)
+      .header("X-Jersey-Tracing-Accept", true)
       .get(String.class));
   }
 
@@ -187,6 +193,7 @@ public class TestApiV1ClusterMetricsResource {
     final String response = classRule.getTarget()
       .path("dead_servers")
       .request(MediaType.APPLICATION_JSON_TYPE)
+      .header("X-Jersey-Tracing-Accept", true)
       .get(String.class);
     assertThat(response, allOf(
       startsWith("{\"data\":["),
@@ -198,6 +205,7 @@ public class TestApiV1ClusterMetricsResource {
     assertThrows(NotAcceptableException.class, () -> classRule.getTarget()
       .path("dead_servers")
       .request(MediaType.TEXT_HTML_TYPE)
+      .header("X-Jersey-Tracing-Accept", true)
       .get(String.class));
   }
 }
