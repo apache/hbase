@@ -28,15 +28,21 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-26828](https://issues.apache.org/jira/browse/HBASE-26828) | Increase the concurrency when running UTs in pre commit job |  Major | jenkins, test |
+| [HBASE-26833](https://issues.apache.org/jira/browse/HBASE-26833) | Avoid waiting to clear buffer usage of ReplicationSourceShipper when aborting the RS |  Major | regionserver, Replication |
+| [HBASE-26835](https://issues.apache.org/jira/browse/HBASE-26835) | Rewrite TestLruAdaptiveBlockCache to make it more stable |  Major | test |
 | [HBASE-26830](https://issues.apache.org/jira/browse/HBASE-26830) | Rewrite TestLruBlockCache to make it more stable |  Major | test |
+| [HBASE-26552](https://issues.apache.org/jira/browse/HBASE-26552) | Introduce retry to logroller to avoid abort |  Major | wal |
 | [HBASE-26792](https://issues.apache.org/jira/browse/HBASE-26792) | Implement ScanInfo#toString |  Minor | regionserver |
 | [HBASE-26789](https://issues.apache.org/jira/browse/HBASE-26789) | Automatically add default security headers to http/rest if SSL enabled |  Major | REST, UI |
+| [HBASE-23303](https://issues.apache.org/jira/browse/HBASE-23303) | Add security headers to REST server/info page |  Major | REST |
 
 
 ### BUG FIXES:
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-26840](https://issues.apache.org/jira/browse/HBASE-26840) | Fix NPE in the retry of logroller |  Minor | wal |
 | [HBASE-26670](https://issues.apache.org/jira/browse/HBASE-26670) | HFileLinkCleaner should be added even if snapshot is disabled |  Critical | snapshots |
 | [HBASE-26761](https://issues.apache.org/jira/browse/HBASE-26761) | TestMobStoreScanner (testGetMassive) can OOME |  Minor | mob, test |
 | [HBASE-26816](https://issues.apache.org/jira/browse/HBASE-26816) | Fix CME in ReplicationSourceManager |  Minor | Replication |

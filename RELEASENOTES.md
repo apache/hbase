@@ -34,6 +34,15 @@ HBASE-15676 introduced a backwards incompatible change which makes it impossible
 
 ---
 
+* [HBASE-26552](https://issues.apache.org/jira/browse/HBASE-26552) | *Major* | **Introduce retry to logroller to avoid abort**
+
+For retrying to roll log, the wait timeout is limited by "hbase.regionserver.logroll.wait.timeout.ms",
+and the max retry time is limited by "hbase.regionserver.logroll.retries".
+Do not retry to roll log is the default behavior.
+
+
+---
+
 * [HBASE-25709](https://issues.apache.org/jira/browse/HBASE-25709) | *Major* | **Close region may stuck when region is compacting and skipped most cells read**
 
 Both compacting scanners and user scanners should return promptly, when  there are many skipped cells.
