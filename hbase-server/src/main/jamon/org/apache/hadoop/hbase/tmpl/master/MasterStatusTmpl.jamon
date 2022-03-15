@@ -277,6 +277,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             </div>
         </section>
         <section>
+            <h2><a name="region_visualizer"></a>Region Visualizer</h2>
+            <& RegionVisualizerTmpl &>
+        </section>
+        <section>
             <h2><a name="peers">Peers</a></h2>
             <& peerConfigs &>
         </section>
