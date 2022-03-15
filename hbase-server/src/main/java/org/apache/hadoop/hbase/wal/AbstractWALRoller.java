@@ -223,7 +223,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
               if (waitingTime < rollWaitTimeout && nAttempts < maxRollRetry) {
                 nAttempts++;
                 LOG.warn("Retry to roll log, nAttempts={}, waiting time={}ms, sleeping 1s to retry,"
-                    + " last excepiton= {}", nAttempts, waitingTime, ioe);
+                    + " last exception", nAttempts, waitingTime, ioe);
                 sleep(1000);
               } else {
                 LOG.error("Roll wal failed and waiting timeout, will not retry", ioe);
