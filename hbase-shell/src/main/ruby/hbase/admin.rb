@@ -923,15 +923,15 @@ module Hbase
         for v in cluster_metrics.getRegionStatesInTransition
           puts(format('    %s', v))
         end
-        master = cluster_metrics.getMaster
+        master = cluster_metrics.getMasterName
         unless master.nil?
           puts(format('active master:  %s:%d %d', master.getHostname, master.getPort, master.getStartcode))
           for task in cluster_metrics.getMasterTasks
             puts(format('    %s', task.toString))
           end
         end
-        puts(format('%d backup masters', cluster_metrics.getBackupMastersSize))
-        for server in cluster_metrics.getBackupMasters
+        puts(format('%d backup masters', cluster_metrics.getBackupMasterNames.size))
+        for server in cluster_metrics.getBackupMasterNames
           puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
         end
         master_coprocs = @admin.getMasterCoprocessorNames.toString
@@ -946,7 +946,7 @@ module Hbase
             puts(format('        %s', region.getNameAsString.dump))
             puts(format('            %s', region.toString))
           end
-          for task in cluster_metrics.getLoad(server).getTasks
+          for task in cluster_metrics.getLiveServerMetrics.get(server).getTasks
             puts(format('        %s', task.toString))
           end
         end
@@ -989,7 +989,7 @@ module Hbase
           end
         end
       elsif format == 'tasks'
-        master = cluster_metrics.getMaster
+        master = cluster_metrics.getMasterName
         unless master.nil?
           puts(format('active master:  %s:%d %d', master.getHostname, master.getPort, master.getStartcode))
           printed = false
@@ -1006,7 +1006,7 @@ module Hbase
         for server in cluster_metrics.getServers
           puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
           printed = false
-          for task in cluster_metrics.getLoad(server).getTasks
+          for task in cluster_metrics.getLiveServerMetrics.get(server).getTasks
             next unless task.getState.name == 'RUNNING'
             puts(format('        %s', task.toString))
             printed = true
