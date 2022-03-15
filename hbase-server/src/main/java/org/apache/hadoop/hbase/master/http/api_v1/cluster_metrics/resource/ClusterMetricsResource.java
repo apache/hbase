@@ -39,7 +39,7 @@ import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
  * The root object exposing a subset of {@link org.apache.hadoop.hbase.ClusterMetrics}.
  */
 @InterfaceAudience.Private
-@Path("cluster_metrics")
+@Path("admin/cluster_metrics")
 @Produces({ MediaType.APPLICATION_JSON })
 public class ClusterMetricsResource {
 
