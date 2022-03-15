@@ -974,8 +974,6 @@
               <exclude>**/parser-date-iso8601.min.js</exclude>
               <!-- MIT: bootstrap -->
               <exclude>**/src/main/resources/hbase-webapps/static/*/bootstrap*</exclude>
-              <!-- BSD 3-clause: Vega, Vega-Lite, Vega-Embed -->
-              <exclude>**/hbase-webapps/static/js/vega*.min.js</exclude>
               <!-- vector graphics -->
               <exclude>**/*.vm</exclude>
               <!-- apache doxia generated -->
@@ -1728,8 +1726,6 @@
     <license.bundles.bootstrap>false</license.bundles.bootstrap>
     <!-- modules that include jquery in their source tree should set true -->
     <license.bundles.jquery>false</license.bundles.jquery>
-    <!-- modules that include vega in their source tree should set true -->
-    <license.bundles.vega>false</license.bundles.vega>
     <tar.name>${project.build.finalName}.tar.gz</tar.name>
     <maven.build.timestamp.format>
       yyyy-MM-dd'T'HH:mm
