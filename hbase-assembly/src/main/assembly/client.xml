@@ -65,6 +65,7 @@
               <exclude>org.slf4j:*</exclude>
               <exclude>org.apache.logging.log4j:*</exclude>
               <exclude>io.opentelemetry.javaagent:*</exclude>
+              <exclude>org.hamcrest:hamcrest-core</exclude>
             </excludes>
           </dependencySet>
         </dependencySets>
@@ -160,8 +161,6 @@
         <include>io.opentelemetry.javaagent:*</include>
       </includes>
     </dependencySet>
-
-
   </dependencySets>
 
 </assembly>
