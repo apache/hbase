@@ -118,7 +118,7 @@ public class TestApiV1ClusterMetricsResource {
           (hostName, infoPort) -> "http://" + hostName + ":" + infoPort)
         .get();
       final Client client = ClientBuilder.newClient();
-      target = client.target(baseUrl).path("api/v1/cluster_metrics");
+      target = client.target(baseUrl).path("api/v1/admin/cluster_metrics");
     }
 
     @Override
