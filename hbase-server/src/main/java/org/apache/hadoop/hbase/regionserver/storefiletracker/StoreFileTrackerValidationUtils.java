@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
@@ -94,7 +95,7 @@ public final class StoreFileTrackerValidationUtils {
    *           {@code ModifyTableProcedure}.
    */
   public static void checkForModifyTable(Configuration conf, TableDescriptor oldTable,
-    TableDescriptor newTable) throws IOException {
+    TableDescriptor newTable, boolean isTableDisabled) throws IOException {
     for (ColumnFamilyDescriptor newFamily : newTable.getColumnFamilies()) {
       ColumnFamilyDescriptor oldFamily = oldTable.getColumnFamily(newFamily.getName());
       if (oldFamily == null) {
@@ -133,6 +134,16 @@ public final class StoreFileTrackerValidationUtils {
               newFamily.getNameAsString() + " of table " + newTable.getTableName());
           }
         } else {
+          // do not allow changing from MIGRATION to its dst SFT implementation while the table is
+          // disabled. We need to open the HRegion to migrate the tracking information while the SFT
+          // implementation is MIGRATION, otherwise we may loss data. See HBASE-26611 for more
+          // details.
+          if (isTableDisabled) {
+            throw new TableNotEnabledException(
+              "Should not change store file tracker implementation from " +
+                StoreFileTrackerFactory.Trackers.MIGRATION.name() + " while table " +
+                newTable.getTableName() + " is disabled");
+          }
           // we can only change to the dst tracker
           if (!newTracker.equals(oldDstTracker)) {
             throw new DoNotRetryIOException("Should migrate tracker to " +
@@ -151,6 +162,9 @@ public final class StoreFileTrackerValidationUtils {
                 StoreFileTrackerFactory.getStoreFileTrackerName(oldTracker) + " for family " +
                 newFamily.getNameAsString() + " of table " + newTable.getTableName());
           }
+          // here we do not check whether the table is disabled, as after changing to MIGRATION, we
+          // still rely on the src SFT implementation to actually load the store files, so there
+          // will be no data loss problem.
           Class<? extends StoreFileTracker> newSrcTracker =
             MigrationStoreFileTracker.getSrcTrackerClass(newConf);
           if (!oldTracker.equals(newSrcTracker)) {
