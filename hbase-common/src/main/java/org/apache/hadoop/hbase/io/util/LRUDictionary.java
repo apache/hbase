@@ -95,23 +95,32 @@ public class LRUDictionary implements Dictionary {
       byte[] stored = new byte[length];
       Bytes.putBytes(stored, 0, array, offset, length);
 
-      if (currSize < initSize) {
-        // There is space to add without evicting.
-        if (indexToNode[currSize] == null) {
-          indexToNode[currSize] = new Node();
-        }
-        indexToNode[currSize].setContents(stored, 0, stored.length);
-        setHead(indexToNode[currSize]);
-        short ret = (short) currSize++;
-        nodeToIndex.put(indexToNode[ret], ret);
-        return ret;
+      Node node = new Node();
+      node.setContents(stored, 0, stored.length);
+      if (nodeToIndex.containsKey(node)) {
+        short index = nodeToIndex.get(node);
+        node = indexToNode[index];
+        moveToHead(node);
+        return index;
       } else {
-        short s = nodeToIndex.remove(tail);
-        tail.setContents(stored, 0, stored.length);
-        // we need to rehash this.
-        nodeToIndex.put(tail, s);
-        moveToHead(tail);
-        return s;
+        if (currSize < initSize) {
+          // There is space to add without evicting.
+          if (indexToNode[currSize] == null) {
+            indexToNode[currSize] = new Node();
+          }
+          indexToNode[currSize].setContents(stored, 0, stored.length);
+          setHead(indexToNode[currSize]);
+          short ret = (short) currSize++;
+          nodeToIndex.put(indexToNode[ret], ret);
+          return ret;
+        } else {
+          short s = nodeToIndex.remove(tail);
+          tail.setContents(stored, 0, stored.length);
+          // we need to rehash this.
+          nodeToIndex.put(tail, s);
+          moveToHead(tail);
+          return s;
+        }
       }
     }
 
