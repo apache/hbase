@@ -194,6 +194,13 @@ module Hbase
       assert_nil(res2)
     end
 
+    define_test "deleteall with row prefix in hbase:meta should not be allowed." do
+      assert_raise(ArgumentError) do
+        @meta_table = table('hbase:meta')
+        @meta_table.deleteall({ROWPREFIXFILTER => "test_meta"})
+      end
+    end
+
     define_test "append should work with value" do
       @test_table.append("123", 'x:cnt2', '123')
       assert_equal("123123", @test_table._append_internal("123", 'x:cnt2', '123'))
