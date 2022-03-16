@@ -1002,7 +1002,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
     // Verify snapshot source before copying files
     if (verifySource) {
-      LOG.info("Verify snapshot source.");
+      LOG.info("Verify snapshot source, inputFs={}, inputRoot={}, snapshotDir={}.",
+        inputFs.getUri(), inputRoot, snapshotDir);
       verifySnapshot(srcConf, inputFs, inputRoot, snapshotDir);
     }
 
