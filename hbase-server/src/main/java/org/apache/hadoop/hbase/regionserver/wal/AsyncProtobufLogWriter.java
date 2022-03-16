@@ -195,6 +195,17 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
     this.asyncOutputWrapper = new OutputStreamWrapper(output);
   }
 
+  @Override
+  protected void closeOutput() {
+    if (this.output != null) {
+      try {
+        this.output.close();
+      } catch (IOException e) {
+        LOG.warn("Close output failed", e);
+      }
+    }
+  }
+  
   private long writeWALMetadata(Consumer<CompletableFuture<Long>> action) throws IOException {
     CompletableFuture<Long> future = new CompletableFuture<>();
     action.accept(future);
