@@ -112,7 +112,7 @@ public final class MiniClusterRule extends ExternalResource {
    * Create a {@link Connection} to the managed {@link MiniHBaseCluster}. It's up to the caller
    * to {@link Connection#close() close()} the connection when finished.
    */
-  public Connection createSyncConnection() {
+  public Connection createConnection() {
     if (miniCluster == null) {
       throw new IllegalStateException("test cluster not initialized");
     }

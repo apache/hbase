@@ -53,7 +53,7 @@ public final class ConnectionRule extends ExternalResource {
   private Connection connection;
   private AsyncConnection asyncConnection;
 
-  public static ConnectionRule createSyncConnectionRule(
+  public static ConnectionRule createConnectionRule(
     final Supplier<Connection> connectionSupplier
   ) {
     return new ConnectionRule(connectionSupplier, null);
@@ -80,7 +80,7 @@ public final class ConnectionRule extends ExternalResource {
     this.asyncConnectionSupplier = asyncConnectionSupplier;
   }
 
-  public Connection getSyncConnection() {
+  public Connection getConnection() {
     if (connection == null) {
       throw new IllegalStateException(
         "ConnectionRule not initialized with a synchronous connection.");
