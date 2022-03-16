@@ -119,15 +119,15 @@ function personality_parse_args
         delete_parameter "${i}"
         ASF_NIGHTLIES_GENERAL_CHECK_BASE=${i#*=}
       ;;
-      --build-thread=*
+      --build-thread=*)
         delete_parameter "${i}"
         BUILD_THREAD=${i#*=}
       ;;
-      --surefire-first-part-fork-count=*
+      --surefire-first-part-fork-count=*)
         delete_parameter "${i}"
         SUREFIRE_FIRST_PART_FORK_COUNT=${i#*=}
       ;;
-      --surefire-second-part-fork-count=*
+      --surefire-second-part-fork-count=*)
         delete_parameter "${i}"
         SUREFIRE_SECOND_PART_FORK_COUNT=${i#*=}
       ;;
