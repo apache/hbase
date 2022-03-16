@@ -194,15 +194,11 @@ module Hbase
       assert_nil(res2)
     end
 
-    define_test "deleteall should work with row prefix in hbase:meta" do
-      @meta_table = table('hbase:meta')
-      @meta_table.put("test_meta_1", "table:state", "\x08\x01")
-      @meta_table.put("test_meta_2", "table:state", "\x08\x01")
-      @meta_table.deleteall({ROWPREFIXFILTER => "test_meta"})
-      res1 = @test_table._get_internal('test_meta_1')
-      assert_nil(res1)
-      res2 = @test_table._get_internal('test_meta_2')
-      assert_nil(res2)
+    define_test "deleteall with row prefix in hbase:meta should not be allowed." do
+      assert_raise(ArgumentError) do
+        @meta_table = table('hbase:meta')
+        @meta_table.deleteall({ROWPREFIXFILTER => "test_meta"})
+      end
     end
 
     define_test "append should work with value" do
