@@ -90,13 +90,6 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
       } else {
         LOG.debug("Error instantiating log writer.", e);
       }
-      if (writer != null) {
-        try{
-          writer.close();
-        } catch(IOException ee){
-          LOG.error("cannot close log writer", ee);
-        }
-      }
       throw new IOException("cannot get log writer", e);
     }
   }
