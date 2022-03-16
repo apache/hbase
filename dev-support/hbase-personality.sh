@@ -144,7 +144,11 @@ function personality_modules
 
   clear_personality_queue
 
-  extra="-DHBasePatchProcess"
+  # Set java.io.tmpdir to avoid exhausting the /tmp space
+  # Just simply set to 'target', it is not very critical so we do not care
+  # whether it is placed in the root directory or a sub module's directory
+  extra="-Djava.io.tmpdir=target -DHBasePatchProcess"
+
   if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
     extra="${extra} -Dhttps.protocols=TLSv1.2"
   fi
