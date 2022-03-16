@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -26,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -193,6 +195,26 @@ public class TestChangeStoreFileTracker {
       TableDescriptorBuilder.newBuilder(td).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
         StoreFileTrackerFactory.Trackers.MIGRATION.name()).build();
     UTIL.getAdmin().modifyTable(newTd);
+  }
+
+  @Test
+  public void testModifyError9() throws IOException {
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
+    UTIL.getAdmin().createTable(td);
+    UTIL.getAdmin().disableTable(td.getTableName());
+    TableDescriptor newTd = TableDescriptorBuilder.newBuilder(td)
+      .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+        StoreFileTrackerFactory.Trackers.MIGRATION.name())
+      .setValue(MigrationStoreFileTracker.SRC_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name())
+      .setValue(MigrationStoreFileTracker.DST_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+      .build();
+    UTIL.getAdmin().modifyTable(newTd);
+    TableDescriptor newTd2 = TableDescriptorBuilder.newBuilder(td)
+      .setValue(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+      .build();
+    // changing from MIGRATION while table is disabled is not allowed
+    assertThrows(TableNotEnabledException.class, () -> UTIL.getAdmin().modifyTable(newTd2));
   }
 
   private String getStoreFileName(TableName table, byte[] family) {

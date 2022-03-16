@@ -327,7 +327,7 @@ public class ModifyTableProcedure
 
     // check for store file tracker configurations
     StoreFileTrackerValidationUtils.checkForModifyTable(env.getMasterConfiguration(),
-      unmodifiedTableDescriptor, modifiedTableDescriptor);
+      unmodifiedTableDescriptor, modifiedTableDescriptor, !isTableEnabled(env));
   }
 
   /**

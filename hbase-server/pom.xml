@@ -34,6 +34,7 @@
     <license.bundles.logo>true</license.bundles.logo>
     <license.bundles.bootstrap>true</license.bundles.bootstrap>
     <license.bundles.jquery>true</license.bundles.jquery>
+    <license.bundles.vega>true</license.bundles.vega>
   </properties>
   <build>
     <!-- Make sure resources get added before they are processed by placing this first
@@ -100,6 +101,7 @@
                 <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
                 <bundled-dependencies>${license.bundles.dependencies}</bundled-dependencies>
                 <bundled-jquery>${license.bundles.jquery}</bundled-jquery>
+                <bundled-vega>${license.bundles.vega}</bundled-vega>
                 <bundled-logo>${license.bundles.logo}</bundled-logo>
                 <bundled-bootstrap>${license.bundles.bootstrap}</bundled-bootstrap>
               </properties>
