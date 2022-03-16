@@ -228,7 +228,7 @@ public class TestCoprocessorEndpointTracing {
 
   @Test
   public void traceSyncTableEndpointCall() throws Exception {
-    final Connection connection = connectionRule.getSyncConnection();
+    final Connection connection = connectionRule.getConnection();
     try (final Table table = connection.getTable(TEST_TABLE)) {
       final RpcController controller = new ServerRpcController();
       final EchoRequestProto request = EchoRequestProto.newBuilder().setMessage("hello").build();
@@ -280,7 +280,7 @@ public class TestCoprocessorEndpointTracing {
 
   @Test
   public void traceSyncTableEndpointCallAndCallback() throws Exception {
-    final Connection connection = connectionRule.getSyncConnection();
+    final Connection connection = connectionRule.getConnection();
     try (final Table table = connection.getTable(TEST_TABLE)) {
       final RpcController controller = new ServerRpcController();
       final EchoRequestProto request = EchoRequestProto.newBuilder().setMessage("hello").build();
@@ -336,7 +336,7 @@ public class TestCoprocessorEndpointTracing {
 
   @Test
   public void traceSyncTableRegionCoprocessorRpcChannel() throws Exception {
-    final Connection connection = connectionRule.getSyncConnection();
+    final Connection connection = connectionRule.getConnection();
     try (final Table table = connection.getTable(TEST_TABLE)) {
       final EchoRequestProto request = EchoRequestProto.newBuilder().setMessage("hello").build();
       final EchoResponseProto response = TraceUtil.trace(() -> {
@@ -376,7 +376,7 @@ public class TestCoprocessorEndpointTracing {
 
   @Test
   public void traceSyncTableBatchEndpoint() throws Exception {
-    final Connection connection = connectionRule.getSyncConnection();
+    final Connection connection = connectionRule.getConnection();
     try (final Table table = connection.getTable(TEST_TABLE)) {
       final Descriptors.MethodDescriptor descriptor =
         TestProtobufRpcProto.getDescriptor().findMethodByName("echo");
@@ -423,7 +423,7 @@ public class TestCoprocessorEndpointTracing {
 
   @Test
   public void traceSyncTableBatchEndpointCallback() throws Exception {
-    final Connection connection = connectionRule.getSyncConnection();
+    final Connection connection = connectionRule.getConnection();
     try (final Table table = connection.getTable(TEST_TABLE)) {
       final Descriptors.MethodDescriptor descriptor =
         TestProtobufRpcProto.getDescriptor().findMethodByName("echo");
@@ -504,7 +504,7 @@ public class TestCoprocessorEndpointTracing {
 
   @Test
   public void traceSyncAdminEndpoint() throws Exception {
-    final Connection connection = connectionRule.getSyncConnection();
+    final Connection connection = connectionRule.getConnection();
     try (final Admin admin = connection.getAdmin()) {
       final TestProtobufRpcProto.BlockingInterface service =
         TestProtobufRpcProto.newBlockingStub(admin.coprocessorService());

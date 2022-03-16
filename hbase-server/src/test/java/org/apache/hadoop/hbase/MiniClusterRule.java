@@ -111,10 +111,10 @@ public final class MiniClusterRule extends ExternalResource {
   }
 
   /**
-   * Create a {@link AsyncConnection} to the managed {@link SingleProcessHBaseCluster}. It's up to
+   * Create a {@link Connection} to the managed {@link SingleProcessHBaseCluster}. It's up to
    * the caller to {@link Connection#close() close()} the connection when finished.
    */
-  public Connection createSyncConnection() {
+  public Connection createConnection() {
     try {
       return createAsyncConnection().get().toConnection();
     } catch (InterruptedException | ExecutionException e) {
