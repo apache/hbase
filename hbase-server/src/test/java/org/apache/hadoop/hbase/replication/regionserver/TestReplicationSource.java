@@ -291,8 +291,8 @@ public class TestReplicationSource {
     ReplicationPeer mockPeer = mock(ReplicationPeer.class);
     Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
     Configuration testConf = HBaseConfiguration.create();
-    source.init(testConf, null, mockManager, null, mockPeer, null,
-      "testPeer", null, p -> OptionalLong.empty(), mock(MetricsSource.class));
+    source.init(testConf, null, mockManager, null, mockPeer, Mockito.mock(Server.class), "testPeer",
+      null, p -> OptionalLong.empty(), mock(MetricsSource.class));
     ReplicationSourceWALReader reader = new ReplicationSourceWALReader(null,
       conf, null, 0, null, source, null);
     ReplicationSourceShipper shipper =
