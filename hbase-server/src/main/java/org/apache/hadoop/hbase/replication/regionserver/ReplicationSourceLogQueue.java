@@ -23,7 +23,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -31,8 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /*
-  Class that does enqueueing/dequeuing of wal at one place so that we can update the metrics
-  just at one place.
+  Class that does enqueueing/dequeuing of wal at one place
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -80,8 +78,6 @@ public class ReplicationSourceLogQueue {
     }
     // Increment size of logQueue
     this.metrics.incrSizeOfLogQueue();
-    // Compute oldest wal age
-    this.metrics.setOldestWalAge(getOldestWalAge());
     // This will wal a warning for each new wal that gets created above the warn threshold
     int queueSize = queue.size();
     if (queueSize > this.logQueueWarnThreshold) {
@@ -137,8 +133,6 @@ public class ReplicationSourceLogQueue {
     queue.remove();
     // Decrease size logQueue.
     this.metrics.decrSizeOfLogQueue();
-    // Re-compute age of oldest wal metric.
-    this.metrics.setOldestWalAge(getOldestWalAge());
   }
 
   /**
@@ -152,39 +146,6 @@ public class ReplicationSourceLogQueue {
       queue.remove();
       metrics.decrSizeOfLogQueue();
     }
-    this.metrics.setOldestWalAge(getOldestWalAge());
-  }
-
-  /*
-    Returns the age of oldest wal.
-   */
-  long getOldestWalAge() {
-    long now = EnvironmentEdgeManager.currentTime();
-    long timestamp = getOldestWalTimestamp();
-    if (timestamp == Long.MAX_VALUE) {
-      // If there are no wals in the queue then set the oldest wal timestamp to current time
-      // so that the oldest wal age will be 0.
-      timestamp = now;
-    }
-    long age = now - timestamp;
-    return age;
-  }
-
-  /*
-  Get the oldest wal timestamp from all the queues.
-  */
-  private long getOldestWalTimestamp() {
-    long oldestWalTimestamp = Long.MAX_VALUE;
-    for (Map.Entry<String, PriorityBlockingQueue<Path>> entry : queues.entrySet()) {
-      PriorityBlockingQueue<Path> queue = entry.getValue();
-      Path path = queue.peek();
-      // Can path ever be null ?
-      if (path != null) {
-        oldestWalTimestamp = Math.min(oldestWalTimestamp,
-          AbstractFSWALProvider.WALStartTimeComparator.getTS(path));
-      }
-    }
-    return oldestWalTimestamp;
   }
 
   public MetricsSource getMetrics() {

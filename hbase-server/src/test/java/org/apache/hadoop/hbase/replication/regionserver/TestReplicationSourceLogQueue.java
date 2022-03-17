@@ -25,8 +25,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -40,44 +38,34 @@ public class TestReplicationSourceLogQueue {
     HBaseClassTestRule.forClass(TestReplicationSourceLogQueue.class);
 
   /*
-    Testing enqueue and dequeuing of wal and check age of oldest wal.
+    Testing enqueue and dequeuing of wal
   */
   @Test
   public void testEnqueueDequeue() {
-    try {
-      String walGroupId1 = "fake-walgroup-id-1";
-      String walGroupId2 = "fake-walgroup-id-2";
+    String walGroupId1 = "fake-walgroup-id-1";
+    String walGroupId2 = "fake-walgroup-id-2";
 
-      ManualEnvironmentEdge manualEdge = new ManualEnvironmentEdge();
-      EnvironmentEdgeManager.injectEdge(manualEdge);
+    MetricsSource metrics = new MetricsSource("1");
+    Configuration conf = HBaseConfiguration.create();
+    ReplicationSource source = mock(ReplicationSource.class);
+    Mockito.doReturn("peer").when(source).logPeerId();
+    ReplicationSourceLogQueue logQueue = new ReplicationSourceLogQueue(conf, metrics, source);
+    final Path log1 = new Path("log-walgroup-a.8");
 
-      MetricsSource metrics = new MetricsSource("1");
-      Configuration conf = HBaseConfiguration.create();
-      ReplicationSource source = mock(ReplicationSource.class);
-      Mockito.doReturn("peer").when(source).logPeerId();
-      ReplicationSourceLogQueue logQueue = new ReplicationSourceLogQueue(conf, metrics, source);
-      final Path log1 = new Path("log-walgroup-a.8");
-      manualEdge.setValue(10);
-      // Diff of current time (10) and  log-walgroup-a.8 timestamp will be 2.
-      logQueue.enqueueLog(log1, walGroupId1);
-      assertEquals(2, logQueue.getOldestWalAge());
+    logQueue.enqueueLog(log1, walGroupId1);
+    assertEquals(1, logQueue.getQueue(walGroupId1).size());
+    final Path log2 = new Path("log-walgroup-b.4");
+    logQueue.enqueueLog(log2, walGroupId2);
+    assertEquals(1, logQueue.getQueue(walGroupId2).size());
+    assertEquals(2, logQueue.getNumQueues());
 
-      final Path log2 = new Path("log-walgroup-b.4");
-      // Diff of current time (10) and log-walgroup-b.4 will be 6 so oldestWalAge should be 6
-      logQueue.enqueueLog(log2, walGroupId2);
-      assertEquals(6, logQueue.getOldestWalAge());
-
-      // Remove an element from walGroupId2.
-      // After this op, there will be only one element in the queue log-walgroup-a.8
-      logQueue.remove(walGroupId2);
-      assertEquals(2, logQueue.getOldestWalAge());
-
-      // Remove last element from the queue.
-      logQueue.remove(walGroupId1);
-      // This will test the case where there are no elements in the queue.
-      assertEquals(0, logQueue.getOldestWalAge());
-    } finally {
-      EnvironmentEdgeManager.reset();
-    }
+    // Remove an element from walGroupId2.
+    // After this op, there will be only one element in the queue log-walgroup-a.8
+    logQueue.remove(walGroupId2);
+    assertEquals(0, logQueue.getQueue(walGroupId2).size());
+    // Remove last element from the queue.
+    logQueue.remove(walGroupId1);
+    assertEquals(0, logQueue.getQueue(walGroupId1).size());
+    // This will test the case where there are no elements in the queue.
   }
 }

@@ -226,6 +226,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.abortOnError = this.conf.getBoolean("replication.source.regionserver.abort",
       true);
 
+    int duration = this.conf.getInt(MetricsReplicationSourceRefresherChore.DURATION,
+      MetricsReplicationSourceRefresherChore.DEFAULT_DURATION_MILLISECONDS);
+    this.server.getChoreService()
+        .scheduleChore(new MetricsReplicationSourceRefresherChore(duration, server, this));
     LOG.info("queueId={}, ReplicationSource: {}, currentBandwidth={}", queueId,
       replicationPeer.getId(), this.currentBandwidth);
   }

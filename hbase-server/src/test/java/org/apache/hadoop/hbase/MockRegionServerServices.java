@@ -251,7 +251,7 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public ChoreService getChoreService() {
-    return null;
+    return new ChoreService(getClass().getSimpleName());
   }
 
   @Override
