@@ -165,7 +165,9 @@ function personality_modules
   # Set java.io.tmpdir to avoid exhausting the /tmp space
   # Just simply set to 'target', it is not very critical so we do not care
   # whether it is placed in the root directory or a sub module's directory
-  extra="${extra} -Djava.io.tmpdir=target -DHBasePatchProcess"
+  # let's make it absolute
+  tmpdir=$(realpath target)
+  extra="${extra} -Djava.io.tmpdir=${tmpdir} -DHBasePatchProcess"
 
   if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
     extra="${extra} -Dhttps.protocols=TLSv1.2"
