@@ -46,7 +46,8 @@ pipeline {
         sh '''#!/usr/bin/env bash
           set -e
           declare -a curl_args=(--fail)
-          declare -a mvn_args=(--batch-mode -fn -Dbuild.id="${BUILD_ID}" -Dmaven.repo.local="${WORKSPACE}/local-repository" -Djava.io.tmpdir=target)
+          tmpdir=$(realpath target)
+          declare -a mvn_args=(--batch-mode -fn -Dbuild.id="${BUILD_ID}" -Dmaven.repo.local="${WORKSPACE}/local-repository" -Djava.io.tmpdir=${tmpdir})
           if [ "${DEBUG}" = "true" ]; then
             curl_args=("${curl_args[@]}" -v)
             mvn_args=("${mvn_args[@]}" -X)
