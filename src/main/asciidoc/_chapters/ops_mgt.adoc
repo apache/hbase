@@ -2172,6 +2172,8 @@ Before enabling replication for a column family, create the table and all column
 NOTE: Replication is asynchronous as we send WAL to another cluster in background, which means that when you want to do recovery through replication, you could loss some data. To address this problem, we have introduced a new feature called synchronous replication. As the mechanism is a bit different so we use a separated section to describe it. Please see
 <<Synchronous Replication,Synchronous Replication>>.
 
+NOTE: At present, there is compatibility problem if Replication and WAL Compression are used together. If you need to use Replication, it is recommended to set the `hbase.regionserver.wal.enablecompression` property to `false`. See (https://issues.apache.org/jira/browse/HBASE-26849[HBASE-26849]) for details.
+
 === Replication Overview
 
 Cluster replication uses a source-push methodology.
