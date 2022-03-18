@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -488,14 +489,27 @@ public class TestSnapshotFromMaster {
       }
     }
     // run the cleaner again
-    LOG.debug("Running hfile cleaners");
-    ensureHFileCleanersRun();
-    LOG.info("After delete snapshot cleaners run File-System state");
-    CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
+    // In SnapshotFileCache, we use lock.tryLock to avoid being blocked by snapshot operation, if we
+    // fail to get the lock, we will not archive any files. This is not a big deal in real world, so
+    // here we will try to run the cleaner multiple times to make the test more stable.
+    // See HBASE-26861
+    UTIL.waitFor(60000, 1000, new ExplainingPredicate<Exception>() {
 
-    archives = getHFiles(archiveDir, fs, TABLE_NAME);
-    assertEquals("Still have some hfiles in the archive, when their snapshot has been deleted.", 0,
-      archives.size());
+      @Override
+      public boolean evaluate() throws Exception {
+        LOG.debug("Running hfile cleaners");
+        ensureHFileCleanersRun();
+        LOG.info("After delete snapshot cleaners run File-System state");
+        CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
+        return getHFiles(archiveDir, fs, TABLE_NAME).isEmpty();
+      }
+
+      @Override
+      public String explainFailure() throws Exception {
+        return "Still have some hfiles in the archive, when their snapshot has been deleted: "
+          + getHFiles(archiveDir, fs, TABLE_NAME);
+      }
+    });
   }
 
   /**
