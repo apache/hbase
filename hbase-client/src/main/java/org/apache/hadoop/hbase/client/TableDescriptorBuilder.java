@@ -818,9 +818,8 @@ public class TableDescriptorBuilder {
     /**
      * Remove metadata represented by the key from the {@link #values} map
      *
-     * @param key Key whose key and value we're to remove from TableDescriptor
-     * parameters.
-     * @return the modifyable TD
+     * @param key Key whose key and value we're to remove from TableDescriptor parameters
+     * @return the modifiable TD
      */
     public ModifyableTableDescriptor removeValue(final byte[] key) {
       return removeValue(new Bytes(key));

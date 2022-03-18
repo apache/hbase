@@ -232,8 +232,7 @@ public abstract class AbstractMemStore implements MemStore {
   }
 
   /**
-   * This method is protected under {@link HStore#lock} write lock,<br/>
-   * and this method is used by {@link HStore#updateStorefiles} after flushing is completed.<br/>
+   * This method is protected under HStore write lock.<br/>
    * The passed snapshot was successfully persisted; it can be let go.
    * @param id Id of the snapshot to clean out.
    * @see MemStore#snapshot()

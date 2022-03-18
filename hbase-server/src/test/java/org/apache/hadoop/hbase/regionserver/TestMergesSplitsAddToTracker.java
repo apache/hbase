@@ -234,7 +234,6 @@ public class TestMergesSplitsAddToTracker {
     List<StoreFileInfo> infos = region.getRegionFileSystem().getStoreFiles("info");
     final MutableBoolean foundLink = new MutableBoolean(false);
     infos.stream().forEach(i -> {
-      i.getActiveFileName().contains(orignalFileName);
       if(i.getActiveFileName().contains(untrackedFile)){
         fail();
       }

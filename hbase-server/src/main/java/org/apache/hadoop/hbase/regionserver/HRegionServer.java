@@ -2262,7 +2262,8 @@ public class HRegionServer extends Thread implements
     double brokenStoreFileCleanerDelayJitter = conf.getDouble(
       BrokenStoreFileCleaner.BROKEN_STOREFILE_CLEANER_DELAY_JITTER,
       BrokenStoreFileCleaner.DEFAULT_BROKEN_STOREFILE_CLEANER_DELAY_JITTER);
-    double jitterRate = (ThreadLocalRandom.current().nextDouble() - 0.5D) * brokenStoreFileCleanerDelayJitter;
+    double jitterRate = (ThreadLocalRandom.current().nextDouble() - 0.5D) *
+      brokenStoreFileCleanerDelayJitter;
     long jitterValue = Math.round(brokenStoreFileCleanerDelay * jitterRate);
     this.brokenStoreFileCleaner =
       new BrokenStoreFileCleaner((int) (brokenStoreFileCleanerDelay + jitterValue),

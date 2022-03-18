@@ -59,10 +59,10 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 @RunWith(Parameterized.class)
 public class TestBulkloadBase {
@@ -135,7 +135,8 @@ public class TestBulkloadBase {
   }
 
   protected HRegion testRegionWithFamilies(byte[]... families) throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName().substring(0, name.getMethodName().indexOf("[")));
+    TableName tableName =
+      TableName.valueOf(name.getMethodName().substring(0, name.getMethodName().indexOf("[")));
     return testRegionWithFamiliesAndSpecifiedTableName(tableName, families);
   }
 
@@ -175,7 +176,9 @@ public class TestBulkloadBase {
 
   private static String generateUniqueName(final String suffix) {
     String name = UUID.randomUUID().toString().replaceAll("-", "");
-    if (suffix != null) name += suffix;
+    if (suffix != null) {
+      name += suffix;
+    }
     return name;
   }
 
