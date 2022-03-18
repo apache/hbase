@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -276,12 +275,8 @@ public class TestFlushSnapshotFromClient {
         .setType(SnapshotProtos.SnapshotDescription.Type.FLUSH).build();
 
     // take the snapshot async
-    admin.takeSnapshotAsync(
-      new SnapshotDescription("asyncSnapshot", TABLE_NAME, SnapshotType.FLUSH));
-
-    // constantly loop, looking for the snapshot to complete
-    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    SnapshotTestingUtils.waitForSnapshotToComplete(master, snapshot, 200);
+    admin.snapshotAsync(
+      new SnapshotDescription("asyncSnapshot", TABLE_NAME, SnapshotType.FLUSH)).get();
     LOG.info(" === Async Snapshot Completed ===");
     UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
 
