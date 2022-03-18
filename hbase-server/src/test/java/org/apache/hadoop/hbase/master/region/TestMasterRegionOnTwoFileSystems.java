@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.region;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -185,7 +186,7 @@ public class TestMasterRegionOnTwoFileSystems {
     LOG.info("wal archive dir {}", walArchiveDir);
     AbstractFSWAL<?> wal = (AbstractFSWAL<?>) region.region.getWAL();
     Path currentWALFile = wal.getCurrentFileName();
-    for (;;) {
+    for (int i = 0; ; i++) {
       region.requestRollAll();
       region.waitUntilWalRollFinished();
       Path newWALFile = wal.getCurrentFileName();
@@ -193,6 +194,10 @@ public class TestMasterRegionOnTwoFileSystems {
       if (!newWALFile.equals(currentWALFile)) {
         break;
       }
+      if (i == 10) {
+        fail("Can not roll wal after " + i + " times");
+      }
+      Thread.sleep(1000);
     }
     HFILE_UTIL.waitFor(15000, () -> {
       try {
