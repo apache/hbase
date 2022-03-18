@@ -51,12 +51,14 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -71,6 +73,8 @@ import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
+import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -88,7 +92,6 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -134,11 +137,7 @@ public class TestHStoreFile {
 
   /**
    * Write a file and then assert that we can read from top and bottom halves using two
-<<<<<<< HEAD
-   * HalfMapFiles, as well as one HalfMapFile and one HFileLink file.
-=======
    * HalfMapFiles.
->>>>>>> 16116fa35e... HBASE-24510 Remove HBaseTestCase and GenericTestUtils (#1859)
    */
   @Test
   public void testBasicHalfAndHFileLinkMapFile() throws Exception {
@@ -1062,7 +1061,19 @@ public class TestHStoreFile {
     if (null == path) {
       return null;
     }
-    Path regionDir = regionFs.commitDaughterRegion(hri);
+    List<Path> splitFiles = new ArrayList<>();
+    splitFiles.add(path);
+    MasterProcedureEnv mockEnv = mock(MasterProcedureEnv.class);
+    MasterServices mockServices = mock(MasterServices.class);
+    when(mockEnv.getMasterServices()).thenReturn(mockServices);
+    when(mockEnv.getMasterConfiguration()).thenReturn(new Configuration());
+    TableDescriptors mockTblDescs = mock(TableDescriptors.class);
+    when(mockServices.getTableDescriptors()).thenReturn(mockTblDescs);
+    TableDescriptor mockTblDesc = mock(TableDescriptor.class);
+    when(mockTblDescs.get(any())).thenReturn(mockTblDesc);
+    ColumnFamilyDescriptor mockCfDesc = mock(ColumnFamilyDescriptor.class);
+    when(mockTblDesc.getColumnFamily(any())).thenReturn(mockCfDesc);
+    Path regionDir = regionFs.commitDaughterRegion(hri, splitFiles, mockEnv);
     return new Path(new Path(regionDir, family), path.getName());
   }
 

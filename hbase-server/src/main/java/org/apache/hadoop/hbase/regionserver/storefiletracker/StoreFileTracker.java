@@ -48,7 +48,6 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface StoreFileTracker {
-
   /**
    * Load the store files list when opening a region.
    */
