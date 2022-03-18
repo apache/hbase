@@ -271,6 +271,7 @@ public class TestShortCircuitGet {
           inCP = false;
         }
 
+        // RegionScanner is closed and there is no rpcCallBack set
         assertTrue(prevScannerCount == region.scannerReadPoints.size());
         ServerCall serverCall = (ServerCall) RpcServer.getCurrentCall().get();
         assertTrue(serverCall.getCallBack() == null);
@@ -291,6 +292,7 @@ public class TestShortCircuitGet {
           inCP = false;
         }
 
+        // RegionScanner is closed and there is no rpcCallBack set
         assertTrue(prevScannerCount == region.scannerReadPoints.size());
         serverCall = (ServerCall) RpcServer.getCurrentCall().get();
         assertTrue(serverCall.getCallBack() == null);
@@ -320,6 +322,7 @@ public class TestShortCircuitGet {
           inCP = false;
         }
 
+        // RegionScanner is closed and there is no rpcCallBack set
         assertTrue(prevScannerCount == region.scannerReadPoints.size());
         serverCall = (ServerCall) RpcServer.getCurrentCall().get();
         assertTrue(serverCall.getCallBack() == null);
