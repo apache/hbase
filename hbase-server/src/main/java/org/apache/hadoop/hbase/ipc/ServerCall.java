@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
@@ -568,5 +569,11 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     } else {
       return response;
     }
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public synchronized RpcCallback getCallBack() {
+    return this.rpcCallback;
   }
 }

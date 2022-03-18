@@ -56,7 +56,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.io.netty.util.Timer;
 
@@ -64,7 +66,21 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 
@@ -128,67 +144,6 @@ public final class ConnectionUtils {
     int retries = hcRetries * serversideMultiplier;
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
     log.info(sn + " server-side Connection retries=" + retries);
-  }
-
-  /**
-   * A ClusterConnection that will short-circuit RPC making direct invocations against the localhost
-   * if the invocation target is 'this' server; save on network and protobuf invocations.
-   */
-  // TODO This has to still do PB marshalling/unmarshalling stuff. Check how/whether we can avoid.
-  // Class is visible so can assert we are short-circuiting when expected.
-  public static class ShortCircuitingClusterConnection extends ConnectionImplementation {
-    private final ServerName serverName;
-    private final AdminService.BlockingInterface localHostAdmin;
-    private final ClientService.BlockingInterface localHostClient;
-
-    private ShortCircuitingClusterConnection(Configuration conf, User user,
-        ServerName serverName, AdminService.BlockingInterface admin,
-        ClientService.BlockingInterface client, ConnectionRegistry registry) throws IOException {
-      super(conf, null, user, registry);
-      this.serverName = serverName;
-      this.localHostAdmin = admin;
-      this.localHostClient = client;
-    }
-
-    @Override
-    public AdminService.BlockingInterface getAdmin(ServerName sn) throws IOException {
-      return serverName.equals(sn) ? this.localHostAdmin : super.getAdmin(sn);
-    }
-
-    @Override
-    public ClientService.BlockingInterface getClient(ServerName sn) throws IOException {
-      return serverName.equals(sn) ? this.localHostClient : super.getClient(sn);
-    }
-
-    @Override
-    public MasterKeepAliveConnection getMaster() throws IOException {
-      if (this.localHostClient instanceof MasterService.BlockingInterface) {
-        return new ShortCircuitMasterConnection(
-          (MasterService.BlockingInterface) this.localHostClient);
-      }
-      return super.getMaster();
-    }
-  }
-
-  /**
-   * Creates a short-circuit connection that can bypass the RPC layer (serialization,
-   * deserialization, networking, etc..) when talking to a local server.
-   * @param conf the current configuration
-   * @param user the user the connection is for
-   * @param serverName the local server name
-   * @param admin the admin interface of the local server
-   * @param client the client interface of the local server
-   * @param registry the connection registry to be used, can be null
-   * @return an short-circuit connection.
-   * @throws IOException if IO failure occurred
-   */
-  public static ClusterConnection createShortCircuitConnection(final Configuration conf, User user,
-    final ServerName serverName, final AdminService.BlockingInterface admin,
-    final ClientService.BlockingInterface client, ConnectionRegistry registry) throws IOException {
-    if (user == null) {
-      user = UserProvider.instantiate(conf).getCurrent();
-    }
-    return new ShortCircuitingClusterConnection(conf, user, serverName, admin, client, registry);
   }
 
   /**
