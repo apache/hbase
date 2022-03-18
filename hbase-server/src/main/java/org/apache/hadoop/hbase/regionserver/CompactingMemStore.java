@@ -395,7 +395,7 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   /**
-   * This method is protected under {@link HStore#lock} read lock.
+   * This method is protected under HStore read lock.
    */
   @Override
   public List<KeyValueScanner> getScanners(long readPt) throws IOException {

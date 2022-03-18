@@ -2868,10 +2868,10 @@ public class HBaseAdmin implements Admin {
       @Override
       protected RestoreSnapshotResponse rpcCall() throws Exception {
         final RestoreSnapshotRequest.Builder builder = RestoreSnapshotRequest.newBuilder()
-            .setSnapshot(snapshot)
-            .setNonceGroup(nonceGroup)
-            .setNonce(nonce)
-            .setRestoreACL(restoreAcl);
+          .setSnapshot(snapshot)
+          .setNonceGroup(nonceGroup)
+          .setNonce(nonce)
+          .setRestoreACL(restoreAcl);
         if (customSFT != null) {
           builder.setCustomSFT(customSFT);
         }

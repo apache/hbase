@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.Random;
+import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,9 +45,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
-import java.io.IOException;
-import java.util.Random;
-import java.util.UUID;
 
 /**
  * Tests for failedBulkLoad logic to make sure staged files are returned to their original location
@@ -232,7 +232,8 @@ public class TestSecureBulkloadListener {
 
   private String createHFileForFamilies(byte[] family) throws IOException {
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(conf);
-    Path testDir = new Path(dfs.getWorkingDirectory() , new Path(name.getMethodName(), Bytes.toString(family)));
+    Path testDir = new Path(dfs.getWorkingDirectory(),
+      new Path(name.getMethodName(), Bytes.toString(family)));
     if(!dfs.exists(testDir)){
       dfs.mkdirs(testDir);
     }
@@ -257,7 +258,9 @@ public class TestSecureBulkloadListener {
 
   private static String generateUniqueName(final String suffix) {
     String name = UUID.randomUUID().toString().replaceAll("-", "");
-    if (suffix != null) name += suffix;
+    if (suffix != null) {
+      name += suffix;
+    }
     return name;
   }
 

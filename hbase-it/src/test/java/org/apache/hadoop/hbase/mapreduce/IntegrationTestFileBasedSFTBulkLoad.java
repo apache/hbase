@@ -66,7 +66,8 @@ import org.slf4j.LoggerFactory;
 @Category(IntegrationTests.class)
 public class IntegrationTestFileBasedSFTBulkLoad extends IntegrationTestBulkLoad {
 
-  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestFileBasedSFTBulkLoad.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(IntegrationTestFileBasedSFTBulkLoad.class);
 
   private static String NUM_MAPS_KEY = "hbase.IntegrationTestBulkLoad.numMaps";
   private static String NUM_IMPORT_ROUNDS_KEY = "hbase.IntegrationTestBulkLoad.numImportRounds";

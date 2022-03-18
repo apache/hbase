@@ -364,7 +364,7 @@ public class SecureBulkLoadManager {
 
     @Override
     public String prepareBulkLoad(final byte[] family, final String srcPath, boolean copyFile,
-      String customStaging ) throws IOException {
+        String customStaging) throws IOException {
       Path p = new Path(srcPath);
 
       //store customStaging for failedBulkLoad

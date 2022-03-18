@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
