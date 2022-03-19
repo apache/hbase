@@ -63,7 +63,5 @@ class DefaultStoreFileTracker extends StoreFileTrackerBase {
 
   @Override
   protected void doSetStoreFiles(Collection<StoreFileInfo> files) throws IOException {
-    // TODO Implement StoreFileTrackerBase.doSetStoreFiles
-    
   }
 }

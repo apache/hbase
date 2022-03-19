@@ -65,7 +65,6 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
       backedFile = null;
     }
   }
-  
 
   @Override
   protected List<StoreFileInfo> doLoadStoreFiles(boolean readOnly) throws IOException {
