@@ -7871,8 +7871,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // This can be an EXPENSIVE call. It may make an extra copy from offheap to onheap buffers.
       // See more details in HBASE-26036.
       for (Cell cell : tmp) {
-        results.add(cell instanceof ByteBufferExtendedCell ?
-            KeyValueUtil.copyToNewKeyValue(cell) : cell);
+        results.add(
+          CellUtil.cloneIfNecessary(cell));
       }
     }
 
