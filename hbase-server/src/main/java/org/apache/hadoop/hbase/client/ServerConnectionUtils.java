@@ -52,13 +52,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterServ
 @InterfaceAudience.Private
 public class ServerConnectionUtils {
 
+  private ServerConnectionUtils() {
+  }
+
   /**
    * A ClusterConnection that will short-circuit RPC making direct invocations against the localhost
    * if the invocation target is 'this' server; save on network and protobuf invocations.
    */
   // TODO This has to still do PB marshalling/unmarshalling stuff. Check how/whether we can avoid.
   // Class is visible so can assert we are short-circuiting when expected.
-  public static class ShortCircuitingClusterConnection extends ConnectionImplementation {
+  public final static class ShortCircuitingClusterConnection extends ConnectionImplementation {
     private final ServerName serverName;
     private final AdminService.BlockingInterface localHostAdmin;
     private final ClientService.BlockingInterface localHostClient;
