@@ -109,11 +109,11 @@ public class ServerConnectionUtils {
 
       @Override
       public GetResponse get(RpcController controller, GetRequest request) throws ServiceException {
-        Optional<RpcCall> rpcCall = RpcServer.unsetCurrentCall();
+        Optional<RpcCall> rpcCall = this.beforeInvoke();
         try {
           return target.get(controller, request);
         } finally {
-          rpcCall.ifPresent(RpcServer::setCurrentCall);
+          this.afterInvoke(rpcCall);
         }
       }
 
@@ -123,23 +123,36 @@ public class ServerConnectionUtils {
         /**
          * Here is for multiGet
          */
-        Optional<RpcCall> rpcCall = RpcServer.unsetCurrentCall();
+        Optional<RpcCall> rpcCall = this.beforeInvoke();
         try {
           return target.multi(controller, request);
         } finally {
-          rpcCall.ifPresent(RpcServer::setCurrentCall);
+          this.afterInvoke(rpcCall);
         }
       }
 
       @Override
       public ScanResponse scan(RpcController controller, ScanRequest request)
           throws ServiceException {
-        Optional<RpcCall> rpcCall = RpcServer.unsetCurrentCall();
+        Optional<RpcCall> rpcCall = this.beforeInvoke();
         try {
           return target.scan(controller, request);
         } finally {
-          rpcCall.ifPresent(RpcServer::setCurrentCall);
+          this.afterInvoke(rpcCall);
         }
+      }
+
+      private Optional<RpcCall> beforeInvoke() {
+        Optional<RpcCall> rpcCallOptional = RpcServer.unsetCurrentCall();
+        rpcCallOptional.ifPresent((rpcCall) -> {
+          rpcCall.getRequestUser().ifPresent(RpcServer::saveUserByUnsetCurrentCall);
+        });
+        return rpcCallOptional;
+      }
+
+      private void afterInvoke(Optional<RpcCall> rpcCall) {
+        rpcCall.ifPresent(RpcServer::setCurrentCall);
+        RpcServer.removeSavedUserByUnsetCurrentCall();
       }
 
       @Override

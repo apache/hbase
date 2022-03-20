@@ -127,6 +127,8 @@ public abstract class RpcServer implements RpcServerInterface,
    */
   protected static final ThreadLocal<RpcCall> CurCall = new ThreadLocal<>();
 
+  protected static final ThreadLocal<User> savedUserByUnsetCurrentCall = new ThreadLocal<>();
+
   /** Keeps MonitoredRPCHandler per handler thread. */
   protected static final ThreadLocal<MonitoredRPCHandler> MONITORED_RPC = new ThreadLocal<>();
 
@@ -696,6 +698,14 @@ public abstract class RpcServer implements RpcServerInterface,
     return rpcCall;
   }
 
+  public static void saveUserByUnsetCurrentCall(User user) {
+    savedUserByUnsetCurrentCall.set(user);
+  }
+
+  public static void removeSavedUserByUnsetCurrentCall() {
+    savedUserByUnsetCurrentCall.remove();
+  }
+
   /**
    * Used by {@link org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore}. Set the
    * rpc call back after mutate region.
@@ -711,7 +721,8 @@ public abstract class RpcServer implements RpcServerInterface,
    */
   public static Optional<User> getRequestUser() {
     Optional<RpcCall> ctx = getCurrentCall();
-    return ctx.isPresent() ? ctx.get().getRequestUser() : Optional.empty();
+    return ctx.isPresent() ? ctx.get().getRequestUser()
+        : Optional.ofNullable(savedUserByUnsetCurrentCall.get());
   }
 
   /**

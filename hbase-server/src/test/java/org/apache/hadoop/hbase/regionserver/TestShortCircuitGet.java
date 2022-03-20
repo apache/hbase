@@ -95,7 +95,7 @@ public class TestShortCircuitGet {
 
     conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 60 * 60 * 1000);
     conf.setStrings(HConstants.REGION_SERVER_IMPL, MyRegionServer.class.getName());
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3000);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     conf.setInt(HConstants.HBASE_CLIENT_PAUSE, 10000);
     TEST_UTIL.startMiniCluster(1);
   }
@@ -175,6 +175,8 @@ public class TestShortCircuitGet {
         }
 
         assertTrue(!RpcServer.getCurrentCall().isPresent());
+        // for multi,which is executed by threadPool,so there is no user.
+        assertTrue(!RpcServer.getRequestUser().isPresent());
         return super.multi(rpcc, request);
       } catch (Throwable e) {
         exceptionRef.set(e);
@@ -201,6 +203,8 @@ public class TestShortCircuitGet {
         }
 
         assertTrue(!RpcServer.getCurrentCall().isPresent());
+        // for scan,which is executed by threadPool,so there is no user.
+        assertTrue(!RpcServer.getRequestUser().isPresent());
         return super.scan(controller, request);
       } catch (Throwable e) {
         exceptionRef.set(e);
@@ -225,6 +229,7 @@ public class TestShortCircuitGet {
         }
 
         assertTrue(!RpcServer.getCurrentCall().isPresent());
+        assertTrue(RpcServer.getRequestUser().isPresent());
         return super.get(controller, request);
       } catch (Throwable e) {
         exceptionRef.set(e);
