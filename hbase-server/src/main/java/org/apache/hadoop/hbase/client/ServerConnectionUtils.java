@@ -95,7 +95,8 @@ public class ServerConnectionUtils {
       return super.getMaster();
     }
 
-    static class ClientServiceBlockingInterfaceWrapper implements ClientService.BlockingInterface {
+    static class ClientServiceBlockingInterfaceWrapper
+        implements ClientService.BlockingInterface {
 
       private ClientService.BlockingInterface target;
 
