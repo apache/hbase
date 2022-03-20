@@ -228,6 +228,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProced
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
@@ -3540,5 +3542,18 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   public ReplicateWALEntryResponse replicateToReplica(RpcController controller,
     ReplicateWALEntryRequest request) throws ServiceException {
     throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
+  public FlushTableResponse flushTable(RpcController controller,
+      FlushTableRequest req) throws ServiceException {
+    TableName tableName = ProtobufUtil.toTableName(req.getTableName());
+    byte[] columnFamily = req.hasColumnFamily() ? req.getColumnFamily().toByteArray() : null;
+    try {
+      long procId = server.flushTable(tableName, columnFamily, req.getNonceGroup(), req.getNonce());
+      return FlushTableResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
   }
 }

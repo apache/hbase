@@ -315,7 +315,14 @@ public enum EventType {
    *
    *  RS_VERIFY_SNAPSHOT
    */
-  RS_VERIFY_SNAPSHOT(88, ExecutorType.RS_SNAPSHOT_OPERATIONS);
+  RS_VERIFY_SNAPSHOT(88, ExecutorType.RS_SNAPSHOT_OPERATIONS),
+
+  /**
+   * RS flush regions.<br>
+   *
+   * RS_FLUSH_OPERATIONS
+   */
+  RS_FLUSH_REGIONS(89, ExecutorType.RS_FLUSH_OPERATIONS);
 
   private final int code;
   private final ExecutorType executor;

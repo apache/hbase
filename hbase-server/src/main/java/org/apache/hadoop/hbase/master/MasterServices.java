@@ -253,6 +253,19 @@ public interface MasterServices extends Server {
       final long nonceGroup,
       final long nonce) throws IOException;
 
+  /**
+   * Flush an existing table
+   * @param tableName The table name
+   * @param columnFamily The column family
+   * @param nonceGroup the nonce group
+   * @param nonce the nonce
+   * @return the flush procedure id
+   */
+  long flushTable(
+    final TableName tableName,
+    final byte[] columnFamily,
+    final long nonceGroup,
+    final long nonce) throws IOException;
 
   /**
    * Add a new column to an existing table
