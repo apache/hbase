@@ -198,23 +198,21 @@ echo "Writing out configuration for HBase."
 rm -rf "${working_dir}/hbase-conf"
 mkdir "${working_dir}/hbase-conf"
 
-if [ -f "${component_install}/conf/log4j.properties" ]; then
-  cp "${component_install}/conf/log4j.properties" "${working_dir}/hbase-conf/log4j.properties"
+if [ -f "${component_install}/conf/log4j2.properties" ]; then
+  cp "${component_install}/conf/log4j2.properties" "${working_dir}/hbase-conf/log4j2.properties"
 else
-  cat >"${working_dir}/hbase-conf/log4j.properties" <<EOF
-# Define some default values that can be overridden by system properties
-hbase.root.logger=INFO,console
+  cat >"${working_dir}/hbase-conf/log4j2.properties" <<EOF
+status = debug
+dest = err
+name = PropertiesConfig
 
-# Define the root logger to the system property "hbase.root.logger".
-log4j.rootLogger=${hbase.root.logger}
+appender.console.type = Console
+appender.console.target = SYSTEM_ERR
+appender.console.name = Console
+appender.console.layout.type = PatternLayout
+appender.console.layout.pattern = %d{ISO8601} %-5p [%t] %c{2}: %.1000m%n
 
-# Logging Threshold
-log4j.threshold=ALL
-# console
-log4j.appender.console=org.apache.log4j.ConsoleAppender
-log4j.appender.console.target=System.err
-log4j.appender.console.layout=org.apache.log4j.PatternLayout
-log4j.appender.console.layout.ConversionPattern=%d{ISO8601} %-5p [%t] %c{2}: %.1000m%n
+rootLogger = ${sys:hbase.root.logger:-INFO,console}
 EOF
 fi
 
