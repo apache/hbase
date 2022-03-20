@@ -77,10 +77,6 @@ public class TestRegionServerScan {
   static final byte[] r0 = Bytes.toBytes("row-0");
   static final byte[] r1 = Bytes.toBytes("row-1");
   static final byte[] r2 = Bytes.toBytes("row-2");
-  static final byte[] r3 = Bytes.toBytes("row-3");
-  static final byte[] r4 = Bytes.toBytes("row-4");
-  static final byte[] r5 = Bytes.toBytes("row-5");
-  static final byte[] r6 = Bytes.toBytes("row-6");
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
