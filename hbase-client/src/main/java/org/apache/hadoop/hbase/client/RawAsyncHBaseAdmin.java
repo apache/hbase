@@ -968,12 +968,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                   }
                   addListener(execProcedure(FLUSH_TABLE_PROCEDURE_SIGNATURE,
                     tableName.getNameAsString(), props), (ret2, err3) -> {
-                    if (err3 != null) {
-                      future.completeExceptionally(err3);
-                    } else {
-                      future.complete(ret2);
-                    }
-                  });
+                      if (err3 != null) {
+                        future.completeExceptionally(err3);
+                      } else {
+                        future.complete(ret2);
+                      }
+                    });
                 }
               });
             }

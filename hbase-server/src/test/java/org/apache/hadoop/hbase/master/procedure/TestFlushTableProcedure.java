@@ -34,7 +34,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
-import java.util.List;
+
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestFlushTableProcedure {
