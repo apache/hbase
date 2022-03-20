@@ -198,23 +198,21 @@ echo "Writing out configuration for HBase."
 rm -rf "${working_dir}/hbase-conf"
 mkdir "${working_dir}/hbase-conf"
 
-if [ -f "${component_install}/conf/log4j2.xml" ]; then
-  cp "${component_install}/conf/log4j2.xml" "${working_dir}/hbase-conf/log4j2.xml"
+if [ -f "${component_install}/conf/log4j2.properties" ]; then
+  cp "${component_install}/conf/log4j2.properties" "${working_dir}/hbase-conf/log4j2.properties"
 else
-  cat >"${working_dir}/hbase-conf/log4j2.xml" <<EOF
-<Configuration>
-  <Appenders>
-    <!-- Console appender -->
-    <Console name="console" target="SYSTEM_ERR">
-      <PatternLayout pattern="%d{ISO8601} %-5p [%t] %c{2}: %.1000m%n" />
-    </Console>
-  </Appenders>
-  <Loggers>
-    <Root level="${sys:hbase.root.logger.level:-info}">
-      <AppenderRef ref="${sys:hbase.root.logger.appender:-console}" />
-    </Root>
-  </Loggers>
-</Configuration>
+  cat >"${working_dir}/hbase-conf/log4j2.properties" <<EOF
+status = debug
+dest = err
+name = PropertiesConfig
+
+appender.console.type = Console
+appender.console.target = SYSTEM_ERR
+appender.console.name = Console
+appender.console.layout.type = PatternLayout
+appender.console.layout.pattern = %d{ISO8601} %-5p [%t] %c{2}: %.1000m%n
+
+rootLogger = ${sys:hbase.root.logger:-INFO,console}
 EOF
 fi
 
