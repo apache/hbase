@@ -20,11 +20,10 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
-
+import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
@@ -52,7 +51,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   // Holds the scanners when a ever a eager close() happens.  All such eagerly closed
   // scans are collected and when the final scanner.close() happens will perform the
   // actual close.
-  protected List<KeyValueScanner> scannersForDelayedClose = null;
+  protected ConcurrentLinkedQueue<KeyValueScanner> scannersForDelayedClose = null;
 
   /**
    * The current sub-scanner, i.e. the one that contains the next key/value
@@ -88,7 +87,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   KeyValueHeap(List<? extends KeyValueScanner> scanners,
       KVScannerComparator comparator) throws IOException {
     this.comparator = comparator;
-    this.scannersForDelayedClose = new ArrayList<>(scanners.size());
+    this.scannersForDelayedClose = new ConcurrentLinkedQueue<>();
     if (!scanners.isEmpty()) {
       this.heap = new PriorityQueue<>(scanners.size(), this.comparator);
       for (KeyValueScanner scanner : scanners) {
