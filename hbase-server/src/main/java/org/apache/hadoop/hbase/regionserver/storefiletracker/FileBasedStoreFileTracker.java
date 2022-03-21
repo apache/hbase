@@ -67,8 +67,8 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
   }
 
   @Override
-  public List<StoreFileInfo> load() throws IOException {
-    StoreFileList list = backedFile.load();
+  protected List<StoreFileInfo> doLoadStoreFiles(boolean readOnly) throws IOException {
+    StoreFileList list = backedFile.load(readOnly);
     if (list == null) {
       return Collections.emptyList();
     }
@@ -148,7 +148,7 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
   }
 
   @Override
-  public void set(List<StoreFileInfo> files) throws IOException {
+  protected void doSetStoreFiles(Collection<StoreFileInfo> files) throws IOException {
     synchronized (storefiles) {
       storefiles.clear();
       StoreFileList.Builder builder = StoreFileList.newBuilder();
