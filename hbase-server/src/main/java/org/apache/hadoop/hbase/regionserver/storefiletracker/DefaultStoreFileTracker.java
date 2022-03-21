@@ -39,13 +39,6 @@ class DefaultStoreFileTracker extends StoreFileTrackerBase {
   }
 
   @Override
-  public List<StoreFileInfo> load() throws IOException {
-    List<StoreFileInfo> files =
-      ctx.getRegionFileSystem().getStoreFiles(ctx.getFamily().getNameAsString());
-    return files != null ? files : Collections.emptyList();
-  }
-
-  @Override
   public boolean requireWritingToTmpDirFirst() {
     return true;
   }
@@ -62,7 +55,13 @@ class DefaultStoreFileTracker extends StoreFileTrackerBase {
   }
 
   @Override
-  public void set(List<StoreFileInfo> files) {
-    // NOOP
+  protected List<StoreFileInfo> doLoadStoreFiles(boolean readOnly) throws IOException {
+    List<StoreFileInfo> files =
+      ctx.getRegionFileSystem().getStoreFiles(ctx.getFamily().getNameAsString());
+    return files != null ? files : Collections.emptyList();
+  }
+
+  @Override
+  protected void doSetStoreFiles(Collection<StoreFileInfo> files) throws IOException {
   }
 }

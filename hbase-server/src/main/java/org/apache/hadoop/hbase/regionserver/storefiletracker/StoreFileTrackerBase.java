@@ -21,7 +21,7 @@ import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTra
 
 import java.io.IOException;
 import java.util.Collection;
-
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -67,6 +67,11 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
   }
 
   @Override
+  public final List<StoreFileInfo> load() throws IOException {
+    return doLoadStoreFiles(!isPrimaryReplica);
+  }
+
+  @Override
   public final void add(Collection<StoreFileInfo> newFiles) throws IOException {
     if (isPrimaryReplica) {
       doAddNewStoreFiles(newFiles);
@@ -78,6 +83,13 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     Collection<StoreFileInfo> newFiles) throws IOException {
     if (isPrimaryReplica) {
       doAddCompactionResults(compactedFiles, newFiles);
+    }
+  }
+
+  @Override
+  public final void set(List<StoreFileInfo> files) throws IOException {
+    if (isPrimaryReplica) {
+      doSetStoreFiles(files);
     }
   }
 
@@ -173,8 +185,19 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     return builder.build();
   }
 
+  /**
+   * For primary replica, we will call load once when opening a region, and the implementation could
+   * choose to do some cleanup work. So here we use {@code readOnly} to indicate that whether you
+   * are allowed to do the cleanup work. For secondary replicas, we will set {@code readOnly} to
+   * {@code true}.
+   */
+  protected abstract List<StoreFileInfo> doLoadStoreFiles(boolean readOnly) throws IOException;
+
   protected abstract void doAddNewStoreFiles(Collection<StoreFileInfo> newFiles) throws IOException;
 
   protected abstract void doAddCompactionResults(Collection<StoreFileInfo> compactedFiles,
     Collection<StoreFileInfo> newFiles) throws IOException;
+
+  protected abstract void doSetStoreFiles(Collection<StoreFileInfo> files) throws IOException;
+
 }

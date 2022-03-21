@@ -50,13 +50,6 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
   }
 
   @Override
-  public List<StoreFileInfo> load() throws IOException {
-    List<StoreFileInfo> files = src.load();
-    dst.set(files);
-    return files;
-  }
-
-  @Override
   public boolean requireWritingToTmpDirFirst() {
     // Returns true if either of the two StoreFileTracker returns true.
     // For example, if we want to migrate from a tracker implementation which can ignore the broken
@@ -65,6 +58,15 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
     // then after we finally change the implementation which can not ignore the broken files, we
     // will be in trouble.
     return src.requireWritingToTmpDirFirst() || dst.requireWritingToTmpDirFirst();
+  }
+
+  @Override
+  protected List<StoreFileInfo> doLoadStoreFiles(boolean readOnly) throws IOException {
+    List<StoreFileInfo> files = src.doLoadStoreFiles(readOnly);
+    if (!readOnly) {
+      dst.doSetStoreFiles(files);
+    }
+    return files;
   }
 
   @Override
@@ -81,7 +83,7 @@ class MigrationStoreFileTracker extends StoreFileTrackerBase {
   }
 
   @Override
-  public void set(List<StoreFileInfo> files) {
+  protected void doSetStoreFiles(Collection<StoreFileInfo> files) throws IOException {
     throw new UnsupportedOperationException(
       "Should not call this method on " + getClass().getSimpleName());
   }
