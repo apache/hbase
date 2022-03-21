@@ -24,10 +24,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -119,6 +122,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
           "hbase.master.balancer.stochastic.additionalCostFunctions";
   public static final String OVERALL_COST_FUNCTION_NAME = "Overall";
 
+  protected static final String CLUSTER_BALANCE_STATUS_CHECKERS_KEY =
+    "hbase.master.balancer.stochastic.cluster.status.checkers";
+
   Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<>();
 
   // values are defaults
@@ -130,6 +136,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private float minCostNeedBalance = 0.025f;
 
   private List<CostFunction> costFunctions; // FindBugs: Wants this protected; IS2_INCONSISTENT_SYNC
+  private List<CostFunction> simpleCostFunctions;
   // To save currently configed sum of multiplier. Defaulted at 1 for cases that carry high cost
   private float sumMultiplier;
   // to save and report costs to JMX
@@ -147,6 +154,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private RegionReplicaRackCostFunction regionReplicaRackCostFunction;
 
   protected List<CandidateGenerator> candidateGenerators;
+
+  protected LinkedList<ClusterStatusBalanceChecker> clusterStatusCheckers;
 
   public enum GeneratorType {
     RANDOM, LOAD, LOCALITY, RACK
@@ -177,25 +186,31 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return ReflectionUtils.newInstance(clazz);
   }
 
-  private void loadCustomCostFunctions(Configuration conf) {
-    String[] functionsNames = conf.getStrings(COST_FUNCTIONS_COST_FUNCTIONS_KEY);
+  private <T> List<? extends T> loadFunctions(Configuration conf, String configName) {
+    String[] classNames = conf.getStrings(configName);
 
-    if (null == functionsNames) {
-      return;
+    if (null == classNames) {
+      return new ArrayList<>();
     }
-    for (String className : functionsNames) {
-      Class<? extends CostFunction> clazz;
+
+    return Arrays.stream(classNames).map(c -> {
+      Class<? extends T> klass = null;
       try {
-        clazz = Class.forName(className).asSubclass(CostFunction.class);
+        klass = (Class<? extends T>) Class.forName(c);
       } catch (ClassNotFoundException e) {
-        LOG.warn("Cannot load class '{}': {}", className, e.getMessage());
-        continue;
+        LOG.warn("Cannot load class " + c + "': " + e.getMessage());
       }
-      CostFunction func = createCostFunction(clazz, conf);
-      LOG.info("Successfully loaded custom CostFunction '{}'", func.getClass().getSimpleName());
-      costFunctions.add(func);
-    }
+      if (null == klass) {
+        return null;
+      }
+
+      T reflected = ReflectionUtils.newInstance(klass, conf);
+      LOG.info("Successfully loaded class {}", reflected.getClass().getSimpleName());
+
+      return reflected;
+    }).filter(Objects::nonNull).collect(Collectors.toList());
   }
+
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
     allowedOnPath = ".*/src/test/.*")
@@ -250,16 +265,32 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     addCostFunction(new WriteRequestCostFunction(conf));
     addCostFunction(new MemStoreSizeCostFunction(conf));
     addCostFunction(new StoreFileCostFunction(conf));
-    loadCustomCostFunctions(conf);
+    loadFunctions(conf, COST_FUNCTIONS_COST_FUNCTIONS_KEY);
+
+    simpleCostFunctions = new ArrayList<>();
+    simpleCostFunctions.add(new RegionCountSkewCostFunction(conf));
+    simpleCostFunctions.add(new PrimaryRegionCountSkewCostFunction(conf));
+    simpleCostFunctions.add(new MoveCostFunction(conf, provider));
+    simpleCostFunctions.add(regionReplicaHostCostFunction);
+    simpleCostFunctions.add(regionReplicaRackCostFunction);
+
+    assert simpleCostFunctions.size() <= costFunctions.size() :
+      "Simple cost functions should be less than normal!";
 
     curFunctionCosts = new double[costFunctions.size()];
     tempFunctionCosts = new double[costFunctions.size()];
+
+    clusterStatusCheckers = new LinkedList<>();
+    clusterStatusCheckers.addAll(loadFunctions(conf, CLUSTER_BALANCE_STATUS_CHECKERS_KEY));
 
     LOG.info(
       "Loaded config; maxSteps=" + maxSteps + ", runMaxSteps=" + runMaxSteps +
         ", stepsPerRegion=" + stepsPerRegion +
         ", maxRunningTime=" + maxRunningTime + ", isByTable=" + isByTable +
-        ", CostFunctions=" + Arrays.toString(getCostFunctionNames()) +
+        ", CostFunctions=" + Arrays.toString(getCostFunctionNames(false)) +
+        ", simpleCostFunctions=" + Arrays.toString(getCostFunctionNames(true)) +
+        ", clusterStatusCheckers=" +
+        Arrays.toString(conf.getStrings(CLUSTER_BALANCE_STATUS_CHECKERS_KEY)) +
         " , sum of multiplier of cost functions = " + sumMultiplier + " etc.");  }
 
   @Override
@@ -271,7 +302,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     try {
       // by-table or ensemble mode
       int tablesCount = isByTable ? provider.getNumberOfTables() : 1;
-      int functionsCount = getCostFunctionNames().length;
+      int functionsCount = getCostFunctionNames(false).length;
 
       updateMetricsSize(tablesCount * (functionsCount + 1)); // +1 for overall
     } catch (Exception e) {
@@ -279,7 +310,53 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
   }
 
-  private void updateBalancerTableLoadInfo(TableName tableName, Map<ServerName, List<RegionInfo>> loadOfOneTable) {
+  @Override
+  public List<RegionPlan> balanceCluster(
+    Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+    if (clusterStatusCheckers != null) {
+      for (ClusterStatusBalanceChecker clusterStatusBalancer : clusterStatusCheckers) {
+        boolean needsSimplifiedBalance =
+          clusterStatusBalancer.needsSimplifiedBalance(loadOfAllTable);
+        if (needsSimplifiedBalance) {
+          List<RegionPlan> plans = simpleBalanceCluster(loadOfAllTable);
+          if (plans != null && !plans.isEmpty()) {
+            return plans;
+          } else {
+            LOG.warn("Needs simple balance, but generated no plans");
+          }
+        }
+      }
+    }
+    return super.balanceCluster(loadOfAllTable);
+  }
+
+  /**
+   * Use the simple cost functions to balance cluster.
+   */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
+  List<RegionPlan> simpleBalanceCluster(
+      Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+    preBalanceCluster(loadOfAllTable);
+    if (isByTable) {
+      List<RegionPlan> result = new ArrayList<>();
+      loadOfAllTable.forEach((tableName, loadOfOneTable) -> {
+        LOG.info("Simple balance start Generate Balance plan for table: " + tableName);
+        List<RegionPlan> partialPlans = balanceTable(tableName, loadOfOneTable, true);
+        if (partialPlans != null) {
+          result.addAll(partialPlans);
+        }
+      });
+      return result;
+    } else {
+      LOG.info("Simple balance start Generate Balance plans for cluster");
+      return balanceTable(HConstants.ENSEMBLE_TABLE_NAME, toEnsumbleTableLoad(loadOfAllTable),
+        true);
+    }
+  }
+
+  private void updateBalancerTableLoadInfo(TableName tableName,
+      Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     RegionHDFSBlockLocationFinder finder = null;
     if ((this.localityCost != null) || (this.rackLocalityCost != null)) {
       finder = this.regionFinder;
@@ -287,10 +364,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     BalancerClusterState cluster =
       new BalancerClusterState(loadOfOneTable, loads, finder, rackManager);
 
-    initCosts(cluster);
-    curOverallCost = computeCost(cluster, Double.MAX_VALUE);
+    initCosts(cluster, false);
+    curOverallCost = computeCost(cluster, Double.MAX_VALUE, false);
     System.arraycopy(tempFunctionCosts, 0, curFunctionCosts, 0, curFunctionCosts.length);
-    updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
+    updateStochasticCosts(tableName, curOverallCost, curFunctionCosts, false);
   }
 
   @Override
@@ -335,8 +412,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
-  boolean needsBalance(TableName tableName, BalancerClusterState cluster) {
+    allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer|Checker).java")
+  boolean needsBalance(TableName tableName, BalancerClusterState cluster, boolean simple) {
     ClusterLoadState cs = new ClusterLoadState(cluster.clusterState);
     if (cs.getNumServers() < MIN_SERVER_BALANCE) {
       LOG.info("Not running balancer because only " + cs.getNumServers()
@@ -347,18 +424,18 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
     if (areSomeRegionReplicasColocated(cluster)) {
       LOG.info("Running balancer because at least one server hosts replicas of the same region." +
-        " function cost={}", functionCost());
+        " function cost={}", functionCost(simple));
       return true;
     }
 
     if (idleRegionServerExist(cluster)){
       LOG.info("Running balancer because cluster has idle server(s)."+
-        " function cost={}", functionCost());
+        " function cost={}", functionCost(simple));
       return true;
     }
 
     double total = 0.0;
-    for (CostFunction c : costFunctions) {
+    for (CostFunction c : simple ? simpleCostFunctions : costFunctions) {
       if (!c.isNeeded()) {
         LOG.trace("{} not needed", c.getClass().getSimpleName());
         continue;
@@ -376,7 +453,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
           + "hbase.master.balancer.stochastic.minCostNeedBalance from {} or increase the relative "
           + "multiplier(s) of the specific cost function(s). functionCost={}",
         isByTable ? "Table specific ("+tableName+")" : "Cluster wide", total / sumMultiplier,
-        minCostNeedBalance, minCostNeedBalance, functionCost());
+        minCostNeedBalance, minCostNeedBalance, functionCost(simple));
     } else {
       LOG.info("{} - Calculating plan. may take up to {}ms to complete.",
         isByTable ? "Table specific ("+tableName+")" : "Cluster wide", maxRunningTime);
@@ -433,13 +510,18 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   @Override
   protected List<RegionPlan> balanceTable(TableName tableName, Map<ServerName,
     List<RegionInfo>> loadOfOneTable) {
+    return balanceTable(tableName, loadOfOneTable, false);
+  }
+
+  private List<RegionPlan> balanceTable(TableName tableName, Map<ServerName,
+    List<RegionInfo>> loadOfOneTable, boolean simple) {
     // On clusters with lots of HFileLinks or lots of reference files,
     // instantiating the storefile infos can be quite expensive.
     // Allow turning this feature off if the locality cost is not going to
     // be used in any computations.
     RegionHDFSBlockLocationFinder finder = null;
     if ((this.localityCost != null)
-        || (this.rackLocalityCost != null)) {
+      || (this.rackLocalityCost != null)) {
       finder = this.regionFinder;
     }
 
@@ -451,10 +533,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     long startTime = EnvironmentEdgeManager.currentTime();
 
-    initCosts(cluster);
+    initCosts(cluster, simple);
 
     sumMultiplier = 0;
-    for (CostFunction c : costFunctions) {
+    for (CostFunction c : simple ? simpleCostFunctions : costFunctions) {
       if(c.isNeeded()) {
         sumMultiplier += c.getMultiplier();
       }
@@ -465,14 +547,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return null;
     }
 
-    double currentCost = computeCost(cluster, Double.MAX_VALUE);
+    double currentCost = computeCost(cluster, Double.MAX_VALUE, simple);
     curOverallCost = currentCost;
     System.arraycopy(tempFunctionCosts, 0, curFunctionCosts, 0, curFunctionCosts.length);
-    updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
+    updateStochasticCosts(tableName, curOverallCost, curFunctionCosts, simple);
     double initCost = currentCost;
     double newCost;
 
-    if (!needsBalance(tableName, cluster)) {
+    if (!needsBalance(tableName, cluster, simple)) {
       return null;
     }
 
@@ -487,14 +569,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
             + "maxSteps:{}. Hence load balancing may not work well. Setting parameter "
             + "\"hbase.master.balancer.stochastic.runMaxSteps\" to true can overcome this issue."
             + "(This config change does not require service restart)", calculatedMaxSteps,
-            maxSteps);
+          maxSteps);
       }
     }
     LOG.info("Start StochasticLoadBalancer.balancer, initial weighted average imbalance={}, "
-      + "functionCost={} computedMaxSteps={}",
-      currentCost / sumMultiplier, functionCost(), computedMaxSteps);
+        + "functionCost={} computedMaxSteps={}",
+      currentCost / sumMultiplier, functionCost(simple), computedMaxSteps);
 
-    final String initFunctionTotalCosts = totalCostsPerFunc();
+    final String initFunctionTotalCosts = totalCostsPerFunc(simple);
     // Perform a stochastic walk to see if we can get a good fit.
     long step;
 
@@ -506,9 +588,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
 
       cluster.doAction(action);
-      updateCostsAndWeightsWithAction(cluster, action);
+      updateCostsAndWeightsWithAction(cluster, action, simple);
 
-      newCost = computeCost(cluster, currentCost);
+      newCost = computeCost(cluster, currentCost, simple);
 
       // Should this be kept?
       if (newCost < currentCost) {
@@ -522,11 +604,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         // TODO: undo by remembering old values
         BalanceAction undoAction = action.undoAction();
         cluster.doAction(undoAction);
-        updateCostsAndWeightsWithAction(cluster, undoAction);
+        updateCostsAndWeightsWithAction(cluster, undoAction, simple);
       }
 
       if (EnvironmentEdgeManager.currentTime() - startTime >
-          maxRunningTime) {
+        maxRunningTime) {
         break;
       }
     }
@@ -535,15 +617,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     metricsBalancer.balanceCluster(endTime - startTime);
 
     if (initCost > currentCost) {
-      updateStochasticCosts(tableName, curOverallCost, curFunctionCosts);
+      updateStochasticCosts(tableName, curOverallCost, curFunctionCosts, simple);
       List<RegionPlan> plans = createRegionPlans(cluster);
       LOG.info("Finished computing new moving plan. Computation took {} ms" +
           " to try {} different iterations.  Found a solution that moves " +
           "{} regions; Going from a computed imbalance of {}" +
           " to a new imbalance of {}. funtionCost={}",
         endTime - startTime, step, plans.size(),
-        initCost / sumMultiplier, currentCost / sumMultiplier, functionCost());
-      sendRegionPlansToRingBuffer(plans, currentCost, initCost, initFunctionTotalCosts, step);
+        initCost / sumMultiplier, currentCost / sumMultiplier, functionCost(simple));
+      sendRegionPlansToRingBuffer(plans, currentCost, initCost, initFunctionTotalCosts, step, simple);
       return plans;
     }
     LOG.info("Could not find a better moving plan.  Tried {} different configurations in " +
@@ -569,7 +651,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   private void sendRegionPlansToRingBuffer(List<RegionPlan> plans, double currentCost,
-    double initCost, String initFunctionTotalCosts, long step) {
+    double initCost, String initFunctionTotalCosts, long step, boolean simple) {
     provider.recordBalancerDecision(() -> {
       List<String> regionPlans = new ArrayList<>();
       for (RegionPlan plan : plans) {
@@ -579,7 +661,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
       return new BalancerDecision.Builder().setInitTotalCost(initCost)
         .setInitialFunctionCosts(initFunctionTotalCosts).setComputedTotalCost(currentCost)
-        .setFinalFunctionCosts(totalCostsPerFunc()).setComputedSteps(step)
+        .setFinalFunctionCosts(totalCostsPerFunc(simple)).setComputedSteps(step)
         .setRegionPlans(regionPlans).build();
     });
   }
@@ -587,7 +669,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   /**
    * update costs to JMX
    */
-  private void updateStochasticCosts(TableName tableName, double overall, double[] subCosts) {
+  private void updateStochasticCosts(TableName tableName, double overall, double[] subCosts,
+      boolean simple) {
     if (tableName == null) {
       return;
     }
@@ -600,8 +683,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         OVERALL_COST_FUNCTION_NAME, "Overall cost", overall);
 
       // each cost function
-      for (int i = 0; i < costFunctions.size(); i++) {
-        CostFunction costFunction = costFunctions.get(i);
+      List<CostFunction> realCostFunctions = simple ? simpleCostFunctions : costFunctions;
+      for (int i = 0; i < realCostFunctions.size(); i++) {
+        CostFunction costFunction = realCostFunctions.get(i);
         String costFunctionName = costFunction.getClass().getSimpleName();
         double costPercent = (overall == 0) ? 0 : (subCosts[i] / overall);
         // TODO: cost function may need a specific description
@@ -618,9 +702,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
   }
 
-  private String functionCost() {
+  private String functionCost(boolean simple) {
     StringBuilder builder = new StringBuilder();
-    for (CostFunction c : costFunctions) {
+    for (CostFunction c : simple ? simpleCostFunctions : costFunctions) {
       builder.append(c.getClass().getSimpleName());
       builder.append(" : (");
       if (c.isNeeded()) {
@@ -639,9 +723,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return builder.toString();
   }
 
-  private String totalCostsPerFunc() {
+  private String totalCostsPerFunc(boolean simple) {
     StringBuilder builder = new StringBuilder();
-    for (CostFunction c : costFunctions) {
+    for (CostFunction c : simple ? simpleCostFunctions : costFunctions) {
       if (!c.isNeeded()) {
         continue;
       }
@@ -716,26 +800,27 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
     allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
-  void initCosts(BalancerClusterState cluster) {
+  void initCosts(BalancerClusterState cluster, boolean simple) {
     // Initialize the weights of generator every time
     weightsOfGenerators = new double[this.candidateGenerators.size()];
-    for (CostFunction c : costFunctions) {
+    for (CostFunction c : simple ? simpleCostFunctions : costFunctions) {
       c.prepare(cluster);
       c.updateWeight(weightsOfGenerators);
     }
   }
 
-  /**
-   * Update both the costs of costfunctions and the weights of candidate generators
-   */
+    /**
+     * Update both the costs of costfunctions and the weights of candidate generators
+     */
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
     allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
-  void updateCostsAndWeightsWithAction(BalancerClusterState cluster, BalanceAction action) {
+  void updateCostsAndWeightsWithAction(BalancerClusterState cluster, BalanceAction action,
+      boolean simple) {
     // Reset all the weights to 0
     for (int i = 0; i < weightsOfGenerators.length; i++) {
       weightsOfGenerators[i] = 0;
     }
-    for (CostFunction c : costFunctions) {
+    for (CostFunction c : simple ? simpleCostFunctions : costFunctions) {
       if (c.isNeeded()) {
         c.postAction(action);
         c.updateWeight(weightsOfGenerators);
@@ -748,10 +833,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    */
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
     allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
-  String[] getCostFunctionNames() {
-    String[] ret = new String[costFunctions.size()];
-    for (int i = 0; i < costFunctions.size(); i++) {
-      CostFunction c = costFunctions.get(i);
+  String[] getCostFunctionNames(boolean simple) {
+    List<CostFunction> functions = simple ? simpleCostFunctions : costFunctions;
+    String[] ret = new String[functions.size()];
+    for (int i = 0; i < functions.size(); i++) {
+      CostFunction c = functions.get(i);
       ret[i] = c.getClass().getSimpleName();
     }
 
@@ -769,12 +855,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    */
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
     allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
-  double computeCost(BalancerClusterState cluster, double previousCost) {
+  double computeCost(BalancerClusterState cluster, double previousCost, boolean simple) {
     double total = 0;
 
-    for (int i = 0; i < costFunctions.size(); i++) {
-      CostFunction c = costFunctions.get(i);
-      this.tempFunctionCosts[i] = 0.0;
+    List<CostFunction> toComputeCostFunctions = simple ? simpleCostFunctions : costFunctions;
+    Arrays.fill(this.tempFunctionCosts, 0.0);
+    for (int i = 0; i < toComputeCostFunctions.size(); i++) {
+      CostFunction c = toComputeCostFunctions.get(i);
 
       if (!c.isNeeded()) {
         continue;
@@ -799,5 +886,19 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    */
   static String composeAttributeName(String tableName, String costFunctionName) {
     return tableName + TABLE_FUNCTION_SEP + costFunctionName;
+  }
+
+  /**
+   * The interface for overall cluster status checkers, used in {@code StochasticLoadBalancer}.
+   */
+  public interface ClusterStatusBalanceChecker {
+
+    /**
+     * Check if the cluster needs simplified balance to ack quickly,
+     * ignoring the complex and time-consuming calculations in normal steps of
+     * {@code StochasticLoadBalancer}.
+     */
+    boolean needsSimplifiedBalance(Map<TableName, Map<ServerName,
+        List<RegionInfo>>> loadOfAllTable);
   }
 }

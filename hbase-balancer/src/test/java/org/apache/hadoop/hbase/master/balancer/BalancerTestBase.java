@@ -137,7 +137,6 @@ public class BalancerTestBase {
 
   };
 
-
   // This class is introduced because IP to rack resolution can be lengthy.
   public static class MockMapping implements DNSToSwitchMapping {
     public MockMapping(Configuration conf) {
