@@ -67,7 +67,7 @@ module Hbase
         peer_state = args.fetch(STATE, nil)
         remote_wal_dir = args.fetch(REMOTE_WAL_DIR, nil)
         serial = args.fetch(SERIAL, nil)
-        chain_operator = args.fetch(OPERATOR, nil)
+        chain_operator = args.fetch(OPERATOR, nil).upcase
 
         # Create and populate a ReplicationPeerConfig
         builder = ReplicationPeerConfig.newBuilder()
