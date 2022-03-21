@@ -116,13 +116,13 @@ public class TestCoprocessorEndpointTracing {
     })
     .build();
   private static final ConnectionRule connectionRule =
-    new ConnectionRule(miniclusterRule::createConnection);
+    ConnectionRule.createAsyncConnectionRule(miniclusterRule::createAsyncConnection);
 
   private static final class Setup extends ExternalResource {
     @Override
     protected void before() throws Throwable {
       final HBaseTestingUtil util = miniclusterRule.getTestingUtility();
-      final AsyncConnection connection = connectionRule.getConnection();
+      final AsyncConnection connection = connectionRule.getAsyncConnection();
       final AsyncAdmin admin = connection.getAdmin();
       final TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TABLE)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
@@ -149,7 +149,7 @@ public class TestCoprocessorEndpointTracing {
 
   @Test
   public void traceAsyncTableEndpoint() {
-    final AsyncConnection connection = connectionRule.getConnection();
+    final AsyncConnection connection = connectionRule.getAsyncConnection();
     final AsyncTable<?> table = connection.getTable(TEST_TABLE);
     final EchoRequestProto request = EchoRequestProto.newBuilder().setMessage("hello").build();
     final CompletableFuture<Map<byte[], String>> future = new CompletableFuture<>();
@@ -228,7 +228,7 @@ public class TestCoprocessorEndpointTracing {
 
   @Test
   public void traceSyncTableEndpointCall() throws Exception {
-    final Connection connection = connectionRule.getConnection().toConnection();
+    final Connection connection = connectionRule.getConnection();
     try (final Table table = connection.getTable(TEST_TABLE)) {
       final RpcController controller = new ServerRpcController();
       final EchoRequestProto request = EchoRequestProto.newBuilder().setMessage("hello").build();
@@ -280,7 +280,7 @@ public class TestCoprocessorEndpointTracing {
 
   @Test
   public void traceSyncTableEndpointCallAndCallback() throws Exception {
-    final Connection connection = connectionRule.getConnection().toConnection();
+    final Connection connection = connectionRule.getConnection();
     try (final Table table = connection.getTable(TEST_TABLE)) {
       final RpcController controller = new ServerRpcController();
       final EchoRequestProto request = EchoRequestProto.newBuilder().setMessage("hello").build();
@@ -336,7 +336,7 @@ public class TestCoprocessorEndpointTracing {
 
   @Test
   public void traceSyncTableRegionCoprocessorRpcChannel() throws Exception {
-    final Connection connection = connectionRule.getConnection().toConnection();
+    final Connection connection = connectionRule.getConnection();
     try (final Table table = connection.getTable(TEST_TABLE)) {
       final EchoRequestProto request = EchoRequestProto.newBuilder().setMessage("hello").build();
       final EchoResponseProto response = TraceUtil.trace(() -> {
@@ -376,7 +376,7 @@ public class TestCoprocessorEndpointTracing {
 
   @Test
   public void traceSyncTableBatchEndpoint() throws Exception {
-    final Connection connection = connectionRule.getConnection().toConnection();
+    final Connection connection = connectionRule.getConnection();
     try (final Table table = connection.getTable(TEST_TABLE)) {
       final Descriptors.MethodDescriptor descriptor =
         TestProtobufRpcProto.getDescriptor().findMethodByName("echo");
@@ -423,7 +423,7 @@ public class TestCoprocessorEndpointTracing {
 
   @Test
   public void traceSyncTableBatchEndpointCallback() throws Exception {
-    final Connection connection = connectionRule.getConnection().toConnection();
+    final Connection connection = connectionRule.getConnection();
     try (final Table table = connection.getTable(TEST_TABLE)) {
       final Descriptors.MethodDescriptor descriptor =
         TestProtobufRpcProto.getDescriptor().findMethodByName("echo");
@@ -472,7 +472,7 @@ public class TestCoprocessorEndpointTracing {
 
   @Test
   public void traceAsyncAdminEndpoint() throws Exception {
-    final AsyncConnection connection = connectionRule.getConnection();
+    final AsyncConnection connection = connectionRule.getAsyncConnection();
     final AsyncAdmin admin = connection.getAdmin();
     final EchoRequestProto request = EchoRequestProto.newBuilder().setMessage("hello").build();
     final ServiceCaller<TestProtobufRpcProto, EchoResponseProto> callback =
@@ -504,7 +504,7 @@ public class TestCoprocessorEndpointTracing {
 
   @Test
   public void traceSyncAdminEndpoint() throws Exception {
-    final Connection connection = connectionRule.getConnection().toConnection();
+    final Connection connection = connectionRule.getConnection();
     try (final Admin admin = connection.getAdmin()) {
       final TestProtobufRpcProto.BlockingInterface service =
         TestProtobufRpcProto.newBlockingStub(admin.coprocessorService());
@@ -537,7 +537,7 @@ public class TestCoprocessorEndpointTracing {
   }
 
   private void waitForAndLog(Matcher<SpanData> spanMatcher) {
-    final Configuration conf = connectionRule.getConnection().getConfiguration();
+    final Configuration conf = connectionRule.getAsyncConnection().getConfiguration();
     Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(
       otelClassRule::getSpans, hasItem(spanMatcher)));
     final List<SpanData> spans = otelClassRule.getSpans();
