@@ -68,9 +68,9 @@ public class TestMetaBrowser {
   public static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
 
   private final ConnectionRule connectionRule =
-    new ConnectionRule(miniClusterRule::createConnection);
+    ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
   private final ClearUserNamespacesAndTablesRule clearUserNamespacesAndTablesRule =
-    new ClearUserNamespacesAndTablesRule(connectionRule::getConnection);
+    new ClearUserNamespacesAndTablesRule(connectionRule::getAsyncConnection);
 
   @Rule
   public TestRule rule = RuleChain.outerRule(connectionRule)
@@ -84,7 +84,7 @@ public class TestMetaBrowser {
 
   @Before
   public void before() {
-    connection = connectionRule.getConnection();
+    connection = connectionRule.getAsyncConnection();
     admin = connection.getAdmin();
   }
 
