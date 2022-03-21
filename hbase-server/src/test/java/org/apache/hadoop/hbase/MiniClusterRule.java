@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.AsyncConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -42,7 +43,7 @@ import org.junit.rules.TestRule;
  *
  *     @Rule
  *     public final ConnectionRule connectionRule =
- *       new ConnectionRule(miniClusterRule::createConnection);
+ *       ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
  *   }
  * }</pre>
  */
@@ -108,10 +109,25 @@ public final class MiniClusterRule extends ExternalResource {
   }
 
   /**
+   * Create a {@link Connection} to the managed {@link MiniHBaseCluster}. It's up to the caller
+   * to {@link Connection#close() close()} the connection when finished.
+   */
+  public Connection createConnection() {
+    if (miniCluster == null) {
+      throw new IllegalStateException("test cluster not initialized");
+    }
+    try {
+      return ConnectionFactory.createConnection(miniCluster.getConf());
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
    * Create a {@link AsyncConnection} to the managed {@link MiniHBaseCluster}. It's up to the caller
    * to {@link AsyncConnection#close() close()} the connection when finished.
    */
-  public CompletableFuture<AsyncConnection> createConnection() {
+  public CompletableFuture<AsyncConnection> createAsyncConnection() {
     if (miniCluster == null) {
       throw new IllegalStateException("test cluster not initialized");
     }
