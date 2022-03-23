@@ -757,7 +757,7 @@ elif [ "$COMMAND" = "hbtop" ] ; then
   HBASE_OPTS="${HBASE_OPTS} ${HBASE_HBTOP_OPTS}"
 else
   CLASS=$COMMAND
-  if [ "$CLASS" = "org.apache.hadoop.hbase.IntegrationTestIngest" ] ; then
+if [[ "$CLASS" =~ .*IntegrationTest.* ]] ; then
     for f in ${HBASE_HOME}/lib/test/*.jar; do
       if [ -f "${f}" ]; then
         CLASSPATH="${CLASSPATH}:${f}"
