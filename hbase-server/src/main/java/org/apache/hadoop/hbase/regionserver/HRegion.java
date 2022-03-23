@@ -79,7 +79,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
@@ -95,7 +94,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -8276,8 +8274,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // This can be an EXPENSIVE call. It may make an extra copy from offheap to onheap buffers.
       // See more details in HBASE-26036.
       for (Cell cell : tmp) {
-        results.add(cell instanceof ByteBufferExtendedCell ?
-            KeyValueUtil.copyToNewKeyValue(cell) : cell);
+        results.add(
+          CellUtil.cloneIfNecessary(cell));
       }
     }
 
