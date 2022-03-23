@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Coprocesso
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
@@ -109,50 +111,83 @@ public class ServerConnectionUtils {
 
       @Override
       public GetResponse get(RpcController controller, GetRequest request) throws ServiceException {
-        Optional<RpcCall> rpcCall = this.beforeInvoke();
+        Optional<RpcCall> rpcCallOptional = RpcServer.unsetCurrentCall();
+        User requestUser = getRequestUser(rpcCallOptional) ;
         try {
-          return target.get(controller, request);
+          if (requestUser != null) {
+            try {
+              return requestUser.runAs(new PrivilegedExceptionAction<GetResponse>() {
+                public GetResponse run() throws Exception {
+                  return target.get(controller, request);
+                }
+              });
+            } catch (InterruptedException | IOException e) {
+              throw new ServiceException(e);
+            }
+          } else {
+            return target.get(controller, request);
+          }
         } finally {
-          this.afterInvoke(rpcCall);
+          rpcCallOptional.ifPresent(RpcServer::setCurrentCall);
         }
       }
 
       @Override
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiResponse
-          multi(RpcController controller, MultiRequest request) throws ServiceException {
+      public MultiResponse multi(RpcController controller, MultiRequest request)
+          throws ServiceException {
         /**
          * Here is for multiGet
          */
-        Optional<RpcCall> rpcCall = this.beforeInvoke();
+        Optional<RpcCall> rpcCallOptional = RpcServer.unsetCurrentCall();
+        User requestUser = getRequestUser(rpcCallOptional);
         try {
-          return target.multi(controller, request);
+          if (requestUser != null) {
+            try {
+              return requestUser.runAs(new PrivilegedExceptionAction<MultiResponse>() {
+
+                public MultiResponse run() throws Exception {
+                  return target.multi(controller, request);
+                }
+              });
+            } catch (InterruptedException | IOException e) {
+              throw new ServiceException(e);
+            }
+          } else {
+            return target.multi(controller, request);
+          }
         } finally {
-          this.afterInvoke(rpcCall);
+          rpcCallOptional.ifPresent(RpcServer::setCurrentCall);
         }
       }
 
       @Override
       public ScanResponse scan(RpcController controller, ScanRequest request)
           throws ServiceException {
-        Optional<RpcCall> rpcCall = this.beforeInvoke();
+        Optional<RpcCall> rpcCallOptional = RpcServer.unsetCurrentCall();
+        User requestUser = getRequestUser(rpcCallOptional);
         try {
-          return target.scan(controller, request);
+          if (requestUser != null) {
+            try {
+              return requestUser.runAs(new PrivilegedExceptionAction<ScanResponse>() {
+
+                public ScanResponse run() throws Exception {
+                  return target.scan(controller, request);
+                }
+              });
+            } catch (InterruptedException | IOException e) {
+              throw new ServiceException(e);
+            }
+          } else {
+            return target.scan(controller, request);
+          }
         } finally {
-          this.afterInvoke(rpcCall);
+          rpcCallOptional.ifPresent(RpcServer::setCurrentCall);
         }
       }
 
-      private Optional<RpcCall> beforeInvoke() {
-        Optional<RpcCall> rpcCallOptional = RpcServer.unsetCurrentCall();
-        rpcCallOptional.ifPresent((rpcCall) -> {
-          rpcCall.getRequestUser().ifPresent(RpcServer::saveUserByUnsetCurrentCall);
-        });
-        return rpcCallOptional;
-      }
-
-      private void afterInvoke(Optional<RpcCall> rpcCall) {
-        rpcCall.ifPresent(RpcServer::setCurrentCall);
-        RpcServer.removeSavedUserByUnsetCurrentCall();
+      private static User getRequestUser(Optional<RpcCall> rpcCallOptional) {
+        RpcCall rpcCall = rpcCallOptional.orElse(null);
+        return rpcCall == null ? null : rpcCall.getRequestUser().orElse(null);
       }
 
       @Override
