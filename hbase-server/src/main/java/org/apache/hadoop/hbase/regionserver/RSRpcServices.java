@@ -3734,8 +3734,9 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         if (context != null) {
           context.setCallBack(rsh.shippedCallback);
         } else {
-          // If context is null,we call rsh.shippedCallback directly to release the
-          // internal resources in rsh.
+          // If context is null,here we call rsh.shippedCallback directly to reuse the logic in
+          // rsh.shippedCallback to release the internal resources in rsh,and lease is also added
+          // back to regionserver's LeaseManager in rsh.shippedCallback.
           runShippedCallback(rsh);
         }
       }
