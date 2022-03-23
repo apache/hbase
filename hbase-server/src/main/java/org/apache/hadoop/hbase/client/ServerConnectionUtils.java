@@ -112,8 +112,8 @@ public class ServerConnectionUtils {
       @Override
       public GetResponse get(RpcController controller, GetRequest request) throws ServiceException {
         Optional<RpcCall> rpcCallOptional = RpcServer.unsetCurrentCall();
-        User requestUser = getRequestUser(rpcCallOptional) ;
         try {
+          User requestUser = getRequestUser(rpcCallOptional);
           if (requestUser != null) {
             try {
               return requestUser.runAs(new PrivilegedExceptionAction<GetResponse>() {
@@ -139,8 +139,8 @@ public class ServerConnectionUtils {
          * Here is for multiGet
          */
         Optional<RpcCall> rpcCallOptional = RpcServer.unsetCurrentCall();
-        User requestUser = getRequestUser(rpcCallOptional);
         try {
+          User requestUser = getRequestUser(rpcCallOptional);
           if (requestUser != null) {
             try {
               return requestUser.runAs(new PrivilegedExceptionAction<MultiResponse>() {
@@ -164,8 +164,8 @@ public class ServerConnectionUtils {
       public ScanResponse scan(RpcController controller, ScanRequest request)
           throws ServiceException {
         Optional<RpcCall> rpcCallOptional = RpcServer.unsetCurrentCall();
-        User requestUser = getRequestUser(rpcCallOptional);
         try {
+          User requestUser = getRequestUser(rpcCallOptional);
           if (requestUser != null) {
             try {
               return requestUser.runAs(new PrivilegedExceptionAction<ScanResponse>() {
