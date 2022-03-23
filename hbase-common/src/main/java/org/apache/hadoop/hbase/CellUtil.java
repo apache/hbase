@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.KeyValue.getDelimiter;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -848,5 +849,19 @@ public final class CellUtil {
     int diff = compareFamilies(left, right, rfoffset, rflength);
     if (diff != 0) return diff;
     return compareQualifiers(left, right, rqoffset, rqlength);
+  }
+
+  public static void cloneIfNecessary(ArrayList<Cell> cells) {
+    if (cells == null || cells.isEmpty()) {
+      return;
+    }
+    for (int i = 0; i < cells.size(); i++) {
+      Cell cell = cells.get(i);
+      cells.set(i, cloneIfNecessary(cell));
+    }
+  }
+
+  public static Cell cloneIfNecessary(Cell cell) {
+    return (cell instanceof ByteBufferExtendedCell ? KeyValueUtil.copyToNewKeyValue(cell) : cell);
   }
 }
