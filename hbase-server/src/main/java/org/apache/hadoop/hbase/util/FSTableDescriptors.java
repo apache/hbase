@@ -149,8 +149,8 @@ public class FSTableDescriptors implements TableDescriptors {
         .setInMemory(true)
         .setBlocksize(8 * 1024)
         .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-        // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-        .setBloomFilterType(BloomType.NONE)
+        .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
+        .setBloomFilterType(BloomType.ROWCOL)
         .build();
   }
 
@@ -160,8 +160,8 @@ public class FSTableDescriptors implements TableDescriptors {
         .setMaxVersions(HConstants.ALL_VERSIONS)
         .setInMemory(true)
         .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-        // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-        .setBloomFilterType(BloomType.NONE)
+        .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
+        .setBloomFilterType(BloomType.ROWCOL)
         .build();
   }
 
@@ -178,8 +178,8 @@ public class FSTableDescriptors implements TableDescriptors {
         .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
           HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
         .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-        // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-        .setBloomFilterType(BloomType.NONE)
+        .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
+        .setBloomFilterType(BloomType.ROWCOL)
         .build())
       .setColumnFamily(getTableFamilyDescForMeta(conf))
       .setColumnFamily(getReplBarrierFamilyDescForMeta())
