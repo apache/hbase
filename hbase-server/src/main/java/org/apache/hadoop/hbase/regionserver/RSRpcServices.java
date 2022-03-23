@@ -3340,7 +3340,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
     // This is cells inside a row. Default size is 10 so if many versions or many cfs,
     // then we'll resize. Resizings show in profiler. Set it higher than 10. For now
     // arbitrary 32. TODO: keep record of general size of results being returned.
-    ArrayList<Cell> values = new ArrayList<>(32);
+    List<Cell> values = new ArrayList<>(32);
     region.startRegionOperation(Operation.SCAN);
     long before = EnvironmentEdgeManager.currentTime();
     // Used to check if we've matched the row limit set on the Scan
@@ -3401,16 +3401,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
           // reset the batch progress between nextRaw invocations since we don't want the
           // batch progress from previous calls to affect future calls
           scannerContext.setBatchProgress(0);
-          assert values.isEmpty();
 
           // Collect values to be returned here
           moreRows = scanner.nextRaw(values, scannerContext);
-          if (context == null) {
-            // When there is no RpcCallContext,copy EC to heap, then the scanner would close,
-            // This can be an EXPENSIVE call. It may make an extra copy from offheap to onheap
-            // buffers.See more details in HBASE-26036.
-            CellUtil.cloneIfNecessary(values);
-          }
           numOfNextRawCalls++;
 
           if (!values.isEmpty()) {
@@ -3767,22 +3760,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
         if (context != null) {
           context.setCallBack(rsh.shippedCallback);
         } else {
-          // If context is null,here we call rsh.shippedCallback directly to reuse the logic in
-          // rsh.shippedCallback to release the internal resources in rsh,and lease is also added
-          // back to regionserver's LeaseManager in rsh.shippedCallback.
-          runShippedCallback(rsh);
+          // When context != null, adding back the lease will be done in callback set above.
+          addScannerLeaseBack(lease);
         }
       }
       quota.close();
-    }
-  }
-
-  private void runShippedCallback(RegionScannerHolder rsh) throws ServiceException {
-    assert rsh.shippedCallback != null;
-    try {
-      rsh.shippedCallback.run();
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
     }
   }
 
