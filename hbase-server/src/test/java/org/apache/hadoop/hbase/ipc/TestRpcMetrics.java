@@ -17,16 +17,17 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.*;
-
+import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -145,12 +146,23 @@ public class TestRpcMetrics {
     mrpc.exception(new OutOfOrderScannerNextException());
     mrpc.exception(new NotServingRegionException());
     mrpc.exception(new CallDroppedException());
+    mrpc.exception(new RequestTooBigException());
+    mrpc.exception(new FakeException());
     HELPER.assertCounter("exceptions.RegionMovedException", 1, serverSource);
     HELPER.assertCounter("exceptions.RegionTooBusyException", 1, serverSource);
     HELPER.assertCounter("exceptions.OutOfOrderScannerNextException", 1, serverSource);
     HELPER.assertCounter("exceptions.NotServingRegionException", 1, serverSource);
     HELPER.assertCounter("exceptions.callDropped", 1, serverSource);
-    HELPER.assertCounter("exceptions", 6, serverSource);
+    HELPER.assertCounter("exceptions.requestTooBig", 1, serverSource);
+    HELPER.assertCounter("exceptions.otherExceptions", 1, serverSource);
+    HELPER.assertCounter("exceptions", 8, serverSource);
+  }
+
+  private class FakeException extends DoNotRetryIOException {
+
+    public FakeException() {
+      super();
+    }
   }
 
   @Test
