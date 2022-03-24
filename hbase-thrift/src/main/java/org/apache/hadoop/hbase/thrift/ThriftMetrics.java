@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
@@ -157,8 +158,13 @@ public class ThriftMetrics  {
         source.rpcThrottlingException();
       } else if (throwable instanceof CallDroppedException) {
         source.callDroppedException();
-      } else if (LOG.isDebugEnabled()) {
-        LOG.debug("Unknown exception type", throwable);
+      } else if (throwable instanceof RequestTooBigException) {
+        source.requestTooBigException();
+      } else {
+        source.otherExceptions();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Unknown exception type", throwable);
+        }
       }
     }
   }
