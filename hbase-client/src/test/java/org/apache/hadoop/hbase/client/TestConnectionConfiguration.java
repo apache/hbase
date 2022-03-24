@@ -1,4 +1,5 @@
-/**
+/*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,10 +20,8 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -30,42 +29,26 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-/**
- * See HBASE-24513.
- */
-@Category({ ClientTests.class, SmallTests.class })
-public class TestAsyncConnectionConfiguration {
+@Category({ ClientTests.class, SmallTests.class})
+public class TestConnectionConfiguration {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncConnectionConfiguration.class);
+    HBaseClassTestRule.forClass(TestConnectionConfiguration.class);
 
   @Test
   public void itHandlesDeprecatedPauseForCQTBE() {
     Configuration conf = new Configuration();
     long timeoutMs = 1000;
     conf.setLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, timeoutMs);
-    AsyncConnectionConfiguration config = new AsyncConnectionConfiguration(conf);
+    ConnectionConfiguration config = new ConnectionConfiguration(conf);
 
     assertTrue(Configuration.isDeprecated(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE));
-    long expected = TimeUnit.MILLISECONDS.toNanos(timeoutMs);
-    assertEquals(expected, config.getPauseNsForServerOverloaded());
+    assertEquals(timeoutMs, config.getPauseMillisForServerOverloaded());
 
     conf = new Configuration();
     conf.setLong(ConnectionConfiguration.HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED, timeoutMs);
-    config = new AsyncConnectionConfiguration(conf);
-    assertEquals(expected, config.getPauseNsForServerOverloaded());
-  }
-
-  @Test
-  public void testDefaultReadWriteRpcTimeout() {
-    Configuration conf = HBaseConfiguration.create();
-    long timeoutMs = 1000;
-    conf.setLong(HConstants.HBASE_RPC_TIMEOUT_KEY, timeoutMs);
-    AsyncConnectionConfiguration config = new AsyncConnectionConfiguration(conf);
-    long expected = TimeUnit.MILLISECONDS.toNanos(timeoutMs);
-    assertEquals(expected, config.getRpcTimeoutNs());
-    assertEquals(expected, config.getReadRpcTimeoutNs());
-    assertEquals(expected, config.getWriteRpcTimeoutNs());
+    config = new ConnectionConfiguration(conf);
+    assertEquals(timeoutMs, config.getPauseMillisForServerOverloaded());
   }
 }

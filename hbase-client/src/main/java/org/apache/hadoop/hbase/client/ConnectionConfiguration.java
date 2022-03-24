@@ -11,9 +11,13 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_PAUSE;
+import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_PAUSE;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Configuration parameters for the connection.
@@ -25,6 +29,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class ConnectionConfiguration {
+  private static final Logger LOG = LoggerFactory.getLogger(ConnectionConfiguration.class);
 
   public static final String WRITE_BUFFER_SIZE_KEY = "hbase.client.write.buffer";
   public static final long WRITE_BUFFER_SIZE_DEFAULT = 2097152;
@@ -43,6 +48,24 @@ public class ConnectionConfiguration {
     "hbase.client.replicaCallTimeout.scan";
   public static final int PRIMARY_SCAN_TIMEOUT_MICROSECOND_DEFAULT = 1000000; // 1s
 
+  /**
+   * Parameter name for client pause when server is overloaded, denoted by an exception
+   * where {@link org.apache.hadoop.hbase.HBaseServerException#isServerOverloaded(Throwable)}
+   * is true.
+   */
+  public static final String HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED =
+    "hbase.client.pause.server.overloaded";
+
+  static {
+    // This is added where the configs are referenced. It may be too late to happen before
+    // any user _sets_ the old cqtbe config onto a Configuration option. So we still need
+    // to handle checking both properties in parsing below. The benefit of calling this is
+    // that it should still cause Configuration to log a warning if we do end up falling
+    // through to the old deprecated config.
+    Configuration.addDeprecation(
+      HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED);
+  }
+
   private final long writeBufferSize;
   private final long writeBufferPeriodicFlushTimeoutMs;
   private final long writeBufferPeriodicFlushTimerTickMs;
@@ -60,6 +83,8 @@ public class ConnectionConfiguration {
   private final int writeRpcTimeout;
   // toggle for async/sync prefetch
   private final boolean clientScannerAsyncPrefetch;
+  private final long pauseMs;
+  private final long pauseMsForServerOverloaded;
 
   /**
    * Constructor
@@ -115,6 +140,21 @@ public class ConnectionConfiguration {
 
     this.writeRpcTimeout = conf.getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
         conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+
+
+    long pauseMs = conf.getLong(HBASE_CLIENT_PAUSE, DEFAULT_HBASE_CLIENT_PAUSE);
+    long pauseMsForServerOverloaded = conf.getLong(HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED,
+      conf.getLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, pauseMs));
+    if (pauseMsForServerOverloaded < pauseMs) {
+      LOG.warn(
+        "The {} setting: {} ms is less than the {} setting: {} ms, use the greater one instead",
+        HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED, pauseMsForServerOverloaded,
+        HBASE_CLIENT_PAUSE, pauseMs);
+      pauseMsForServerOverloaded = pauseMs;
+    }
+
+    this.pauseMs = pauseMs;
+    this.pauseMsForServerOverloaded = pauseMsForServerOverloaded;
   }
 
   /**
@@ -140,6 +180,8 @@ public class ConnectionConfiguration {
     this.readRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
     this.writeRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
     this.rpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
+    this.pauseMs = DEFAULT_HBASE_CLIENT_PAUSE;
+    this.pauseMsForServerOverloaded = DEFAULT_HBASE_CLIENT_PAUSE;
   }
 
   public int getReadRpcTimeout() {
@@ -204,5 +246,13 @@ public class ConnectionConfiguration {
 
   public int getRpcTimeout() {
     return rpcTimeout;
+  }
+
+  public long getPauseMillis() {
+    return pauseMs;
+  }
+
+  public long getPauseMillisForServerOverloaded() {
+    return pauseMsForServerOverloaded;
   }
 }

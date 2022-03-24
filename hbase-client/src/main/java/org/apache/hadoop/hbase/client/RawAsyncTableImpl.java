@@ -127,8 +127,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     this.pauseNs = builder.pauseNs;
     if (builder.pauseNsForServerOverloaded < builder.pauseNs) {
       LOG.warn(
-        "Configured value of pauseForCQTBENs is {} ms, which is less than"
-            + " the normal pause value {} ms, use the greater one instead",
+        "Configured value of pauseNsForServerOverloaded is {} ms, which is less than" +
+          " the normal pause value {} ms, use the greater one instead",
         TimeUnit.NANOSECONDS.toMillis(builder.pauseNsForServerOverloaded),
         TimeUnit.NANOSECONDS.toMillis(builder.pauseNs));
       this.pauseNsForServerOverloaded = builder.pauseNs;

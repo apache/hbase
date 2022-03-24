@@ -36,8 +36,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -738,11 +738,14 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     long backOffTime;
     if (retryImmediately) {
       backOffTime = 0;
-    } else if (throwable instanceof CallQueueTooBigException) {
-      // Give a special check on CQTBE, see #HBASE-17114
-      backOffTime = errorsByServer.calculateBackoffTime(oldServer, asyncProcess.pauseForCQTBE);
+    } else if (HBaseServerException.isServerOverloaded(throwable)) {
+      // Give a special check when encountering an exception indicating the server is overloaded.
+      // see #HBASE-17114 and HBASE-26807
+      backOffTime = errorsByServer.calculateBackoffTime(oldServer,
+        asyncProcess.connectionConfiguration.getPauseMillisForServerOverloaded());
     } else {
-      backOffTime = errorsByServer.calculateBackoffTime(oldServer, asyncProcess.pause);
+      backOffTime = errorsByServer.calculateBackoffTime(oldServer,
+        asyncProcess.connectionConfiguration.getPauseMillis());
     }
     if (numAttempt > asyncProcess.startLogErrorsCnt) {
       // We use this value to have some logs when we have multiple failures, but not too many

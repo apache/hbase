@@ -111,6 +111,8 @@ public class HConnectionTestingUtility {
   throws IOException {
     ConnectionImplementation c = Mockito.mock(ConnectionImplementation.class);
     Mockito.when(c.getConfiguration()).thenReturn(conf);
+    ConnectionConfiguration connectionConfiguration = new ConnectionConfiguration(conf);
+    Mockito.when(c.getConnectionConfiguration()).thenReturn(connectionConfiguration);
     Mockito.doNothing().when(c).close();
     // Make it so we return a particular location when asked.
     final HRegionLocation loc = new HRegionLocation(hri, sn);
@@ -134,9 +136,10 @@ public class HConnectionTestingUtility {
     }
     NonceGenerator ng = Mockito.mock(NonceGenerator.class);
     Mockito.when(c.getNonceGenerator()).thenReturn(ng);
-    Mockito.when(c.getAsyncProcess()).thenReturn(
+    AsyncProcess asyncProcess =
       new AsyncProcess(c, conf, RpcRetryingCallerFactory.instantiate(conf),
-          RpcControllerFactory.instantiate(conf)));
+        RpcControllerFactory.instantiate(conf));
+    Mockito.when(c.getAsyncProcess()).thenReturn(asyncProcess);
     Mockito.when(c.getNewRpcRetryingCallerFactory(conf)).thenReturn(
         RpcRetryingCallerFactory.instantiate(conf,
             RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null));
