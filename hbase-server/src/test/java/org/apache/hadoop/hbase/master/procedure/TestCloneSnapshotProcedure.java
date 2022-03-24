@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -95,8 +96,11 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     return 1;
   }
 
-  public static TableDescriptor createTableDescriptor(TableName tableName, byte[]... family) {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+  private static TableDescriptor createTableDescriptor(TableName tableName, byte[]... family) {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(tableName).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+        UTIL.getConfiguration().get(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.DEFAULT.name()));
     Stream.of(family).map(ColumnFamilyDescriptorBuilder::of)
       .forEachOrdered(builder::setColumnFamily);
     return builder.build();

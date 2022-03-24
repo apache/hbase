@@ -455,15 +455,6 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-auth</artifactId>
         </dependency>
-        <!--Needed when jdk11/hadoop3 else complaint about
-          NoSuchMethodError: 'java.util.Map javax.ws.rs.core.Application.getProperties()'
-          when REST server is started.
-          -->
-        <dependency>
-          <groupId>org.glassfish.jaxb</groupId>
-          <artifactId>jaxb-runtime</artifactId>
-          <version>2.3.2</version>
-        </dependency>
       </dependencies>
     </profile>
     <profile>

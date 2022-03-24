@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.client.AsyncConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.ExternalResource;
@@ -35,7 +36,7 @@ import org.junit.rules.ExternalResource;
  *   public class TestMyClass {
  *     private static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
  *     private static final ConnectionRule connectionRule =
- *       new ConnectionRule(miniClusterRule::createConnection);
+ *       ConnectionRule.createAsyncConnectionRule(miniClusterRule::createConnection);
  *
  *     @ClassRule
  *     public static final TestRule rule = RuleChain
@@ -44,32 +45,90 @@ import org.junit.rules.ExternalResource;
  *   }
  * }</pre>
  */
-public class ConnectionRule extends ExternalResource {
+public final class ConnectionRule extends ExternalResource {
 
-  private final Supplier<CompletableFuture<AsyncConnection>> connectionSupplier;
-  private AsyncConnection connection;
+  private final Supplier<Connection> connectionSupplier;
+  private final Supplier<CompletableFuture<AsyncConnection>> asyncConnectionSupplier;
 
-  public ConnectionRule(final Supplier<CompletableFuture<AsyncConnection>> connectionSupplier) {
-    this.connectionSupplier = connectionSupplier;
+  private Connection connection;
+  private AsyncConnection asyncConnection;
+
+  public static ConnectionRule createConnectionRule(
+    final Supplier<Connection> connectionSupplier
+  ) {
+    return new ConnectionRule(connectionSupplier, null);
   }
 
-  public AsyncConnection getConnection() {
+  public static ConnectionRule createAsyncConnectionRule(
+    final Supplier<CompletableFuture<AsyncConnection>> asyncConnectionSupplier
+  ) {
+    return new ConnectionRule(null, asyncConnectionSupplier);
+  }
+
+  public static ConnectionRule createConnectionRule(
+    final Supplier<Connection> connectionSupplier,
+    final Supplier<CompletableFuture<AsyncConnection>> asyncConnectionSupplier
+  ) {
+    return new ConnectionRule(connectionSupplier, asyncConnectionSupplier);
+  }
+
+  private ConnectionRule(
+    final Supplier<Connection> connectionSupplier,
+    final Supplier<CompletableFuture<AsyncConnection>> asyncConnectionSupplier
+  ) {
+    this.connectionSupplier = connectionSupplier;
+    this.asyncConnectionSupplier = asyncConnectionSupplier;
+  }
+
+  public Connection getConnection() {
+    if (connection == null) {
+      throw new IllegalStateException(
+        "ConnectionRule not initialized with a synchronous connection.");
+    }
     return connection;
+  }
+
+  public AsyncConnection getAsyncConnection() {
+    if (asyncConnection == null) {
+      throw new IllegalStateException(
+        "ConnectionRule not initialized with an asynchronous connection.");
+    }
+    return asyncConnection;
   }
 
   @Override
   protected void before() throws Throwable {
-    this.connection = connectionSupplier.get().join();
+    if (connectionSupplier != null) {
+      this.connection = connectionSupplier.get();
+    }
+    if (asyncConnectionSupplier != null) {
+      this.asyncConnection = asyncConnectionSupplier.get().join();
+    }
+    if (connection == null && asyncConnection != null) {
+      this.connection = asyncConnection.toConnection();
+    }
   }
 
   @Override
   protected void after() {
-    if (this.connection != null) {
-      try {
-        connection.close();
-      } catch (IOException e) {
-        throw new RuntimeException(e);
+    CompletableFuture<Void> closeConnection = CompletableFuture.runAsync(() -> {
+      if (this.connection != null) {
+        try {
+          connection.close();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
       }
-    }
+    });
+    CompletableFuture<Void> closeAsyncConnection = CompletableFuture.runAsync(() -> {
+      if (this.asyncConnection != null) {
+        try {
+          asyncConnection.close();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    });
+    CompletableFuture.allOf(closeConnection, closeAsyncConnection).join();
   }
 }
