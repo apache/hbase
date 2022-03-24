@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -129,8 +130,13 @@ public class MetricsHBaseServer {
         source.rpcThrottlingException();
       } else if (throwable instanceof CallDroppedException) {
         source.callDroppedException();
-      } else if (LOG.isDebugEnabled()) {
-        LOG.debug("Unknown exception type", throwable);
+      } else if (throwable instanceof RequestTooBigException) {
+        source.requestTooBigException();
+      } else {
+        source.otherExceptions();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Unknown exception type", throwable);
+        }
       }
     }
   }
