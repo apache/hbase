@@ -132,6 +132,17 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
   }
 
   @Override
+  protected void closeOutput() {
+    if (this.output != null) {
+      try {
+        this.output.close();
+      } catch (IOException e) {
+        LOG.warn("Close output failed", e);
+      }
+    }
+  }
+
+  @Override
   protected long writeMagicAndWALHeader(byte[] magic, WALHeader header) throws IOException {
     output.write(magic);
     header.writeDelimitedTo(output);

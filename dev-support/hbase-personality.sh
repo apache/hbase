@@ -119,15 +119,15 @@ function personality_parse_args
         delete_parameter "${i}"
         ASF_NIGHTLIES_GENERAL_CHECK_BASE=${i#*=}
       ;;
-      --build-thread=*
+      --build-thread=*)
         delete_parameter "${i}"
         BUILD_THREAD=${i#*=}
       ;;
-      --surefire-first-part-fork-count=*
+      --surefire-first-part-fork-count=*)
         delete_parameter "${i}"
         SUREFIRE_FIRST_PART_FORK_COUNT=${i#*=}
       ;;
-      --surefire-second-part-fork-count=*
+      --surefire-second-part-fork-count=*)
         delete_parameter "${i}"
         SUREFIRE_SECOND_PART_FORK_COUNT=${i#*=}
       ;;
@@ -162,7 +162,13 @@ function personality_modules
     extra="--threads=2"
   fi
 
-  extra="${extra} -DHBasePatchProcess"
+  # Set java.io.tmpdir to avoid exhausting the /tmp space
+  # Just simply set to 'target', it is not very critical so we do not care
+  # whether it is placed in the root directory or a sub module's directory
+  # let's make it absolute
+  tmpdir=$(realpath target)
+  extra="${extra} -Djava.io.tmpdir=${tmpdir} -DHBasePatchProcess"
+
   if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
     extra="${extra} -Dhttps.protocols=TLSv1.2"
   fi

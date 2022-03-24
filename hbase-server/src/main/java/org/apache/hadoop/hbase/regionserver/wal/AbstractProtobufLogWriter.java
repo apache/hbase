@@ -166,38 +166,43 @@ public abstract class AbstractProtobufLogWriter {
   public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable,
       long blocksize, StreamSlowMonitor monitor) throws IOException,
       StreamLacksCapabilityException {
-    this.conf = conf;
-    boolean doCompress = initializeCompressionContext(conf, path);
-    this.trailerWarnSize = conf.getInt(WAL_TRAILER_WARN_SIZE, DEFAULT_WAL_TRAILER_WARN_SIZE);
-    int bufferSize = CommonFSUtils.getDefaultBufferSize(fs);
-    short replication = (short) conf.getInt("hbase.regionserver.hlog.replication",
-      CommonFSUtils.getDefaultReplication(fs, path));
+    try {
+      this.conf = conf;
+      boolean doCompress = initializeCompressionContext(conf, path);
+      this.trailerWarnSize = conf.getInt(WAL_TRAILER_WARN_SIZE, DEFAULT_WAL_TRAILER_WARN_SIZE);
+      int bufferSize = CommonFSUtils.getDefaultBufferSize(fs);
+      short replication = (short) conf.getInt("hbase.regionserver.hlog.replication",
+        CommonFSUtils.getDefaultReplication(fs, path));
 
-    initOutput(fs, path, overwritable, bufferSize, replication, blocksize, monitor);
+      initOutput(fs, path, overwritable, bufferSize, replication, blocksize, monitor);
 
-    boolean doTagCompress = doCompress &&
-      conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
-    boolean doValueCompress = doCompress &&
-      conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
-    WALHeader.Builder headerBuilder = WALHeader.newBuilder()
-      .setHasCompression(doCompress)
-      .setHasTagCompression(doTagCompress)
-      .setHasValueCompression(doValueCompress);
-    if (doValueCompress) {
-      headerBuilder.setValueCompressionAlgorithm(
-        CompressionContext.getValueCompressionAlgorithm(conf).ordinal());
-    }
-    length.set(writeMagicAndWALHeader(ProtobufLogReader.PB_WAL_MAGIC,
-      buildWALHeader(conf, headerBuilder)));
+      boolean doTagCompress =
+        doCompress && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
+      boolean doValueCompress =
+        doCompress && conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
+      WALHeader.Builder headerBuilder =
+        WALHeader.newBuilder().setHasCompression(doCompress).setHasTagCompression(doTagCompress)
+          .setHasValueCompression(doValueCompress);
+      if (doValueCompress) {
+        headerBuilder.setValueCompressionAlgorithm(
+          CompressionContext.getValueCompressionAlgorithm(conf).ordinal());
+      }
+      length.set(writeMagicAndWALHeader(ProtobufLogReader.PB_WAL_MAGIC,
+        buildWALHeader(conf, headerBuilder)));
 
-    initAfterHeader(doCompress);
+      initAfterHeader(doCompress);
 
-    // instantiate trailer to default value.
-    trailer = WALTrailer.newBuilder().build();
+      // instantiate trailer to default value.
+      trailer = WALTrailer.newBuilder().build();
 
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Initialized protobuf WAL={}, compression={}, tagCompression={}" +
-        ", valueCompression={}", path, doCompress, doTagCompress, doValueCompress);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Initialized protobuf WAL={}, compression={}, tagCompression={}"
+          + ", valueCompression={}", path, doCompress, doTagCompress, doValueCompress);
+      }
+    } catch (Exception e) {
+      LOG.warn("Init output failed, path={}", path, e);
+      closeOutput();
+      throw e;
     }
   }
 
@@ -264,6 +269,11 @@ public abstract class AbstractProtobufLogWriter {
   protected abstract void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
       short replication, long blockSize, StreamSlowMonitor monitor)
       throws IOException, StreamLacksCapabilityException;
+
+  /**
+   * simply close the output, do not need to write trailer like the Writer.close
+   */
+  protected abstract void closeOutput();
 
   /**
    * return the file length after written.

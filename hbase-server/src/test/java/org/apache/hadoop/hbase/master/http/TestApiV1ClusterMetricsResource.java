@@ -80,8 +80,8 @@ public class TestApiV1ClusterMetricsResource {
     })
     .build();
   private static final ConnectionRule connectionRule =
-    new ConnectionRule(miniClusterRule::createConnection);
-  private static final ClassSetup classRule = new ClassSetup(connectionRule::getConnection);
+    ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
+  private static final ClassSetup classRule = new ClassSetup(connectionRule::getAsyncConnection);
 
   private static final class ClassSetup extends ExternalResource {
 
