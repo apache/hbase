@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -56,6 +57,7 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -65,6 +67,34 @@ public class TestTableInputFormatBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestTableInputFormatBase.class);
+
+  @Test
+  public void testReuseRegionSizeCalculator() throws IOException {
+    JobContext context = mock(JobContext.class);
+    Configuration conf = HBaseConfiguration.create();
+    conf.set(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL,
+      ConnectionForMergeTesting.class.getName());
+    conf.set(TableInputFormat.INPUT_TABLE, "testTable");
+    conf.setBoolean(TableInputFormatBase.MAPREDUCE_INPUT_AUTOBALANCE, true);
+    when(context.getConfiguration()).thenReturn(conf);
+
+    TableInputFormat format = Mockito.spy(new TableInputFormatForMergeTesting());
+    format.setConf(conf);
+    // initialize so that table is set, otherwise cloneOnFinish
+    // will be true and each getSplits call will re-initialize everything
+    format.initialize(context);
+    format.getSplits(context);
+    format.getSplits(context);
+
+    // re-initialize which will cause the next getSplits call to create a new RegionSizeCalculator
+    format.initialize(context);
+    format.getSplits(context);
+    format.getSplits(context);
+
+    // should only be 2 despite calling getSplits 4 times
+    Mockito.verify(format, Mockito.times(2))
+      .createRegionSizeCalculator(Mockito.any(), Mockito.any());
+  }
 
   @Test
   public void testTableInputFormatBaseReverseDNSForIPv6()
