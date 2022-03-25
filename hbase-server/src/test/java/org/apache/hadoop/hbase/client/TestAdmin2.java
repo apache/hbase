@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -316,11 +317,9 @@ public class TestAdmin2 extends TestAdminBase {
       if (!regionInfo.isMetaRegion()) {
         if (regionInfo.getRegionNameAsString().contains(name)) {
           info = regionInfo;
-          try {
-            ADMIN.unassign(Bytes.toBytes("sample"), true);
-          } catch (UnknownRegionException nsre) {
-            // expected, ignore it
-          }
+          assertThrows(UnknownRegionException.class,
+            () -> ADMIN.unassign(Bytes.toBytes(
+              "test,,1358563771069.acc1ad1b7962564fc3a43e5907e8db33."), true));
         }
       }
     }
