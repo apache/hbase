@@ -18,11 +18,19 @@
  */
 package org.apache.hadoop.hbase.security.token;
 
+import static org.apache.hadoop.hbase.client.ConnectionFactory.ENV_OAUTHBEARER_TOKEN;
+import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.TOKEN_KIND;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.Optional;
 import javax.security.auth.Subject;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;
+import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils;
 import org.apache.hadoop.hbase.security.oauthbearer.internals.OAuthBearerSaslClientProvider;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
@@ -36,7 +44,6 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Public
 public final class OAuthBearerTokenUtil {
   private static final Logger LOG = LoggerFactory.getLogger(OAuthBearerTokenUtil.class);
-  public static final String TOKEN_KIND = "JWT_AUTH_TOKEN";
 
   static {
     OAuthBearerSaslClientProvider.initialize(); // not part of public API
@@ -68,8 +75,46 @@ public final class OAuthBearerTokenUtil {
           }
         };
         subject.getPrivateCredentials().add(jwt);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("JWT token has been added to user credentials with expiry {}",
+            lifetimeMs == 0 ? "0" : Instant.ofEpochMilli(lifetimeMs).toString());
+        }
         return null;
       }
     });
+  }
+
+  /**
+   * Check whether an OAuth Beaerer token is provided in environment variable HBASE_JWT.
+   * Parse and add it to user private credentials, but only if another token is not already present.
+   */
+  public static void addTokenFromEnvironmentVar(User user, String token) {
+    Optional<Token<?>> oauthBearerToken = user.getTokens().stream()
+      .filter((t) -> new Text(OAuthBearerUtils.TOKEN_KIND).equals(t.getKind()))
+      .findFirst();
+
+    if (oauthBearerToken.isPresent()) {
+      LOG.warn("Ignoring OAuth Bearer token in " + ENV_OAUTHBEARER_TOKEN + " environment "
+        + "variable, because another token is already present");
+      return;
+    }
+
+    String[] tokens = token.split(",");
+    if (StringUtils.isEmpty(tokens[0])) {
+      return;
+    }
+    long lifetimeMs = 0;
+    if (tokens.length > 1) {
+      try {
+        ZonedDateTime lifetime = ZonedDateTime.parse(tokens[1]);
+        lifetimeMs = lifetime.toInstant().toEpochMilli();
+      } catch (DateTimeParseException e) {
+        throw new RuntimeException("Unable to parse JWT expiry: " + tokens[1], e);
+      }
+    } else {
+      throw new RuntimeException("Expiry information of JWT is missing");
+    }
+
+    addTokenForUser(user, tokens[0], lifetimeMs);
   }
 }
