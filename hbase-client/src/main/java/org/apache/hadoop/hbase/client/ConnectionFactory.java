@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
-
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.security.PrivilegedExceptionAction;
@@ -29,6 +28,7 @@ import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.token.OAuthBearerTokenUtil;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -73,6 +73,9 @@ public class ConnectionFactory {
 
   public static final String HBASE_CLIENT_ASYNC_CONNECTION_IMPL =
     "hbase.client.async.connection.impl";
+
+  /** Environment variable for OAuth Bearer token */
+  public static final String ENV_OAUTHBEARER_TOKEN = "HBASE_JWT";
 
   /** No public c.tors */
   protected ConnectionFactory() {
@@ -216,6 +219,11 @@ public class ConnectionFactory {
    */
   public static Connection createConnection(Configuration conf, ExecutorService pool,
     final User user) throws IOException {
+
+    if (System.getenv().containsKey(ENV_OAUTHBEARER_TOKEN)) {
+      OAuthBearerTokenUtil.addTokenFromEnvironmentVar(user, System.getenv(ENV_OAUTHBEARER_TOKEN));
+    }
+
     Class<?> clazz = conf.getClass(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL,
       ConnectionOverAsyncConnection.class, Connection.class);
     if (clazz != ConnectionOverAsyncConnection.class) {
@@ -295,6 +303,11 @@ public class ConnectionFactory {
           future.completeExceptionally(new IOException("clusterid came back null"));
           return;
         }
+
+        if (System.getenv().containsKey(ENV_OAUTHBEARER_TOKEN)) {
+          OAuthBearerTokenUtil.addTokenFromEnvironmentVar(user, System.getenv(ENV_OAUTHBEARER_TOKEN));
+        }
+
         Class<? extends AsyncConnection> clazz = conf.getClass(HBASE_CLIENT_ASYNC_CONNECTION_IMPL,
           AsyncConnectionImpl.class, AsyncConnection.class);
         try {
