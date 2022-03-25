@@ -806,7 +806,7 @@ pipeline {
             '''
             unstash 'hadoop-2'
             sh '''#!/bin/bash -xe
-              if [[ "${BRANCH}" = branch-2* ]] || [[ "${BRANCH}" = branch-1* ]]; then
+              if [[ "${BRANCH}" = *branch-2* ]] || [[ "${BRANCH}" = *branch-1* ]]; then
                 echo "Attempting to use run an instance on top of Hadoop 2."
                 artifact=$(ls -1 "${WORKSPACE}"/hadoop-2*.tar.gz | head -n 1)
                 tar --strip-components=1 -xzf "${artifact}" -C "hadoop-2"
@@ -830,7 +830,7 @@ pipeline {
             '''
             unstash 'hadoop-3'
             sh '''#!/bin/bash -e
-              if [[ "${BRANCH}" = branch-1* ]]; then
+              if [[ "${BRANCH}" = *branch-1* ]]; then
                 echo "Skipping to run against Hadoop 3 for branch ${BRANCH}"
               else
                 echo "Attempting to use run an instance on top of Hadoop 3."
