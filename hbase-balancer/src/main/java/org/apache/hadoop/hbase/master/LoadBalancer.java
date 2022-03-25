@@ -156,4 +156,12 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
    */
   default void updateBalancerLoadInfo(Map<TableName, Map<ServerName, List<RegionInfo>>>
     loadOfAllTable){}
+
+  /**
+   * Check if the ServerName is bogus.
+   * @param sn server name to be checked
+   */
+  default boolean isBogusServerName(ServerName sn) {
+    return BOGUS_SERVER_NAME.equals(sn);
+  }
 }

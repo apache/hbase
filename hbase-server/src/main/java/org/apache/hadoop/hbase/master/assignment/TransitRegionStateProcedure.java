@@ -199,7 +199,7 @@ public class TransitRegionStateProcedure
 
   private void openRegion(MasterProcedureEnv env, RegionStateNode regionNode) throws IOException {
     ServerName loc = regionNode.getRegionLocation();
-    if (loc == null) {
+    if (loc == null || env.getMasterServices().getLoadBalancer().isBogusServerName(loc)) {
       LOG.warn("No location specified for {}, jump back to state {} to get one", getRegion(),
         RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE);
       setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE);
