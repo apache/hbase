@@ -224,13 +224,12 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
     if (t instanceof ServiceException) {
       ServiceException se = (ServiceException)t;
       Throwable cause = se.getCause();
-      if (cause != null && cause instanceof DoNotRetryIOException) {
+      if (cause instanceof DoNotRetryIOException) {
         throw (DoNotRetryIOException)cause;
       }
       // Don't let ServiceException out; its rpc specific.
-      t = cause;
-      // t could be a RemoteException so go around again.
-      translateException(t);
+      // It also could be a RemoteException, so go around again.
+      t = translateException(cause);
     } else if (t instanceof DoNotRetryIOException) {
       throw (DoNotRetryIOException)t;
     }
