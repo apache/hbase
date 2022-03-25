@@ -64,7 +64,7 @@ public class TestOAuthBearerTokenUtil {
     });
   }
 
-  @Test
+  @Test(expected = RuntimeException.class)
   public void testAddTokenEnvVarWithoutExpiry() {
     // Arrange
     User user = User.createUserForTesting(new HBaseConfiguration(), "testuser", new String[] {});
@@ -74,24 +74,9 @@ public class TestOAuthBearerTokenUtil {
     OAuthBearerTokenUtil.addTokenFromEnvironmentVar(user, testToken);
 
     // Assert
-    Optional<Token<?>> oauthBearerToken = user.getTokens().stream()
-      .filter((t) -> new Text(TOKEN_KIND).equals(t.getKind()))
-      .findFirst();
-    assertTrue("Token cannot be found in user tokens", oauthBearerToken.isPresent());
-    user.runAs(new PrivilegedAction<Object>() {
-      @Override public Object run() {
-        Subject subject = Subject.getSubject(AccessController.getContext());
-        Set<OAuthBearerToken> tokens = subject.getPrivateCredentials(OAuthBearerToken.class);
-        assertFalse("Token cannot be found in subject's private credentials", tokens.isEmpty());
-        OAuthBearerToken jwt = tokens.iterator().next();
-        assertEquals("Invalid encoded JWT value", "some_base64_encoded_stuff", jwt.value());
-        assertEquals("Invalid JWT expiry", 0, jwt.lifetimeMs());
-        return null;
-      }
-    });
   }
 
-  @Test
+  @Test(expected = RuntimeException.class)
   public void testAddTokenEnvVarWithInvalidExpiry() {
     // Arrange
     User user = User.createUserForTesting(new HBaseConfiguration(), "testuser", new String[] {});
@@ -101,21 +86,6 @@ public class TestOAuthBearerTokenUtil {
     OAuthBearerTokenUtil.addTokenFromEnvironmentVar(user, testToken);
 
     // Assert
-    Optional<Token<?>> oauthBearerToken = user.getTokens().stream()
-      .filter((t) -> new Text(TOKEN_KIND).equals(t.getKind()))
-      .findFirst();
-    assertTrue("Token cannot be found in user tokens", oauthBearerToken.isPresent());
-    user.runAs(new PrivilegedAction<Object>() {
-      @Override public Object run() {
-        Subject subject = Subject.getSubject(AccessController.getContext());
-        Set<OAuthBearerToken> tokens = subject.getPrivateCredentials(OAuthBearerToken.class);
-        assertFalse("Token cannot be found in subject's private credentials", tokens.isEmpty());
-        OAuthBearerToken jwt = tokens.iterator().next();
-        assertEquals("Invalid encoded JWT value", "some_base64_encoded_stuff", jwt.value());
-        assertEquals("Invalid JWT expiry", 0, jwt.lifetimeMs());
-        return null;
-      }
-    });
   }
 
   @Test

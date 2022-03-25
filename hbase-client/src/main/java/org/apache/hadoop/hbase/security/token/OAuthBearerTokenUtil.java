@@ -109,10 +109,10 @@ public final class OAuthBearerTokenUtil {
         ZonedDateTime lifetime = ZonedDateTime.parse(tokens[1]);
         lifetimeMs = lifetime.toInstant().toEpochMilli();
       } catch (DateTimeParseException e) {
-        LOG.warn("Unable to parse JWT expiry: {}", tokens[1]);
+        throw new RuntimeException("Unable to parse JWT expiry: " + tokens[1], e);
       }
     } else {
-      LOG.warn("Expiry information of JWT is missing");
+      throw new RuntimeException("Expiry information of JWT is missing");
     }
 
     addTokenForUser(user, tokens[0], lifetimeMs);
