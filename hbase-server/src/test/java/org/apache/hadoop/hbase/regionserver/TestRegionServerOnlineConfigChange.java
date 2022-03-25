@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -28,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.JMXListener;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -37,6 +39,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -70,6 +74,7 @@ public class TestRegionServerOnlineConfigChange {
 
   private static Table t1 = null;
   private static HRegionServer rs1 = null;
+  private static HMaster hMaster = null;
   private static byte[] r1name = null;
   private static Region r1 = null;
 
@@ -102,6 +107,7 @@ public class TestRegionServerOnlineConfigChange {
       rs1 = hbaseTestingUtility.getHBaseCluster().getRegionServer(
         hbaseTestingUtility.getHBaseCluster().getServerWith(r1name));
       r1 = rs1.getRegion(r1name);
+      hMaster = hbaseTestingUtility.getHBaseCluster().getMaster();
     }
   }
 
@@ -271,4 +277,24 @@ public class TestRegionServerOnlineConfigChange {
         .getLong(TableDescriptorBuilder.MAX_FILESIZE, -1);
     assertEquals(MAX_FILE_SIZE, actualMaxFileSize);
   }
+
+  @Test
+  public void testCoprocessorConfigurationOnlineChange() {
+    assertNull(rs1.getRegionServerCoprocessorHost().findCoprocessor(JMXListener.class.getName()));
+    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
+    rs1.getConfigurationManager().notifyAllObservers(conf);
+    assertNotNull(
+      rs1.getRegionServerCoprocessorHost().findCoprocessor(JMXListener.class.getName()));
+  }
+
+  @Test
+  public void testCoprocessorConfigurationOnlineChangeOnMaster() {
+    assertNull(hMaster.getMasterCoprocessorHost().findCoprocessor(JMXListener.class.getName()));
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
+    assertFalse(hMaster.isInMaintenanceMode());
+    hMaster.getConfigurationManager().notifyAllObservers(conf);
+    assertNotNull(
+      hMaster.getMasterCoprocessorHost().findCoprocessor(JMXListener.class.getName()));
+  }
+
 }

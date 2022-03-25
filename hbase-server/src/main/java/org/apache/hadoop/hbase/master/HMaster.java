@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.MasterStoppedException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
@@ -220,6 +221,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -391,7 +393,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   // the key is table name, the value is the number of compactions in that table.
   private Map<TableName, AtomicInteger> mobCompactionStates = Maps.newConcurrentMap();
 
-  MasterCoprocessorHost cpHost;
+  volatile MasterCoprocessorHost cpHost;
 
   private final boolean preLoadTableDescriptors;
 
@@ -985,14 +987,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     zombieDetector.start();
 
     if (!maintenanceMode) {
-      // Add the Observer to delete quotas on table deletion before starting all CPs by
-      // default with quota support, avoiding if user specifically asks to not load this Observer.
-      if (QuotaUtil.isQuotaEnabled(conf)) {
-        updateConfigurationForQuotasObserver(conf);
-      }
-      // initialize master side coprocessors before we start handling requests
       status.setStatus("Initializing master coprocessors");
-      this.cpHost = new MasterCoprocessorHost(this, this.conf);
+      setQuotasObserver(conf);
+      initializeCoprocessorHost(conf);
     } else {
       // start an in process region server for carrying system regions
       maintenanceRegionServer =
@@ -4097,6 +4094,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     } catch (IOException e) {
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
+    // append the quotas observer back to the master coprocessor key
+    setQuotasObserver(newConf);
+    // update region server coprocessor if the configuration has changed.
+    if (CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
+      CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) && !maintenanceMode) {
+      LOG.info("Update the master coprocessor(s) because the configuration has changed");
+      initializeCoprocessorHost(newConf);
+    }
   }
 
   @Override
@@ -4164,6 +4169,26 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       allowedOnPath = ".*/src/test/.*")
   static void setDisableBalancerChoreForTest(boolean disable) {
     disableBalancerChoreForTest = disable;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
+  public ConfigurationManager getConfigurationManager() {
+    return configurationManager;
+  }
+
+
+  private void setQuotasObserver(Configuration conf) {
+    // Add the Observer to delete quotas on table deletion before starting all CPs by
+    // default with quota support, avoiding if user specifically asks to not load this Observer.
+    if (QuotaUtil.isQuotaEnabled(conf)) {
+      updateConfigurationForQuotasObserver(conf);
+    }
+  }
+
+  private void initializeCoprocessorHost(Configuration conf) {
+    // initialize master side coprocessors before we start handling requests
+    this.cpHost = new MasterCoprocessorHost(this, conf);
   }
 
 }
