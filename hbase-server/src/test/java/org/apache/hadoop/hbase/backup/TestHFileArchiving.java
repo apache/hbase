@@ -166,25 +166,33 @@ public class TestHFileArchiving {
   @Test
   public void testArchiveStoreFilesDifferentFileSystemsFileAlreadyArchived() throws Exception {
     String baseDir = CommonFSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
-    testArchiveStoreFilesDifferentFileSystems("/hbase/wals/", baseDir, true, false,
+    testArchiveStoreFilesDifferentFileSystems("/hbase/wals/", baseDir, true, false, false,
       HFileArchiver::archiveStoreFiles);
   }
 
   @Test
-  public void testArchiveStoreFilesDifferentFileSystemsArchiveFileNotEmpty() throws Exception {
+  public void testArchiveStoreFilesDifferentFileSystemsArchiveFileMatchCurrent() throws Exception {
     String baseDir = CommonFSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
-    testArchiveStoreFilesDifferentFileSystems("/hbase/wals/", baseDir, true, true,
+    testArchiveStoreFilesDifferentFileSystems("/hbase/wals/", baseDir, true, true, false,
+      HFileArchiver::archiveStoreFiles);
+  }
+
+  @Test(expected = IOException.class)
+  public void testArchiveStoreFilesDifferentFileSystemsArchiveFileMismatch() throws Exception {
+    String baseDir = CommonFSUtils.getRootDir(UTIL.getConfiguration()).toString() + "/";
+    testArchiveStoreFilesDifferentFileSystems("/hbase/wals/", baseDir, true, true, true,
       HFileArchiver::archiveStoreFiles);
   }
 
   private void testArchiveStoreFilesDifferentFileSystems(String walDir, String expectedBase,
     ArchivingFunction<Configuration, FileSystem, RegionInfo, Path, byte[],
       Collection<HStoreFile>> archivingFunction) throws IOException {
-    testArchiveStoreFilesDifferentFileSystems(walDir, expectedBase, false, true, archivingFunction);
+    testArchiveStoreFilesDifferentFileSystems(walDir, expectedBase, false, true, false,
+      archivingFunction);
   }
 
   private void testArchiveStoreFilesDifferentFileSystems(String walDir, String expectedBase,
-    boolean archiveFileExists, boolean sourceFileExists,
+    boolean archiveFileExists, boolean sourceFileExists, boolean archiveFileDifferentLength,
     ArchivingFunction<Configuration, FileSystem, RegionInfo, Path, byte[],
       Collection<HStoreFile>> archivingFunction) throws IOException {
     FileSystem mockedFileSystem = mock(FileSystem.class);
@@ -202,7 +210,9 @@ public class TestHFileArchiving {
     existsTracker.put(filePath, sourceFileExists);
     when(mockedFileSystem.exists(any())).thenAnswer(invocation ->
       existsTracker.getOrDefault((Path)invocation.getArgument(0), true));
-    when(mockedFileSystem.getFileStatus(any())).thenReturn(mock(FileStatus.class));
+    FileStatus mockedStatus = mock(FileStatus.class);
+    when(mockedStatus.getLen()).thenReturn(12L).thenReturn(archiveFileDifferentLength ? 34L : 12L);
+    when(mockedFileSystem.getFileStatus(any())).thenReturn(mockedStatus);
     RegionInfo mockedRegion = mock(RegionInfo.class);
     TableName tableName = TableName.valueOf("mockTable");
     when(mockedRegion.getTable()).thenReturn(tableName);

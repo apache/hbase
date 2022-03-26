@@ -509,10 +509,21 @@ public class HFileArchiver {
       // has no references.
       FileStatus curStatus = fs.getFileStatus(currentFile.getPath());
       FileStatus archiveStatus = fs.getFileStatus(archiveFile);
+      long curLen = curStatus.getLen();
+      long archiveLen = archiveStatus.getLen();
+      long curMtime = curStatus.getModificationTime();
+      long archiveMtime = archiveStatus.getModificationTime();
+      if (curLen != archiveLen) {
+        LOG.error("{} already exists in archive with different size than current {}."
+            + " archiveLen: {} currentLen: {} archiveMtime: {} currentMtime: {}",
+          archiveFile, currentFile, archiveLen, curLen, archiveMtime, curMtime);
+        throw new IOException(archiveFile + " already exists in archive with different size" +
+          " than " + currentFile);
+      }
+
       LOG.error("{} already exists in archive, moving to timestamped backup and overwriting"
-          + " current. archiveLen: {} currentLen: {} archiveMtime: {} currentMtime: {}",
-        archiveFile, archiveStatus.getLen(), curStatus.getLen(),
-        archiveStatus.getModificationTime(), curStatus.getModificationTime());
+          + " current {}. archiveLen: {} currentLen: {} archiveMtime: {} currentMtime: {}",
+        archiveFile, currentFile, archiveLen, curLen, archiveMtime, curMtime);
 
       // move the archive file to the stamped backup
       Path backedupArchiveFile = new Path(archiveDir, filename + SEPARATOR + archiveStartTime);
