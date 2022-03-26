@@ -180,9 +180,15 @@ final class AssignmentManagerUtil {
     for (RegionInfo hri : regions) {
       // start the index from 1
       for (int i = 1; i < regionReplication; i++) {
-        replicaRegionInfos.add(RegionReplicaUtil.getRegionInfoForReplica(hri, i));
+        RegionInfo ri = RegionReplicaUtil.getRegionInfoForReplica(hri, i);
+        // apply ignoreRITs to replica regions as well.
+        if (!ignoreIfInTransition || !env.getAssignmentManager().getRegionStates().
+          getOrCreateRegionStateNode(ri).isInTransition()) {
+          replicaRegionInfos.add(ri);
+        }
       }
     }
+
     // create round robin procs. Note that we exclude the primary region's target server
     TransitRegionStateProcedure[] replicaRegionAssignProcs =
         env.getAssignmentManager().createRoundRobinAssignProcedures(replicaRegionInfos,
