@@ -302,6 +302,11 @@ public class SplitTableRegionProcedure
           break;
         case SPLIT_TABLE_REGION_CLOSE_PARENT_REGION:
           addChildProcedure(createUnassignProcedures(env));
+          // createUnassignProcedures() can throw out IOException. If this happens,
+          // it wont reach state SPLIT_TABLE_REGIONS_CHECK_CLOSED_REGION and no parent regions
+          // is closed as all created UnassignProcedures are rolled back. If it rolls back with
+          // state SPLIT_TABLE_REGION_CLOSE_PARENT_REGION, no need to call openParentRegion(),
+          // otherwise, it will result in OpenRegionProcedure for an already open region.
           setNextState(SplitTableRegionState.SPLIT_TABLE_REGIONS_CHECK_CLOSED_REGIONS);
           break;
         case SPLIT_TABLE_REGIONS_CHECK_CLOSED_REGIONS:
@@ -379,11 +384,12 @@ public class SplitTableRegionProcedure
           deleteDaughterRegions(env);
           break;
         case SPLIT_TABLE_REGIONS_CHECK_CLOSED_REGIONS:
-          // Doing nothing, in SPLIT_TABLE_REGION_CLOSE_PARENT_REGION,
-          // we will bring parent region online
+          openParentRegion(env);
           break;
         case SPLIT_TABLE_REGION_CLOSE_PARENT_REGION:
-          openParentRegion(env);
+          // If it rolls back with state SPLIT_TABLE_REGION_CLOSE_PARENT_REGION, no need to call
+          // openParentRegion(), otherwise, it will result in OpenRegionProcedure for an
+          // already open region.
           break;
         case SPLIT_TABLE_REGION_PRE_OPERATION:
           postRollBackSplitRegion(env);
