@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.apache.hadoop.hbase.master.LoadBalancer.BOGUS_SERVER_NAME;
+
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -47,7 +49,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.R
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import static org.apache.hadoop.hbase.master.LoadBalancer.BOGUS_SERVER_NAME;
 
 /**
  * The procedure to deal with the state transition of a region. A region with a TRSP in place is
