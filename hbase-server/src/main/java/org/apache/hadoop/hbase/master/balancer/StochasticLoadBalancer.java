@@ -1328,7 +1328,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       double cost = 0;
       do {
         double current = getCostFromRl(iter.next());
-        cost += current - previous;
+        cost += current >= previous ? current - previous : current;
         previous = current;
       } while (iter.hasNext());
       return Math.max(0, cost / (regionLoadList.size() - 1));

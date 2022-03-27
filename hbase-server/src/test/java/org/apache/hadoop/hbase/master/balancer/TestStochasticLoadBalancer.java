@@ -359,6 +359,32 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   }
 
   @Test
+  public void testRegionLoadCostWhenDecrease() {
+    List<BalancerRegionLoad> regionLoads = new ArrayList<>();
+    // test region loads of [1,2,1,4]
+    for (int i = 1; i < 5; i++) {
+      int load = i == 3 ? 1 : i;
+      BalancerRegionLoad regionLoad = mock(BalancerRegionLoad.class);
+      when(regionLoad.getReadRequestsCount()).thenReturn((long)load);
+      when(regionLoad.getStorefileSizeMB()).thenReturn(load);
+      regionLoads.add(regionLoad);
+    }
+
+    Configuration conf = HBaseConfiguration.create();
+    StochasticLoadBalancer.ReadRequestCostFunction readCostFunction =
+      new StochasticLoadBalancer.ReadRequestCostFunction(conf);
+    double rateResult = readCostFunction.getRegionLoadCost(regionLoads);
+    // read requests are treated as a rate, so here is the average rate
+    assertEquals(1.67, rateResult, 0.01);
+
+    StochasticLoadBalancer.StoreFileCostFunction storeFileCostFunction =
+      new StochasticLoadBalancer.StoreFileCostFunction(conf);
+    rateResult = storeFileCostFunction.getRegionLoadCost(regionLoads);
+    // storefile size cost is simply an average of it's value over time
+    assertEquals(2.0, rateResult, 0.01);
+  }
+
+  @Test
   public void testLosingRs() throws Exception {
     int numNodes = 3;
     int numRegions = 20;
