@@ -57,7 +57,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private final String regionIncrementKey;
   private final String regionAppendKey;
   private final String regionScanKey;
-
+  private final String regionRowSequencerYieldsKey;
   /*
    * Implementation note: Do not put histograms per region. With hundreds of regions in a server
    * histograms allocate too many counters. See HBASE-17016.
@@ -68,6 +68,8 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private final MutableFastCounter regionAppend;
   private final MutableFastCounter regionGet;
   private final MutableFastCounter regionScan;
+
+  private final MutableFastCounter regionRowSequencerYields;
 
   private final int hashCode;
 
@@ -107,6 +109,10 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
     regionScanKey = regionNamePrefix + MetricsRegionServerSource.SCAN_KEY + suffix;
     regionScan = registry.getCounter(regionScanKey, 0L);
+
+    regionRowSequencerYieldsKey = regionNamePrefix + MetricsRegionSource.ROW_SEQUENCING_YIELDS +
+        suffix;
+    regionRowSequencerYields = registry.getCounter(regionRowSequencerYieldsKey, 0L);
   }
 
   @Override
@@ -135,6 +141,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
       registry.removeMetric(regionAppendKey);
       registry.removeMetric(regionGetKey);
       registry.removeMetric(regionScanKey);
+      registry.removeMetric(regionRowSequencerYieldsKey);
 
       regionWrapper = null;
     }
@@ -168,6 +175,11 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   @Override
   public void updateAppend() {
     regionAppend.incr();
+  }
+
+  @Override
+  public void updateRowSequencingYields() {
+    regionRowSequencerYields.incr();
   }
 
   @Override
@@ -302,6 +314,10 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
               regionNamePrefix + MetricsRegionSource.MAX_FLUSH_QUEUE_SIZE,
               MetricsRegionSource.MAX_FLUSH_QUEUE_DESC),
           this.regionWrapper.getMaxFlushQueueSize());
+      mrb.addCounter(Interns.info(
+             regionNamePrefix + MetricsRegionSource.ROW_SEQUENCING_YIELDS,
+             MetricsRegionSource.ROW_SEQUENCING_YIELDS_DESC),
+          this.regionWrapper.getRowSequencingYields());
       addCounter(mrb, this.regionWrapper.getMemstoreOnlyRowReadsCount(),
         MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE,
         MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE_DESC);
