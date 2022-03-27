@@ -23,7 +23,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -51,7 +50,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 @Category({ MasterTests.class, MediumTests.class })
@@ -517,6 +515,32 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
     double result = storeFileCostFunction.getRegionLoadCost(regionLoads);
     // storefile size cost is simply an average of it's value over time
     assertEquals(2.5, result, 0.01);
+  }
+
+  @Test
+  public void testRegionLoadCostWhenDecrease() {
+    List<BalancerRegionLoad> regionLoads = new ArrayList<>();
+    // test region loads of [1,2,1,4]
+    for (int i = 1; i < 5; i++) {
+      int load = i == 3 ? 1 : i;
+      BalancerRegionLoad regionLoad = mock(BalancerRegionLoad.class);
+      when(regionLoad.getReadRequestsCount()).thenReturn((long)load);
+      when(regionLoad.getCpRequestsCount()).thenReturn((long)load);
+      regionLoads.add(regionLoad);
+    }
+
+    Configuration conf = HBaseConfiguration.create();
+    ReadRequestCostFunction readCostFunction =
+      new ReadRequestCostFunction(conf);
+    double rateResult = readCostFunction.getRegionLoadCost(regionLoads);
+    // read requests are treated as a rate so the average rate here is simply 1
+    assertEquals(1.67, rateResult, 0.01);
+
+    CPRequestCostFunction cpCostFunction =
+      new CPRequestCostFunction(conf);
+    rateResult = cpCostFunction.getRegionLoadCost(regionLoads);
+    // coprocessor requests are treated as a rate so the average rate here is simply 1
+    assertEquals(1.67, rateResult, 0.01);
   }
 
   @Test
