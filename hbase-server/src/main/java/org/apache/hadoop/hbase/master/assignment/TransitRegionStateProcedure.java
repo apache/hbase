@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.R
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import static org.apache.hadoop.hbase.master.LoadBalancer.BOGUS_SERVER_NAME;
 
 /**
  * The procedure to deal with the state transition of a region. A region with a TRSP in place is
@@ -199,7 +200,7 @@ public class TransitRegionStateProcedure
 
   private void openRegion(MasterProcedureEnv env, RegionStateNode regionNode) throws IOException {
     ServerName loc = regionNode.getRegionLocation();
-    if (loc == null || env.getMasterServices().getLoadBalancer().isBogusServerName(loc)) {
+    if (loc == null || BOGUS_SERVER_NAME.equals(loc)) {
       LOG.warn("No location specified for {}, jump back to state {} to get one", getRegion(),
         RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE);
       setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE);
