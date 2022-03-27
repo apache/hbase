@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.util.clock;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge.Clock;
+import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**

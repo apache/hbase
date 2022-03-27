@@ -53,9 +53,9 @@ import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.util.BaseEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
@@ -355,7 +355,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   @Test
   public void testUpdateToTimeOfOldestEdit() throws Exception {
     try {
-      EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
+      ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+      edge.setValue(1234);
       EnvironmentEdgeManager.injectEdge(edge);
       long t = memstore.timeOfOldestEdit();
       assertEquals(Long.MAX_VALUE, t);
@@ -904,15 +905,6 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     regionServicesForStores.addMemStoreSize(hmc.getActive().getDataSize() - size,
       hmc.getActive().getHeapSize() - heapOverhead, 0, cellsCount);
     return totalLen;
-  }
-
-  private class EnvironmentEdgeForMemstoreTest extends BaseEnvironmentEdge {
-    long t = 1234;
-
-    @Override
-    public long currentTime() {
-      return t;
-    }
   }
 
   static protected class MyCompactingMemStore extends CompactingMemStore {

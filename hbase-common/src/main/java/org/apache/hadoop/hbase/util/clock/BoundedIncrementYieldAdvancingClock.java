@@ -32,7 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class BoundedIncrementYieldAdvancingClock extends IncrementAdvancingClock {
 
-  static final int MAX_ADVANCE = 1000; // one second in milliseconds
+  static final int MAX_ADVANCE = 1000;
 
   protected AtomicLong currentAdvance = new AtomicLong(0);
 
@@ -50,12 +50,11 @@ public class BoundedIncrementYieldAdvancingClock extends IncrementAdvancingClock
     // If we have advanced too far, now we have to wait for the system clock to
     // catch up.
     if (currentAdvance.incrementAndGet() >= MAX_ADVANCE) {
-      long now;
       while (true) {
-        now = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
         if (now > lastTime.get()) {
-          final long updateTime = now;
-          return lastTime.updateAndGet(x -> update(updateTime));
+          lastTime.set(update(now));
+          return now;
         }
         spin();
       }
@@ -76,7 +75,7 @@ public class BoundedIncrementYieldAdvancingClock extends IncrementAdvancingClock
     // System clock hasn't moved forward. Increment our notion of current tick to keep
     // the time advancing.
     currentAdvance.incrementAndGet();
-    return super.advance(last);
+    return last + 1;
   }
 
   // Broken out to inlinable method for subclassing and instrumentation.
@@ -84,7 +83,7 @@ public class BoundedIncrementYieldAdvancingClock extends IncrementAdvancingClock
     // System clock has moved ahead of our notion of current tick. Move us forward to match.
     // We do that just by returning the current time, which was passed in to us as 'n'.
     currentAdvance.set(0);
-    return super.update(now);
+    return now;
   }
 
   // Broken out to inlinable method for subclassing and instrumentation.

@@ -27,6 +27,40 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class ManualEnvironmentEdge extends BaseEnvironmentEdge {
 
+  class ManualFixedClock implements EnvironmentEdge.Clock {
+
+    private HashedBytes name;
+
+    public ManualFixedClock(HashedBytes name) {
+      this.name = name;
+    }
+
+    @Override
+    public HashedBytes getName() {
+      return name;
+    }
+
+    @Override
+    public long currentTime() {
+      return value;
+    }
+
+    @Override
+    public long currentTimeAdvancing() {
+      return value;
+    }
+
+    @Override
+    public void get() {
+    }
+
+    @Override
+    public boolean remove() {
+      return true;
+    }
+
+  }
+
   protected long value;
 
   public ManualEnvironmentEdge() {
@@ -49,6 +83,16 @@ public class ManualEnvironmentEdge extends BaseEnvironmentEdge {
   @Override
   public long currentTime() {
     return this.value;
+  }
+
+  @Override
+  public Clock getClock(HashedBytes name) {
+    return new ManualFixedClock(name);
+  }
+
+  @Override
+  public boolean removeClock(Clock clock) {
+    return true;
   }
 
 }
