@@ -21,12 +21,17 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.lang.reflect.Method;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdge.Clock;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -67,4 +72,26 @@ public class TestEnvironmentEdgeManager {
     verify(mock).currentTime();
     assertEquals(expectation, result);
   }
+
+  @Test
+  public void testClockRegistration() throws Exception {
+    DefaultEnvironmentEdge edge = new DefaultEnvironmentEdge();
+    HashedBytes key = new HashedBytes(Bytes.toBytes("key"));
+    Clock clock = edge.getClock(key);
+    assertNotNull("Clock instance was not created", clock);
+    Method method;
+    try {
+      method = clock.getClass().getMethod("getRefCount");
+    } catch (NoSuchMethodException e) {
+      fail("Clock instance does not have a getRefCount method");
+      return;
+    }
+    assertEquals("Clock does not have correct reference count after getClock()",
+      method.invoke(clock), 1);
+    boolean removed = edge.removeClock(clock);
+    assertTrue("Clock was not removed", removed);
+    assertEquals("Clock does not have correct reference count after removeClock()",
+      method.invoke(clock), 0);
+  }
+
 }

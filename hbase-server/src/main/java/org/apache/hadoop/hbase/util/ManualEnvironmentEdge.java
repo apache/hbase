@@ -25,10 +25,18 @@ import org.apache.yetus.audience.InterfaceAudience;
  * happen in the same millisecond.
  */
 @InterfaceAudience.Private
-public class ManualEnvironmentEdge implements EnvironmentEdge {
+public class ManualEnvironmentEdge extends BaseEnvironmentEdge {
 
-  // Sometimes 0 ts might have a special value, so lets start with 1
-  protected long value = 1L;
+  protected long value;
+
+  public ManualEnvironmentEdge() {
+    // Sometimes 0 ts might have a special value, so lets start with 1
+    this(1L);
+  }
+
+  public ManualEnvironmentEdge(long value) {
+    this.value = value;
+  }
 
   public void setValue(long newValue) {
     value = newValue;
@@ -42,4 +50,5 @@ public class ManualEnvironmentEdge implements EnvironmentEdge {
   public long currentTime() {
     return this.value;
   }
+
 }

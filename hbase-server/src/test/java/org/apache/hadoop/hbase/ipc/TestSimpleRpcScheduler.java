@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -599,6 +600,17 @@ public class TestSimpleRpcScheduler {
       }
       return System.currentTimeMillis();
     }
+
+    @Override
+    public Clock getClock(HashedBytes name) {
+      return null;
+    }
+
+    @Override
+    public boolean removeClock(Clock clock) {
+      return false;
+    }
+
   }
 
   // FIX. I don't get this test (St.Ack). When I time this test, the minDelay is > 2 * codel delay

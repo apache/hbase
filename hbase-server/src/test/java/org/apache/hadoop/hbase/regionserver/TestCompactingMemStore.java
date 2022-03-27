@@ -53,8 +53,8 @@ import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.util.BaseEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -906,7 +906,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     return totalLen;
   }
 
-  private class EnvironmentEdgeForMemstoreTest implements EnvironmentEdge {
+  private class EnvironmentEdgeForMemstoreTest extends BaseEnvironmentEdge {
     long t = 1234;
 
     @Override

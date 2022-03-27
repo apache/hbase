@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -1017,6 +1018,14 @@ public class TestDefaultMemStore {
     }
     public void setCurrentTimeMillis(long t) {
       this.t = t;
+    }
+    @Override
+    public Clock getClock(HashedBytes name) {
+      return null;
+    }
+    @Override
+    public boolean removeClock(Clock clock) {
+      return false;
     }
   }
 

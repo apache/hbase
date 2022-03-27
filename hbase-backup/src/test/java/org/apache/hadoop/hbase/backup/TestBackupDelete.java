@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -117,6 +118,14 @@ public class TestBackupDelete extends TestBackupBase {
       @Override
       public long currentTime() {
         return System.currentTimeMillis() - 2 * 24 * 3600 * 1000 ;
+      }
+      @Override
+      public Clock getClock(HashedBytes name) {
+        return null;
+      }
+      @Override
+      public boolean removeClock(Clock clock) {
+        return false;
       }
     });
     String backupId = fullTableBackup(tableList);

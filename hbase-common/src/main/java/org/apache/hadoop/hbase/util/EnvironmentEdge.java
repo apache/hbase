@@ -28,10 +28,71 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface EnvironmentEdge {
+
   /**
-   * Returns the currentTime.
+   * Returns the current time using the default clock.
+   * <p>
+   * This is almost always what you want, unless managing timekeeping with a named clock.
    *
-   * @return Current time.
+   * @return The current time.
    */
   long currentTime();
+
+  /**
+   * Get the clock associated with the given identifier.
+   * @param name clock identifier
+   * @returns the clock instance for the given identifier
+   */
+  Clock getClock(HashedBytes name);
+
+  /**
+   * Remove the clock with the given identifier.
+   * @param clockId clock identifier
+   * @return true if the clock was removed, false if it did not exist
+   */
+  boolean removeClock(Clock clock);
+
+  /**
+   * Abstraction for an environment's time source.
+   */
+  public interface Clock {
+
+    /**
+     * Returns the clock's identifier.
+     */
+    HashedBytes getName();
+
+    /**
+     * Returns the current time using a named clock.
+     * @param clockId clock identifier
+     * @return The current time, according to the given named clock.
+     */
+    long currentTime();
+
+    /**
+     * Returns the current time using a named clock. Ensure the clock advanced by
+     * at least one tick before returning.
+     * <p>
+     * This method may block the current thread's execution or cause it to yield.
+     * @param clockId clock identifier
+     * @return The current time, according to the given named clock.
+     * @throws InterruptedException if interrupted while waiting for the clock to advance
+     */
+    default long currentTimeAdvancing() throws InterruptedException {
+      throw new UnsupportedOperationException("BaseClock does not implement currentTimeAdvancing");
+    }
+
+    /**
+     * Called to increment the reference count of the clock.
+     */
+    void get();
+
+    /**
+     * Called when the clock is removed.
+     * @return true if the reference count is zero, false otherwise.
+     */
+    boolean remove();
+
+  }
+
 }
