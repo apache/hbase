@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.hbtop.field;
 import java.util.Objects;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * Represents fields that are displayed in the top screen.
  */
@@ -34,27 +33,25 @@ public enum Field {
   REGION("REGION", "Encoded Region Name", false, true, FieldValueType.STRING),
   REGION_SERVER("RS", "Short Region Server Name", true, true, FieldValueType.STRING),
   LONG_REGION_SERVER("LRS", "Long Region Server Name", true, true, FieldValueType.STRING),
-  REQUEST_COUNT_PER_SECOND("#REQ/S", "Request Count per second", false, false,
-    FieldValueType.LONG),
+  REQUEST_COUNT_PER_SECOND("#REQ/S", "Request Count per second", false, false, FieldValueType.LONG),
   READ_REQUEST_COUNT_PER_SECOND("#READ/S", "Read Request Count per second", false, false,
-    FieldValueType.LONG),
+      FieldValueType.LONG),
   FILTERED_READ_REQUEST_COUNT_PER_SECOND("#FREAD/S", "Filtered Read Request Count per second",
-    false, false, FieldValueType.LONG),
+      false, false, FieldValueType.LONG),
   WRITE_REQUEST_COUNT_PER_SECOND("#WRITE/S", "Write Request Count per second", false, false,
-    FieldValueType.LONG),
+      FieldValueType.LONG),
   STORE_FILE_SIZE("SF", "StoreFile Size", false, false, FieldValueType.SIZE),
   UNCOMPRESSED_STORE_FILE_SIZE("USF", "Uncompressed StoreFile Size", false, false,
-    FieldValueType.SIZE),
+      FieldValueType.SIZE),
   NUM_STORE_FILES("#SF", "Number of StoreFiles", false, false, FieldValueType.INTEGER),
   MEM_STORE_SIZE("MEMSTORE", "MemStore Size", false, false, FieldValueType.SIZE),
   LOCALITY("LOCALITY", "Block Locality", false, false, FieldValueType.FLOAT),
   START_KEY("SKEY", "Start Key", true, true, FieldValueType.STRING),
-  COMPACTING_CELL_COUNT("#COMPingCELL", "Compacting Cell Count", false, false,
-    FieldValueType.LONG),
+  COMPACTING_CELL_COUNT("#COMPingCELL", "Compacting Cell Count", false, false, FieldValueType.LONG),
   COMPACTED_CELL_COUNT("#COMPedCELL", "Compacted Cell Count", false, false, FieldValueType.LONG),
   COMPACTION_PROGRESS("%COMP", "Compaction Progress", false, false, FieldValueType.PERCENT),
   LAST_MAJOR_COMPACTION_TIME("LASTMCOMP", "Last Major Compaction Time", false, true,
-    FieldValueType.STRING),
+      FieldValueType.STRING),
   REGION_COUNT("#REGION", "Region Count", false, false, FieldValueType.INTEGER),
   USED_HEAP_SIZE("UHEAP", "Used Heap Size", false, false, FieldValueType.SIZE),
   USER("USER", "user Name", true, true, FieldValueType.STRING),
@@ -70,7 +67,7 @@ public enum Field {
   private final FieldValueType fieldValueType;
 
   Field(String header, String description, boolean autoAdjust, boolean leftJustify,
-    FieldValueType fieldValueType) {
+      FieldValueType fieldValueType) {
     this.header = Objects.requireNonNull(header);
     this.description = Objects.requireNonNull(description);
     this.autoAdjust = autoAdjust;

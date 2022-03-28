@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.metrics;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -41,9 +40,9 @@ public class OperationMetrics {
     Preconditions.checkNotNull(metricNamePrefix);
 
     /**
-     * TODO: As of now, Metrics description cannot be added/ registered with
-     * {@link MetricRegistry}. As metric names are unambiguous but concise, descriptions of
-     * metrics need to be made available someplace for users.
+     * TODO: As of now, Metrics description cannot be added/ registered with {@link MetricRegistry}.
+     * As metric names are unambiguous but concise, descriptions of metrics need to be made
+     * available someplace for users.
      */
     submittedCounter = registry.counter(metricNamePrefix + SUBMITTED_COUNT);
     timeHisto = registry.histogram(metricNamePrefix + TIME);

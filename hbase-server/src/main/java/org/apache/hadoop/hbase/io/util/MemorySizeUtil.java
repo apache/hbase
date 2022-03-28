@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,14 +20,13 @@ package org.apache.hadoop.hbase.io.util;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Util class to calculate memory size for memstore, block cache(L1, L2) of RS.
@@ -55,15 +54,15 @@ public class MemorySizeUtil {
   // a constant to convert a fraction to a percentage
   private static final int CONVERT_TO_PERCENTAGE = 100;
 
-  private static final String JVM_HEAP_EXCEPTION = "Got an exception while attempting to read " +
-      "information about the JVM heap. Please submit this log information in a bug report and " +
-      "include your JVM settings, specifically the GC in use and any -XX options. Consider " +
-      "restarting the service.";
+  private static final String JVM_HEAP_EXCEPTION = "Got an exception while attempting to read "
+      + "information about the JVM heap. Please submit this log information in a bug report and "
+      + "include your JVM settings, specifically the GC in use and any -XX options. Consider "
+      + "restarting the service.";
 
   /**
    * Return JVM memory statistics while properly handling runtime exceptions from the JVM.
-   * @return a memory usage object, null if there was a runtime exception. (n.b. you
-   *         could also get -1 values back from the JVM)
+   * @return a memory usage object, null if there was a runtime exception. (n.b. you could also get
+   *         -1 values back from the JVM)
    * @see MemoryUsage
    */
   public static MemoryUsage safeGetHeapMemoryUsage() {
@@ -86,12 +85,11 @@ public class MemorySizeUtil {
       LOG.warn(MEMSTORE_SIZE_OLD_KEY + " is deprecated by " + MEMSTORE_SIZE_KEY);
     }
     float globalMemstoreSize = getGlobalMemStoreHeapPercent(conf, false);
-    int gml = (int)(globalMemstoreSize * CONVERT_TO_PERCENTAGE);
+    int gml = (int) (globalMemstoreSize * CONVERT_TO_PERCENTAGE);
     float blockCacheUpperLimit = getBlockCacheHeapPercent(conf);
-    int bcul = (int)(blockCacheUpperLimit * CONVERT_TO_PERCENTAGE);
-    if (CONVERT_TO_PERCENTAGE - (gml + bcul)
-            < (int)(CONVERT_TO_PERCENTAGE *
-                    HConstants.HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD)) {
+    int bcul = (int) (blockCacheUpperLimit * CONVERT_TO_PERCENTAGE);
+    if (CONVERT_TO_PERCENTAGE - (gml + bcul) < (int) (CONVERT_TO_PERCENTAGE
+        * HConstants.HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD)) {
       throw new RuntimeException("Current heap configuration for MemStore and BlockCache exceeds "
           + "the threshold required for successful cluster operation. "
           + "The combined value cannot exceed 0.8. Please check "
@@ -109,8 +107,8 @@ public class MemorySizeUtil {
    */
   public static float getGlobalMemStoreHeapPercent(final Configuration c,
       final boolean logInvalid) {
-    float limit = c.getFloat(MEMSTORE_SIZE_KEY,
-        c.getFloat(MEMSTORE_SIZE_OLD_KEY, DEFAULT_MEMSTORE_SIZE));
+    float limit =
+        c.getFloat(MEMSTORE_SIZE_KEY, c.getFloat(MEMSTORE_SIZE_OLD_KEY, DEFAULT_MEMSTORE_SIZE));
     if (limit > 0.8f || limit <= 0.0f) {
       if (logInvalid) {
         LOG.warn("Setting global memstore limit to default of " + DEFAULT_MEMSTORE_SIZE
@@ -204,7 +202,7 @@ public class MemorySizeUtil {
   public static float getBlockCacheHeapPercent(final Configuration conf) {
     // L1 block cache is always on heap
     float l1CachePercent = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
-        HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
+      HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
     return l1CachePercent;
   }
 
@@ -220,25 +218,25 @@ public class MemorySizeUtil {
       return -1;
     }
     if (cachePercentage > 1.0) {
-      throw new IllegalArgumentException(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY +
-        " must be between 0.0 and 1.0, and not > 1.0");
+      throw new IllegalArgumentException(
+          HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + " must be between 0.0 and 1.0, and not > 1.0");
     }
     long max = -1L;
     final MemoryUsage usage = safeGetHeapMemoryUsage();
     if (usage != null) {
       max = usage.getMax();
     }
-    float onHeapCacheFixedSize = (float) conf
-      .getLong(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY,
-        HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT) / max;
+    float onHeapCacheFixedSize =
+        (float) conf.getLong(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY,
+          HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT) / max;
     // Calculate the amount of heap to give the heap.
-    return (onHeapCacheFixedSize > 0 && onHeapCacheFixedSize < cachePercentage) ?
-      (long) (max * onHeapCacheFixedSize) :
-      (long) (max * cachePercentage);
+    return (onHeapCacheFixedSize > 0 && onHeapCacheFixedSize < cachePercentage)
+        ? (long) (max * onHeapCacheFixedSize)
+        : (long) (max * cachePercentage);
   }
 
   /**
-   * @param conf used to read config for bucket cache size. 
+   * @param conf used to read config for bucket cache size.
    * @return the number of bytes to use for bucket cache, negative if disabled.
    */
   public static long getBucketCacheSize(final Configuration conf) {

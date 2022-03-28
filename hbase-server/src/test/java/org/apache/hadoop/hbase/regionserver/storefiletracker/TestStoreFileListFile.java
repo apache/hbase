@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestStoreFileListFile {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStoreFileListFile.class);
+      HBaseClassTestRule.forClass(TestStoreFileListFile.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestStoreFileListFile.class);
 
@@ -73,7 +73,7 @@ public class TestStoreFileListFile {
     HRegionFileSystem hfs = mock(HRegionFileSystem.class);
     when(hfs.getFileSystem()).thenReturn(FileSystem.get(UTIL.getConfiguration()));
     StoreContext ctx = StoreContext.getBuilder().withFamilyStoreDirectoryPath(testDir)
-      .withRegionFileSystem(hfs).build();
+        .withRegionFileSystem(hfs).build();
     storeFileListFile = new StoreFileListFile(ctx);
   }
 

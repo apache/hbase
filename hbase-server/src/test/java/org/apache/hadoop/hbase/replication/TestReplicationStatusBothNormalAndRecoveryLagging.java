@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ public class TestReplicationStatusBothNormalAndRecoveryLagging extends TestRepli
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationStatusBothNormalAndRecoveryLagging.class);
+      HBaseClassTestRule.forClass(TestReplicationStatusBothNormalAndRecoveryLagging.class);
 
   @Test
   public void testReplicationStatusBothNormalAndRecoveryLagging() throws Exception {
@@ -65,7 +65,7 @@ public class TestReplicationStatusBothNormalAndRecoveryLagging extends TestRepli
     Thread.sleep(10000);
     ClusterMetrics metrics = hbaseAdmin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
     List<ReplicationLoadSource> loadSources =
-      metrics.getLiveServerMetrics().get(serverName).getReplicationLoadSourceList();
+        metrics.getLiveServerMetrics().get(serverName).getReplicationLoadSourceList();
     assertEquals(2, loadSources.size());
     boolean foundRecovery = false;
     boolean foundNormal = false;

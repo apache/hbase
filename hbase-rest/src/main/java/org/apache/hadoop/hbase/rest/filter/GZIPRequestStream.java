@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,11 +19,9 @@ package org.apache.hadoop.hbase.rest.filter;
 
 import java.io.IOException;
 import java.util.zip.GZIPInputStream;
-
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,7 +52,7 @@ import org.slf4j.LoggerFactory;
 @Category(LargeTests.class)
 public class TestServerSideScanMetricsFromClientSide {
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestServerSideScanMetricsFromClientSide.class);
+      LoggerFactory.getLogger(TestServerSideScanMetricsFromClientSide.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -299,8 +300,8 @@ public class TestServerSideScanMetricsFromClientSide {
     testRowsFilteredMetric(baseScan, filter, 0);
 
     // No matching column value should exist in any row. Filter all rows
-    filter = new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0],
-      CompareOperator.NOT_EQUAL, VALUE);
+    filter =
+        new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOperator.NOT_EQUAL, VALUE);
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
 
     List<Filter> filters = new ArrayList<>();
@@ -317,7 +318,7 @@ public class TestServerSideScanMetricsFromClientSide {
     for (int family = 0; family < FAMILIES.length; family++) {
       for (int qualifier = 0; qualifier < QUALIFIERS.length; qualifier++) {
         filters.add(new SingleColumnValueExcludeFilter(FAMILIES[family], QUALIFIERS[qualifier],
-          CompareOperator.EQUAL, VALUE));
+            CompareOperator.EQUAL, VALUE));
       }
     }
     filter = new FilterList(Operator.MUST_PASS_ONE, filters);
@@ -353,8 +354,9 @@ public class TestServerSideScanMetricsFromClientSide {
     assertTrue("Metrics are null", metrics != null);
     assertTrue("Metric : " + metricKey + " does not exist", metrics.hasCounter(metricKey));
     final long actualMetricValue = metrics.getCounter(metricKey).get();
-    assertEquals("Metric: " + metricKey + " Expected: " + expectedValue + " Actual: "
-        + actualMetricValue, expectedValue, actualMetricValue);
+    assertEquals(
+      "Metric: " + metricKey + " Expected: " + expectedValue + " Actual: " + actualMetricValue,
+      expectedValue, actualMetricValue);
 
   }
 }

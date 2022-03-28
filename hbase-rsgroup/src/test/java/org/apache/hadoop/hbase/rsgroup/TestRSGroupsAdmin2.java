@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,7 +62,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsAdmin2.class);
+      HBaseClassTestRule.forClass(TestRSGroupsAdmin2.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsAdmin2.class);
 
@@ -116,7 +116,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     // get server which is not a member of new group
     ServerName tmpTargetServer = null;
     for (ServerName server : admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-      .getLiveServerMetrics().keySet()) {
+        .getLiveServerMetrics().keySet()) {
       if (!newGroup.containsServer(server.getAddress())) {
         tmpTargetServer = server;
         break;
@@ -133,15 +133,15 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     });
 
     // Lets move this region to the new group.
-    TEST_UTIL.getAdmin()
-      .move(Bytes.toBytes(RegionInfo.encodeRegionName(Bytes.toBytes(targetRegion))), targetServer);
+    TEST_UTIL.getAdmin().move(
+      Bytes.toBytes(RegionInfo.encodeRegionName(Bytes.toBytes(targetRegion))), targetServer);
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return getTableRegionMap().get(tableName) != null &&
-          getTableRegionMap().get(tableName).size() == 6 &&
-          admin.getClusterMetrics(EnumSet.of(Option.REGIONS_IN_TRANSITION))
-            .getRegionStatesInTransition().size() < 1;
+        return getTableRegionMap().get(tableName) != null
+            && getTableRegionMap().get(tableName).size() == 6
+            && admin.getClusterMetrics(EnumSet.of(Option.REGIONS_IN_TRANSITION))
+                .getRegionStatesInTransition().size() < 1;
       }
     });
 
@@ -207,7 +207,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       @Override
       public boolean evaluate() throws Exception {
         return getNumServers() == rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP)
-          .getServers().size();
+            .getServers().size();
       }
     });
 
@@ -236,7 +236,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       fail("Online servers shouldn't have been successfully removed.");
     } catch (IOException ex) {
       String exp =
-        "Server " + targetServer.getAddress() + " is an online server, not allowed to remove.";
+          "Server " + targetServer.getAddress() + " is an online server, not allowed to remove.";
       String msg = "Expected '" + exp + "' in exception message: ";
       assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
     }
@@ -257,8 +257,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return !master.getServerManager().areDeadServersInProgress() &&
-          cluster.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS;
+        return !master.getServerManager().areDeadServersInProgress()
+            && cluster.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS;
       }
     });
 
@@ -266,8 +266,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       rsGroupAdmin.removeServers(Sets.newHashSet(targetServer.getAddress()));
       fail("Dead servers shouldn't have been successfully removed.");
     } catch (IOException ex) {
-      String exp = "Server " + targetServer.getAddress() + " is on the dead servers list," +
-        " Maybe it will come back again, not allowed to remove.";
+      String exp = "Server " + targetServer.getAddress() + " is on the dead servers list,"
+          + " Maybe it will come back again, not allowed to remove.";
       String msg = "Expected '" + exp + "' in exception message: ";
       assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
     }
@@ -314,9 +314,9 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     // get server which is not a member of new group
     ServerName targetServer = null;
     for (ServerName server : admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-      .getLiveServerMetrics().keySet()) {
-      if (!newGroup.containsServer(server.getAddress()) &&
-        !rsGroupAdmin.getRSGroupInfo("master").containsServer(server.getAddress())) {
+        .getLiveServerMetrics().keySet()) {
+      if (!newGroup.containsServer(server.getAddress())
+          && !rsGroupAdmin.getRSGroupInfo("master").containsServer(server.getAddress())) {
         targetServer = server;
         break;
       }
@@ -324,9 +324,9 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
     LOG.debug("Print group info : " + rsGroupAdmin.listRSGroups());
     int oldDefaultGroupServerSize =
-      rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size();
+        rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size();
     int oldDefaultGroupTableSize =
-      rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables().size();
+        rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables().size();
 
     // test fail bogus server move
     try {
@@ -364,11 +364,11 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return getTableRegionMap().get(tableName) != null &&
-          getTableRegionMap().get(tableName).size() == 5 &&
-          getTableServerRegionMap().get(tableName).size() == 1 &&
-          admin.getClusterMetrics(EnumSet.of(Option.REGIONS_IN_TRANSITION))
-            .getRegionStatesInTransition().size() < 1;
+        return getTableRegionMap().get(tableName) != null
+            && getTableRegionMap().get(tableName).size() == 5
+            && getTableServerRegionMap().get(tableName).size() == 1
+            && admin.getClusterMetrics(EnumSet.of(Option.REGIONS_IN_TRANSITION))
+                .getRegionStatesInTransition().size() < 1;
       }
     });
 
@@ -386,7 +386,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
     // verify servers' not exist in old group
     Set<Address> defaultServers =
-      rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers();
+        rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers();
     assertFalse(defaultServers.contains(targetServer.getAddress()));
 
     // verify servers' exist in new group
@@ -395,7 +395,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
 
     // verify tables' not exist in old group
     Set<TableName> defaultTables =
-      rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
+        rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
     assertFalse(defaultTables.contains(tableName));
 
     // verify tables' exist in new group
@@ -430,8 +430,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     // test success case, remove one server from default ,keep at least one server
     if (defaultGroup.getServers().size() > 1) {
       Address serverInDefaultGroup = defaultGroup.getServers().iterator().next();
-      LOG.info("moving server " + serverInDefaultGroup + " from group default to group " +
-        fooGroup.getName());
+      LOG.info("moving server " + serverInDefaultGroup + " from group default to group "
+          + fooGroup.getName());
       rsGroupAdmin.moveServers(Sets.newHashSet(serverInDefaultGroup), fooGroup.getName());
     }
 
@@ -443,7 +443,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       @Override
       public boolean evaluate() throws Exception {
         return getNumServers() == rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP)
-          .getServers().size();
+            .getServers().size();
       }
     });
 
@@ -480,20 +480,19 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     String rregion = null;
     ServerName toMoveServer = null;
     for (ServerName server : assignMap.keySet()) {
-      rregion = assignMap.get(server).size() > 1 && !newGroup.containsServer(server.getAddress()) ?
-          assignMap.get(server).get(0) :
-          null;
+      rregion = assignMap.get(server).size() > 1 && !newGroup.containsServer(server.getAddress())
+          ? assignMap.get(server).get(0)
+          : null;
       if (rregion != null) {
         toMoveServer = server;
         break;
       }
     }
     assert toMoveServer != null;
-    RegionInfo ri = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().
-        getRegionInfo(Bytes.toBytesBinary(rregion));
-    RegionStateNode rsn =
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-            .getRegionStateNode(ri);
+    RegionInfo ri = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
+        .getRegionInfo(Bytes.toBytesBinary(rregion));
+    RegionStateNode rsn = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
+        .getRegionStates().getRegionStateNode(ri);
     rsn.setState(RegionState.State.SPLITTING);
 
     // start thread to recover region state
@@ -539,8 +538,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       @Override
       public boolean evaluate() {
         if (changed.get()) {
-          return master.getAssignmentManager().getRegionsOnServer(movedServer).size() == 0 && !rsn
-              .getRegionLocation().equals(movedServer);
+          return master.getAssignmentManager().getRegionsOnServer(movedServer).size() == 0
+              && !rsn.getRegionLocation().equals(movedServer);
         }
         return false;
       }
@@ -570,20 +569,19 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     String rregion = null;
     ServerName srcServer = null;
     for (ServerName server : assignMap.keySet()) {
-      rregion = assignMap.get(server).size() >= 1 && !newGroup.containsServer(server.getAddress()) ?
-          assignMap.get(server).get(0) :
-          null;
+      rregion = assignMap.get(server).size() >= 1 && !newGroup.containsServer(server.getAddress())
+          ? assignMap.get(server).get(0)
+          : null;
       if (rregion != null) {
         srcServer = server;
         break;
       }
     }
     assert srcServer != null;
-    RegionInfo ri = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().
-        getRegionInfo(Bytes.toBytesBinary(rregion));
-    RegionStateNode rsn =
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-            .getRegionStateNode(ri);
+    RegionInfo ri = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
+        .getRegionInfo(Bytes.toBytesBinary(rregion));
+    RegionStateNode rsn = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
+        .getRegionStates().getRegionStateNode(ri);
     rsn.setState(RegionState.State.SPLITTING);
 
     // move table to group
@@ -667,8 +665,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     rsGroupAdmin.moveTables(Sets.newHashSet(tableName), newGroup.getName());
     long timeTaken = EnvironmentEdgeManager.currentTime() - startTime;
     String msg =
-      "Should not take mote than 15000 ms to move a table with 100 regions. Time taken  ="
-        + timeTaken + " ms";
+        "Should not take mote than 15000 ms to move a table with 100 regions. Time taken  ="
+            + timeTaken + " ms";
     // This test case is meant to be used for verifying the performance quickly by a developer.
     // Moving 100 regions takes much less than 15000 ms. Given 15000 ms so test cases passes
     // on all environment.

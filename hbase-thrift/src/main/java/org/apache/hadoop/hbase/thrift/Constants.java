@@ -24,12 +24,12 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public final class Constants {
-  private Constants(){}
+  private Constants() {
+  }
 
   public static final int DEFAULT_HTTP_MAX_HEADER_SIZE = 64 * 1024; // 64k
 
-  public static final String SERVER_TYPE_CONF_KEY =
-      "hbase.regionserver.thrift.server.type";
+  public static final String SERVER_TYPE_CONF_KEY = "hbase.regionserver.thrift.server.type";
 
   public static final String COMPACT_CONF_KEY = "hbase.regionserver.thrift.compact";
   public static final boolean COMPACT_CONF_DEFAULT = false;
@@ -55,8 +55,8 @@ public final class Constants {
   public static final String THRIFT_SSL_KEYSTORE_STORE_KEY = "hbase.thrift.ssl.keystore.store";
   public static final String THRIFT_SSL_KEYSTORE_PASSWORD_KEY =
       "hbase.thrift.ssl.keystore.password";
-  public static final String THRIFT_SSL_KEYSTORE_KEYPASSWORD_KEY
-      = "hbase.thrift.ssl.keystore.keypassword";
+  public static final String THRIFT_SSL_KEYSTORE_KEYPASSWORD_KEY =
+      "hbase.thrift.ssl.keystore.keypassword";
   public static final String THRIFT_SSL_EXCLUDE_CIPHER_SUITES_KEY =
       "hbase.thrift.ssl.exclude.cipher.suites";
   public static final String THRIFT_SSL_INCLUDE_CIPHER_SUITES_KEY =
@@ -65,15 +65,12 @@ public final class Constants {
       "hbase.thrift.ssl.exclude.protocols";
   public static final String THRIFT_SSL_INCLUDE_PROTOCOLS_KEY =
       "hbase.thrift.ssl.include.protocols";
-  public static final String THRIFT_SSL_KEYSTORE_TYPE_KEY =
-    "hbase.thrift.ssl.keystore.type";
-  public static final String THRIFT_SSL_KEYSTORE_TYPE_DEFAULT =
-    "jks";
-
+  public static final String THRIFT_SSL_KEYSTORE_TYPE_KEY = "hbase.thrift.ssl.keystore.type";
+  public static final String THRIFT_SSL_KEYSTORE_TYPE_DEFAULT = "jks";
 
   public static final String THRIFT_SUPPORT_PROXYUSER_KEY = "hbase.thrift.support.proxyuser";
 
-  //kerberos related configs
+  // kerberos related configs
   public static final String THRIFT_DNS_INTERFACE_KEY = "hbase.thrift.dns.interface";
   public static final String THRIFT_DNS_NAMESERVER_KEY = "hbase.thrift.dns.nameserver";
   public static final String THRIFT_KERBEROS_PRINCIPAL_KEY = "hbase.thrift.kerberos.principal";
@@ -82,23 +79,18 @@ public final class Constants {
   public static final String THRIFT_SPNEGO_KEYTAB_FILE_KEY = "hbase.thrift.spnego.keytab.file";
 
   /**
-   * Amount of time in milliseconds before a server thread will timeout
-   * waiting for client to send data on a connected socket. Currently,
-   * applies only to TBoundedThreadPoolServer
+   * Amount of time in milliseconds before a server thread will timeout waiting for client to send
+   * data on a connected socket. Currently, applies only to TBoundedThreadPoolServer
    */
   public static final String THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY =
       "hbase.thrift.server.socket.read.timeout";
   public static final int THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT = 60000;
 
-
   /**
-   * Thrift quality of protection configuration key. Valid values can be:
-   * auth-conf: authentication, integrity and confidentiality checking
-   * auth-int: authentication and integrity checking
-   * auth: authentication only
-   *
-   * This is used to authenticate the callers and support impersonation.
-   * The thrift server and the HBase cluster must run in secure mode.
+   * Thrift quality of protection configuration key. Valid values can be: auth-conf: authentication,
+   * integrity and confidentiality checking auth-int: authentication and integrity checking auth:
+   * authentication only This is used to authenticate the callers and support impersonation. The
+   * thrift server and the HBase cluster must run in secure mode.
    */
   public static final String THRIFT_QOP_KEY = "hbase.thrift.security.qop";
 
@@ -142,8 +134,8 @@ public final class Constants {
   public static final String PORT_OPTION = "port";
   public static final String INFOPORT_OPTION = "infoport";
 
-  //for thrift2 server
-  public static final String READONLY_OPTION ="readonly";
+  // for thrift2 server
+  public static final String READONLY_OPTION = "readonly";
 
   public static final String THRIFT_READONLY_ENABLED = "hbase.thrift.readonly";
   public static final boolean THRIFT_READONLY_ENABLED_DEFAULT = false;
@@ -158,6 +150,5 @@ public final class Constants {
 
   public static final String HBASE_THRIFT_CLIENT_BUIDLER_CLASS =
       "hbase.thrift.client.builder.class";
-
 
 }

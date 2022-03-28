@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,19 +45,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * An implementation of the StoreFlusher. It extends the DefaultStoreFlusher.
- * If the store is not a mob store, the flusher flushes the MemStore the same with
- * DefaultStoreFlusher,
- * If the store is a mob store, the flusher flushes the MemStore into two places.
- * One is the store files of HBase, the other is the mob files.
+ * An implementation of the StoreFlusher. It extends the DefaultStoreFlusher. If the store is not a
+ * mob store, the flusher flushes the MemStore the same with DefaultStoreFlusher, If the store is a
+ * mob store, the flusher flushes the MemStore into two places. One is the store files of HBase, the
+ * other is the mob files.
  * <ol>
  * <li>Cells that are not PUT type or have the delete mark will be directly flushed to HBase.</li>
- * <li>If the size of a cell value is larger than a threshold, it'll be flushed
- * to a mob file, another cell with the path of this file will be flushed to HBase.</li>
+ * <li>If the size of a cell value is larger than a threshold, it'll be flushed to a mob file,
+ * another cell with the path of this file will be flushed to HBase.</li>
  * <li>If the size of a cell value is smaller than or equal with a threshold, it'll be flushed to
  * HBase directly.</li>
  * </ol>
- *
  */
 @InterfaceAudience.Private
 public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
@@ -75,8 +72,8 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
       throw new IllegalArgumentException("The store " + store + " is not a HMobStore");
     }
     mobCellValueSizeThreshold = store.getColumnFamilyDescriptor().getMobThreshold();
-    this.targetPath = MobUtils.getMobFamilyPath(conf, store.getTableName(),
-        store.getColumnFamilyName());
+    this.targetPath =
+        MobUtils.getMobFamilyPath(conf, store.getTableName(), store.getColumnFamilyName());
     if (!this.store.getFileSystem().exists(targetPath)) {
       this.store.getFileSystem().mkdirs(targetPath);
     }
@@ -84,15 +81,13 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
   }
 
   /**
-   * Flushes the snapshot of the MemStore.
-   * If this store is not a mob store, flush the cells in the snapshot to store files of HBase.
-   * If the store is a mob one, the flusher flushes the MemStore into two places.
-   * One is the store files of HBase, the other is the mob files.
+   * Flushes the snapshot of the MemStore. If this store is not a mob store, flush the cells in the
+   * snapshot to store files of HBase. If the store is a mob one, the flusher flushes the MemStore
+   * into two places. One is the store files of HBase, the other is the mob files.
    * <ol>
-   * <li>Cells that are not PUT type or have the delete mark will be directly flushed to
-   * HBase.</li>
-   * <li>If the size of a cell value is larger than a threshold, it'll be
-   * flushed to a mob file, another cell with the path of this file will be flushed to HBase.</li>
+   * <li>Cells that are not PUT type or have the delete mark will be directly flushed to HBase.</li>
+   * <li>If the size of a cell value is larger than a threshold, it'll be flushed to a mob file,
+   * another cell with the path of this file will be flushed to HBase.</li>
    * <li>If the size of a cell value is smaller than or equal with a threshold, it'll be flushed to
    * HBase directly.</li>
    * </ol>
@@ -136,22 +131,22 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
       scanner.close();
     }
     LOG.info("Mob store is flushed, sequenceid=" + cacheFlushId + ", memsize="
-        + StringUtils.TraditionalBinaryPrefix.long2String(snapshot.getDataSize(), "", 1) +
-        ", hasBloomFilter=" + writer.hasGeneralBloom() +
-        ", into tmp file " + writer.getPath());
+        + StringUtils.TraditionalBinaryPrefix.long2String(snapshot.getDataSize(), "", 1)
+        + ", hasBloomFilter=" + writer.hasGeneralBloom() + ", into tmp file " + writer.getPath());
     result.add(writer.getPath());
     return result;
   }
 
   /**
    * Flushes the cells in the mob store.
-   * <ol>In the mob store, the cells with PUT type might have or have no mob tags.
-   * <li>If a cell does not have a mob tag, flushing the cell to different files depends
-   * on the value length. If the length is larger than a threshold, it's flushed to a
-   * mob file and the mob file is flushed to a store file in HBase. Otherwise, directly
-   * flush the cell to a store file in HBase.</li>
-   * <li>If a cell have a mob tag, its value is a mob file name, directly flush it
-   * to a store file in HBase.</li>
+   * <ol>
+   * In the mob store, the cells with PUT type might have or have no mob tags.
+   * <li>If a cell does not have a mob tag, flushing the cell to different files depends on the
+   * value length. If the length is larger than a threshold, it's flushed to a mob file and the mob
+   * file is flushed to a store file in HBase. Otherwise, directly flush the cell to a store file in
+   * HBase.</li>
+   * <li>If a cell have a mob tag, its value is a mob file name, directly flush it to a store file
+   * in HBase.</li>
    * </ol>
    * @param snapshot Memstore snapshot.
    * @param cacheFlushId Log cache flush sequence number.
@@ -165,13 +160,14 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
       InternalScanner scanner, StoreFileWriter writer, MonitoredTask status,
       ThroughputController throughputController) throws IOException {
     StoreFileWriter mobFileWriter = null;
-    int compactionKVMax = conf.getInt(HConstants.COMPACTION_KV_MAX,
-        HConstants.COMPACTION_KV_MAX_DEFAULT);
+    int compactionKVMax =
+        conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
     long mobCount = 0;
     long mobSize = 0;
     long time = snapshot.getTimeRangeTracker().getMax();
     mobFileWriter = mobStore.createWriterInTmp(new Date(time), snapshot.getCellsCount(),
-        store.getColumnFamilyDescriptor().getCompressionType(), store.getRegionInfo().getStartKey(), false);
+      store.getColumnFamilyDescriptor().getCompressionType(), store.getRegionInfo().getStartKey(),
+      false);
     // the target path is {tableName}/.mob/{cfName}/mobFiles
     // the relative path is mobFiles
     byte[] fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
@@ -180,7 +176,8 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     List<Cell> cells = new ArrayList<>();
     boolean hasMore;
     String flushName = ThroughputControlUtil.getNameForThrottling(store, "flush");
-    boolean control = throughputController != null && !store.getRegionInfo().getTable().isSystemTable();
+    boolean control =
+        throughputController != null && !store.getRegionInfo().getTable().isSystemTable();
     if (control) {
       throughputController.start(flushName);
     }
@@ -204,8 +201,8 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
 
               // append the tags to the KeyValue.
               // The key is same, the value is the filename of the mob file
-              Cell reference = MobUtils.createMobRefCell(c, fileName,
-                  this.mobStore.getRefCellTags());
+              Cell reference =
+                  MobUtils.createMobRefCell(c, fileName, this.mobStore.getRefCellTags());
               writer.append(reference);
             }
             if (control) {

@@ -34,13 +34,13 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
-import org.mockito.Mockito;
 
-@Category({ReplicationTests.class, SmallTests.class})
+@Category({ ReplicationTests.class, SmallTests.class })
 public class TestReplicationSinkManager {
 
   @ClassRule
@@ -53,9 +53,9 @@ public class TestReplicationSinkManager {
   private HBaseReplicationEndpoint replicationEndpoint;
 
   /**
-   * Manage the 'getRegionServers' for the tests below. Override the base class handling
-   * of Regionservers. We used to use a mock for this but updated guava/errorprone disallows
-   * mocking of classes that implement Service.
+   * Manage the 'getRegionServers' for the tests below. Override the base class handling of
+   * Regionservers. We used to use a mock for this but updated guava/errorprone disallows mocking of
+   * classes that implement Service.
    */
   private static class SetServersHBaseReplicationEndpoint extends HBaseReplicationEndpoint {
     List<ServerName> regionServers;
@@ -80,7 +80,7 @@ public class TestReplicationSinkManager {
   public void setUp() {
     this.replicationEndpoint = new SetServersHBaseReplicationEndpoint();
     sinkManager = new ReplicationSinkManager(mock(ClusterConnection.class), PEER_CLUSTER_ID,
-      replicationEndpoint, new Configuration());
+        replicationEndpoint, new Configuration());
   }
 
   @Test
@@ -99,8 +99,8 @@ public class TestReplicationSinkManager {
 
   @Test
   public void testChooseSinks_LessThanRatioAvailable() {
-    List<ServerName> serverNames = Lists.newArrayList(mock(ServerName.class),
-      mock(ServerName.class));
+    List<ServerName> serverNames =
+        Lists.newArrayList(mock(ServerName.class), mock(ServerName.class));
     replicationEndpoint.setRegionServers(serverNames);
     sinkManager.chooseSinks();
     assertEquals(1, sinkManager.getNumSinks());
@@ -125,8 +125,8 @@ public class TestReplicationSinkManager {
   }
 
   /**
-   * Once a SinkPeer has been reported as bad more than BAD_SINK_THRESHOLD times, it should not
-   * be replicated to anymore.
+   * Once a SinkPeer has been reported as bad more than BAD_SINK_THRESHOLD times, it should not be
+   * replicated to anymore.
    */
   @Test
   public void testReportBadSink_PastThreshold() {
@@ -160,7 +160,7 @@ public class TestReplicationSinkManager {
     serverName = sinkManager.getSinksForTesting().get(0);
 
     sinkPeer = new SinkPeer(serverName, mock(AdminService.BlockingInterface.class));
-    for (int i = 0; i <= ReplicationSinkManager.DEFAULT_BAD_SINK_THRESHOLD-1; i++) {
+    for (int i = 0; i <= ReplicationSinkManager.DEFAULT_BAD_SINK_THRESHOLD - 1; i++) {
       sinkManager.reportBadSink(sinkPeer);
     }
     sinkManager.reportSinkSuccess(sinkPeer); // one success
@@ -169,7 +169,7 @@ public class TestReplicationSinkManager {
     // did not remove the sink, since we had one successful try
     assertEquals(expected - 1, sinkManager.getNumSinks());
 
-    for (int i = 0; i <= ReplicationSinkManager.DEFAULT_BAD_SINK_THRESHOLD-2; i++) {
+    for (int i = 0; i <= ReplicationSinkManager.DEFAULT_BAD_SINK_THRESHOLD - 2; i++) {
       sinkManager.reportBadSink(sinkPeer);
     }
     // still not remove, since the success reset the counter

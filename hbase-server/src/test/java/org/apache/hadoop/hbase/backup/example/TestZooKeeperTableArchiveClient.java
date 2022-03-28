@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,7 +72,7 @@ import org.slf4j.LoggerFactory;
  * Spin up a small cluster and check that the hfiles of region are properly long-term archived as
  * specified via the {@link ZKTableArchiveClient}.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestZooKeeperTableArchiveClient {
 
   @ClassRule
@@ -90,7 +90,6 @@ public class TestZooKeeperTableArchiveClient {
   private static RegionServerServices rss;
   private static DirScanPool POOL;
 
-
   /**
    * Setup the config for the cluster
    */
@@ -98,7 +97,7 @@ public class TestZooKeeperTableArchiveClient {
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniZKCluster();
-    CONNECTION = (ClusterConnection)ConnectionFactory.createConnection(UTIL.getConfiguration());
+    CONNECTION = (ClusterConnection) ConnectionFactory.createConnection(UTIL.getConfiguration());
     archivingClient = new ZKTableArchiveClient(UTIL.getConfiguration(), CONNECTION);
     // make hfile archiving node so we can archive files
     ZKWatcher watcher = UTIL.getZooKeeperWatcher();
@@ -119,7 +118,7 @@ public class TestZooKeeperTableArchiveClient {
       FileSystem fs = UTIL.getTestFileSystem();
       // cleanup each of the files/directories registered
       for (Path file : toCleanup) {
-      // remove the table and archive directories
+        // remove the table and archive directories
         CommonFSUtils.delete(fs, file, true);
       }
     } catch (IOException e) {
@@ -150,8 +149,7 @@ public class TestZooKeeperTableArchiveClient {
     // 1. turn on hfile backups
     LOG.debug("----Starting archiving");
     archivingClient.enableHFileBackupAsync(TABLE_NAME);
-    assertTrue("Archving didn't get turned on", archivingClient
-        .getArchivingEnabled(TABLE_NAME));
+    assertTrue("Archving didn't get turned on", archivingClient.getArchivingEnabled(TABLE_NAME));
 
     // 2. Turn off archiving and make sure its off
     archivingClient.disableHFileBackup();
@@ -159,8 +157,7 @@ public class TestZooKeeperTableArchiveClient {
 
     // 3. Check enable/disable on a single table
     archivingClient.enableHFileBackupAsync(TABLE_NAME);
-    assertTrue("Archving didn't get turned on", archivingClient
-        .getArchivingEnabled(TABLE_NAME));
+    assertTrue("Archving didn't get turned on", archivingClient.getArchivingEnabled(TABLE_NAME));
 
     // 4. Turn off archiving and make sure its off
     archivingClient.disableHFileBackup(TABLE_NAME);
@@ -253,12 +250,12 @@ public class TestZooKeeperTableArchiveClient {
     regions = new ArrayList<>();
     regions.add(otherRegion);
     Mockito.doReturn(regions).when(rss).getRegions();
-    final CompactedHFilesDischarger compactionCleaner1 = new CompactedHFilesDischarger(100, stop,
-        rss, false);
+    final CompactedHFilesDischarger compactionCleaner1 =
+        new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(otherRegion, TEST_FAM);
     compactionCleaner1.chore();
     // get the current hfiles in the archive directory
-    // Should  be archived
+    // Should be archived
     List<Path> files = getAllFiles(fs, archiveDir);
     if (files == null) {
       CommonFSUtils.logFileSystemState(fs, archiveDir, LOG);
@@ -294,7 +291,7 @@ public class TestZooKeeperTableArchiveClient {
     // know the cleaner ran, so now check all the files again to make sure they are still there
     List<Path> archivedFiles = getAllFiles(fs, archiveDir);
     int archivedForPrimary = 0;
-    for(Path file: archivedFiles) {
+    for (Path file : archivedFiles) {
       String tableName = file.getParent().getParent().getParent().getName();
       // ensure we don't have files from the non-archived table
       assertFalse("Have a file from the non-archived table: " + file, tableName.equals(otherTable));
@@ -304,15 +301,14 @@ public class TestZooKeeperTableArchiveClient {
     }
 
     assertEquals("Not all archived files for the primary table were retained.",
-        initialCountForPrimary, archivedForPrimary);
+      initialCountForPrimary, archivedForPrimary);
 
     // but we still have the archive directory
     assertTrue("Archive directory was deleted via archiver", fs.exists(archiveDir));
   }
 
-
   private void createArchiveDirectory() throws IOException {
-    //create the archive and test directory
+    // create the archive and test directory
     FileSystem fs = UTIL.getTestFileSystem();
     Path archiveDir = getArchiveDir();
     fs.mkdirs(archiveDir);

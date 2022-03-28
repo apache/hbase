@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,10 +18,6 @@
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -32,13 +27,15 @@ import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Convert HBase tabular data into a format that is consumable by Map/Reduce.
  */
 @InterfaceAudience.Public
-public class TableInputFormat extends TableInputFormatBase implements
-    JobConfigurable {
+public class TableInputFormat extends TableInputFormatBase implements JobConfigurable {
   private static final Logger LOG = LoggerFactory.getLogger(TableInputFormat.class);
 
   /**
@@ -59,7 +56,7 @@ public class TableInputFormat extends TableInputFormatBase implements
     Path[] tableNames = FileInputFormat.getInputPaths(job);
     String colArg = job.get(COLUMN_LIST);
     String[] colNames = colArg.split(" ");
-    byte [][] m_cols = new byte[colNames.length][];
+    byte[][] m_cols = new byte[colNames.length][];
     for (int i = 0; i < m_cols.length; i++) {
       m_cols[i] = Bytes.toBytes(colNames[i]);
     }
@@ -70,15 +67,14 @@ public class TableInputFormat extends TableInputFormatBase implements
 
   public void validateInput(JobConf job) throws IOException {
     // expecting exactly one path
-    Path [] tableNames = FileInputFormat.getInputPaths(job);
+    Path[] tableNames = FileInputFormat.getInputPaths(job);
     if (tableNames == null || tableNames.length > 1) {
       throw new IOException("expecting one table name");
     }
 
     // connected to table?
     if (getTable() == null) {
-      throw new IOException("could not connect to table '" +
-        tableNames[0].getName() + "'");
+      throw new IOException("could not connect to table '" + tableNames[0].getName() + "'");
     }
 
     // expecting at least one column

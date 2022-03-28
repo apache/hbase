@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,7 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Slf4jRequestLogWrite
 public final class HttpRequestLog {
 
   private static final ImmutableMap<String, String> SERVER_TO_COMPONENT =
-    ImmutableMap.of("master", "master", "region", "regionserver");
+      ImmutableMap.of("master", "master", "region", "regionserver");
 
   public static RequestLog getRequestLog(String name) {
     String lookup = SERVER_TO_COMPONENT.get(name);

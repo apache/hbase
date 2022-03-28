@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
@@ -65,21 +64,20 @@ import org.apache.hadoop.hbase.wal.OutputSink;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALSplitter.PipelineController;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 
 /**
- * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint} endpoint
- * which receives the WAL edits from the WAL, and sends the edits to replicas
- * of regions.
+ * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint} endpoint which receives the WAL
+ * edits from the WAL, and sends the edits to replicas of regions.
  */
 @InterfaceAudience.Private
 public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
@@ -87,8 +85,8 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
   private static final Logger LOG = LoggerFactory.getLogger(RegionReplicaReplicationEndpoint.class);
 
   // Can be configured differently than hbase.client.retries.number
-  private static String CLIENT_RETRIES_NUMBER
-    = "hbase.region.replica.replication.client.retries.number";
+  private static String CLIENT_RETRIES_NUMBER =
+      "hbase.region.replica.replication.client.retries.number";
 
   private Configuration conf;
   private ClusterConnection connection;
@@ -128,8 +126,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     int numRetries = conf.getInt(CLIENT_RETRIES_NUMBER, defaultNumRetries);
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, numRetries);
 
-    this.numWriterThreads = this.conf.getInt(
-      "hbase.region.replica.replication.writer.threads", 3);
+    this.numWriterThreads = this.conf.getInt("hbase.region.replica.replication.writer.threads", 3);
     controller = new PipelineController();
     entryBuffers = new EntryBuffers(controller,
         this.conf.getLong("hbase.region.replica.replication.buffersize", 128 * 1024 * 1024));
@@ -145,7 +142,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       connection = (ClusterConnection) ConnectionFactory.createConnection(this.conf);
       this.pool = getDefaultThreadPool(conf);
       outputSink = new RegionReplicaOutputSink(controller, tableDescriptors, entryBuffers,
-        connection, pool, numWriterThreads, operationTimeout);
+          connection, pool, numWriterThreads, operationTimeout);
       outputSink.startWriterThreads();
       super.doStart();
     } catch (IOException ex) {
@@ -186,8 +183,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
   }
 
   /**
-   * Returns a Thread pool for the RPC's to region replicas. Similar to
-   * Connection's thread pool.
+   * Returns a Thread pool for the RPC's to region replicas. Similar to Connection's thread pool.
    */
   private ExecutorService getDefaultThreadPool(Configuration conf) {
     int maxThreads = conf.getInt("hbase.region.replica.replication.threads.max", 256);
@@ -196,58 +192,53 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     }
     long keepAliveTime = conf.getLong("hbase.region.replica.replication.threads.keepalivetime", 60);
     LinkedBlockingQueue<Runnable> workQueue =
-        new LinkedBlockingQueue<>(maxThreads *
-            conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
-              HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
+        new LinkedBlockingQueue<>(maxThreads * conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
+          HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
     ThreadPoolExecutor tpe =
-      new ThreadPoolExecutor(maxThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
-        new ThreadFactoryBuilder()
-          .setNameFormat(this.getClass().getSimpleName() + "-rpc-shared-pool-%d")
-          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+        new ThreadPoolExecutor(maxThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
+            new ThreadFactoryBuilder()
+                .setNameFormat(this.getClass().getSimpleName() + "-rpc-shared-pool-%d")
+                .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     tpe.allowCoreThreadTimeOut(true);
     return tpe;
   }
 
   @Override
   public boolean replicate(ReplicateContext replicateContext) {
-    /* A note on batching in RegionReplicaReplicationEndpoint (RRRE):
-     *
-     * RRRE relies on batching from two different mechanisms. The first is the batching from
-     * ReplicationSource since RRRE is a ReplicationEndpoint driven by RS. RS reads from a single
-     * WAL file filling up a buffer of heap size "replication.source.size.capacity"(64MB) or at most
-     * "replication.source.nb.capacity" entries or until it sees the end of file (in live tailing).
-     * Then RS passes all the buffered edits in this replicate() call context. RRRE puts the edits
-     * to the WALSplitter.EntryBuffers which is a blocking buffer space of up to
-     * "hbase.region.replica.replication.buffersize" (128MB) in size. This buffer splits the edits
-     * based on regions.
-     *
-     * There are "hbase.region.replica.replication.writer.threads"(default 3) writer threads which
-     * pick largest per-region buffer and send it to the SinkWriter (see RegionReplicaOutputSink).
-     * The SinkWriter in this case will send the wal edits to all secondary region replicas in
-     * parallel via a retrying rpc call. EntryBuffers guarantees that while a buffer is
-     * being written to the sink, another buffer for the same region will not be made available to
-     * writers ensuring regions edits are not replayed out of order.
-     *
-     * The replicate() call won't return until all the buffers are sent and ack'd by the sinks so
-     * that the replication can assume all edits are persisted. We may be able to do a better
-     * pipelining between the replication thread and output sinks later if it becomes a bottleneck.
+    /*
+     * A note on batching in RegionReplicaReplicationEndpoint (RRRE): RRRE relies on batching from
+     * two different mechanisms. The first is the batching from ReplicationSource since RRRE is a
+     * ReplicationEndpoint driven by RS. RS reads from a single WAL file filling up a buffer of heap
+     * size "replication.source.size.capacity"(64MB) or at most "replication.source.nb.capacity"
+     * entries or until it sees the end of file (in live tailing). Then RS passes all the buffered
+     * edits in this replicate() call context. RRRE puts the edits to the WALSplitter.EntryBuffers
+     * which is a blocking buffer space of up to "hbase.region.replica.replication.buffersize"
+     * (128MB) in size. This buffer splits the edits based on regions. There are
+     * "hbase.region.replica.replication.writer.threads"(default 3) writer threads which pick
+     * largest per-region buffer and send it to the SinkWriter (see RegionReplicaOutputSink). The
+     * SinkWriter in this case will send the wal edits to all secondary region replicas in parallel
+     * via a retrying rpc call. EntryBuffers guarantees that while a buffer is being written to the
+     * sink, another buffer for the same region will not be made available to writers ensuring
+     * regions edits are not replayed out of order. The replicate() call won't return until all the
+     * buffers are sent and ack'd by the sinks so that the replication can assume all edits are
+     * persisted. We may be able to do a better pipelining between the replication thread and output
+     * sinks later if it becomes a bottleneck.
      */
 
     while (this.isRunning()) {
       try {
-        for (Entry entry: replicateContext.getEntries()) {
+        for (Entry entry : replicateContext.getEntries()) {
           entryBuffers.appendEntry(entry);
         }
         outputSink.flush(); // make sure everything is flushed
-        ctx.getMetrics().incrLogEditsFiltered(
-          outputSink.getSkippedEditsCounter().getAndSet(0));
+        ctx.getMetrics().incrLogEditsFiltered(outputSink.getSkippedEditsCounter().getAndSet(0));
         return true;
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         return false;
       } catch (IOException e) {
-        LOG.warn("Received IOException while trying to replicate"
-            + StringUtils.stringifyException(e));
+        LOG.warn(
+          "Received IOException while trying to replicate" + StringUtils.stringifyException(e));
         outputSink.restartWriterThreadsIfNeeded();
       }
     }
@@ -283,13 +274,11 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       // It has a default expiry of 5 sec. This means that if the table is altered
       // with a different flag value, we might miss to replicate for that amount of
       // time. But this cache avoid the slow lookup and parsing of the TableDescriptor.
-      int memstoreReplicationEnabledCacheExpiryMs = connection.getConfiguration()
-        .getInt("hbase.region.replica.replication.cache.memstoreReplicationEnabled.expiryMs", 5000);
+      int memstoreReplicationEnabledCacheExpiryMs = connection.getConfiguration().getInt(
+        "hbase.region.replica.replication.cache.memstoreReplicationEnabled.expiryMs", 5000);
       this.memstoreReplicationEnabled = CacheBuilder.newBuilder()
-        .expireAfterWrite(memstoreReplicationEnabledCacheExpiryMs, TimeUnit.MILLISECONDS)
-        .initialCapacity(10)
-        .maximumSize(1000)
-        .build();
+          .expireAfterWrite(memstoreReplicationEnabledCacheExpiryMs, TimeUnit.MILLISECONDS)
+          .initialCapacity(10).maximumSize(1000).build();
     }
 
     @Override
@@ -342,9 +331,9 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     }
 
     /**
-     * returns true if the specified entry must be replicated.
-     * We should always replicate meta operations (e.g. flush)
-     * and use the user HTD flag to decide whether or not replicate the memstore.
+     * returns true if the specified entry must be replicated. We should always replicate meta
+     * operations (e.g. flush) and use the user HTD flag to decide whether or not replicate the
+     * memstore.
      */
     private boolean requiresReplication(final TableName tableName, final List<Entry> entries)
         throws IOException {
@@ -401,22 +390,20 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       this.sink = sink;
       this.connection = connection;
       this.operationTimeout = operationTimeout;
-      this.rpcRetryingCallerFactory
-        = RpcRetryingCallerFactory.instantiate(connection.getConfiguration());
+      this.rpcRetryingCallerFactory =
+          RpcRetryingCallerFactory.instantiate(connection.getConfiguration());
       this.rpcControllerFactory = RpcControllerFactory.instantiate(connection.getConfiguration());
       this.pool = pool;
       this.tableDescriptors = tableDescriptors;
 
       int nonExistentTableCacheExpiryMs = connection.getConfiguration()
-        .getInt("hbase.region.replica.replication.cache.disabledAndDroppedTables.expiryMs", 5000);
+          .getInt("hbase.region.replica.replication.cache.disabledAndDroppedTables.expiryMs", 5000);
       // A cache for non existing tables that have a default expiry of 5 sec. This means that if the
       // table is created again with the same name, we might miss to replicate for that amount of
       // time. But this cache prevents overloading meta requests for every edit from a deleted file.
       disabledAndDroppedTables = CacheBuilder.newBuilder()
-        .expireAfterWrite(nonExistentTableCacheExpiryMs, TimeUnit.MILLISECONDS)
-        .initialCapacity(10)
-        .maximumSize(1000)
-        .build();
+          .expireAfterWrite(nonExistentTableCacheExpiryMs, TimeUnit.MILLISECONDS)
+          .initialCapacity(10).maximumSize(1000).build();
     }
 
     public void append(TableName tableName, byte[] encodedRegionName, byte[] row,
@@ -425,7 +412,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       if (disabledAndDroppedTables.getIfPresent(tableName) != null) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Skipping " + entries.size() + " entries because table " + tableName
-            + " is cached as a disabled or dropped table");
+              + " is cached as a disabled or dropped table");
           for (Entry entry : entries) {
             LOG.trace("Skipping : " + entry);
           }
@@ -442,11 +429,11 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       while (true) {
         // get the replicas of the primary region
         try {
-          locations = RegionReplicaReplayCallable
-              .getRegionLocations(connection, tableName, row, useCache, 0);
+          locations = RegionReplicaReplayCallable.getRegionLocations(connection, tableName, row,
+            useCache, 0);
           if (locations == null) {
-            throw new HBaseIOException("Cannot locate locations for "
-                + tableName + ", row:" + Bytes.toStringBinary(row));
+            throw new HBaseIOException(
+                "Cannot locate locations for " + tableName + ", row:" + Bytes.toStringBinary(row));
           }
           // Replicas can take a while to come online. The cache may have only the primary. If we
           // keep going to the cache, we will not learn of the replicas and their locations after
@@ -463,7 +450,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         } catch (TableNotFoundException e) {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Skipping " + entries.size() + " entries because table " + tableName
-              + " is dropped. Adding table to cache.");
+                + " is dropped. Adding table to cache.");
             for (Entry entry : entries) {
               LOG.trace("Skipping : " + entry);
             }
@@ -478,16 +465,16 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         // entry is not coming from the primary region, filter it out.
         HRegionLocation primaryLocation = locations.getDefaultRegionLocation();
         if (!Bytes.equals(primaryLocation.getRegionInfo().getEncodedNameAsBytes(),
-            encodedRegionName)) {
+          encodedRegionName)) {
           if (useCache) {
             useCache = false;
             continue; // this will retry location lookup
           }
           if (LOG.isTraceEnabled()) {
             LOG.trace("Skipping " + entries.size() + " entries in table " + tableName
-              + " because located region " + primaryLocation.getRegionInfo().getEncodedName()
-              + " is different than the original region " + Bytes.toStringBinary(encodedRegionName)
-              + " from WALEdit");
+                + " because located region " + primaryLocation.getRegionInfo().getEncodedName()
+                + " is different than the original region "
+                + Bytes.toStringBinary(encodedRegionName) + " from WALEdit");
             for (Entry entry : entries) {
               LOG.trace("Skipping : " + entry);
             }
@@ -513,12 +500,12 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
               ? RegionReplicaUtil.getRegionInfoForReplica(
                 locations.getDefaultRegionLocation().getRegionInfo(), replicaId)
               : location.getRegionInfo();
-          RegionReplicaReplayCallable callable = new RegionReplicaReplayCallable(connection,
-            rpcControllerFactory, tableName, location, regionInfo, row, entries,
-            sink.getSkippedEditsCounter());
-           Future<ReplicateWALEntryResponse> task = pool.submit(
-             new RetryingRpcCallable<>(rpcRetryingCallerFactory, callable, operationTimeout));
-           tasks.add(task);
+          RegionReplicaReplayCallable callable =
+              new RegionReplicaReplayCallable(connection, rpcControllerFactory, tableName, location,
+                  regionInfo, row, entries, sink.getSkippedEditsCounter());
+          Future<ReplicateWALEntryResponse> task = pool.submit(
+            new RetryingRpcCallable<>(rpcRetryingCallerFactory, callable, operationTimeout));
+          tasks.add(task);
         }
       }
 
@@ -538,14 +525,13 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
             // RPC. So instead we start the replay RPC with retries and check whether the table is
             // dropped or disabled which might cause SocketTimeoutException, or
             // RetriesExhaustedException or similar if we get IOE.
-            if (cause instanceof TableNotFoundException
-                || connection.isTableDisabled(tableName)) {
+            if (cause instanceof TableNotFoundException || connection.isTableDisabled(tableName)) {
               disabledAndDroppedTables.put(tableName, Boolean.TRUE); // put to cache for later.
               canBeSkipped = true;
             } else if (tableDescriptors != null) {
               TableDescriptor tableDescriptor = tableDescriptors.get(tableName);
               if (tableDescriptor != null
-                  //(replicaId + 1) as no task is added for primary replica for replication
+                  // (replicaId + 1) as no task is added for primary replica for replication
                   && tableDescriptor.getRegionReplication() <= (replicaId + 1)) {
                 canBeSkipped = true;
               }
@@ -567,7 +553,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
             }
 
             // otherwise rethrow
-            throw (IOException)cause;
+            throw (IOException) cause;
           }
           // unexpected exception
           throw new IOException(cause);
@@ -580,15 +566,17 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     RpcRetryingCallerFactory factory;
     RetryingCallable<V> callable;
     int timeout;
+
     public RetryingRpcCallable(RpcRetryingCallerFactory factory, RetryingCallable<V> callable,
         int timeout) {
       this.factory = factory;
       this.callable = callable;
       this.timeout = timeout;
     }
+
     @Override
     public V call() throws Exception {
-      return factory.<V>newCaller().callWithRetries(callable, timeout);
+      return factory.<V> newCaller().callWithRetries(callable, timeout);
     }
   }
 
@@ -596,16 +584,15 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
    * Calls replay on the passed edits for the given set of entries belonging to the region. It skips
    * the entry if the region boundaries have changed or the region is gone.
    */
-  static class RegionReplicaReplayCallable extends
-      RegionAdminServiceCallable<ReplicateWALEntryResponse> {
+  static class RegionReplicaReplayCallable
+      extends RegionAdminServiceCallable<ReplicateWALEntryResponse> {
     private final List<Entry> entries;
     private final byte[] initialEncodedRegionName;
     private final AtomicLong skippedEntries;
 
     public RegionReplicaReplayCallable(ClusterConnection connection,
-        RpcControllerFactory rpcControllerFactory, TableName tableName,
-        HRegionLocation location, RegionInfo regionInfo, byte[] row,List<Entry> entries,
-        AtomicLong skippedEntries) {
+        RpcControllerFactory rpcControllerFactory, TableName tableName, HRegionLocation location,
+        RegionInfo regionInfo, byte[] row, List<Entry> entries, AtomicLong skippedEntries) {
       super(connection, rpcControllerFactory, location, tableName, row, regionInfo.getReplicaId());
       this.entries = entries;
       this.skippedEntries = skippedEntries;
@@ -619,7 +606,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       // Regions can change because of (1) region split (2) region merge (3) table recreated
       boolean skip = false;
       if (!Bytes.equals(location.getRegionInfo().getEncodedNameAsBytes(),
-          initialEncodedRegionName)) {
+        initialEncodedRegionName)) {
         skip = true;
       }
       if (!this.entries.isEmpty() && !skip) {
@@ -628,8 +615,8 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
         // set the region name for the target region replica
         Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> p =
-            ReplicationProtbufUtil.buildReplicateWALEntryRequest(entriesArray, location
-                .getRegionInfo().getEncodedNameAsBytes(), null, null, null);
+            ReplicationProtbufUtil.buildReplicateWALEntryRequest(entriesArray,
+              location.getRegionInfo().getEncodedNameAsBytes(), null, null, null);
         controller.setCellScanner(p.getSecond());
         return stub.replay(controller, p.getFirst());
       }
@@ -637,9 +624,9 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       if (skip) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Skipping " + entries.size() + " entries in table " + tableName
-            + " because located region " + location.getRegionInfo().getEncodedName()
-            + " is different than the original region "
-            + Bytes.toStringBinary(initialEncodedRegionName) + " from WALEdit");
+              + " because located region " + location.getRegionInfo().getEncodedName()
+              + " is different than the original region "
+              + Bytes.toStringBinary(initialEncodedRegionName) + " from WALEdit");
           for (Entry entry : entries) {
             LOG.trace("Skipping : " + entry);
           }

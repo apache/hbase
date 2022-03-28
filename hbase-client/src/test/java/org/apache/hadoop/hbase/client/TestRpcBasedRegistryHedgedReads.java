@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,22 +64,22 @@ public class TestRpcBasedRegistryHedgedReads {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRpcBasedRegistryHedgedReads.class);
+      HBaseClassTestRule.forClass(TestRpcBasedRegistryHedgedReads.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRpcBasedRegistryHedgedReads.class);
 
   private static final String HEDGED_REQS_FANOUT_CONFIG_NAME = "hbase.test.hedged.reqs.fanout";
   private static final String INITIAL_DELAY_SECS_CONFIG_NAME =
-    "hbase.test.refresh.initial.delay.secs";
+      "hbase.test.refresh.initial.delay.secs";
   private static final String REFRESH_INTERVAL_SECS_CONFIG_NAME =
-    "hbase.test.refresh.interval.secs";
+      "hbase.test.refresh.interval.secs";
   private static final String MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME =
-    "hbase.test.min.refresh.interval.secs";
+      "hbase.test.min.refresh.interval.secs";
 
   private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
 
   private static final ExecutorService EXECUTOR =
-    Executors.newCachedThreadPool(new ThreadFactoryBuilder().setDaemon(true).build());
+      Executors.newCachedThreadPool(new ThreadFactoryBuilder().setDaemon(true).build());
 
   private static Set<ServerName> BOOTSTRAP_NODES;
 
@@ -90,12 +90,12 @@ public class TestRpcBasedRegistryHedgedReads {
   private static volatile Set<Integer> GOOD_RESP_INDEXS;
 
   private static GetClusterIdResponse RESP =
-    GetClusterIdResponse.newBuilder().setClusterId("id").build();
+      GetClusterIdResponse.newBuilder().setClusterId("id").build();
 
   public static final class RpcClientImpl implements RpcClient {
 
     public RpcClientImpl(Configuration configuration, String clusterId, SocketAddress localAddress,
-      MetricsConnection metrics) {
+        MetricsConnection metrics) {
     }
 
     @Override
@@ -130,7 +130,7 @@ public class TestRpcBasedRegistryHedgedReads {
 
     @Override
     public void callMethod(MethodDescriptor method, RpcController controller, Message request,
-      Message responsePrototype, RpcCallback<Message> done) {
+        Message responsePrototype, RpcCallback<Message> done) {
       if (!method.getName().equals("GetClusterId")) {
         // On RPC failures, MasterRegistry internally runs getMasters() RPC to keep the master list
         // fresh. We do not want to intercept those RPCs here and double count.
@@ -155,8 +155,8 @@ public class TestRpcBasedRegistryHedgedReads {
     Configuration conf = UTIL.getConfiguration();
     conf.setInt(HEDGED_REQS_FANOUT_CONFIG_NAME, hedged);
     return new AbstractRpcBasedConnectionRegistry(conf, HEDGED_REQS_FANOUT_CONFIG_NAME,
-      INITIAL_DELAY_SECS_CONFIG_NAME, REFRESH_INTERVAL_SECS_CONFIG_NAME,
-      MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME) {
+        INITIAL_DELAY_SECS_CONFIG_NAME, REFRESH_INTERVAL_SECS_CONFIG_NAME,
+        MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME) {
 
       @Override
       protected Set<ServerName> getBootstrapNodes(Configuration conf) throws IOException {
@@ -168,7 +168,8 @@ public class TestRpcBasedRegistryHedgedReads {
         return CompletableFuture.completedFuture(BOOTSTRAP_NODES);
       }
 
-      @Override public String getConnectionString() {
+      @Override
+      public String getConnectionString() {
         return "unimplemented";
       }
     };
@@ -184,8 +185,8 @@ public class TestRpcBasedRegistryHedgedReads {
     conf.setLong(REFRESH_INTERVAL_SECS_CONFIG_NAME, Integer.MAX_VALUE);
     conf.setLong(MIN_REFRESH_INTERVAL_SECS_CONFIG_NAME, Integer.MAX_VALUE - 1);
     BOOTSTRAP_NODES = IntStream.range(0, 10)
-      .mapToObj(i -> ServerName.valueOf("localhost", (10000 + 100 * i), ServerName.NON_STARTCODE))
-      .collect(Collectors.toSet());
+        .mapToObj(i -> ServerName.valueOf("localhost", (10000 + 100 * i), ServerName.NON_STARTCODE))
+        .collect(Collectors.toSet());
   }
 
   @AfterClass
@@ -229,7 +230,7 @@ public class TestRpcBasedRegistryHedgedReads {
   @Test
   public void testFirstSucceededNoHedge() throws IOException {
     GOOD_RESP_INDEXS =
-      IntStream.range(0, 10).mapToObj(Integer::valueOf).collect(Collectors.toSet());
+        IntStream.range(0, 10).mapToObj(Integer::valueOf).collect(Collectors.toSet());
     // will be set to 1
     try (AbstractRpcBasedConnectionRegistry registry = createRegistry(0)) {
       String clusterId = logIfError(registry.getClusterId());

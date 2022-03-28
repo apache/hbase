@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -181,10 +181,10 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       }
 
       if (dataLength > this.rpcServer.maxRequestSize) {
-        String msg = "RPC data length of " + dataLength + " received from " + getHostAddress() +
-            " is greater than max allowed " + this.rpcServer.maxRequestSize + ". Set \"" +
-            SimpleRpcServer.MAX_REQUEST_SIZE +
-            "\" on server to override this limit (not recommended)";
+        String msg = "RPC data length of " + dataLength + " received from " + getHostAddress()
+            + " is greater than max allowed " + this.rpcServer.maxRequestSize + ". Set \""
+            + SimpleRpcServer.MAX_REQUEST_SIZE
+            + "\" on server to override this limit (not recommended)";
         SimpleRpcServer.LOG.warn(msg);
 
         if (connectionHeaderRead && connectionPreambleRead) {

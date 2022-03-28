@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ public abstract class AsyncFSTestBase {
     // Using randomUUID ensures that multiple clusters can be launched by
     // a same test, if it stops & starts them
     Path testDir =
-      UTIL.getDataTestDir("cluster_" + HBaseCommonTestingUtility.getRandomUUID().toString());
+        UTIL.getDataTestDir("cluster_" + HBaseCommonTestingUtility.getRandomUUID().toString());
     CLUSTER_TEST_DIR = new File(testDir.toString()).getAbsoluteFile();
     // Have it cleaned up on exit
     boolean b = deleteOnExit();

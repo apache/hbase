@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,16 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.filter;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -80,7 +76,7 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
       writer.flush();
     }
     if (os != null && (os instanceof GZIPResponseStream)) {
-      ((GZIPResponseStream)os).finish();
+      ((GZIPResponseStream) os).finish();
     } else {
       getResponse().flushBuffer();
     }
@@ -90,7 +86,7 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
   public void reset() {
     super.reset();
     if (os != null && (os instanceof GZIPResponseStream)) {
-      ((GZIPResponseStream)os).resetBuffer();
+      ((GZIPResponseStream) os).resetBuffer();
     }
     writer = null;
     os = null;
@@ -101,7 +97,7 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
   public void resetBuffer() {
     super.resetBuffer();
     if (os != null && (os instanceof GZIPResponseStream)) {
-      ((GZIPResponseStream)os).resetBuffer();
+      ((GZIPResponseStream) os).resetBuffer();
     }
     writer = null;
     os = null;
@@ -129,7 +125,7 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
   public ServletOutputStream getOutputStream() throws IOException {
     if (os == null) {
       if (!response.isCommitted() && compress) {
-        os = (ServletOutputStream)new GZIPResponseStream(response);
+        os = (ServletOutputStream) new GZIPResponseStream(response);
       } else {
         os = response.getOutputStream();
       }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,12 +19,10 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.replication.regionserver.SwitchRpcThrottleRemoteCallable;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,13 +73,14 @@ public class SwitchRpcThrottleRemoteProcedure extends ServerRemoteProcedure
   }
 
   @Override
-  public Optional<RemoteProcedureDispatcher.RemoteOperation> remoteCallBuild(
-      MasterProcedureEnv masterProcedureEnv, ServerName remote) {
+  public Optional<RemoteProcedureDispatcher.RemoteOperation>
+      remoteCallBuild(MasterProcedureEnv masterProcedureEnv, ServerName remote) {
     assert targetServer.equals(remote);
     return Optional.of(new RSProcedureDispatcher.ServerOperation(this, getProcId(),
-        SwitchRpcThrottleRemoteCallable.class, SwitchRpcThrottleRemoteStateData.newBuilder()
-        .setTargetServer(ProtobufUtil.toServerName(remote))
-        .setRpcThrottleEnabled(rpcThrottleEnabled).build().toByteArray()));
+        SwitchRpcThrottleRemoteCallable.class,
+        SwitchRpcThrottleRemoteStateData.newBuilder()
+            .setTargetServer(ProtobufUtil.toServerName(remote))
+            .setRpcThrottleEnabled(rpcThrottleEnabled).build().toByteArray()));
   }
 
   @Override

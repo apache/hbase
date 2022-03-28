@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -102,8 +102,8 @@ public final class TestingHBaseClusterOption {
    * Private constructor. Use {@link Builder#build()}.
    */
   private TestingHBaseClusterOption(Configuration conf, int numMasters, int numAlwaysStandByMasters,
-    int numRegionServers, List<Integer> rsPorts, int numDataNodes, String[] dataNodeHosts,
-    int numZkServers, boolean createRootDir, boolean createWALDir) {
+      int numRegionServers, List<Integer> rsPorts, int numDataNodes, String[] dataNodeHosts,
+      int numZkServers, boolean createRootDir, boolean createWALDir) {
     this.conf = conf;
     this.numMasters = numMasters;
     this.numAlwaysStandByMasters = numAlwaysStandByMasters;
@@ -158,10 +158,11 @@ public final class TestingHBaseClusterOption {
 
   @Override
   public String toString() {
-    return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", numRegionServers=" +
-      numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts) + ", numDataNodes=" +
-      numDataNodes + ", dataNodeHosts=" + Arrays.toString(dataNodeHosts) + ", numZkServers=" +
-      numZkServers + ", createRootDir=" + createRootDir + ", createWALDir=" + createWALDir + '}';
+    return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", numRegionServers="
+        + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts) + ", numDataNodes="
+        + numDataNodes + ", dataNodeHosts=" + Arrays.toString(dataNodeHosts) + ", numZkServers="
+        + numZkServers + ", createRootDir=" + createRootDir + ", createWALDir=" + createWALDir
+        + '}';
   }
 
   /**
@@ -169,9 +170,9 @@ public final class TestingHBaseClusterOption {
    */
   StartMiniClusterOption convert() {
     return StartMiniClusterOption.builder().numMasters(numMasters)
-      .numAlwaysStandByMasters(numAlwaysStandByMasters).numRegionServers(numRegionServers)
-      .rsPorts(rsPorts).numDataNodes(numDataNodes).dataNodeHosts(dataNodeHosts)
-      .numZkServers(numZkServers).createRootDir(createRootDir).createWALDir(createWALDir).build();
+        .numAlwaysStandByMasters(numAlwaysStandByMasters).numRegionServers(numRegionServers)
+        .rsPorts(rsPorts).numDataNodes(numDataNodes).dataNodeHosts(dataNodeHosts)
+        .numZkServers(numZkServers).createRootDir(createRootDir).createWALDir(createWALDir).build();
   }
 
   /**
@@ -206,8 +207,8 @@ public final class TestingHBaseClusterOption {
         numDataNodes = dataNodeHosts.length;
       }
       return new TestingHBaseClusterOption(conf, numMasters, numAlwaysStandByMasters,
-        numRegionServers, rsPorts, numDataNodes, dataNodeHosts, numZkServers, createRootDir,
-        createWALDir);
+          numRegionServers, rsPorts, numDataNodes, dataNodeHosts, numZkServers, createRootDir,
+          createWALDir);
     }
 
     public Builder conf(Configuration conf) {

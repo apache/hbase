@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,9 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.namequeues.impl;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Queue;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
@@ -27,17 +30,14 @@ import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
 import org.apache.hadoop.hbase.namequeues.NamedQueueService;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
-import org.apache.hbase.thirdparty.com.google.common.collect.EvictingQueue;
-import org.apache.hbase.thirdparty.com.google.common.collect.Queues;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Queue;
-import java.util.stream.Collectors;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.EvictingQueue;
+import org.apache.hbase.thirdparty.com.google.common.collect.Queues;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
 
 /**
  * In-memory Queue service provider for Balancer Rejection events
@@ -49,22 +49,23 @@ public class BalancerRejectionQueueService implements NamedQueueService {
 
   private final boolean isBalancerRejectionRecording;
   private static final String BALANCER_REJECTION_QUEUE_SIZE =
-    "hbase.master.balancer.rejection.queue.size";
+      "hbase.master.balancer.rejection.queue.size";
   private static final int DEFAULT_BALANCER_REJECTION_QUEUE_SIZE = 250;
 
   private final Queue<RecentLogs.BalancerRejection> balancerRejectionQueue;
 
   public BalancerRejectionQueueService(Configuration conf) {
-    isBalancerRejectionRecording = conf.getBoolean(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED,
-      BaseLoadBalancer.DEFAULT_BALANCER_REJECTION_BUFFER_ENABLED);
+    isBalancerRejectionRecording =
+        conf.getBoolean(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED,
+          BaseLoadBalancer.DEFAULT_BALANCER_REJECTION_BUFFER_ENABLED);
     if (!isBalancerRejectionRecording) {
       balancerRejectionQueue = null;
       return;
     }
     final int queueSize =
-      conf.getInt(BALANCER_REJECTION_QUEUE_SIZE, DEFAULT_BALANCER_REJECTION_QUEUE_SIZE);
+        conf.getInt(BALANCER_REJECTION_QUEUE_SIZE, DEFAULT_BALANCER_REJECTION_QUEUE_SIZE);
     final EvictingQueue<RecentLogs.BalancerRejection> evictingQueue =
-      EvictingQueue.create(queueSize);
+        EvictingQueue.create(queueSize);
     balancerRejectionQueue = Queues.synchronizedQueue(evictingQueue);
   }
 
@@ -83,14 +84,13 @@ public class BalancerRejectionQueueService implements NamedQueueService {
         "BalancerRejectionQueueService: NamedQueuePayload is not of type BalancerRejectionDetails.");
       return;
     }
-    BalancerRejectionDetails balancerRejectionDetails = (BalancerRejectionDetails) namedQueuePayload;
-    BalancerRejection balancerRejectionRecord =
-      balancerRejectionDetails.getBalancerRejection();
-      RecentLogs.BalancerRejection BalancerRejection = RecentLogs.BalancerRejection.newBuilder()
-        .setReason(balancerRejectionRecord.getReason())
-        .addAllCostFuncInfo(balancerRejectionRecord.getCostFuncInfoList())
-        .build();
-      balancerRejectionQueue.add(BalancerRejection);
+    BalancerRejectionDetails balancerRejectionDetails =
+        (BalancerRejectionDetails) namedQueuePayload;
+    BalancerRejection balancerRejectionRecord = balancerRejectionDetails.getBalancerRejection();
+    RecentLogs.BalancerRejection BalancerRejection =
+        RecentLogs.BalancerRejection.newBuilder().setReason(balancerRejectionRecord.getReason())
+            .addAllCostFuncInfo(balancerRejectionRecord.getCostFuncInfoList()).build();
+    balancerRejectionQueue.add(BalancerRejection);
   }
 
   @Override
@@ -109,13 +109,14 @@ public class BalancerRejectionQueueService implements NamedQueueService {
       return null;
     }
     List<RecentLogs.BalancerRejection> balancerRejections =
-      Arrays.stream(balancerRejectionQueue.toArray(new RecentLogs.BalancerRejection[0]))
-        .collect(Collectors.toList());
+        Arrays.stream(balancerRejectionQueue.toArray(new RecentLogs.BalancerRejection[0]))
+            .collect(Collectors.toList());
     // latest records should be displayed first, hence reverse order sorting
     Collections.reverse(balancerRejections);
     int limit = balancerRejections.size();
     if (request.getBalancerRejectionsRequest().hasLimit()) {
-      limit = Math.min(request.getBalancerRejectionsRequest().getLimit(), balancerRejections.size());
+      limit =
+          Math.min(request.getBalancerRejectionsRequest().getLimit(), balancerRejections.size());
     }
     // filter limit if provided
     balancerRejections = balancerRejections.subList(0, limit);

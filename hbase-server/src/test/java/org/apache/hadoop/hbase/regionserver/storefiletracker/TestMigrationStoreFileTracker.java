@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,7 +67,7 @@ public class TestMigrationStoreFileTracker {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMigrationStoreFileTracker.class);
+      HBaseClassTestRule.forClass(TestMigrationStoreFileTracker.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -76,8 +76,8 @@ public class TestMigrationStoreFileTracker {
   private static final byte[] CQ = Bytes.toBytes("cq");
 
   private static final TableDescriptor TD =
-    TableDescriptorBuilder.newBuilder(TableName.valueOf("file_based_tracker"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build();
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("file_based_tracker"))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build();
 
   private static final RegionInfo RI = RegionInfoBuilder.newBuilder(TD.getTableName()).build();
 
@@ -102,7 +102,7 @@ public class TestMigrationStoreFileTracker {
     for (StoreFileTrackerFactory.Trackers src : StoreFileTrackerFactory.Trackers.values()) {
       for (StoreFileTrackerFactory.Trackers dst : StoreFileTrackerFactory.Trackers.values()) {
         if (src == StoreFileTrackerFactory.Trackers.MIGRATION
-          || dst == StoreFileTrackerFactory.Trackers.MIGRATION) {
+            || dst == StoreFileTrackerFactory.Trackers.MIGRATION) {
           continue;
         }
         if (src.equals(dst)) {
@@ -140,18 +140,18 @@ public class TestMigrationStoreFileTracker {
 
   private List<String> getStoreFiles() {
     return Iterables.getOnlyElement(region.getStores()).getStorefiles().stream()
-      .map(s -> s.getFileInfo().getPath().getName()).collect(Collectors.toList());
+        .map(s -> s.getFileInfo().getPath().getName()).collect(Collectors.toList());
   }
 
   private HRegion createRegion(Class<? extends StoreFileTrackerBase> trackerImplClass)
-    throws IOException {
+      throws IOException {
     Configuration conf = new Configuration(UTIL.getConfiguration());
     conf.setClass(StoreFileTrackerFactory.TRACKER_IMPL, trackerImplClass, StoreFileTracker.class);
     return HRegion.createHRegion(RI, rootDir, conf, TD, wal, true);
   }
 
   private void reopenRegion(Class<? extends StoreFileTrackerBase> trackerImplClass)
-    throws IOException {
+      throws IOException {
     region.flush(true);
     List<String> before = getStoreFiles();
     region.close();

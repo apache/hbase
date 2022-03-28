@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,7 @@ public class TestAdminShell2 extends AbstractTestShell {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAdminShell2.class);
+      HBaseClassTestRule.forClass(TestAdminShell2.class);
 
   @Override
   protected String getIncludeList() {

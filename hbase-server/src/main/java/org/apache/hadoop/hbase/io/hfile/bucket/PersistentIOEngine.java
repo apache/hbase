@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.File;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Shell;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -29,13 +28,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A class implementing PersistentIOEngine interface supports file integrity verification
- * for {@link BucketCache} which use persistent IOEngine
+ * A class implementing PersistentIOEngine interface supports file integrity verification for
+ * {@link BucketCache} which use persistent IOEngine
  */
 @InterfaceAudience.Private
 public abstract class PersistentIOEngine implements IOEngine {
   private static final Logger LOG = LoggerFactory.getLogger(PersistentIOEngine.class);
-  private static final DuFileCommand DU = new DuFileCommand(new String[] {"du", ""});
+  private static final DuFileCommand DU = new DuFileCommand(new String[] { "du", "" });
   protected final String[] filePaths;
 
   public PersistentIOEngine(String... filePaths) {
@@ -47,12 +46,12 @@ public abstract class PersistentIOEngine implements IOEngine {
    * @param algorithm the backingMap persistence path
    */
   protected void verifyFileIntegrity(byte[] persistentChecksum, String algorithm)
-    throws IOException {
+      throws IOException {
     byte[] calculateChecksum = calculateChecksum(algorithm);
     if (!Bytes.equals(persistentChecksum, calculateChecksum)) {
-      throw new IOException("Mismatch of checksum! The persistent checksum is " +
-      Bytes.toString(persistentChecksum) + ", but the calculate checksum is " +
-        Bytes.toString(calculateChecksum));
+      throw new IOException(
+          "Mismatch of checksum! The persistent checksum is " + Bytes.toString(persistentChecksum)
+              + ", but the calculate checksum is " + Bytes.toString(calculateChecksum));
     }
   }
 
@@ -65,7 +64,7 @@ public abstract class PersistentIOEngine implements IOEngine {
   protected byte[] calculateChecksum(String algorithm) {
     try {
       StringBuilder sb = new StringBuilder();
-      for (String filePath : filePaths){
+      for (String filePath : filePaths) {
         File file = new File(filePath);
         sb.append(filePath);
         sb.append(getFileSize(filePath));
@@ -113,4 +112,3 @@ public abstract class PersistentIOEngine implements IOEngine {
     }
   }
 }
-

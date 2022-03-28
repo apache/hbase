@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,6 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public class TableNotEnabledException extends DoNotRetryIOException {
   private static final long serialVersionUID = 262144L;
+
   /** default constructor */
   public TableNotEnabledException() {
     super();

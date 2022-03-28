@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,10 +35,10 @@ import org.slf4j.LoggerFactory;
 public abstract class BaseTimeToLiveFileCleaner extends BaseLogCleanerDelegate {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(BaseTimeToLiveFileCleaner.class.getName());
+      LoggerFactory.getLogger(BaseTimeToLiveFileCleaner.class.getName());
 
   private static final DateTimeFormatter FORMATTER =
-    DateTimeFormatter.ISO_DATE_TIME.withZone(ZoneOffset.systemDefault());
+      DateTimeFormatter.ISO_DATE_TIME.withZone(ZoneOffset.systemDefault());
 
   // Configured time a log can be kept after it was closed
   private long ttlMs;

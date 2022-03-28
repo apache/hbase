@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ public class TestKeyValueHeap {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestKeyValueHeap.class);
+      HBaseClassTestRule.forClass(TestKeyValueHeap.class);
 
   private byte[] row1 = Bytes.toBytes("row1");
   private byte[] fam1 = Bytes.toBytes("fam1");
@@ -81,7 +81,7 @@ public class TestKeyValueHeap {
    * @return List of Cells returned from scanners.
    */
   public List<Cell> assertCells(List<Cell> expected, List<KeyValueScanner> scanners)
-    throws IOException {
+      throws IOException {
     // Creating KeyValueHeap
     try (KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR)) {
       List<Cell> actual = new ArrayList<>();
@@ -101,7 +101,7 @@ public class TestKeyValueHeap {
     // 2. Current scanner gets empty
 
     List<Cell> expected =
-      Arrays.asList(kv111, kv112, kv113, kv114, kv115, kv121, kv122, kv211, kv212, kv213);
+        Arrays.asList(kv111, kv112, kv113, kv114, kv115, kv121, kv122, kv211, kv212, kv213);
 
     List<Cell> actual = assertCells(expected, scanners);
 
@@ -126,8 +126,9 @@ public class TestKeyValueHeap {
 
       List<Cell> actual = Arrays.asList(kvh.peek());
 
-      assertEquals("Expected = " + Arrays.toString(expected.toArray()) + "\n Actual = " +
-        Arrays.toString(actual.toArray()), expected, actual);
+      assertEquals("Expected = " + Arrays.toString(expected.toArray()) + "\n Actual = "
+          + Arrays.toString(actual.toArray()),
+        expected, actual);
     }
   }
 

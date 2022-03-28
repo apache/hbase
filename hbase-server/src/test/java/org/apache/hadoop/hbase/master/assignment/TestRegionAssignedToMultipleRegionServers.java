@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,7 +58,7 @@ public class TestRegionAssignedToMultipleRegionServers {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionAssignedToMultipleRegionServers.class);
+      HBaseClassTestRule.forClass(TestRegionAssignedToMultipleRegionServers.class);
 
   private static final List<ServerName> EXCLUDE_SERVERS = new ArrayList<>();
 
@@ -117,13 +117,13 @@ public class TestRegionAssignedToMultipleRegionServers {
 
     @Override
     protected AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
+        MasterRegion masterRegion) {
       return new AssignmentManagerForTest(master, masterRegion);
     }
 
     @Override
-    protected ServerManager createServerManager(MasterServices master,
-      RegionServerList storage) throws IOException {
+    protected ServerManager createServerManager(MasterServices master, RegionServerList storage)
+        throws IOException {
       setupClusterConnection();
       return new ServerManagerForTest(master, storage);
     }
@@ -138,8 +138,8 @@ public class TestRegionAssignedToMultipleRegionServers {
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
-    UTIL
-      .startMiniCluster(StartMiniClusterOption.builder().numMasters(2).numRegionServers(2).build());
+    UTIL.startMiniCluster(
+      StartMiniClusterOption.builder().numMasters(2).numRegionServers(2).build());
     UTIL.createTable(NAME, CF);
     UTIL.waitTableAvailable(NAME);
     UTIL.getAdmin().balancerSwitch(false, true);

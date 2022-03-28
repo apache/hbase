@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.http;
 
 import static org.junit.Assert.assertEquals;
+
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,15 +42,16 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
 
-@Category({ MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestRegionVisualizer {
 
   @ClassRule
   public static final HBaseClassTestRule testRule =
-    HBaseClassTestRule.forClass(TestRegionVisualizer.class);
+      HBaseClassTestRule.forClass(TestRegionVisualizer.class);
 
   private static final Random rand = new Random();
   private static List<Method> regionMetricsBuilderLongValueSetters;
@@ -57,20 +59,20 @@ public class TestRegionVisualizer {
   @BeforeClass
   public static void beforeClass() {
     regionMetricsBuilderLongValueSetters =
-      Arrays.stream(RegionMetricsBuilder.class.getDeclaredMethods())
-        .filter(method -> method.getName().startsWith("set"))
-        .filter(method -> method.getParameterTypes().length == 1)
-        .filter(method -> Objects.equals(method.getParameterTypes()[0], long.class))
-        .collect(Collectors.toList());
+        Arrays.stream(RegionMetricsBuilder.class.getDeclaredMethods())
+            .filter(method -> method.getName().startsWith("set"))
+            .filter(method -> method.getParameterTypes().length == 1)
+            .filter(method -> Objects.equals(method.getParameterTypes()[0], long.class))
+            .collect(Collectors.toList());
   }
 
   @Test
   public void testRegionDetailsJsonSerialization() throws Exception {
     final ServerName serverName =
-      ServerName.valueOf("example.org", 1234, System.currentTimeMillis());
+        ServerName.valueOf("example.org", 1234, System.currentTimeMillis());
     final TableName tableName = TableName.valueOf("foo", "bar");
     final RegionDetails regionDetails =
-      new RegionDetails(serverName, tableName, buildRegionMetrics(tableName));
+        new RegionDetails(serverName, tableName, buildRegionMetrics(tableName));
 
     final Gson gson = RegionVisualizer.buildGson();
     final JsonObject result = gson.fromJson(gson.toJson(regionDetails), JsonObject.class);
@@ -89,7 +91,7 @@ public class TestRegionVisualizer {
 
     final RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
     final RegionMetricsBuilder builder =
-      RegionMetricsBuilder.newBuilder(regionInfo.getRegionName());
+        RegionMetricsBuilder.newBuilder(regionInfo.getRegionName());
     for (final Method setter : setters.subList(0, 3)) {
       setter.invoke(builder, rand.nextLong());
     }

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -24,16 +23,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface AccessControlConstants {
 
   /**
-   * Configuration option that toggles whether EXEC permission checking is
-   * performed during coprocessor endpoint invocations.
+   * Configuration option that toggles whether EXEC permission checking is performed during
+   * coprocessor endpoint invocations.
    */
   public static final String EXEC_PERMISSION_CHECKS_KEY = "hbase.security.exec.permission.checks";
   /** Default setting for hbase.security.exec.permission.checks; false */
   public static final boolean DEFAULT_EXEC_PERMISSION_CHECKS = false;
 
   /**
-   * Configuration or CF schema option for early termination of access checks
-   * if table or CF permissions grant access. Pre-0.98 compatible behavior
+   * Configuration or CF schema option for early termination of access checks if table or CF
+   * permissions grant access. Pre-0.98 compatible behavior
    */
   public static final String CF_ATTRIBUTE_EARLY_OUT = "hbase.security.access.early_out";
   /** Default setting for hbase.security.access.early_out */

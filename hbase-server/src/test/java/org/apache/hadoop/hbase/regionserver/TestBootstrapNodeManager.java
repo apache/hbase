@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ public class TestBootstrapNodeManager {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBootstrapNodeManager.class);
+      HBaseClassTestRule.forClass(TestBootstrapNodeManager.class);
 
   private Configuration conf;
 
@@ -92,10 +92,10 @@ public class TestBootstrapNodeManager {
   @Test
   public void testNormal() throws Exception {
     List<ServerName> regionServers =
-      Arrays.asList(ServerName.valueOf("server1", 12345, EnvironmentEdgeManager.currentTime()),
-        ServerName.valueOf("server2", 12345, EnvironmentEdgeManager.currentTime()),
-        ServerName.valueOf("server3", 12345, EnvironmentEdgeManager.currentTime()),
-        ServerName.valueOf("server4", 12345, EnvironmentEdgeManager.currentTime()));
+        Arrays.asList(ServerName.valueOf("server1", 12345, EnvironmentEdgeManager.currentTime()),
+          ServerName.valueOf("server2", 12345, EnvironmentEdgeManager.currentTime()),
+          ServerName.valueOf("server3", 12345, EnvironmentEdgeManager.currentTime()),
+          ServerName.valueOf("server4", 12345, EnvironmentEdgeManager.currentTime()));
     when(conn.getLiveRegionServers(any(), anyInt())).thenReturn(regionServers);
     when(conn.getAllBootstrapNodes(any())).thenReturn(regionServers);
     manager = new BootstrapNodeManager(conn, tracker);
@@ -109,7 +109,7 @@ public class TestBootstrapNodeManager {
   @Test
   public void testOnlyMaster() throws Exception {
     List<ServerName> regionServers =
-      Arrays.asList(ServerName.valueOf("server1", 12345, EnvironmentEdgeManager.currentTime()));
+        Arrays.asList(ServerName.valueOf("server1", 12345, EnvironmentEdgeManager.currentTime()));
     when(conn.getLiveRegionServers(any(), anyInt())).thenReturn(regionServers);
     when(conn.getAllBootstrapNodes(any())).thenReturn(regionServers);
     manager = new BootstrapNodeManager(conn, tracker);
@@ -122,13 +122,13 @@ public class TestBootstrapNodeManager {
   @Test
   public void testRegionServerError() throws Exception {
     List<ServerName> regionServers =
-      Arrays.asList(ServerName.valueOf("server1", 12345, EnvironmentEdgeManager.currentTime()),
-        ServerName.valueOf("server2", 12345, EnvironmentEdgeManager.currentTime()),
-        ServerName.valueOf("server3", 12345, EnvironmentEdgeManager.currentTime()),
-        ServerName.valueOf("server4", 12345, EnvironmentEdgeManager.currentTime()));
+        Arrays.asList(ServerName.valueOf("server1", 12345, EnvironmentEdgeManager.currentTime()),
+          ServerName.valueOf("server2", 12345, EnvironmentEdgeManager.currentTime()),
+          ServerName.valueOf("server3", 12345, EnvironmentEdgeManager.currentTime()),
+          ServerName.valueOf("server4", 12345, EnvironmentEdgeManager.currentTime()));
     List<ServerName> newRegionServers =
-      Arrays.asList(ServerName.valueOf("server5", 12345, EnvironmentEdgeManager.currentTime()),
-        ServerName.valueOf("server6", 12345, EnvironmentEdgeManager.currentTime()));
+        Arrays.asList(ServerName.valueOf("server5", 12345, EnvironmentEdgeManager.currentTime()),
+          ServerName.valueOf("server6", 12345, EnvironmentEdgeManager.currentTime()));
     when(conn.getLiveRegionServers(any(), anyInt())).thenReturn(regionServers);
     when(conn.getAllBootstrapNodes(any())).thenAnswer(invocation -> {
       if (invocation.getArgument(0, ServerName.class).getHostname().equals("server4")) {

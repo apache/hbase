@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -36,8 +37,8 @@ final class ConnectionRegistryFactory {
    */
   static ConnectionRegistry getRegistry(Configuration conf) {
     Class<? extends ConnectionRegistry> clazz =
-      conf.getClass(CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, ZKConnectionRegistry.class,
-        ConnectionRegistry.class);
+        conf.getClass(CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, ZKConnectionRegistry.class,
+          ConnectionRegistry.class);
     return ReflectionUtils.newInstance(clazz, conf);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -86,7 +86,7 @@ public class TestReplicationEditsDroppedWithDroppedTable {
   public static void setUpBeforeClass() throws Exception {
     // Set true to filter replication edits for dropped table
     conf1.setBoolean(HBaseInterClusterReplicationEndpoint.REPLICATION_DROP_ON_DELETED_TABLE_KEY,
-        true);
+      true);
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     conf1.setInt("replication.source.nb.capacity", 1);
     utility1 = new HBaseTestingUtility(conf1);
@@ -125,8 +125,7 @@ public class TestReplicationEditsDroppedWithDroppedTable {
     }
     // add peer
     ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(utility2.getClusterKey())
-        .setReplicateAllUserTables(true).build();
+        .setClusterKey(utility2.getClusterKey()).setReplicateAllUserTables(true).build();
     admin1.addReplicationPeer(PEER_ID, rpc);
     // create table
     createTable(NORMAL_TABLE);
@@ -144,10 +143,9 @@ public class TestReplicationEditsDroppedWithDroppedTable {
   }
 
   private void createTable(TableName tableName) throws Exception {
-    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY)
-            .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()
-    ).build();
+    TableDescriptor desc =
+        TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
+            .newBuilder(FAMILY).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
     admin1.createTable(desc);
     admin2.createTable(desc);
     utility1.waitUntilAllRegionsAssigned(tableName);
@@ -237,8 +235,8 @@ public class TestReplicationEditsDroppedWithDroppedTable {
       for (int i = 0; i < NB_RETRIES; i++) {
         Result result = normalTable.get(new Get(ROW).addColumn(FAMILY, QUALIFIER));
         if (result != null && !result.isEmpty()) {
-          fail("Edit should have been stuck behind dropped tables, but value is " + Bytes
-              .toString(result.getValue(FAMILY, QUALIFIER)));
+          fail("Edit should have been stuck behind dropped tables, but value is "
+              + Bytes.toString(result.getValue(FAMILY, QUALIFIER)));
         } else {
           LOG.info("Row not replicated, let's wait a bit more...");
           Thread.sleep(SLEEP_TIME);

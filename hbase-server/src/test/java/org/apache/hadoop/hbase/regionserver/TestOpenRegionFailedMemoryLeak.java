@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestOpenRegionFailedMemoryLeak {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOpenRegionFailedMemoryLeak.class);
+      HBaseClassTestRule.forClass(TestOpenRegionFailedMemoryLeak.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestOpenRegionFailedMemoryLeak.class);
 
@@ -74,13 +74,13 @@ public class TestOpenRegionFailedMemoryLeak {
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
 
     TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf("testOpenRegionFailed"))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1))
-        .setValue("COPROCESSOR$1", "hdfs://test/test.jar|test||").build();
+        TableDescriptorBuilder.newBuilder(TableName.valueOf("testOpenRegionFailed"))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1))
+            .setValue("COPROCESSOR$1", "hdfs://test/test.jar|test||").build();
 
     RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     ScheduledExecutorService executor =
-      CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
+        CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     for (int i = 0; i < 20; i++) {
       try {
         HRegion.openHRegion(hri, htd, rss.getWAL(hri), TEST_UTIL.getConfiguration(), rss, null);
@@ -97,8 +97,9 @@ public class TestOpenRegionFailedMemoryLeak {
         field.setAccessible(true);
         BlockingQueue<Runnable> workQueue = (BlockingQueue<Runnable>) field.get(executor);
         // there are still two task not cancel, can not cause to memory lack
-        Assert.assertTrue("ScheduledExecutor#workQueue should equals 2, now is " +
-          workQueue.size() + ", please check region is close", 2 == workQueue.size());
+        Assert.assertTrue("ScheduledExecutor#workQueue should equals 2, now is " + workQueue.size()
+            + ", please check region is close",
+          2 == workQueue.size());
         found = true;
       }
     }

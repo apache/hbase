@@ -60,13 +60,13 @@ public class TableStateManager {
    * hbase:meta table.
    */
   private static final String MIGRATE_TABLE_STATE_FROM_ZK_KEY =
-    "hbase.migrate.table.state.from.zookeeper";
+      "hbase.migrate.table.state.from.zookeeper";
 
   private final IdReadWriteLock<TableName> tnLock = new IdReadWriteLock<>();
   protected final MasterServices master;
 
   private final ConcurrentMap<TableName, TableState.State> tableName2State =
-    new ConcurrentHashMap<>();
+      new ConcurrentHashMap<>();
 
   TableStateManager(MasterServices master) {
     this.master = master;
@@ -162,8 +162,8 @@ public class TableStateManager {
 
   private void updateMetaState(TableName tableName, TableState.State newState) throws IOException {
     if (tableName.equals(TableName.META_TABLE_NAME)) {
-      if (TableState.State.DISABLING.equals(newState) ||
-          TableState.State.DISABLED.equals(newState)) {
+      if (TableState.State.DISABLING.equals(newState)
+          || TableState.State.DISABLED.equals(newState)) {
         throw new IllegalArgumentIOException("Cannot disable meta table; " + newState);
       }
       // Otherwise, just return; no need to set ENABLED on meta -- it is always ENABLED.
@@ -263,11 +263,11 @@ public class TableStateManager {
     }
     try {
       for (Map.Entry<TableName, TableState.State> entry : ZKDataMigrator
-        .queryForTableStates(this.master.getZooKeeper()).entrySet()) {
+          .queryForTableStates(this.master.getZooKeeper()).entrySet()) {
         if (this.master.getTableDescriptors().get(entry.getKey()) == null) {
           deleteZooKeeper(entry.getKey());
-          LOG.info("Purged table state entry from zookeepr for table not in hbase:meta: " +
-            entry.getKey());
+          LOG.info("Purged table state entry from zookeepr for table not in hbase:meta: "
+              + entry.getKey());
           continue;
         }
         TableState ts = null;
@@ -281,14 +281,15 @@ public class TableStateManager {
           // Only migrate if it is an enable or disabled table. If in-between -- ENABLING or
           // DISABLING then we have a problem; we are starting up an hbase-2 on a cluster with
           // RIT. It is going to be rough!
-          if (zkstate.equals(TableState.State.ENABLED) ||
-            zkstate.equals(TableState.State.DISABLED)) {
-            LOG.info("Migrating table state from zookeeper to hbase:meta; tableName=" +
-              entry.getKey() + ", state=" + entry.getValue());
+          if (zkstate.equals(TableState.State.ENABLED)
+              || zkstate.equals(TableState.State.DISABLED)) {
+            LOG.info("Migrating table state from zookeeper to hbase:meta; tableName="
+                + entry.getKey() + ", state=" + entry.getValue());
             updateMetaState(entry.getKey(), entry.getValue());
           } else {
-            LOG.warn("Table={} has no state and zookeeper state is in-between={} (neither " +
-              "ENABLED or DISABLED); NOT MIGRATING table state", entry.getKey(), zkstate);
+            LOG.warn("Table={} has no state and zookeeper state is in-between={} (neither "
+                + "ENABLED or DISABLED); NOT MIGRATING table state",
+              entry.getKey(), zkstate);
           }
         }
         // What if the table states disagree? Defer to the hbase:meta setting rather than have the

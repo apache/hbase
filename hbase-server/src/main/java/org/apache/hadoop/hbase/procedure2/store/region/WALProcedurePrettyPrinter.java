@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,7 +58,7 @@ public class WALProcedurePrettyPrinter extends AbstractHBaseTool {
   private static final String KEY_TMPL = "Sequence=%s, at write timestamp=%s";
 
   private static final DateTimeFormatter FORMATTER =
-    DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.systemDefault());
+      DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.systemDefault());
 
   private String file;
 
@@ -109,14 +109,14 @@ public class WALProcedurePrettyPrinter extends AbstractHBaseTool {
             continue;
           }
           long procId = Bytes.toLong(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-          out.println("pid=" + procId + ", type=" + op.get("type") + ", column=" +
-            op.get("family") + ":" + op.get("qualifier"));
+          out.println("pid=" + procId + ", type=" + op.get("type") + ", column=" + op.get("family")
+              + ":" + op.get("qualifier"));
           if (cell.getType() == Cell.Type.Put) {
             if (cell.getValueLength() > 0) {
               // should be a normal put
               Procedure<?> proc =
-                ProcedureUtil.convertToProcedure(ProcedureProtos.Procedure.parser()
-                  .parseFrom(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+                  ProcedureUtil.convertToProcedure(ProcedureProtos.Procedure.parser().parseFrom(
+                    cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
               out.println("\t" + proc.toStringDetails());
             } else {
               // should be a 'delete' put

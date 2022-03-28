@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -140,7 +139,7 @@ public class TestServerRemoteProcedure {
   public void testRegionOpenProcedureIsNotHandledByDispatcher() throws Exception {
     TableName tableName = TableName.valueOf("testRegionOpenProcedureIsNotHandledByDisPatcher");
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes(1))
-      .setEndKey(Bytes.toBytes(2)).setSplit(false).setRegionId(0).build();
+        .setEndKey(Bytes.toBytes(2)).setSplit(false).setRegionId(0).build();
     MasterProcedureEnv env = master.getMasterProcedureExecutor().getEnvironment();
     env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(hri);
     TransitRegionStateProcedure proc = TransitRegionStateProcedure.assign(env, hri, null);
@@ -190,8 +189,8 @@ public class TestServerRemoteProcedure {
     }
 
     @Override
-    public Optional<RemoteProcedureDispatcher.RemoteOperation> remoteCallBuild(
-        MasterProcedureEnv env, ServerName serverName) {
+    public Optional<RemoteProcedureDispatcher.RemoteOperation>
+        remoteCallBuild(MasterProcedureEnv env, ServerName serverName) {
       return Optional
           .of(new RSProcedureDispatcher.ServerOperation(null, 0L, this.getClass(), new byte[0]));
     }

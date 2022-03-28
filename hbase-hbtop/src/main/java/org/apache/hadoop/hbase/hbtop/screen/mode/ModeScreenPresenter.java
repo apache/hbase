@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.hbtop.mode.Mode;
 import org.apache.hadoop.hbase.hbtop.screen.ScreenView;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * The presentation logic for the mode screen.
  */
@@ -44,7 +43,7 @@ public class ModeScreenPresenter {
   private int currentPosition;
 
   public ModeScreenPresenter(ModeScreenView modeScreenView, Mode currentMode,
-    Consumer<Mode> resultListener, ScreenView nextScreenView) {
+      Consumer<Mode> resultListener, ScreenView nextScreenView) {
     this.modeScreenView = Objects.requireNonNull(modeScreenView);
     this.currentMode = Objects.requireNonNull(currentMode);
     this.resultListener = Objects.requireNonNull(resultListener);

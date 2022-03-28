@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,15 +23,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Base class for cell sink that separates the provided cells into multiple files for stripe
@@ -111,10 +110,9 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
   protected void sanityCheckRight(byte[] right, Cell cell) throws IOException {
     if (!Arrays.equals(StripeStoreFileManager.OPEN_KEY, right)
         && comparator.compareRows(cell, right, 0, right.length) >= 0) {
-      String error =
-          "The last row is higher or equal than the right boundary of [" + Bytes.toString(right)
-              + "]: ["
-              + Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()) + "]";
+      String error = "The last row is higher or equal than the right boundary of ["
+          + Bytes.toString(right) + "]: ["
+          + Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()) + "]";
       LOG.error(error);
       throw new IOException(error);
     }
@@ -149,9 +147,8 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
       // must match some target boundaries, let's find them.
       assert (majorRangeFrom == null) == (majorRangeTo == null);
       if (majorRangeFrom != null) {
-        majorRangeFromIndex =
-            Arrays.equals(majorRangeFrom, StripeStoreFileManager.OPEN_KEY) ? 0 : Collections
-                .binarySearch(boundaries, majorRangeFrom, Bytes.BYTES_COMPARATOR);
+        majorRangeFromIndex = Arrays.equals(majorRangeFrom, StripeStoreFileManager.OPEN_KEY) ? 0
+            : Collections.binarySearch(boundaries, majorRangeFrom, Bytes.BYTES_COMPARATOR);
         majorRangeToIndex =
             Arrays.equals(majorRangeTo, StripeStoreFileManager.OPEN_KEY) ? boundaries.size()
                 : Collections.binarySearch(boundaries, majorRangeTo, Bytes.BYTES_COMPARATOR);
@@ -176,8 +173,8 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
     }
 
     private boolean isCellAfterCurrentWriter(Cell cell) {
-      return !Arrays.equals(currentWriterEndKey, StripeStoreFileManager.OPEN_KEY)
-        && (comparator.compareRows(cell, currentWriterEndKey, 0, currentWriterEndKey.length) >= 0);
+      return !Arrays.equals(currentWriterEndKey, StripeStoreFileManager.OPEN_KEY) && (comparator
+          .compareRows(cell, currentWriterEndKey, 0, currentWriterEndKey.length) >= 0);
     }
 
     @Override
@@ -223,9 +220,8 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
       boolean needEmptyFile = isInMajorRange || isLastWriter;
       existingWriters.add(needEmptyFile ? writerFactory.createWriter() : null);
       hasAnyWriter |= needEmptyFile;
-      currentWriterEndKey =
-          (existingWriters.size() + 1 == boundaries.size()) ? null : boundaries.get(existingWriters
-              .size() + 1);
+      currentWriterEndKey = (existingWriters.size() + 1 == boundaries.size()) ? null
+          : boundaries.get(existingWriters.size() + 1);
     }
 
     private void checkCanCreateWriter() throws IOException {
@@ -246,9 +242,8 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
         cellsInCurrentWriter = 0;
       }
       currentWriter = null;
-      currentWriterEndKey =
-          (existingWriters.size() + 1 == boundaries.size()) ? null : boundaries.get(existingWriters
-              .size() + 1);
+      currentWriterEndKey = (existingWriters.size() + 1 == boundaries.size()) ? null
+          : boundaries.get(existingWriters.size() + 1);
     }
   }
 
@@ -297,18 +292,17 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
         // First append ever, do a sanity check.
         sanityCheckLeft(left, cell);
         doCreateWriter = true;
-      } else if (lastRowInCurrentWriter != null
-          && !PrivateCellUtil.matchingRows(cell, lastRowInCurrentWriter, 0,
-            lastRowInCurrentWriter.length)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Stopping to use a writer after [" + Bytes.toString(lastRowInCurrentWriter)
-              + "] row; wrote out " + cellsInCurrentWriter + " kvs");
+      } else if (lastRowInCurrentWriter != null && !PrivateCellUtil.matchingRows(cell,
+        lastRowInCurrentWriter, 0, lastRowInCurrentWriter.length)) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Stopping to use a writer after [" + Bytes.toString(lastRowInCurrentWriter)
+                + "] row; wrote out " + cellsInCurrentWriter + " kvs");
+          }
+          lastRowInCurrentWriter = null;
+          cellsInCurrentWriter = 0;
+          cellsSeenInPrevious += cellsSeen;
+          doCreateWriter = true;
         }
-        lastRowInCurrentWriter = null;
-        cellsInCurrentWriter = 0;
-        cellsSeenInPrevious += cellsSeen;
-        doCreateWriter = true;
-      }
       if (doCreateWriter) {
         // make a copy
         byte[] boundary = existingWriters.isEmpty() ? left : CellUtil.cloneRow(cell);
@@ -325,9 +319,8 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
       ++cellsInCurrentWriter;
       cellsSeen = cellsInCurrentWriter;
       if (this.sourceScanner != null) {
-        cellsSeen =
-            Math.max(cellsSeen, this.sourceScanner.getEstimatedNumberOfKvsScanned()
-                - cellsSeenInPrevious);
+        cellsSeen = Math.max(cellsSeen,
+          this.sourceScanner.getEstimatedNumberOfKvsScanned() - cellsSeenInPrevious);
       }
 
       // If we are not already waiting for opportunity to close, start waiting if we can
@@ -346,11 +339,10 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
     @Override
     protected void preCommitWritersInternal() throws IOException {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Stopping with "
-            + cellsInCurrentWriter
-            + " kvs in last writer"
-            + ((this.sourceScanner == null) ? "" : ("; observed estimated "
-                + this.sourceScanner.getEstimatedNumberOfKvsScanned() + " KVs total")));
+        LOG.debug("Stopping with " + cellsInCurrentWriter + " kvs in last writer"
+            + ((this.sourceScanner == null) ? ""
+                : ("; observed estimated " + this.sourceScanner.getEstimatedNumberOfKvsScanned()
+                    + " KVs total")));
       }
       if (lastCell != null) {
         sanityCheckRight(right, lastCell);

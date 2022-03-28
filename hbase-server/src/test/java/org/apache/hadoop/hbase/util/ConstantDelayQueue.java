@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.util.Collection;
@@ -24,7 +23,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -37,6 +35,7 @@ public class ConstantDelayQueue<E> implements BlockingQueue<E> {
   private static final class DelayedElement<T> implements Delayed {
     T element;
     long end;
+
     public DelayedElement(T element, long delayMs) {
       this.element = element;
       this.end = EnvironmentEdgeManager.currentTime() + delayMs;
@@ -45,7 +44,7 @@ public class ConstantDelayQueue<E> implements BlockingQueue<E> {
     @Override
     public int compareTo(Delayed o) {
       long cmp = getDelay(TimeUnit.MILLISECONDS) - o.getDelay(TimeUnit.MILLISECONDS);
-      return cmp == 0 ? 0 : ( cmp < 0 ? -1 : 1);
+      return cmp == 0 ? 0 : (cmp < 0 ? -1 : 1);
     }
 
     @Override

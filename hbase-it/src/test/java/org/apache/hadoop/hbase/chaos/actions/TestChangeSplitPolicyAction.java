@@ -32,7 +32,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestChangeSplitPolicyAction {
 
   @ClassRule
@@ -46,10 +46,12 @@ public class TestChangeSplitPolicyAction {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(2);
   }
+
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
+
   @Before
   public void setUp() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();

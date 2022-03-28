@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver.throttle;
 
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -49,8 +48,8 @@ public final class ThroughputControlUtil {
         break;
       }
     }
-    return store.getRegionInfo().getEncodedName() + NAME_DELIMITER +
-        store.getColumnFamilyDescriptor().getNameAsString() + NAME_DELIMITER + opName +
-        NAME_DELIMITER + counter;
+    return store.getRegionInfo().getEncodedName() + NAME_DELIMITER
+        + store.getColumnFamilyDescriptor().getNameAsString() + NAME_DELIMITER + opName
+        + NAME_DELIMITER + counter;
   }
 }

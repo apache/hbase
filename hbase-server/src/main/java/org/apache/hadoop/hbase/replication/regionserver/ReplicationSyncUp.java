@@ -71,14 +71,14 @@ public class ReplicationSyncUp extends Configured implements Tool {
 
   private Set<ServerName> getLiveRegionServers(ZKWatcher zkw) throws KeeperException {
     List<String> rsZNodes = ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode);
-    return rsZNodes == null ? Collections.emptySet() :
-      rsZNodes.stream().map(ServerName::parseServerName).collect(Collectors.toSet());
+    return rsZNodes == null ? Collections.emptySet()
+        : rsZNodes.stream().map(ServerName::parseServerName).collect(Collectors.toSet());
   }
 
   // When using this tool, usually the source cluster is unhealthy, so we should try to claim the
   // replication queues for the dead region servers first and then replicate the data out.
   private void claimReplicationQueues(ZKWatcher zkw, ReplicationSourceManager mgr)
-    throws ReplicationException, KeeperException {
+      throws ReplicationException, KeeperException {
     List<ServerName> replicators = mgr.getQueueStorage().getListOfReplicators();
     Set<ServerName> liveRegionServers = getLiveRegionServers(zkw);
     for (ServerName sn : replicators) {
@@ -106,8 +106,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
     };
     Configuration conf = getConf();
     try (ZKWatcher zkw = new ZKWatcher(conf,
-        "syncupReplication" + EnvironmentEdgeManager.currentTime(),
-        abortable, true)) {
+        "syncupReplication" + EnvironmentEdgeManager.currentTime(), abortable, true)) {
       Path walRootDir = CommonFSUtils.getWALRootDir(conf);
       FileSystem fs = CommonFSUtils.getWALFileSystem(conf);
       Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);

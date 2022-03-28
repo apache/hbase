@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Service;
 
 /**
  * Mixes in ClusterSchema and Service
  */
 @InterfaceAudience.Private
-public interface ClusterSchemaService extends ClusterSchema, Service {}
+public interface ClusterSchemaService extends ClusterSchema, Service {
+}

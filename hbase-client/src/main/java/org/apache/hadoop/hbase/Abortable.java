@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,8 +22,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Interface to support the aborting of a given server or client.
  * <p>
- * This is used primarily for ZooKeeper usage when we could get an unexpected
- * and fatal exception, requiring an abort.
+ * This is used primarily for ZooKeeper usage when we could get an unexpected and fatal exception,
+ * requiring an abort.
  * <p>
  * Implemented by the Master, RegionServer, and TableServers (client).
  */
@@ -38,8 +37,7 @@ public interface Abortable {
   void abort(String why, Throwable e);
 
   /**
-   * It just call another abort method and the Throwable
-   * parameter is null.
+   * It just call another abort method and the Throwable parameter is null.
    * @param why Why we're aborting.
    * @see Abortable#abort(String, Throwable)
    */

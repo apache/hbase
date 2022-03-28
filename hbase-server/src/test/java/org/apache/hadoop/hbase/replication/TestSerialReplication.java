@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestSerialReplication extends SerialReplicationTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSerialReplication.class);
+      HBaseClassTestRule.forClass(TestSerialReplication.class);
 
   @Before
   public void setUp() throws IOException, StreamLacksCapabilityException {
@@ -108,7 +108,7 @@ public class TestSerialReplication extends SerialReplicationTestBase {
     regionsToSeqId.put(region.getEncodedName(), -1L);
     regions.stream().map(RegionInfo::getEncodedName).forEach(n -> regionsToSeqId.put(n, -1L));
     try (WAL.Reader reader =
-      WALFactory.createReader(UTIL.getTestFileSystem(), logPath, UTIL.getConfiguration())) {
+        WALFactory.createReader(UTIL.getTestFileSystem(), logPath, UTIL.getConfiguration())) {
       int count = 0;
       for (Entry entry;;) {
         entry = reader.next();
@@ -119,8 +119,8 @@ public class TestSerialReplication extends SerialReplicationTestBase {
         Long seqId = regionsToSeqId.get(encodedName);
         assertNotNull(
           "Unexcepted entry " + entry + ", expected regions " + region + ", or " + regions, seqId);
-        assertTrue("Sequence id go backwards from " + seqId + " to " +
-          entry.getKey().getSequenceId() + " for " + encodedName,
+        assertTrue("Sequence id go backwards from " + seqId + " to "
+            + entry.getKey().getSequenceId() + " for " + encodedName,
           entry.getKey().getSequenceId() >= seqId.longValue());
         if (count < 100) {
           assertEquals(encodedName + " is pushed before parent " + region.getEncodedName(),
@@ -140,9 +140,9 @@ public class TestSerialReplication extends SerialReplicationTestBase {
     TableName tableName = TableName.valueOf(name.getMethodName());
     UTIL.getAdmin().createTable(
       TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF)
-          .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-        .build(),
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF)
+              .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+          .build(),
       new byte[][] { splitKey });
     UTIL.waitTableAvailable(tableName);
     try (Table table = UTIL.getConnection().getTable(tableName)) {
@@ -152,9 +152,9 @@ public class TestSerialReplication extends SerialReplicationTestBase {
     }
     List<RegionInfo> regions = UTIL.getAdmin().getRegions(tableName);
     UTIL.getAdmin()
-      .mergeRegionsAsync(
-        regions.stream().map(RegionInfo::getEncodedNameAsBytes).toArray(byte[][]::new), false)
-      .get(30, TimeUnit.SECONDS);
+        .mergeRegionsAsync(
+          regions.stream().map(RegionInfo::getEncodedNameAsBytes).toArray(byte[][]::new), false)
+        .get(30, TimeUnit.SECONDS);
     UTIL.waitUntilNoRegionsInTransition(30000);
     List<RegionInfo> regionsAfterMerge = UTIL.getAdmin().getRegions(tableName);
     assertEquals(1, regionsAfterMerge.size());
@@ -169,7 +169,7 @@ public class TestSerialReplication extends SerialReplicationTestBase {
     regionsToSeqId.put(region.getEncodedName(), -1L);
     regions.stream().map(RegionInfo::getEncodedName).forEach(n -> regionsToSeqId.put(n, -1L));
     try (WAL.Reader reader =
-      WALFactory.createReader(UTIL.getTestFileSystem(), logPath, UTIL.getConfiguration())) {
+        WALFactory.createReader(UTIL.getTestFileSystem(), logPath, UTIL.getConfiguration())) {
       int count = 0;
       for (Entry entry;;) {
         entry = reader.next();
@@ -180,13 +180,13 @@ public class TestSerialReplication extends SerialReplicationTestBase {
         Long seqId = regionsToSeqId.get(encodedName);
         assertNotNull(
           "Unexcepted entry " + entry + ", expected regions " + region + ", or " + regions, seqId);
-        assertTrue("Sequence id go backwards from " + seqId + " to " +
-          entry.getKey().getSequenceId() + " for " + encodedName,
+        assertTrue("Sequence id go backwards from " + seqId + " to "
+            + entry.getKey().getSequenceId() + " for " + encodedName,
           entry.getKey().getSequenceId() >= seqId.longValue());
         if (count < 100) {
           assertNotEquals(
-            encodedName + " is pushed before parents " +
-              regions.stream().map(RegionInfo::getEncodedName).collect(Collectors.joining(" and ")),
+            encodedName + " is pushed before parents " + regions.stream()
+                .map(RegionInfo::getEncodedName).collect(Collectors.joining(" and ")),
             region.getEncodedName(), encodedName);
         } else {
           assertEquals(region.getEncodedName(), encodedName);
@@ -201,9 +201,9 @@ public class TestSerialReplication extends SerialReplicationTestBase {
   public void testRemovePeerNothingReplicated() throws Exception {
     TableName tableName = createTable();
     String encodedRegionName =
-      UTIL.getMiniHBaseCluster().getRegions(tableName).get(0).getRegionInfo().getEncodedName();
+        UTIL.getMiniHBaseCluster().getRegions(tableName).get(0).getRegionInfo().getEncodedName();
     ReplicationQueueStorage queueStorage =
-      UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
+        UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
     assertEquals(HConstants.NO_SEQNUM, queueStorage.getLastSequenceId(encodedRegionName, PEER_ID));
     UTIL.getAdmin().removeReplicationPeer(PEER_ID);
     assertEquals(HConstants.NO_SEQNUM, queueStorage.getLastSequenceId(encodedRegionName, PEER_ID));
@@ -220,9 +220,9 @@ public class TestSerialReplication extends SerialReplicationTestBase {
     enablePeerAndWaitUntilReplicationDone(100);
     checkOrder(100);
     String encodedRegionName =
-      UTIL.getMiniHBaseCluster().getRegions(tableName).get(0).getRegionInfo().getEncodedName();
+        UTIL.getMiniHBaseCluster().getRegions(tableName).get(0).getRegionInfo().getEncodedName();
     ReplicationQueueStorage queueStorage =
-      UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
+        UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
     assertTrue(queueStorage.getLastSequenceId(encodedRegionName, PEER_ID) > 0);
     UTIL.getAdmin().removeReplicationPeer(PEER_ID);
     // confirm that we delete the last pushed sequence id
@@ -240,9 +240,9 @@ public class TestSerialReplication extends SerialReplicationTestBase {
     enablePeerAndWaitUntilReplicationDone(100);
     checkOrder(100);
     String encodedRegionName =
-      UTIL.getMiniHBaseCluster().getRegions(tableName).get(0).getRegionInfo().getEncodedName();
+        UTIL.getMiniHBaseCluster().getRegions(tableName).get(0).getRegionInfo().getEncodedName();
     ReplicationQueueStorage queueStorage =
-      UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
+        UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
     assertTrue(queueStorage.getLastSequenceId(encodedRegionName, PEER_ID) > 0);
     ReplicationPeerConfig peerConfig = UTIL.getAdmin().getReplicationPeerConfig(PEER_ID);
     UTIL.getAdmin().updateReplicationPeerConfig(PEER_ID,

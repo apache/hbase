@@ -36,13 +36,13 @@ final class CatalogReplicaLoadBalanceSelectorFactory {
 
   /**
    * Create a CatalogReplicaLoadBalanceReplicaSelector based on input config.
-   * @param replicaSelectorClass  Selector classname.
-   * @param tableName  System table name.
+   * @param replicaSelectorClass Selector classname.
+   * @param tableName System table name.
    * @param choreService {@link ChoreService}
-   * @return  {@link CatalogReplicaLoadBalanceSelector}
+   * @return {@link CatalogReplicaLoadBalanceSelector}
    */
   public static CatalogReplicaLoadBalanceSelector createSelector(String replicaSelectorClass,
-    TableName tableName, ChoreService choreService, IntSupplier getReplicaCount) {
+      TableName tableName, ChoreService choreService, IntSupplier getReplicaCount) {
     return ReflectionUtils.instantiateWithCustomCtor(replicaSelectorClass,
       new Class[] { TableName.class, ChoreService.class, IntSupplier.class },
       new Object[] { tableName, choreService, getReplicaCount });

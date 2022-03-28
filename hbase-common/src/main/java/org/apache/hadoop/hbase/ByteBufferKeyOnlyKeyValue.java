@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,13 +29,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This is a key only Cell implementation which is identical to {@link KeyValue.KeyOnlyKeyValue}
- * with respect to key serialization but have its data in the form of Byte buffer
- * (onheap and offheap).
+ * with respect to key serialization but have its data in the form of Byte buffer (onheap and
+ * offheap).
  */
 @InterfaceAudience.Private
 public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
-  public static final int FIXED_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
-      + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_SHORT;
+  public static final int FIXED_OVERHEAD =
+      ClassSize.OBJECT + ClassSize.REFERENCE + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_SHORT;
   private ByteBuffer buf;
   private int offset = 0; // offset into buffer where key starts at
   private int length = 0; // length of this.
@@ -54,8 +53,8 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
   }
 
   /**
-   * A setter that helps to avoid object creation every time and whenever
-   * there is a need to create new OffheapKeyOnlyKeyValue.
+   * A setter that helps to avoid object creation every time and whenever there is a need to create
+   * new OffheapKeyOnlyKeyValue.
    * @param key
    * @param offset
    * @param length
@@ -65,8 +64,8 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
   }
 
   /**
-   * A setter that helps to avoid object creation every time and whenever
-   * there is a need to create new OffheapKeyOnlyKeyValue.
+   * A setter that helps to avoid object creation every time and whenever there is a need to create
+   * new OffheapKeyOnlyKeyValue.
    * @param key - the key part of the cell
    * @param offset - offset of the cell
    * @param length - length of the cell

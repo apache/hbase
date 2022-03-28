@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,14 +43,10 @@ public class TestKeyValueScanFixture {
 
   @Test
   public void testKeyValueScanFixture() throws IOException {
-    KeyValue kvs[] = new KeyValue[]{
-        KeyValueTestUtil.create("RowA", "family", "qf1",
-            1, KeyValue.Type.Put, "value-1"),
-        KeyValueTestUtil.create("RowA", "family", "qf2",
-            1, KeyValue.Type.Put, "value-2"),
-        KeyValueTestUtil.create("RowB", "family", "qf1",
-            10, KeyValue.Type.Put, "value-10")
-    };
+    KeyValue kvs[] = new KeyValue[] {
+        KeyValueTestUtil.create("RowA", "family", "qf1", 1, KeyValue.Type.Put, "value-1"),
+        KeyValueTestUtil.create("RowA", "family", "qf2", 1, KeyValue.Type.Put, "value-2"),
+        KeyValueTestUtil.create("RowB", "family", "qf1", 10, KeyValue.Type.Put, "value-10") };
     KeyValueScanner scan = new KeyValueScanFixture(CellComparator.getInstance(), kvs);
 
     KeyValue kv = KeyValueUtil.createFirstOnRow(Bytes.toBytes("RowA"));
@@ -78,4 +74,3 @@ public class TestKeyValueScanFixture {
   }
 
 }
-

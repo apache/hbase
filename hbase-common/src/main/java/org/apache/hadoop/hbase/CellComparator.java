@@ -32,11 +32,11 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceStability.Evolving
 public interface CellComparator extends Comparator<Cell> {
   /**
-   * A comparator for ordering cells in user-space tables. Useful when writing cells in sorted
-   * order as necessary for bulk import (i.e. via MapReduce).
+   * A comparator for ordering cells in user-space tables. Useful when writing cells in sorted order
+   * as necessary for bulk import (i.e. via MapReduce).
    * <p>
-   * CAUTION: This comparator may provide inaccurate ordering for cells from system tables,
-   * and should not be relied upon in that case.
+   * CAUTION: This comparator may provide inaccurate ordering for cells from system tables, and
+   * should not be relied upon in that case.
    */
   // For internal use, see CellComparatorImpl utility methods.
   static CellComparator getInstance() {
@@ -56,8 +56,8 @@ public interface CellComparator extends Comparator<Cell> {
 
   /**
    * Compare cells.
-   * @param ignoreSequenceid True if we are to compare the key portion only and ignore
-   *    the sequenceid. Set to false to compare key and consider sequenceid.
+   * @param ignoreSequenceid True if we are to compare the key portion only and ignore the
+   *          sequenceid. Set to false to compare key and consider sequenceid.
    * @return 0 if equal, -1 if a &lt; b, and +1 if a &gt; b.
    */
   int compare(Cell leftCell, Cell rightCell, boolean ignoreSequenceid);
@@ -72,8 +72,7 @@ public interface CellComparator extends Comparator<Cell> {
   int compareRows(Cell leftCell, Cell rightCell);
 
   /**
-   * Compares the row part of the cell with a simple plain byte[] like the
-   * stopRow in Scan.
+   * Compares the row part of the cell with a simple plain byte[] like the stopRow in Scan.
    * @param cell the cell
    * @param bytes the byte[] representing the row to be compared with
    * @param offset the offset of the byte[]
@@ -87,8 +86,8 @@ public interface CellComparator extends Comparator<Cell> {
    * Compares two row bytes
    * @param leftRow the byte array of the left row
    * @param rightRow the byte array of the right row
-   * @return greater than 0 if leftRow is bigger, less than 0 if rightRow is bigger, 0 if both
-   *         rows are equal
+   * @return greater than 0 if leftRow is bigger, less than 0 if rightRow is bigger, 0 if both rows
+   *         are equal
    */
   default int compareRows(byte[] leftRow, byte[] rightRow) {
     return Bytes.compareTo(leftRow, rightRow);
@@ -96,7 +95,7 @@ public interface CellComparator extends Comparator<Cell> {
 
   /**
    * @param row ByteBuffer that wraps a row; will read from current position and will reading all
-   *            remaining; will not disturb the ByteBuffer internal state.
+   *          remaining; will not disturb the ByteBuffer internal state.
    * @return greater than 0 if leftCell is bigger, less than 0 if rightCell is bigger, 0 if both
    *         cells are equal
    */
@@ -104,12 +103,10 @@ public interface CellComparator extends Comparator<Cell> {
     if (cell instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.compareTo(row, row.position(), row.remaining(),
         ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
-        ((ByteBufferExtendedCell) cell).getRowPosition(),
-        cell.getRowLength());
+        ((ByteBufferExtendedCell) cell).getRowPosition(), cell.getRowLength());
     }
-    return ByteBufferUtils.compareTo(row, row.position(), row.remaining(),
-      cell.getRowArray(), cell.getRowOffset(),
-      cell.getRowLength());
+    return ByteBufferUtils.compareTo(row, row.position(), row.remaining(), cell.getRowArray(),
+      cell.getRowOffset(), cell.getRowLength());
   }
 
   /**
@@ -166,8 +163,9 @@ public interface CellComparator extends Comparator<Cell> {
 
   /**
    * @return A dumbed-down, fast comparator for hbase2 base-type, the {@link ByteBufferKeyValue}.
-   *   Create an instance when you make a new memstore, when you know only BBKVs will be passed.
-   *   Do not pollute with types other than BBKV if can be helped; the Comparator will slow.
+   *         Create an instance when you make a new memstore, when you know only BBKVs will be
+   *         passed. Do not pollute with types other than BBKV if can be helped; the Comparator will
+   *         slow.
    */
   Comparator getSimpleComparator();
 }

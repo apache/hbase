@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -35,7 +33,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
-
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 import javax.management.MBeanServerConnection;
@@ -148,17 +145,17 @@ public class TestMetaTableMetrics {
 
     UTIL.waitFor(30000, 2000, true, () -> {
       Map<String, Double> jmxMetrics = readMetaTableJmxMetrics();
-      boolean allMetricsFound = AllOf.allOf(
-        containsPositiveJmxAttributesFor("MetaTable_get_request"),
-        containsPositiveJmxAttributesFor("MetaTable_put_request"),
-        containsPositiveJmxAttributesFor("MetaTable_delete_request"),
-        containsPositiveJmxAttributesFor("MetaTable_region_.+_lossy_request"),
-        containsPositiveJmxAttributesFor("MetaTable_table_" + NAME1 + "_request"),
-        containsPositiveJmxAttributesFor("MetaTable_client_.+_put_request"),
-        containsPositiveJmxAttributesFor("MetaTable_client_.+_get_request"),
-        containsPositiveJmxAttributesFor("MetaTable_client_.+_delete_request"),
-        containsPositiveJmxAttributesFor("MetaTable_client_.+_lossy_request")
-      ).matches(jmxMetrics);
+      boolean allMetricsFound = AllOf
+          .allOf(containsPositiveJmxAttributesFor("MetaTable_get_request"),
+            containsPositiveJmxAttributesFor("MetaTable_put_request"),
+            containsPositiveJmxAttributesFor("MetaTable_delete_request"),
+            containsPositiveJmxAttributesFor("MetaTable_region_.+_lossy_request"),
+            containsPositiveJmxAttributesFor("MetaTable_table_" + NAME1 + "_request"),
+            containsPositiveJmxAttributesFor("MetaTable_client_.+_put_request"),
+            containsPositiveJmxAttributesFor("MetaTable_client_.+_get_request"),
+            containsPositiveJmxAttributesFor("MetaTable_client_.+_delete_request"),
+            containsPositiveJmxAttributesFor("MetaTable_client_.+_lossy_request"))
+          .matches(jmxMetrics);
 
       if (allMetricsFound) {
         LOG.info("all the meta table metrics found with positive values: {}", jmxMetrics);
@@ -264,7 +261,7 @@ public class TestMetaTableMetrics {
         while (iterator.hasNext()) {
           ObjectInstance instance = iterator.next();
           LOG.debug("Class and object name: {} [{}]", instance.getClassName(),
-                    instance.getObjectName());
+            instance.getObjectName());
         }
       }
     } finally {

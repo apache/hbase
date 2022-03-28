@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ public class ModifyColumnFamilyStoreFileTrackerProcedure extends ModifyStoreFile
   }
 
   public ModifyColumnFamilyStoreFileTrackerProcedure(MasterProcedureEnv env, TableName tableName,
-    byte[] family, String dstSFT) throws HBaseIOException {
+      byte[] family, String dstSFT) throws HBaseIOException {
     super(env, tableName, dstSFT);
     this.family = family;
   }
@@ -54,7 +54,7 @@ public class ModifyColumnFamilyStoreFileTrackerProcedure extends ModifyStoreFile
   protected void preCheck(TableDescriptor current) throws IOException {
     if (!current.hasColumnFamily(family)) {
       throw new NoSuchColumnFamilyException(
-        Bytes.toStringBinary(family) + " does not exist for table " + current.getTableName());
+          Bytes.toStringBinary(family) + " does not exist for table " + current.getTableName());
     }
   }
 
@@ -66,18 +66,18 @@ public class ModifyColumnFamilyStoreFileTrackerProcedure extends ModifyStoreFile
 
   @Override
   protected TableDescriptor createRestoreTableDescriptor(TableDescriptor current,
-    String restoreSFT) {
+      String restoreSFT) {
     ColumnFamilyDescriptor cfd =
-      ColumnFamilyDescriptorBuilder.newBuilder(current.getColumnFamily(family))
-        .setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL, restoreSFT).build();
+        ColumnFamilyDescriptorBuilder.newBuilder(current.getColumnFamily(family))
+            .setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL, restoreSFT).build();
     return TableDescriptorBuilder.newBuilder(current).modifyColumnFamily(cfd).build();
   }
 
   @Override
   protected TableDescriptor createMigrationTableDescriptor(Configuration conf,
-    TableDescriptor current) {
+      TableDescriptor current) {
     ColumnFamilyDescriptorBuilder builder =
-      ColumnFamilyDescriptorBuilder.newBuilder(current.getColumnFamily(family));
+        ColumnFamilyDescriptorBuilder.newBuilder(current.getColumnFamily(family));
     migrate(conf, builder::setConfiguration);
     return TableDescriptorBuilder.newBuilder(current).modifyColumnFamily(builder.build()).build();
   }
@@ -85,7 +85,7 @@ public class ModifyColumnFamilyStoreFileTrackerProcedure extends ModifyStoreFile
   @Override
   protected TableDescriptor createFinishTableDescriptor(TableDescriptor current) {
     ColumnFamilyDescriptorBuilder builder =
-      ColumnFamilyDescriptorBuilder.newBuilder(current.getColumnFamily(family));
+        ColumnFamilyDescriptorBuilder.newBuilder(current.getColumnFamily(family));
     finish(builder::setConfiguration, builder::removeConfiguration);
     return TableDescriptorBuilder.newBuilder(current).modifyColumnFamily(builder.build()).build();
   }
@@ -94,14 +94,14 @@ public class ModifyColumnFamilyStoreFileTrackerProcedure extends ModifyStoreFile
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     serializer.serialize(ModifyColumnFamilyStoreFileTrackerStateData.newBuilder()
-      .setFamily(ByteString.copyFrom(family)).build());
+        .setFamily(ByteString.copyFrom(family)).build());
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     ModifyColumnFamilyStoreFileTrackerStateData data =
-      serializer.deserialize(ModifyColumnFamilyStoreFileTrackerStateData.class);
+        serializer.deserialize(ModifyColumnFamilyStoreFileTrackerStateData.class);
     this.family = data.getFamily().toByteArray();
   }
 }

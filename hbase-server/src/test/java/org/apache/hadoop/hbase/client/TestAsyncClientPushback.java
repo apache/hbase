@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public class TestAsyncClientPushback extends ClientPushbackTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncClientPushback.class);
+      HBaseClassTestRule.forClass(TestAsyncClientPushback.class);
 
   private AsyncConnectionImpl conn;
 
@@ -47,8 +47,8 @@ public class TestAsyncClientPushback extends ClientPushbackTestBase {
 
   @Before
   public void setUp() throws Exception {
-    conn =
-      (AsyncConnectionImpl) ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
+    conn = (AsyncConnectionImpl) ConnectionFactory.createAsyncConnection(UTIL.getConfiguration())
+        .get();
     mutator = conn.getBufferedMutator(tableName);
   }
 

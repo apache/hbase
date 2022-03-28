@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -90,22 +90,22 @@ public final class MasterRegionFactory {
   public static final byte[] REGION_SERVER_FAMILY = Bytes.toBytes("rs");
 
   private static final TableDescriptor TABLE_DESC = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-    .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
-      .setMaxVersions(HConstants.DEFAULT_HBASE_META_VERSIONS).setInMemory(true)
-      .setBlocksize(HConstants.DEFAULT_HBASE_META_BLOCK_SIZE).setBloomFilterType(BloomType.ROWCOL)
-      .setDataBlockEncoding(DataBlockEncoding.ROW_INDEX_V1).build())
-    .setColumnFamily(ColumnFamilyDescriptorBuilder.of(PROC_FAMILY))
-    .setColumnFamily(ColumnFamilyDescriptorBuilder.of(REGION_SERVER_FAMILY))
-    .build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
+          .setMaxVersions(HConstants.DEFAULT_HBASE_META_VERSIONS).setInMemory(true)
+          .setBlocksize(HConstants.DEFAULT_HBASE_META_BLOCK_SIZE)
+          .setBloomFilterType(BloomType.ROWCOL).setDataBlockEncoding(DataBlockEncoding.ROW_INDEX_V1)
+          .build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(PROC_FAMILY))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(REGION_SERVER_FAMILY)).build();
 
   private static TableDescriptor withTrackerConfigs(Configuration conf) {
     String trackerImpl = conf.get(TRACKER_IMPL, conf.get(StoreFileTrackerFactory.TRACKER_IMPL,
       StoreFileTrackerFactory.Trackers.DEFAULT.name()));
     Class<? extends StoreFileTracker> trackerClass =
-      StoreFileTrackerFactory.getTrackerClass(trackerImpl);
+        StoreFileTrackerFactory.getTrackerClass(trackerImpl);
     if (StoreFileTrackerFactory.isMigration(trackerClass)) {
-      throw new IllegalArgumentException("Should not set store file tracker to " +
-        StoreFileTrackerFactory.Trackers.MIGRATION.name() + " for master local region");
+      throw new IllegalArgumentException("Should not set store file tracker to "
+          + StoreFileTrackerFactory.Trackers.MIGRATION.name() + " for master local region");
     }
     StoreFileTracker tracker = ReflectionUtils.newInstance(trackerClass, conf, true, null);
     return tracker.updateWithTrackerConfigs(TableDescriptorBuilder.newBuilder(TABLE_DESC)).build();
@@ -114,13 +114,13 @@ public final class MasterRegionFactory {
   public static MasterRegion create(Server server) throws IOException {
     Configuration conf = server.getConfiguration();
     MasterRegionParams params = new MasterRegionParams().server(server)
-      .regionDirName(MASTER_STORE_DIR).tableDescriptor(withTrackerConfigs(conf));
+        .regionDirName(MASTER_STORE_DIR).tableDescriptor(withTrackerConfigs(conf));
     long flushSize = conf.getLong(FLUSH_SIZE_KEY, DEFAULT_FLUSH_SIZE);
     long flushPerChanges = conf.getLong(FLUSH_PER_CHANGES_KEY, DEFAULT_FLUSH_PER_CHANGES);
     long flushIntervalMs = conf.getLong(FLUSH_INTERVAL_MS_KEY, DEFAULT_FLUSH_INTERVAL_MS);
     int compactMin = conf.getInt(COMPACT_MIN_KEY, DEFAULT_COMPACT_MIN);
     params.flushSize(flushSize).flushPerChanges(flushPerChanges).flushIntervalMs(flushIntervalMs)
-      .compactMin(compactMin);
+        .compactMin(compactMin);
     int maxWals = conf.getInt(MAX_WALS_KEY, DEFAULT_MAX_WALS);
     params.maxWals(maxWals);
     if (conf.get(USE_HSYNC_KEY) != null) {
@@ -129,7 +129,7 @@ public final class MasterRegionFactory {
     params.ringBufferSlotCount(conf.getInt(RING_BUFFER_SLOT_COUNT, DEFAULT_RING_BUFFER_SLOT_COUNT));
     long rollPeriodMs = conf.getLong(ROLL_PERIOD_MS_KEY, DEFAULT_ROLL_PERIOD_MS);
     params.rollPeriodMs(rollPeriodMs).archivedWalSuffix(ARCHIVED_WAL_SUFFIX)
-      .archivedHFileSuffix(ARCHIVED_HFILE_SUFFIX);
+        .archivedHFileSuffix(ARCHIVED_HFILE_SUFFIX);
     return MasterRegion.create(params);
   }
 }

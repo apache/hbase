@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
@@ -28,8 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* Action that tries to move a random region of a table.
-*/
+ * Action that tries to move a random region of a table.
+ */
 public class MoveRandomRegionOfTableAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(MoveRandomRegionOfTableAction.class);
   private final long sleepTime;
@@ -44,7 +43,8 @@ public class MoveRandomRegionOfTableAction extends Action {
     this.tableName = tableName;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -64,12 +64,11 @@ public class MoveRandomRegionOfTableAction extends Action {
       return;
     }
 
-    RegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
-      regions.toArray(new RegionInfo[0]));
+    RegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(regions.toArray(new RegionInfo[0]));
     getLogger().debug("Move random region {}", region.getRegionNameAsString());
     // Use facility over in MoveRegionsOfTableAction...
-    MoveRegionsOfTableAction.moveRegion(admin, MoveRegionsOfTableAction.getServers(admin),
-      region, getLogger());
+    MoveRegionsOfTableAction.moveRegion(admin, MoveRegionsOfTableAction.getServers(admin), region,
+      getLogger());
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);
     }

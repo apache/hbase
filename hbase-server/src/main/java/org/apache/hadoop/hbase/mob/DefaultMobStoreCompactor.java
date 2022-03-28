@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,8 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -80,16 +80,16 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   };
 
   private final CellSinkFactory<StoreFileWriter> writerFactory =
-    new CellSinkFactory<StoreFileWriter>() {
-      @Override
-      public StoreFileWriter createWriter(InternalScanner scanner,
-        org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
-        boolean shouldDropBehind, boolean major) throws IOException {
-        // make this writer with tags always because of possible new cells with tags.
-        return store.getStoreEngine().createWriter(
-          createParams(fd, shouldDropBehind, major).includeMVCCReadpoint(true).includesTag(true));
-      }
-    };
+      new CellSinkFactory<StoreFileWriter>() {
+        @Override
+        public StoreFileWriter createWriter(InternalScanner scanner,
+            org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
+            boolean shouldDropBehind, boolean major) throws IOException {
+          // make this writer with tags always because of possible new cells with tags.
+          return store.getStoreEngine().createWriter(
+            createParams(fd, shouldDropBehind, major).includeMVCCReadpoint(true).includesTag(true));
+        }
+      };
 
   public DefaultMobStoreCompactor(Configuration conf, HStore store) {
     super(conf, store);
@@ -105,54 +105,41 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   }
 
   @Override
-  public List<Path> compact(CompactionRequestImpl request, ThroughputController throughputController,
-      User user) throws IOException {
+  public List<Path> compact(CompactionRequestImpl request,
+      ThroughputController throughputController, User user) throws IOException {
     return compact(request, scannerFactory, writerFactory, throughputController, user);
   }
 
   /**
-   * Performs compaction on a column family with the mob flag enabled.
-   * This is for when the mob threshold size has changed or if the mob
-   * column family mode has been toggled via an alter table statement.
-   * Compacts the files by the following rules.
-   * 1. If the Put cell has a mob reference tag, the cell's value is the path of the mob file.
+   * Performs compaction on a column family with the mob flag enabled. This is for when the mob
+   * threshold size has changed or if the mob column family mode has been toggled via an alter table
+   * statement. Compacts the files by the following rules. 1. If the Put cell has a mob reference
+   * tag, the cell's value is the path of the mob file.
    * <ol>
-   * <li>
-   * If the value size of a cell is larger than the threshold, this cell is regarded as a mob,
-   * directly copy the (with mob tag) cell into the new store file.
-   * </li>
-   * <li>
-   * Otherwise, retrieve the mob cell from the mob file, and writes a copy of the cell into
-   * the new store file.
-   * </li>
+   * <li>If the value size of a cell is larger than the threshold, this cell is regarded as a mob,
+   * directly copy the (with mob tag) cell into the new store file.</li>
+   * <li>Otherwise, retrieve the mob cell from the mob file, and writes a copy of the cell into the
+   * new store file.</li>
    * </ol>
    * 2. If the Put cell doesn't have a reference tag.
    * <ol>
-   * <li>
-   * If the value size of a cell is larger than the threshold, this cell is regarded as a mob,
-   * write this cell to a mob file, and write the path of this mob file to the store file.
-   * </li>
-   * <li>
-   * Otherwise, directly write this cell into the store file.
-   * </li>
+   * <li>If the value size of a cell is larger than the threshold, this cell is regarded as a mob,
+   * write this cell to a mob file, and write the path of this mob file to the store file.</li>
+   * <li>Otherwise, directly write this cell into the store file.</li>
    * </ol>
    * 3. Decide how to write a Delete cell.
    * <ol>
-   * <li>
-   * If a Delete cell does not have a mob reference tag which means this delete marker have not
-   * been written to the mob del file, write this cell to the mob del file, and write this cell
-   * with a ref tag to a store file.
-   * </li>
-   * <li>
-   * Otherwise, directly write it to a store file.
-   * </li>
+   * <li>If a Delete cell does not have a mob reference tag which means this delete marker have not
+   * been written to the mob del file, write this cell to the mob del file, and write this cell with
+   * a ref tag to a store file.</li>
+   * <li>Otherwise, directly write it to a store file.</li>
    * </ol>
    * After the major compaction on the normal hfiles, we have a guarantee that we have purged all
    * deleted or old version mob refs, and the delete markers are written to a del file with the
-   * suffix _del. Because of this, it is safe to use the del file in the mob compaction.
-   * The mob compaction doesn't take place in the normal hfiles, it occurs directly in the
-   * mob files. When the small mob files are merged into bigger ones, the del file is added into
-   * the scanner to filter the deleted cells.
+   * suffix _del. Because of this, it is safe to use the del file in the mob compaction. The mob
+   * compaction doesn't take place in the normal hfiles, it occurs directly in the mob files. When
+   * the small mob files are merged into bigger ones, the del file is added into the scanner to
+   * filter the deleted cells.
    * @param fd File details
    * @param scanner Where to read from.
    * @param smallestReadPoint Smallest read point.
@@ -191,8 +178,9 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     ScannerContext scannerContext =
         ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
     throughputController.start(compactionName);
-    KeyValueScanner kvs = (scanner instanceof KeyValueScanner)? (KeyValueScanner)scanner : null;
-    long shippedCallSizeLimit = (long) numofFilesToCompact * this.store.getColumnFamilyDescriptor().getBlocksize();
+    KeyValueScanner kvs = (scanner instanceof KeyValueScanner) ? (KeyValueScanner) scanner : null;
+    long shippedCallSizeLimit =
+        (long) numofFilesToCompact * this.store.getColumnFamilyDescriptor().getBlocksize();
     try {
       try {
         // If the mob file writer could not be created, directly write the cell to the store file.
@@ -202,16 +190,16 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
       } catch (IOException e) {
         LOG.warn("Failed to create mob writer, "
-               + "we will continue the compaction by writing MOB cells directly in store files", e);
+            + "we will continue the compaction by writing MOB cells directly in store files",
+          e);
       }
       if (major) {
         try {
           delFileWriter = mobStore.createDelFileWriterInTmp(new Date(fd.latestPutTs),
             fd.maxKeyCount, majorCompactionCompression, store.getRegionInfo().getStartKey());
         } catch (IOException e) {
-          LOG.warn(
-            "Failed to create del writer, "
-            + "we will continue the compaction by writing delete markers directly in store files",
+          LOG.warn("Failed to create del writer, "
+              + "we will continue the compaction by writing delete markers directly in store files",
             e);
         }
       }
@@ -273,7 +261,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               writer.append(c);
             }
           } else if (c.getValueLength() <= mobSizeThreshold) {
-            //If value size of a cell is not larger than the threshold, directly write to store file
+            // If value size of a cell is not larger than the threshold, directly write to store
+            // file
             writer.append(c);
           } else {
             // If the value size of a cell is larger than the threshold, it's regarded as a mob,
@@ -281,8 +270,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
             mobCells++;
             // append the original keyValue in the mob file.
             mobFileWriter.append(c);
-            Cell reference = MobUtils.createMobRefCell(c, fileName,
-                this.mobStore.getRefCellTags());
+            Cell reference = MobUtils.createMobRefCell(c, fileName, this.mobStore.getRefCellTags());
             // write the cell whose value is the path of a mob file to the store file.
             writer.append(reference);
             cellsCountCompactedToMob++;
@@ -301,7 +289,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
             return false;
           }
           if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
-            ((ShipperListener)writer).beforeShipped();
+            ((ShipperListener) writer).beforeShipped();
             kvs.shipped();
             bytesWrittenProgressForShippedCall = 0;
           }
@@ -369,10 +357,9 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     return true;
   }
 
-
   @Override
-  protected List<Path> commitWriter(FileDetails fd,
-      CompactionRequestImpl request) throws IOException {
+  protected List<Path> commitWriter(FileDetails fd, CompactionRequestImpl request)
+      throws IOException {
     List<Path> newFiles = Lists.newArrayList(writer.getPath());
     writer.appendMetadata(fd.maxSeqId, request.isAllFiles(), request.getFiles());
     writer.close();

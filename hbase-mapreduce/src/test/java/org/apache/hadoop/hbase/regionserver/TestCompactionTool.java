@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,7 @@ public class TestCompactionTool {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactionTool.class);
+      HBaseClassTestRule.forClass(TestCompactionTool.class);
 
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
@@ -77,20 +77,20 @@ public class TestCompactionTool {
     Path tableDir = CommonFSUtils.getTableDir(rootDir, region.getRegionInfo().getTable());
     FileSystem fs = store.getFileSystem();
     String storePath = tableDir + "/" + region.getRegionInfo().getEncodedName() + "/"
-      + Bytes.toString(HBaseTestingUtility.fam1);
+        + Bytes.toString(HBaseTestingUtility.fam1);
     FileStatus[] regionDirFiles = fs.listStatus(new Path(storePath));
     assertEquals(10, regionDirFiles.length);
     String defaultFS = testUtil.getMiniHBaseCluster().getConfiguration().get("fs.defaultFS");
     Configuration config = HBaseConfiguration.create();
     config.set("fs.defaultFS", defaultFS);
     int result = ToolRunner.run(config, new CompactionTool(),
-      new String[]{"-compactOnce", "-major", storePath});
-    assertEquals(0,result);
+      new String[] { "-compactOnce", "-major", storePath });
+    assertEquals(0, result);
     regionDirFiles = fs.listStatus(new Path(storePath));
     assertEquals(1, regionDirFiles.length);
   }
 
-  private void putAndFlush(int key) throws Exception{
+  private void putAndFlush(int key) throws Exception {
     Put put = new Put(Bytes.toBytes(key));
     put.addColumn(HBaseTestingUtility.fam1, qualifier, Bytes.toBytes("val" + key));
     region.put(put);

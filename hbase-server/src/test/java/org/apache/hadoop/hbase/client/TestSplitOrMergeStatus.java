@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -54,7 +53,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestSplitOrMergeStatus {
 
   @ClassRule
@@ -62,7 +61,7 @@ public class TestSplitOrMergeStatus {
       HBaseClassTestRule.forClass(TestSplitOrMergeStatus.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static byte [] FAMILY = Bytes.toBytes("testFamily");
+  private static byte[] FAMILY = Bytes.toBytes("testFamily");
 
   @Rule
   public TestName name = new TestName();
@@ -106,15 +105,16 @@ public class TestSplitOrMergeStatus {
     assertFalse(admin.splitSwitch(true, false));
     admin.split(t.getName());
     while ((count = admin.getTableRegions(tableName).size()) == originalCount) {
-      Threads.sleep(1);;
+      Threads.sleep(1);
+      ;
     }
     count = admin.getTableRegions(tableName).size();
     assertTrue(originalCount < count);
     admin.close();
   }
 
-
-  @Ignore @Test
+  @Ignore
+  @Test
   public void testMergeSwitch() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     Table t = TEST_UTIL.createTable(tableName, FAMILY);
@@ -126,10 +126,11 @@ public class TestSplitOrMergeStatus {
     admin.split(t.getName());
     int postSplitCount = -1;
     while ((postSplitCount = admin.getTableRegions(tableName).size()) == originalCount) {
-      Threads.sleep(1);;
+      Threads.sleep(1);
+      ;
     }
     assertTrue("originalCount=" + originalCount + ", newCount=" + postSplitCount,
-        originalCount != postSplitCount);
+      originalCount != postSplitCount);
 
     // Merge switch is off so merge should NOT succeed.
     boolean[] results = admin.setSplitOrMergeEnabled(false, false, MasterSwitchType.MERGE);
@@ -156,16 +157,16 @@ public class TestSplitOrMergeStatus {
       regions.get(1).getEncodedNameAsBytes(), true);
     f.get(10, TimeUnit.SECONDS);
     count = admin.getTableRegions(tableName).size();
-    assertTrue((postSplitCount / 2 /*Merge*/) == count);
+    assertTrue((postSplitCount / 2 /* Merge */) == count);
     admin.close();
   }
 
   @Test
   public void testMultiSwitches() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
-    boolean[] switches = admin.setSplitOrMergeEnabled(false, false,
-      MasterSwitchType.SPLIT, MasterSwitchType.MERGE);
-    for (boolean s : switches){
+    boolean[] switches =
+        admin.setSplitOrMergeEnabled(false, false, MasterSwitchType.SPLIT, MasterSwitchType.MERGE);
+    for (boolean s : switches) {
       assertTrue(s);
     }
     assertFalse(admin.isSplitOrMergeEnabled(MasterSwitchType.SPLIT));

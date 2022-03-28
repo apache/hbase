@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import java.util.ArrayList;
@@ -39,12 +38,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestRegionPlansWithThrottle {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionPlansWithThrottle.class);
+      HBaseClassTestRule.forClass(TestRegionPlansWithThrottle.class);
 
   private static HMaster hMaster;
 
@@ -66,8 +65,8 @@ public class TestRegionPlansWithThrottle {
     final TableName tableName = TableName.valueOf("testExecuteRegionPlansWithThrottling");
 
     TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName).setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(Bytes.toBytes("cf")));
+        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName).setColumnFamily(
+          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(Bytes.toBytes("cf")));
 
     UTIL.getAdmin().createTable(tableDescriptor);
     Table table = UTIL.getConnection().getTable(tableName);
@@ -87,9 +86,9 @@ public class TestRegionPlansWithThrottle {
     List<RegionPlan> plans = new ArrayList<>();
     List<RegionInfo> regionInfos = UTIL.getAdmin().getRegions(tableName);
     for (RegionInfo regionInfo : regionInfos) {
-      plans.add(
-        new RegionPlan(regionInfo, UTIL.getHBaseCluster().getRegionServer(0).getServerName(),
-          UTIL.getHBaseCluster().getRegionServer(1).getServerName()));
+      plans
+          .add(new RegionPlan(regionInfo, UTIL.getHBaseCluster().getRegionServer(0).getServerName(),
+              UTIL.getHBaseCluster().getRegionServer(1).getServerName()));
     }
     List<RegionPlan> successPlans = hMaster.executeRegionPlansWithThrottling(plans);
     Assert.assertEquals(regionInfos.size(), successPlans.size());

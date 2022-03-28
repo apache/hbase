@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,7 @@ public class TestRaceBetweenSCPAndTRSP {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRaceBetweenSCPAndTRSP.class);
+      HBaseClassTestRule.forClass(TestRaceBetweenSCPAndTRSP.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -110,7 +110,7 @@ public class TestRaceBetweenSCPAndTRSP {
 
     @Override
     protected AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
+        MasterRegion masterRegion) {
       return new AssignmentManagerForTest(master, masterRegion);
     }
   }
@@ -153,10 +153,10 @@ public class TestRaceBetweenSCPAndTRSP {
 
     moveFuture.get();
     ProcedureExecutor<?> procExec =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     long scpProcId =
-      procExec.getProcedures().stream().filter(p -> p instanceof ServerCrashProcedure)
-        .map(p -> (ServerCrashProcedure) p).findAny().get().getProcId();
+        procExec.getProcedures().stream().filter(p -> p instanceof ServerCrashProcedure)
+            .map(p -> (ServerCrashProcedure) p).findAny().get().getProcId();
     RESUME_GET_REGIONS_ON_SERVER.countDown();
     UTIL.waitFor(60000, () -> procExec.isFinished(scpProcId));
   }

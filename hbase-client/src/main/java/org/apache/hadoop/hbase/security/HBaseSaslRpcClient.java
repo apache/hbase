@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security;
 
 import java.io.BufferedInputStream;
@@ -29,14 +28,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
-
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.SaslInputStream;
@@ -46,6 +42,8 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
 /**
  * A utility class that encapsulates SASL logic for RPC client. Copied from
@@ -72,7 +70,7 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
   public HBaseSaslRpcClient(Configuration conf, SaslClientAuthenticationProvider provider,
       Token<? extends TokenIdentifier> token, InetAddress serverAddr, SecurityInfo securityInfo,
       boolean fallbackAllowed, String rpcProtection, boolean initStreamForCrypto)
-          throws IOException {
+      throws IOException {
     super(conf, provider, token, serverAddr, securityInfo, fallbackAllowed, rpcProtection);
     this.initStreamForCrypto = initStreamForCrypto;
   }
@@ -151,9 +149,8 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
 
       try {
         readStatus(inStream);
-      }
-      catch (IOException e){
-        if(e instanceof RemoteException){
+      } catch (IOException e) {
+        if (e instanceof RemoteException) {
           LOG.debug("Sasl connection failed: ", e);
           throw e;
         }
@@ -189,8 +186,8 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
     return (String) saslClient.getNegotiatedProperty(Sasl.QOP);
   }
 
-  public void initCryptoCipher(RPCProtos.CryptoCipherMeta cryptoCipherMeta,
-      Configuration conf) throws IOException {
+  public void initCryptoCipher(RPCProtos.CryptoCipherMeta cryptoCipherMeta, Configuration conf)
+      throws IOException {
     // create SaslAES for client
     cryptoAES = EncryptionUtil.createCryptoAES(cryptoCipherMeta, conf);
     cryptoAesEnable = true;
@@ -214,6 +211,7 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
 
   class WrappedInputStream extends FilterInputStream {
     private ByteBuffer unwrappedRpcBuffer = ByteBuffer.allocate(0);
+
     public WrappedInputStream(InputStream in) throws IOException {
       super(in);
     }
@@ -279,6 +277,7 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
     public WrappedOutputStream(OutputStream out) throws IOException {
       super(out);
     }
+
     @Override
     public void write(byte[] buf, int off, int len) throws IOException {
       if (LOG.isDebugEnabled()) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,18 +33,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ LargeTests.class, ClientTests.class })
-public class TestCloneSnapshotFromClientCustomSFT extends CloneSnapshotFromClientTestBase{
+public class TestCloneSnapshotFromClientCustomSFT extends CloneSnapshotFromClientTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCloneSnapshotFromClientCustomSFT.class);
+      HBaseClassTestRule.forClass(TestCloneSnapshotFromClientCustomSFT.class);
 
   public static final String CLONE_SFT = "FILE";
 
   @Test
   public void testCloneSnapshotWithCustomSFT() throws IOException, InterruptedException {
     TableName clonedTableName =
-      TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
+        TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
 
     admin.cloneSnapshot(Bytes.toString(snapshotName1), clonedTableName, false, CLONE_SFT);
     verifyRowCount(TEST_UTIL, clonedTableName, snapshot1Rows);
@@ -58,15 +58,15 @@ public class TestCloneSnapshotFromClientCustomSFT extends CloneSnapshotFromClien
   @Test
   public void testCloneSnapshotWithIncorrectCustomSFT() throws IOException, InterruptedException {
     TableName clonedTableName =
-      TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
+        TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
 
     IOException ioException = assertThrows(IOException.class, () -> {
       admin.cloneSnapshot(Bytes.toString(snapshotName1), clonedTableName, false, "IncorrectSFT");
     });
 
     assertEquals(
-      "java.lang.RuntimeException: java.lang.RuntimeException: " +
-        "java.lang.ClassNotFoundException: Class IncorrectSFT not found",
+      "java.lang.RuntimeException: java.lang.RuntimeException: "
+          + "java.lang.ClassNotFoundException: Class IncorrectSFT not found",
       ioException.getMessage());
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
@@ -43,12 +44,12 @@ public class TestMetricsTableAggregate {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsTableAggregate.class);
+      HBaseClassTestRule.forClass(TestMetricsTableAggregate.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMetricsTableAggregate.class);
 
   private static MetricsAssertHelper HELPER =
-    CompatibilityFactory.getInstance(MetricsAssertHelper.class);
+      CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
   private String tableName = "testTableMetrics";
   private String pre = "Namespace_default_table_" + tableName + "_metric_";
@@ -170,8 +171,8 @@ public class TestMetricsTableAggregate {
     AtomicBoolean succ = new AtomicBoolean(true);
     CyclicBarrier barrier = new CyclicBarrier(threadNumber);
     Thread[] threads = IntStream.range(0, threadNumber)
-      .mapToObj(i -> new Thread(() -> update(succ, round, barrier), "Update-Worker-" + i))
-      .toArray(Thread[]::new);
+        .mapToObj(i -> new Thread(() -> update(succ, round, barrier), "Update-Worker-" + i))
+        .toArray(Thread[]::new);
     Stream.of(threads).forEach(Thread::start);
     for (Thread t : threads) {
       t.join();

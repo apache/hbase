@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,7 +65,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MapReduceTests.class, LargeTests.class})
+@Category({ MapReduceTests.class, LargeTests.class })
 public class TestImportTSVWithOperationAttributes implements Configurable {
 
   @ClassRule
@@ -78,8 +78,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
   protected static HBaseTestingUtility util = new HBaseTestingUtility();
 
   /**
-   * Delete the tmp directory after running doMROnTableTest. Boolean. Default is
-   * false.
+   * Delete the tmp directory after running doMROnTableTest. Boolean. Default is false.
    */
   protected static final String DELETE_AFTER_LOAD_CONF = NAME + ".deleteAfterLoad";
 
@@ -153,13 +152,10 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
   }
 
   /**
-   * Run an ImportTsv job and perform basic validation on the results. Returns
-   * the ImportTsv <code>Tool</code> instance so that other tests can inspect it
-   * for further validation as necessary. This method is static to insure
-   * non-reliance on instance's util/conf facilities.
-   *
-   * @param args
-   *          Any arguments to pass BEFORE inputFile path is appended.
+   * Run an ImportTsv job and perform basic validation on the results. Returns the ImportTsv
+   * <code>Tool</code> instance so that other tests can inspect it for further validation as
+   * necessary. This method is static to insure non-reliance on instance's util/conf facilities.
+   * @param args Any arguments to pass BEFORE inputFile path is appended.
    * @param dataAvailable
    * @return The Tool instance used to run the test.
    */
@@ -199,7 +195,6 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
 
   /**
    * Confirm ImportTsv via data in online table.
-   *
    * @param dataAvailable
    */
   private static void validateTable(Configuration conf, TableName tableName, String family,
@@ -224,9 +219,10 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
             List<Cell> kvs = res.listCells();
             assertTrue(CellUtil.matchingRows(kvs.get(0), Bytes.toBytes("KEY")));
             assertTrue(CellUtil.matchingRows(kvs.get(1), Bytes.toBytes("KEY")));
-            assertTrue(CellUtil.matchingValue(kvs.get(0), Bytes.toBytes("VALUE" + valueMultiplier)));
-            assertTrue(CellUtil.matchingValue(kvs.get(1),
-                Bytes.toBytes("VALUE" + 2 * valueMultiplier)));
+            assertTrue(
+              CellUtil.matchingValue(kvs.get(0), Bytes.toBytes("VALUE" + valueMultiplier)));
+            assertTrue(
+              CellUtil.matchingValue(kvs.get(1), Bytes.toBytes("VALUE" + 2 * valueMultiplier)));
             // Only one result set is expected, so let it loop.
             verified = true;
           }

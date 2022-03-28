@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,6 +51,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -58,10 +60,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestMetaCache {
 
   @ClassRule
@@ -81,8 +81,7 @@ public class TestMetaCache {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setStrings(HConstants.REGION_SERVER_IMPL,
-        RegionServerWithFakeRpcServices.class.getName());
+    conf.setStrings(HConstants.REGION_SERVER_IMPL, RegionServerWithFakeRpcServices.class.getName());
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster();
     TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_NAME.META_TABLE_NAME);
@@ -95,7 +94,6 @@ public class TestMetaCache {
     TEST_UTIL.createTable(table, null);
   }
 
-
   /**
    * @throws java.lang.Exception
    */
@@ -106,8 +104,8 @@ public class TestMetaCache {
 
   @Test
   public void testPreserveMetaCacheOnException() throws Exception {
-    ((FakeRSRpcServices)badRS.getRSRpcServices()).setExceptionInjector(
-        new RoundRobinExceptionInjector());
+    ((FakeRSRpcServices) badRS.getRSRpcServices())
+        .setExceptionInjector(new RoundRobinExceptionInjector());
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set("hbase.client.retries.number", "1");
     ConnectionImplementation conn =
@@ -163,14 +161,15 @@ public class TestMetaCache {
 
   @Test
   public void testClearsCacheOnScanException() throws Exception {
-    ((FakeRSRpcServices)badRS.getRSRpcServices()).setExceptionInjector(
-      new RoundRobinExceptionInjector());
+    ((FakeRSRpcServices) badRS.getRSRpcServices())
+        .setExceptionInjector(new RoundRobinExceptionInjector());
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set("hbase.client.retries.number", "1");
 
-    try (ConnectionImplementation conn =
-      (ConnectionImplementation) ConnectionFactory.createConnection(conf);
-      Table table = conn.getTable(TABLE_NAME)) {
+    try (
+        ConnectionImplementation conn =
+            (ConnectionImplementation) ConnectionFactory.createConnection(conf);
+        Table table = conn.getTable(TABLE_NAME)) {
 
       byte[] row = Bytes.toBytes("row2");
 
@@ -227,8 +226,8 @@ public class TestMetaCache {
 
   @Test
   public void testCacheClearingOnCallQueueTooBig() throws Exception {
-    ((FakeRSRpcServices)badRS.getRSRpcServices()).setExceptionInjector(
-        new CallQueueTooBigExceptionInjector());
+    ((FakeRSRpcServices) badRS.getRSRpcServices())
+        .setExceptionInjector(new CallQueueTooBigExceptionInjector());
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set("hbase.client.retries.number", "2");
     conf.set(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, "true");
@@ -267,21 +266,23 @@ public class TestMetaCache {
   }
 
   public static List<Throwable> metaCachePreservingExceptions() {
-    return new ArrayList<Throwable>() {{
+    return new ArrayList<Throwable>() {
+      {
         add(new RegionOpeningException(" "));
         add(new RegionTooBusyException("Some old message"));
         add(new RpcThrottlingException(" "));
         add(new MultiActionResultTooLarge(" "));
         add(new RetryImmediatelyException(" "));
         add(new CallQueueTooBigException());
-    }};
+      }
+    };
   }
 
   public static class RegionServerWithFakeRpcServices extends HRegionServer {
     private FakeRSRpcServices rsRpcServices;
 
     public RegionServerWithFakeRpcServices(Configuration conf)
-      throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
       super(conf);
     }
 
@@ -310,8 +311,8 @@ public class TestMetaCache {
     }
 
     @Override
-    public GetResponse get(final RpcController controller,
-                           final ClientProtos.GetRequest request) throws ServiceException {
+    public GetResponse get(final RpcController controller, final ClientProtos.GetRequest request)
+        throws ServiceException {
       exceptions.throwOnGet(this, request);
       return super.get(controller, request);
     }
@@ -333,10 +334,10 @@ public class TestMetaCache {
 
   public static abstract class ExceptionInjector {
     protected boolean isTestTable(FakeRSRpcServices rpcServices,
-                                  HBaseProtos.RegionSpecifier regionSpec) throws ServiceException {
+        HBaseProtos.RegionSpecifier regionSpec) throws ServiceException {
       try {
-        return TABLE_NAME.equals(
-            rpcServices.getRegion(regionSpec).getTableDescriptor().getTableName());
+        return TABLE_NAME
+            .equals(rpcServices.getRegion(regionSpec).getTableDescriptor().getTableName());
       } catch (IOException ioe) {
         throw new ServiceException(ioe);
       }
@@ -345,16 +346,15 @@ public class TestMetaCache {
     public abstract void throwOnGet(FakeRSRpcServices rpcServices, ClientProtos.GetRequest request)
         throws ServiceException;
 
-    public abstract void throwOnMutate(FakeRSRpcServices rpcServices, ClientProtos.MutateRequest request)
-        throws ServiceException;
+    public abstract void throwOnMutate(FakeRSRpcServices rpcServices,
+        ClientProtos.MutateRequest request) throws ServiceException;
 
-    public abstract void throwOnScan(FakeRSRpcServices rpcServices, ClientProtos.ScanRequest request)
-        throws ServiceException;
+    public abstract void throwOnScan(FakeRSRpcServices rpcServices,
+        ClientProtos.ScanRequest request) throws ServiceException;
   }
 
   /**
-   * Rotates through the possible cache clearing and non-cache clearing exceptions
-   * for requests.
+   * Rotates through the possible cache clearing and non-cache clearing exceptions for requests.
    */
   public static class RoundRobinExceptionInjector extends ExceptionInjector {
     private int numReqs = -1;
@@ -383,13 +383,12 @@ public class TestMetaCache {
     }
 
     /**
-     * Throw some exceptions. Mostly throw exceptions which do not clear meta cache.
-     * Periodically throw NotSevingRegionException which clears the meta cache.
+     * Throw some exceptions. Mostly throw exceptions which do not clear meta cache. Periodically
+     * throw NotSevingRegionException which clears the meta cache.
      * @throws ServiceException
      */
     private void throwSomeExceptions(FakeRSRpcServices rpcServices,
-                                     HBaseProtos.RegionSpecifier regionSpec)
-        throws ServiceException {
+        HBaseProtos.RegionSpecifier regionSpec) throws ServiceException {
       if (!isTestTable(rpcServices, regionSpec)) {
         return;
       }
@@ -397,7 +396,7 @@ public class TestMetaCache {
       numReqs++;
       // Succeed every 5 request, throw cache clearing exceptions twice every 5 requests and throw
       // meta cache preserving exceptions otherwise.
-      if (numReqs % 5 ==0) {
+      if (numReqs % 5 == 0) {
         return;
       } else if (numReqs % 5 == 1 || numReqs % 5 == 2) {
         throw new ServiceException(new NotServingRegionException());
@@ -407,8 +406,8 @@ public class TestMetaCache {
       // But, we don't really care here if we throw MultiActionTooLargeException while doing
       // single Gets.
       expCount++;
-      Throwable t = metaCachePreservingExceptions.get(
-          expCount % metaCachePreservingExceptions.size());
+      Throwable t =
+          metaCachePreservingExceptions.get(expCount % metaCachePreservingExceptions.size());
       throw new ServiceException(t);
     }
   }
@@ -438,21 +437,21 @@ public class TestMetaCache {
 
   @Test
   public void testUserRegionLockThrowsException() throws IOException, InterruptedException {
-    ((FakeRSRpcServices)badRS.getRSRpcServices()).setExceptionInjector(new LockSleepInjector());
+    ((FakeRSRpcServices) badRS.getRSRpcServices()).setExceptionInjector(new LockSleepInjector());
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
     conf.setLong(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, 2000);
     conf.setLong(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 2000);
 
     try (ConnectionImplementation conn =
-            (ConnectionImplementation) ConnectionFactory.createConnection(conf)) {
+        (ConnectionImplementation) ConnectionFactory.createConnection(conf)) {
       ClientThread client1 = new ClientThread(conn);
       ClientThread client2 = new ClientThread(conn);
       client1.start();
       client2.start();
       client1.join();
       client2.join();
-      // One thread will get the lock but will sleep in  LockExceptionInjector#throwOnScan and
+      // One thread will get the lock but will sleep in LockExceptionInjector#throwOnScan and
       // eventually fail since the sleep time is more than hbase client scanner timeout period.
       // Other thread will wait to acquire userRegionLock.
       // Have no idea which thread will be scheduled first. So need to check both threads.
@@ -477,6 +476,7 @@ public class TestMetaCache {
     private ClientThread(ConnectionImplementation connection) {
       this.connection = connection;
     }
+
     @Override
     public void run() {
       byte[] currentKey = HConstants.EMPTY_START_ROW;
@@ -487,6 +487,7 @@ public class TestMetaCache {
         this.exception = e;
       }
     }
+
     public Exception getException() {
       return exception;
     }
@@ -503,9 +504,11 @@ public class TestMetaCache {
     }
 
     @Override
-    public void throwOnGet(FakeRSRpcServices rpcServices, ClientProtos.GetRequest request) { }
+    public void throwOnGet(FakeRSRpcServices rpcServices, ClientProtos.GetRequest request) {
+    }
 
     @Override
-    public void throwOnMutate(FakeRSRpcServices rpcServices, ClientProtos.MutateRequest request) { }
+    public void throwOnMutate(FakeRSRpcServices rpcServices, ClientProtos.MutateRequest request) {
+    }
   }
 }

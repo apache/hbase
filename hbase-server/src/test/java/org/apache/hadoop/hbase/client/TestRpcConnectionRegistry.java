@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ public class TestRpcConnectionRegistry {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRpcConnectionRegistry.class);
+      HBaseClassTestRule.forClass(TestRpcConnectionRegistry.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -84,11 +84,11 @@ public class TestRpcConnectionRegistry {
 
   private void setMaxNodeCount(int count) {
     UTIL.getMiniHBaseCluster().getMasterThreads().stream()
-      .map(t -> t.getMaster().getConfiguration())
-      .forEach(conf -> conf.setInt(RSRpcServices.CLIENT_BOOTSTRAP_NODE_LIMIT, count));
+        .map(t -> t.getMaster().getConfiguration())
+        .forEach(conf -> conf.setInt(RSRpcServices.CLIENT_BOOTSTRAP_NODE_LIMIT, count));
     UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
-      .map(t -> t.getRegionServer().getConfiguration())
-      .forEach(conf -> conf.setInt(RSRpcServices.CLIENT_BOOTSTRAP_NODE_LIMIT, count));
+        .map(t -> t.getRegionServer().getConfiguration())
+        .forEach(conf -> conf.setInt(RSRpcServices.CLIENT_BOOTSTRAP_NODE_LIMIT, count));
   }
 
   @Test
@@ -106,9 +106,9 @@ public class TestRpcConnectionRegistry {
     assertEquals(registry.getClusterId().get(), activeMaster.getClusterId());
     assertEquals(registry.getActiveMaster().get(), activeMaster.getServerName());
     List<HRegionLocation> metaLocations =
-      Arrays.asList(registry.getMetaRegionLocations().get().getRegionLocations());
+        Arrays.asList(registry.getMetaRegionLocations().get().getRegionLocations());
     List<HRegionLocation> actualMetaLocations =
-      activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get();
+        activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get();
     Collections.sort(metaLocations);
     Collections.sort(actualMetaLocations);
     assertEquals(actualMetaLocations, metaLocations);

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.security.provider;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
-
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.NameCallback;
@@ -30,7 +29,6 @@ import javax.security.sasl.RealmCallback;
 import javax.security.sasl.RealmChoiceCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityInfo;
@@ -52,7 +50,7 @@ public class DigestSaslClientAuthenticationProvider extends DigestSaslAuthentica
       SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
       Map<String, String> saslProps) throws IOException {
     return Sasl.createSaslClient(new String[] { getSaslAuthMethod().getSaslMechanism() }, null,
-        null, SaslUtil.SASL_DEFAULT_REALM, saslProps, new DigestSaslClientCallbackHandler(token));
+      null, SaslUtil.SASL_DEFAULT_REALM, saslProps, new DigestSaslClientCallbackHandler(token));
   }
 
   public static class DigestSaslClientCallbackHandler implements CallbackHandler {

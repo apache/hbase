@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
  * This dispatches key presses and timers to the current {@link ScreenView}.
  */
@@ -56,10 +55,9 @@ public class Screen implements Closeable {
   private Long timerTimestamp;
 
   public Screen(Configuration conf, long initialRefreshDelay, Mode initialMode,
-    @Nullable List<Field> initialFields, @Nullable Field initialSortField,
-    @Nullable Boolean initialAscendingSort, @Nullable List<RecordFilter> initialFilters,
-    long numberOfIterations, boolean batchMode)
-    throws IOException {
+      @Nullable List<Field> initialFields, @Nullable Field initialSortField,
+      @Nullable Boolean initialAscendingSort, @Nullable List<RecordFilter> initialFilters,
+      long numberOfIterations, boolean batchMode) throws IOException {
     connection = ConnectionFactory.createConnection(conf);
     admin = connection.getAdmin();
 
@@ -69,9 +67,8 @@ public class Screen implements Closeable {
     } else {
       terminal = new TerminalImpl("hbtop");
     }
-    currentScreenView = new TopScreenView(this, terminal, initialRefreshDelay, admin,
-      initialMode, initialFields, initialSortField, initialAscendingSort, initialFilters,
-      numberOfIterations);
+    currentScreenView = new TopScreenView(this, terminal, initialRefreshDelay, admin, initialMode,
+        initialFields, initialSortField, initialAscendingSort, initialFilters, numberOfIterations);
   }
 
   @Override
@@ -106,7 +103,7 @@ public class Screen implements Closeable {
               nextScreenView = currentScreenView.handleTimer();
             } else {
               TimeUnit.MILLISECONDS
-                .sleep(Math.min(timerTimestamp - now, SLEEP_TIMEOUT_MILLISECONDS));
+                  .sleep(Math.min(timerTimestamp - now, SLEEP_TIMEOUT_MILLISECONDS));
               continue;
             }
           } else {

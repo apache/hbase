@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.hadoop.hbase.ServerName;
@@ -33,7 +32,8 @@ public class RestartRandomRsAction extends RestartActionBaseAction {
     super(sleepTime);
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 

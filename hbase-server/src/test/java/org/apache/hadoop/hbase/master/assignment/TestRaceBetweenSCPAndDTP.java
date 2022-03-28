@@ -56,7 +56,7 @@ public class TestRaceBetweenSCPAndDTP {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRaceBetweenSCPAndDTP.class);
+      HBaseClassTestRule.forClass(TestRaceBetweenSCPAndDTP.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -71,7 +71,7 @@ public class TestRaceBetweenSCPAndDTP {
   private static final class AssignmentManagerForTest extends AssignmentManager {
 
     public AssignmentManagerForTest(MasterServices master, MasterRegion masterRegion) {
-      super(master,masterRegion);
+      super(master, masterRegion);
     }
 
     @Override
@@ -97,7 +97,7 @@ public class TestRaceBetweenSCPAndDTP {
 
     @Override
     protected AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
+        MasterRegion masterRegion) {
       return new AssignmentManagerForTest(master, masterRegion);
     }
   }
@@ -132,7 +132,7 @@ public class TestRaceBetweenSCPAndDTP {
     cdl.await();
 
     ProcedureExecutor<?> procExec =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     UTIL.getMiniHBaseCluster().stopRegionServer(sn);
     long pid = Procedure.NO_PROC_ID;
     do {
@@ -153,8 +153,9 @@ public class TestRaceBetweenSCPAndDTP {
    * @return Returns {@link Procedure#NO_PROC_ID} if no SCP found else actual pid.
    */
   private long getSCPPID(ProcedureExecutor<?> e) {
-    Optional<ServerCrashProcedure> optional = e.getProcedures().stream().
-      filter(p -> p instanceof ServerCrashProcedure).map(p -> (ServerCrashProcedure) p).findAny();
-    return optional.isPresent()? optional.get().getProcId(): Procedure.NO_PROC_ID;
+    Optional<ServerCrashProcedure> optional =
+        e.getProcedures().stream().filter(p -> p instanceof ServerCrashProcedure)
+            .map(p -> (ServerCrashProcedure) p).findAny();
+    return optional.isPresent() ? optional.get().getProcId() : Procedure.NO_PROC_ID;
   }
 }

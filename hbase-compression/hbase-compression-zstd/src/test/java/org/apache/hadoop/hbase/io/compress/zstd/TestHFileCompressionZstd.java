@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestHFileCompressionZstd extends HFileTestBase {
 
   @ClassRule
@@ -52,16 +52,16 @@ public class TestHFileCompressionZstd extends HFileTestBase {
   @Test
   public void test() throws Exception {
     Path path = new Path(TEST_UTIL.getDataTestDir(),
-      HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
+        HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
     doTest(conf, path, Compression.Algorithm.ZSTD);
   }
 
   @Test
   public void testReconfLevels() throws Exception {
     Path path_1 = new Path(TEST_UTIL.getDataTestDir(),
-      HBaseTestingUtility.getRandomUUID().toString() + ".1.hfile");
+        HBaseTestingUtility.getRandomUUID().toString() + ".1.hfile");
     Path path_2 = new Path(TEST_UTIL.getDataTestDir(),
-      HBaseTestingUtility.getRandomUUID().toString() + ".2.hfile");
+        HBaseTestingUtility.getRandomUUID().toString() + ".2.hfile");
     conf.setInt(ZstdCodec.ZSTD_LEVEL_KEY, 1);
     doTest(conf, path_1, Compression.Algorithm.ZSTD);
     long len_1 = FS.getFileStatus(path_1).getLen();

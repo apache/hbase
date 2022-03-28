@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,31 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 
 /**
- * A fixture that implements and presents a KeyValueScanner.
- * It takes a list of key/values which is then sorted according
- * to the provided comparator, and then the whole thing pretends
- * to be a store file scanner.
+ * A fixture that implements and presents a KeyValueScanner. It takes a list of key/values which is
+ * then sorted according to the provided comparator, and then the whole thing pretends to be a store
+ * file scanner.
  */
 public class KeyValueScanFixture extends CollectionBackedScanner {
   public KeyValueScanFixture(CellComparator comparator, Cell... cells) {
     super(comparator, cells);
   }
 
-  public static List<KeyValueScanner> scanFixture(KeyValue[] ... kvArrays) {
+  public static List<KeyValueScanner> scanFixture(KeyValue[]... kvArrays) {
     ArrayList<KeyValueScanner> scanners = new ArrayList<>();
-    for (KeyValue [] kvs : kvArrays) {
+    for (KeyValue[] kvs : kvArrays) {
       scanners.add(new KeyValueScanFixture(CellComparator.getInstance(), kvs));
     }
     return scanners;

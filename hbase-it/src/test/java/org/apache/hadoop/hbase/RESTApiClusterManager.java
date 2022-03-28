@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import static org.apache.hadoop.hbase.HBaseClusterManager.DEFAULT_RETRY_ATTEMPTS;
@@ -61,25 +60,19 @@ import org.apache.hbase.thirdparty.org.glassfish.jersey.client.authentication.Ht
  * clusters via REST API. This API uses HTTP GET requests against the cluster manager server to
  * retrieve information and POST/PUT requests to perform actions. As a simple example, to retrieve a
  * list of hosts from a CM server with login credentials admin:admin, a simple curl command would be
- *     curl -X POST -H "Content-Type:application/json" -u admin:admin \
- *         "http://this.is.my.server.com:7180/api/v8/hosts"
- *
- * This command would return a JSON result, which would need to be parsed to retrieve relevant
- * information. This action and many others are covered by this class.
- *
- * A note on nomenclature: while the ClusterManager interface uses a ServiceType enum when
- * referring to things like RegionServers and DataNodes, cluster managers often use different
+ * curl -X POST -H "Content-Type:application/json" -u admin:admin \
+ * "http://this.is.my.server.com:7180/api/v8/hosts" This command would return a JSON result, which
+ * would need to be parsed to retrieve relevant information. This action and many others are covered
+ * by this class. A note on nomenclature: while the ClusterManager interface uses a ServiceType enum
+ * when referring to things like RegionServers and DataNodes, cluster managers often use different
  * terminology. As an example, Cloudera Manager (http://www.cloudera.com) would refer to a
  * RegionServer as a "role" of the HBase "service." It would further refer to "hbase" as the
- * "serviceType." Apache Ambari (http://ambari.apache.org) would call the RegionServer a
- * "component" of the HBase "service."
- *
- * This class will defer to the ClusterManager terminology in methods that it implements from
- * that interface, but uses Cloudera Manager's terminology when dealing with its API directly.
- *
- * DEBUG-level logging gives more details of the actions this class takes as they happen. Log at
- * TRACE-level to see the API requests and responses. TRACE-level logging on RetryCounter displays
- * wait times, so that can be helpful too.
+ * "serviceType." Apache Ambari (http://ambari.apache.org) would call the RegionServer a "component"
+ * of the HBase "service." This class will defer to the ClusterManager terminology in methods that
+ * it implements from that interface, but uses Cloudera Manager's terminology when dealing with its
+ * API directly. DEBUG-level logging gives more details of the actions this class takes as they
+ * happen. Log at TRACE-level to see the API requests and responses. TRACE-level logging on
+ * RetryCounter displays wait times, so that can be helpful too.
  */
 public class RESTApiClusterManager extends Configured implements ClusterManager {
   // Properties that need to be in the Configuration object to interact with the REST API cluster
@@ -93,7 +86,7 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
   private static final String REST_API_CLUSTER_MANAGER_CLUSTER_NAME =
       "hbase.it.clustermanager.restapi.clustername";
   private static final String REST_API_DELEGATE_CLUSTER_MANAGER =
-    "hbase.it.clustermanager.restapi.delegate";
+      "hbase.it.clustermanager.restapi.delegate";
 
   private static final JsonParser parser = new JsonParser();
 
@@ -123,7 +116,8 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
 
   private static final Logger LOG = LoggerFactory.getLogger(RESTApiClusterManager.class);
 
-  RESTApiClusterManager() { }
+  RESTApiClusterManager() {
+  }
 
   @Override
   public void setConf(Configuration conf) {
@@ -146,8 +140,8 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
     client.register(HttpAuthenticationFeature.basic(serverUsername, serverPassword));
 
     this.retryCounterFactory = new RetryCounterFactory(new RetryConfig()
-      .setMaxAttempts(conf.getInt(RETRY_ATTEMPTS_KEY, DEFAULT_RETRY_ATTEMPTS))
-      .setSleepInterval(conf.getLong(RETRY_SLEEP_INTERVAL_KEY, DEFAULT_RETRY_SLEEP_INTERVAL)));
+        .setMaxAttempts(conf.getInt(RETRY_ATTEMPTS_KEY, DEFAULT_RETRY_ATTEMPTS))
+        .setSleepInterval(conf.getLong(RETRY_SLEEP_INTERVAL_KEY, DEFAULT_RETRY_SLEEP_INTERVAL)));
   }
 
   @Override
@@ -168,13 +162,15 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
       case UNKNOWN:
       case HISTORY_NOT_AVAILABLE:
         LOG.warn("Unexpected service state detected. Service START requested, but currently in"
-          + " {} state. Attempting to start. {}, {}:{}", currentState, service, hostname, port);
+            + " {} state. Attempting to start. {}, {}:{}",
+          currentState, service, hostname, port);
         performClusterManagerCommand(service, hostname, RoleCommand.START);
         return;
       case STOPPING:
-        LOG.warn("Unexpected service state detected. Service START requested, but currently in"
-          + " {} state. Waiting for stop before attempting start. {}, {}:{}", currentState,
-          service, hostname, port);
+        LOG.warn(
+          "Unexpected service state detected. Service START requested, but currently in"
+              + " {} state. Waiting for stop before attempting start. {}, {}:{}",
+          currentState, service, hostname, port);
         waitFor(() -> Objects.equals(RoleState.STOPPED, getRoleState(service, hostname)));
         performClusterManagerCommand(service, hostname, RoleCommand.START);
         return;
@@ -182,14 +178,16 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
         performClusterManagerCommand(service, hostname, RoleCommand.START);
         return;
       case STARTING:
-        LOG.warn("Unexpected service state detected. Service START requested, but already in"
-          + " {} state. Ignoring current request and waiting for start to complete. {}, {}:{}",
+        LOG.warn(
+          "Unexpected service state detected. Service START requested, but already in"
+              + " {} state. Ignoring current request and waiting for start to complete. {}, {}:{}",
           currentState, service, hostname, port);
-        waitFor(()-> Objects.equals(RoleState.STARTED, getRoleState(service, hostname)));
+        waitFor(() -> Objects.equals(RoleState.STARTED, getRoleState(service, hostname)));
         return;
       case STARTED:
         LOG.warn("Unexpected service state detected. Service START requested, but already in"
-          + " {} state. Restarting. {}, {}:{}", currentState, service, hostname, port);
+            + " {} state. Restarting. {}, {}:{}",
+          currentState, service, hostname, port);
         performClusterManagerCommand(service, hostname, RoleCommand.RESTART);
         return;
     }
@@ -206,22 +204,25 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
       case UNKNOWN:
       case HISTORY_NOT_AVAILABLE:
         LOG.warn("Unexpected service state detected. Service STOP requested, but already in"
-          + " {} state. Attempting to stop. {}, {}:{}", currentState, service, hostname, port);
+            + " {} state. Attempting to stop. {}, {}:{}",
+          currentState, service, hostname, port);
         performClusterManagerCommand(service, hostname, RoleCommand.STOP);
         return;
       case STOPPING:
         waitFor(() -> Objects.equals(RoleState.STOPPED, getRoleState(service, hostname)));
         return;
       case STOPPED:
-        LOG.warn("Unexpected service state detected. Service STOP requested, but already in"
-          + " {} state. Ignoring current request. {}, {}:{}", currentState, service, hostname,
-          port);
+        LOG.warn(
+          "Unexpected service state detected. Service STOP requested, but already in"
+              + " {} state. Ignoring current request. {}, {}:{}",
+          currentState, service, hostname, port);
         return;
       case STARTING:
-        LOG.warn("Unexpected service state detected. Service STOP requested, but already in"
-          + " {} state. Waiting for start to complete. {}, {}:{}", currentState, service, hostname,
-          port);
-        waitFor(()-> Objects.equals(RoleState.STARTED, getRoleState(service, hostname)));
+        LOG.warn(
+          "Unexpected service state detected. Service STOP requested, but already in"
+              + " {} state. Waiting for start to complete. {}, {}:{}",
+          currentState, service, hostname, port);
+        waitFor(() -> Objects.equals(RoleState.STARTED, getRoleState(service, hostname)));
         performClusterManagerCommand(service, hostname, RoleCommand.STOP);
         return;
       case STARTED:
@@ -247,7 +248,7 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
       RoleState roleState = getRoleState(serviceName, service.toString(), hostId);
       HealthSummary healthSummary = getHealthSummary(serviceName, service.toString(), hostId);
       return Objects.equals(RoleState.STARTED, roleState)
-        && Objects.equals(HealthSummary.GOOD, healthSummary);
+          && Objects.equals(HealthSummary.GOOD, healthSummary);
     });
   }
 
@@ -269,7 +270,7 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
   // Convenience method to execute command against role on hostname. Only graceful commands are
   // supported since cluster management APIs don't tend to let you SIGKILL things.
   private void performClusterManagerCommand(ServiceType role, String hostname,
-    RoleCommand command) {
+      RoleCommand command) {
     // retry submitting the command until the submission succeeds.
     final long commandId = executeWithRetries(() -> {
       final String serviceName = getServiceName(roleServiceType.get(role));
@@ -277,8 +278,8 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
       final String roleName = getRoleName(serviceName, role.toString(), hostId);
       return doRoleCommand(serviceName, roleName, command);
     });
-    LOG.debug("Command {} of {} on {} submitted as commandId {}",
-      command, role, hostname, commandId);
+    LOG.debug("Command {} of {} on {} submitted as commandId {}", command, role, hostname,
+      commandId);
 
     // assume the submitted command was asynchronous. wait on the commandId to be marked as
     // successful.
@@ -289,8 +290,8 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
       // TODO: this does not interrupt the monkey. should it?
       throw new RuntimeException(msg);
     }
-    LOG.debug("Command {} of {} on {} submitted as commandId {} completed successfully.",
-      command, role, hostname, commandId);
+    LOG.debug("Command {} of {} on {} submitted as commandId {} completed successfully.", command,
+      role, hostname, commandId);
   }
 
   /**
@@ -298,57 +299,39 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
    * @return the commandId of a successfully submitted asynchronous command.
    */
   private long doRoleCommand(String serviceName, String roleName, RoleCommand roleCommand) {
-    URI uri = UriBuilder.fromUri(serverHostname)
-        .path("api")
-        .path(API_VERSION)
-        .path("clusters")
-        .path(clusterName)
-        .path("services")
-        .path(serviceName)
-        .path("roleCommands")
-        .path(roleCommand.toString())
-        .build();
+    URI uri = UriBuilder.fromUri(serverHostname).path("api").path(API_VERSION).path("clusters")
+        .path(clusterName).path("services").path(serviceName).path("roleCommands")
+        .path(roleCommand.toString()).build();
     String body = "{ \"items\": [ \"" + roleName + "\" ] }";
     LOG.trace("Executing POST against {} with body {} ...", uri, body);
     WebTarget webTarget = client.target(uri);
-    Invocation.Builder invocationBuilder =  webTarget.request(MediaType.APPLICATION_JSON);
+    Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
     Response response = invocationBuilder.post(Entity.json(body));
     final int statusCode = response.getStatus();
     final String responseBody = response.readEntity(String.class);
     if (statusCode != Response.Status.OK.getStatusCode()) {
-      LOG.warn(
-        "RoleCommand failed with status code {} and response body {}", statusCode, responseBody);
+      LOG.warn("RoleCommand failed with status code {} and response body {}", statusCode,
+        responseBody);
       throw new HTTPException(statusCode);
     }
 
-    LOG.trace("POST against {} completed with status code {} and response body {}",
-      uri, statusCode, responseBody);
-    return parser.parse(responseBody)
-      .getAsJsonObject()
-      .get("items")
-      .getAsJsonArray()
-      .get(0)
-      .getAsJsonObject()
-      .get("id")
-      .getAsLong();
+    LOG.trace("POST against {} completed with status code {} and response body {}", uri, statusCode,
+      responseBody);
+    return parser.parse(responseBody).getAsJsonObject().get("items").getAsJsonArray().get(0)
+        .getAsJsonObject().get("id").getAsLong();
   }
 
   private HealthSummary getHealthSummary(String serviceName, String roleType, String hostId) {
-    return HealthSummary.fromString(
-      getRolePropertyValue(serviceName, roleType, hostId, "healthSummary"));
+    return HealthSummary
+        .fromString(getRolePropertyValue(serviceName, roleType, hostId, "healthSummary"));
   }
 
   // This API uses a hostId to execute host-specific commands; get one from a hostname.
   private String getHostId(String hostname) {
     String hostId = null;
-    URI uri = UriBuilder.fromUri(serverHostname)
-      .path("api")
-      .path(API_VERSION)
-      .path("hosts")
-      .build();
-    JsonElement hosts = parser.parse(getFromURIGet(uri))
-      .getAsJsonObject()
-      .get("items");
+    URI uri =
+        UriBuilder.fromUri(serverHostname).path("api").path(API_VERSION).path("hosts").build();
+    JsonElement hosts = parser.parse(getFromURIGet(uri)).getAsJsonObject().get("items");
     if (hosts != null) {
       // Iterate through the list of hosts, stopping once you've reached the requested hostname.
       for (JsonElement host : hosts.getAsJsonArray()) {
@@ -364,19 +347,16 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
 
   private String getFromURIGet(URI uri) {
     LOG.trace("Executing GET against {} ...", uri);
-    final Response response = client.target(uri)
-      .request(MediaType.APPLICATION_JSON_TYPE)
-      .get();
+    final Response response = client.target(uri).request(MediaType.APPLICATION_JSON_TYPE).get();
     int statusCode = response.getStatus();
     final String responseBody = response.readEntity(String.class);
     if (statusCode != Response.Status.OK.getStatusCode()) {
-      LOG.warn(
-        "request failed with status code {} and response body {}", statusCode, responseBody);
+      LOG.warn("request failed with status code {} and response body {}", statusCode, responseBody);
       throw new HTTPException(statusCode);
     }
     // This API folds information as the value to an "items" attribute.
-    LOG.trace("GET against {} completed with status code {} and response body {}",
-      uri, statusCode, responseBody);
+    LOG.trace("GET against {} completed with status code {} and response body {}", uri, statusCode,
+      responseBody);
     return responseBody;
   }
 
@@ -389,25 +369,16 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
   private String getRolePropertyValue(String serviceName, String roleType, String hostId,
       String property) {
     String roleValue = null;
-    URI uri = UriBuilder.fromUri(serverHostname)
-      .path("api")
-      .path(API_VERSION)
-      .path("clusters")
-      .path(clusterName)
-      .path("services")
-      .path(serviceName)
-      .path("roles")
-      .build();
-    JsonElement roles = parser.parse(getFromURIGet(uri))
-      .getAsJsonObject()
-      .get("items");
+    URI uri = UriBuilder.fromUri(serverHostname).path("api").path(API_VERSION).path("clusters")
+        .path(clusterName).path("services").path(serviceName).path("roles").build();
+    JsonElement roles = parser.parse(getFromURIGet(uri)).getAsJsonObject().get("items");
     if (roles != null) {
       // Iterate through the list of roles, stopping once the requested one is found.
       for (JsonElement role : roles.getAsJsonArray()) {
         JsonObject roleObj = role.getAsJsonObject();
-        if (roleObj.get("hostRef").getAsJsonObject().get("hostId").getAsString().equals(hostId) &&
-          roleObj.get("type").getAsString().toLowerCase(Locale.ROOT)
-            .equals(roleType.toLowerCase(Locale.ROOT))) {
+        if (roleObj.get("hostRef").getAsJsonObject().get("hostId").getAsString().equals(hostId)
+            && roleObj.get("type").getAsString().toLowerCase(Locale.ROOT)
+                .equals(roleType.toLowerCase(Locale.ROOT))) {
           roleValue = roleObj.get(property).getAsString();
           break;
         }
@@ -428,18 +399,15 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
   }
 
   private RoleState getRoleState(String serviceName, String roleType, String hostId) {
-    return RoleState.fromString(
-      getRolePropertyValue(serviceName, roleType, hostId, "roleState"));
+    return RoleState.fromString(getRolePropertyValue(serviceName, roleType, hostId, "roleState"));
   }
 
   // Convert a service (e.g. "HBASE," "HDFS") into a service name (e.g. "HBASE-1," "HDFS-1").
   private String getServiceName(Service service) {
     String serviceName = null;
     URI uri = UriBuilder.fromUri(serverHostname).path("api").path(API_VERSION).path("clusters")
-      .path(clusterName).path("services").build();
-    JsonElement services = parser.parse(getFromURIGet(uri))
-      .getAsJsonObject()
-      .get("items");
+        .path(clusterName).path("services").build();
+    JsonElement services = parser.parse(getFromURIGet(uri)).getAsJsonObject().get("items");
     if (services != null) {
       // Iterate through the list of services, stopping once the requested one is found.
       for (JsonElement serviceEntry : services.getAsJsonArray()) {
@@ -454,50 +422,40 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
   }
 
   private Optional<JsonObject> getCommand(final long commandId) {
-    final URI uri = UriBuilder.fromUri(serverHostname)
-      .path("api")
-      .path(API_VERSION)
-      .path("commands")
-      .path(Long.toString(commandId))
-      .build();
-    return Optional.ofNullable(getFromURIGet(uri))
-      .map(parser::parse)
-      .map(JsonElement::getAsJsonObject);
+    final URI uri = UriBuilder.fromUri(serverHostname).path("api").path(API_VERSION)
+        .path("commands").path(Long.toString(commandId)).build();
+    return Optional.ofNullable(getFromURIGet(uri)).map(parser::parse)
+        .map(JsonElement::getAsJsonObject);
   }
 
   /**
    * Return {@code true} if the {@code commandId} has finished processing.
    */
   private boolean hasCommandCompleted(final long commandId) {
-    return getCommand(commandId)
-      .map(val -> {
-        final boolean isActive = val.get("active").getAsBoolean();
-        if (isActive) {
-          LOG.debug("command {} is still active.", commandId);
-        }
-        return !isActive;
-      })
-      .orElse(false);
+    return getCommand(commandId).map(val -> {
+      final boolean isActive = val.get("active").getAsBoolean();
+      if (isActive) {
+        LOG.debug("command {} is still active.", commandId);
+      }
+      return !isActive;
+    }).orElse(false);
   }
 
   /**
    * Return {@code true} if the {@code commandId} has finished successfully.
    */
   private boolean hasCommandCompletedSuccessfully(final long commandId) {
-    return getCommand(commandId)
-      .filter(val -> {
-        final boolean isActive = val.get("active").getAsBoolean();
-        if (isActive) {
-          LOG.debug("command {} is still active.", commandId);
-        }
-        return !isActive;
-      })
-      .map(val -> {
-        final boolean isSuccess = val.get("success").getAsBoolean();
-        LOG.debug("command {} completed as {}.", commandId, isSuccess);
-        return isSuccess;
-      })
-      .orElse(false);
+    return getCommand(commandId).filter(val -> {
+      final boolean isActive = val.get("active").getAsBoolean();
+      if (isActive) {
+        LOG.debug("command {} is still active.", commandId);
+      }
+      return !isActive;
+    }).map(val -> {
+      final boolean isSuccess = val.get("success").getAsBoolean();
+      LOG.debug("command {} completed as {}.", commandId, isSuccess);
+      return isSuccess;
+    }).orElse(false);
   }
 
   /**
@@ -564,8 +522,9 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
 
   /**
    * Represents the configured run state of a role.
-   * @see <a href="https://archive.cloudera.com/cm6/6.3.0/generic/jar/cm_api/apidocs/json_ApiRoleState.html">
-   *   https://archive.cloudera.com/cm6/6.3.0/generic/jar/cm_api/apidocs/json_ApiRoleState.html</a>
+   * @see <a href=
+   *      "https://archive.cloudera.com/cm6/6.3.0/generic/jar/cm_api/apidocs/json_ApiRoleState.html">
+   *      https://archive.cloudera.com/cm6/6.3.0/generic/jar/cm_api/apidocs/json_ApiRoleState.html</a>
    */
   private enum RoleState {
     HISTORY_NOT_AVAILABLE, UNKNOWN, STARTING, STARTED, BUSY, STOPPING, STOPPED, NA;
@@ -580,8 +539,9 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
 
   /**
    * Represents of the high-level health status of a subject in the cluster.
-   * @see <a href="https://archive.cloudera.com/cm6/6.3.0/generic/jar/cm_api/apidocs/json_ApiHealthSummary.html">
-   *   https://archive.cloudera.com/cm6/6.3.0/generic/jar/cm_api/apidocs/json_ApiHealthSummary.html</a>
+   * @see <a href=
+   *      "https://archive.cloudera.com/cm6/6.3.0/generic/jar/cm_api/apidocs/json_ApiHealthSummary.html">
+   *      https://archive.cloudera.com/cm6/6.3.0/generic/jar/cm_api/apidocs/json_ApiHealthSummary.html</a>
    */
   private enum HealthSummary {
     DISABLED, HISTORY_NOT_AVAILABLE, NOT_AVAILABLE, GOOD, CONCERNING, BAD;

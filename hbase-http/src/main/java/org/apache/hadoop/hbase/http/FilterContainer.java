@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,9 +32,10 @@ public interface FilterContainer {
    * @param parameters a map from parameter names to initial values
    */
   void addFilter(String name, String classname, Map<String, String> parameters);
+
   /**
-   * Add a global filter to the container - This global filter will be
-   * applied to all available web contexts.
+   * Add a global filter to the container - This global filter will be applied to all available web
+   * contexts.
    * @param name filter name
    * @param classname filter class name
    * @param parameters a map from parameter names to initial values

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,8 +21,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Internal runtime error type to indicate the RpcExecutor failed to execute a `pluggable`
- * call queue type. Either the FQCN for the class was missing in Configuration, not found on the
+ * Internal runtime error type to indicate the RpcExecutor failed to execute a `pluggable` call
+ * queue type. Either the FQCN for the class was missing in Configuration, not found on the
  * classpath, or is not a subtype of {@code BlockingQueue<CallRunner>}
  */
 @InterfaceAudience.Private

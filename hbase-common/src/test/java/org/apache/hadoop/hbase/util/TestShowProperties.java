@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,10 +28,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This test is there to dump the properties. It allows to detect possible env issues when
- * executing the tests on various environment.
+ * This test is there to dump the properties. It allows to detect possible env issues when executing
+ * the tests on various environment.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestShowProperties {
 
   @ClassRule

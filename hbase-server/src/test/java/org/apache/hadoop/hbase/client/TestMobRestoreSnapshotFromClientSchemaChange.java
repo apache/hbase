@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,7 @@ public class TestMobRestoreSnapshotFromClientSchemaChange
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobRestoreSnapshotFromClientSchemaChange.class);
+      HBaseClassTestRule.forClass(TestMobRestoreSnapshotFromClientSchemaChange.class);
 
   @BeforeClass
   public static void setupCluster() throws Exception {
@@ -68,6 +68,6 @@ public class TestMobRestoreSnapshotFromClientSchemaChange
   @Override
   protected ColumnFamilyDescriptor getTestRestoreSchemaChangeHCD() {
     return ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY2).setMobEnabled(true)
-      .setMobThreshold(3L).build();
+        .setMobThreshold(3L).build();
   }
 }

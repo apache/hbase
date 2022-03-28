@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,14 +31,12 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A class that finds a set of classes that are locally accessible
- * (from .class or .jar files), and satisfy the conditions that are
- * imposed by name and class filters provided by the user.
+ * A class that finds a set of classes that are locally accessible (from .class or .jar files), and
+ * satisfy the conditions that are imposed by name and class filters provided by the user.
  */
 public class ClassFinder {
   private static final Logger LOG = LoggerFactory.getLogger(ClassFinder.class);
@@ -83,10 +81,12 @@ public class ClassFinder {
     public boolean isCandidatePath(String resourcePath, boolean isJar) {
       return !resourcePathFilter.isCandidatePath(resourcePath, isJar);
     }
+
     @Override
     public boolean isCandidateFile(String fileName, String absFilePath) {
       return !fileNameFilter.isCandidateFile(fileName, absFilePath);
     }
+
     @Override
     public boolean isCandidateClass(Class<?> c) {
       return !classFilter.isCandidateClass(c);
@@ -97,7 +97,7 @@ public class ClassFinder {
     ClassFilter[] classFilters;
     ResourcePathFilter[] resourcePathFilters;
 
-    public And(ClassFilter...classFilters) {
+    public And(ClassFilter... classFilters) {
       this.classFilters = classFilters;
     }
 
@@ -115,7 +115,8 @@ public class ClassFinder {
       return true;
     }
 
-    @Override public boolean isCandidatePath(String resourcePath, boolean isJar) {
+    @Override
+    public boolean isCandidatePath(String resourcePath, boolean isJar) {
       for (ResourcePathFilter filter : resourcePathFilters) {
         if (!filter.isCandidatePath(resourcePath, isJar)) {
           return false;
@@ -146,22 +147,22 @@ public class ClassFinder {
 
   /**
    * Finds the classes in current package (of ClassFinder) and nested packages.
-   * @param proceedOnExceptions whether to ignore exceptions encountered for
-   *        individual jars/files/classes, and proceed looking for others.
+   * @param proceedOnExceptions whether to ignore exceptions encountered for individual
+   *          jars/files/classes, and proceed looking for others.
    */
   public Set<Class<?>> findClasses(boolean proceedOnExceptions)
-    throws ClassNotFoundException, IOException, LinkageError {
+      throws ClassNotFoundException, IOException, LinkageError {
     return findClasses(this.getClass().getPackage().getName(), proceedOnExceptions);
   }
 
   /**
    * Finds the classes in a package and nested packages.
    * @param packageName package names
-   * @param proceedOnExceptions whether to ignore exceptions encountered for
-   *        individual jars/files/classes, and proceed looking for others.
+   * @param proceedOnExceptions whether to ignore exceptions encountered for individual
+   *          jars/files/classes, and proceed looking for others.
    */
   public Set<Class<?>> findClasses(String packageName, boolean proceedOnExceptions)
-    throws ClassNotFoundException, IOException, LinkageError {
+      throws ClassNotFoundException, IOException, LinkageError {
     final String path = packageName.replace('.', '/');
     final Pattern jarResourceRe = Pattern.compile("^file:(.+\\.jar)!/" + path + "$");
 
@@ -196,9 +197,8 @@ public class ClassFinder {
     return classes;
   }
 
-  private Set<Class<?>> findClassesFromJar(String jarFileName,
-      String packageName, boolean proceedOnExceptions)
-    throws IOException, ClassNotFoundException, LinkageError {
+  private Set<Class<?>> findClassesFromJar(String jarFileName, String packageName,
+      boolean proceedOnExceptions) throws IOException, ClassNotFoundException, LinkageError {
     JarInputStream jarFile;
     try {
       jarFile = new JarInputStream(new FileInputStream(jarFileName));
@@ -269,11 +269,11 @@ public class ClassFinder {
     for (File file : files) {
       final String fileName = file.getName();
       if (file.isDirectory()) {
-        classes.addAll(findClassesFromFiles(file, packageName + "." + fileName,
-            proceedOnExceptions));
+        classes
+            .addAll(findClassesFromFiles(file, packageName + "." + fileName, proceedOnExceptions));
       } else {
-        String className = packageName + '.'
-            + fileName.substring(0, fileName.length() - CLASS_EXT.length());
+        String className =
+            packageName + '.' + fileName.substring(0, fileName.length() - CLASS_EXT.length());
         Class<?> c = makeClass(className, proceedOnExceptions);
         if (c != null) {
           if (!classes.add(c)) {
@@ -286,7 +286,7 @@ public class ClassFinder {
   }
 
   private Class<?> makeClass(String className, boolean proceedOnExceptions)
-    throws ClassNotFoundException, LinkageError {
+      throws ClassNotFoundException, LinkageError {
     try {
       Class<?> c = Class.forName(className, false, classLoader);
       boolean isCandidateClass = null == classFilter || classFilter.isCandidateClass(c);
@@ -309,10 +309,8 @@ public class ClassFinder {
 
     @Override
     public boolean accept(File file) {
-      return file.isDirectory()
-          || (file.getName().endsWith(CLASS_EXT)
-              && (null == nameFilter
-                || nameFilter.isCandidateFile(file.getName(), file.getAbsolutePath())));
+      return file.isDirectory() || (file.getName().endsWith(CLASS_EXT) && (null == nameFilter
+          || nameFilter.isCandidateFile(file.getName(), file.getAbsolutePath())));
     }
   }
 }

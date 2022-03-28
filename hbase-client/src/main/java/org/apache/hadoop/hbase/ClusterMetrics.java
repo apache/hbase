@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -39,28 +37,32 @@ import org.apache.yetus.audience.InterfaceAudience;
  * <li>The average cluster load.</li>
  * <li>The number of regions deployed on the cluster.</li>
  * <li>The number of requests since last report.</li>
- * <li>Detailed region server loading and resource usage information,
- *  per server and per region.</li>
+ * <li>Detailed region server loading and resource usage information, per server and per
+ * region.</li>
  * <li>Regions in transition at master</li>
  * <li>The unique cluster ID</li>
  * </ul>
- * <tt>{@link Option}</tt> provides a way to get desired ClusterStatus information.
- * The following codes will get all the cluster information.
+ * <tt>{@link Option}</tt> provides a way to get desired ClusterStatus information. The following
+ * codes will get all the cluster information.
+ * 
  * <pre>
- * {@code
- * // Original version still works
- * Admin admin = connection.getAdmin();
- * ClusterMetrics metrics = admin.getClusterStatus();
- * // or below, a new version which has the same effects
- * ClusterMetrics metrics = admin.getClusterStatus(EnumSet.allOf(Option.class));
+ * {
+ *   &#64;code
+ *   // Original version still works
+ *   Admin admin = connection.getAdmin();
+ *   ClusterMetrics metrics = admin.getClusterStatus();
+ *   // or below, a new version which has the same effects
+ *   ClusterMetrics metrics = admin.getClusterStatus(EnumSet.allOf(Option.class));
  * }
  * </pre>
- * If information about live servers is the only wanted.
- * then codes in the following way:
+ * 
+ * If information about live servers is the only wanted. then codes in the following way:
+ * 
  * <pre>
- * {@code
- * Admin admin = connection.getAdmin();
- * ClusterMetrics metrics = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
+ * {
+ *   &#64;code
+ *   Admin admin = connection.getAdmin();
+ *   ClusterMetrics metrics = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
  * }
  * </pre>
  */
@@ -129,8 +131,7 @@ public interface ClusterMetrics {
 
   default long getLastMajorCompactionTimestamp(byte[] regionName) {
     return getLiveServerMetrics().values().stream()
-        .filter(s -> s.getRegionMetrics().containsKey(regionName))
-        .findAny()
+        .filter(s -> s.getRegionMetrics().containsKey(regionName)).findAny()
         .map(s -> s.getRegionMetrics().get(regionName).getLastMajorCompactionTimestamp())
         .orElse(0L);
   }
@@ -150,13 +151,12 @@ public interface ClusterMetrics {
     if (serverSize == 0) {
       return 0;
     }
-    return (double)getRegionCount() / (double)serverSize;
+    return (double) getRegionCount() / (double) serverSize;
   }
 
   /**
-   * Provide region states count for given table.
-   * e.g howmany regions of give table are opened/closed/rit etc
-   *
+   * Provide region states count for given table. e.g howmany regions of give table are
+   * opened/closed/rit etc
    * @return map of table to region states count
    */
   Map<TableName, RegionStatesCount> getTableRegionStatesCount();

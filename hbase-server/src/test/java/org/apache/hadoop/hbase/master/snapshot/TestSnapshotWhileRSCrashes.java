@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ public class TestSnapshotWhileRSCrashes {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotWhileRSCrashes.class);
+      HBaseClassTestRule.forClass(TestSnapshotWhileRSCrashes.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -81,11 +81,11 @@ public class TestSnapshotWhileRSCrashes {
     t.setDaemon(true);
     t.start();
     ProcedureExecutor<MasterProcedureEnv> procExec =
-      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
+        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     UTIL.waitFor(10000,
       () -> procExec.getProcedures().stream().filter(p -> !p.isFinished())
-        .filter(p -> p instanceof LockProcedure).map(p -> (LockProcedure) p)
-        .filter(p -> NAME.equals(p.getTableName())).anyMatch(p -> !p.isLocked()));
+          .filter(p -> p instanceof LockProcedure).map(p -> (LockProcedure) p)
+          .filter(p -> NAME.equals(p.getTableName())).anyMatch(p -> !p.isLocked()));
     UTIL.getMiniHBaseCluster().stopRegionServer(0);
     lock.release();
     // the snapshot can not work properly when there are rs crashes, so here we just want to make

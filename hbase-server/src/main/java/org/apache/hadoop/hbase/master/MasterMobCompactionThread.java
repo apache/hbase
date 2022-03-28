@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +24,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.TableName;
@@ -37,6 +35,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -55,16 +54,15 @@ public class MasterMobCompactionThread {
     this.conf = master.getConfiguration();
     final String n = Thread.currentThread().getName();
     // this pool is used to run the mob compaction
-    this.masterMobPool = new ThreadPoolExecutor(1, 2, 60,
-        TimeUnit.SECONDS, new SynchronousQueue<>(),
-        new ThreadFactoryBuilder().setDaemon(true)
-            .setNameFormat(n + "-MasterMobCompaction-" + EnvironmentEdgeManager.currentTime())
-            .build());
+    this.masterMobPool =
+        new ThreadPoolExecutor(1, 2, 60, TimeUnit.SECONDS, new SynchronousQueue<>(),
+            new ThreadFactoryBuilder().setDaemon(true)
+                .setNameFormat(n + "-MasterMobCompaction-" + EnvironmentEdgeManager.currentTime())
+                .build());
     ((ThreadPoolExecutor) this.masterMobPool).allowCoreThreadTimeOut(true);
     // this pool is used in the mob compaction to compact the mob files by partitions
     // in parallel
-    this.mobCompactorPool = MobUtils
-      .createMobCompactorThreadPool(master.getConfiguration());
+    this.mobCompactorPool = MobUtils.createMobCompactorThreadPool(master.getConfiguration());
   }
 
   /**
@@ -76,11 +74,11 @@ public class MasterMobCompactionThread {
    * @param allFiles Whether add all mob files into the compaction.
    */
   public void requestMobCompaction(Configuration conf, FileSystem fs, TableName tableName,
-                                   List<ColumnFamilyDescriptor> columns, boolean allFiles) throws IOException {
+      List<ColumnFamilyDescriptor> columns, boolean allFiles) throws IOException {
     master.reportMobCompactionStart(tableName);
     try {
-      masterMobPool.execute(new CompactionRunner(fs, tableName, columns,
-        allFiles, mobCompactorPool));
+      masterMobPool
+          .execute(new CompactionRunner(fs, tableName, columns, allFiles, mobCompactorPool));
     } catch (RejectedExecutionException e) {
       // in case the request is rejected by the pool
       try {
@@ -91,8 +89,8 @@ public class MasterMobCompactionThread {
       throw e;
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("The mob compaction is requested for the columns " + columns
-        + " of the table " + tableName.getNameAsString());
+      LOG.debug("The mob compaction is requested for the columns " + columns + " of the table "
+          + tableName.getNameAsString());
     }
   }
 
@@ -104,7 +102,7 @@ public class MasterMobCompactionThread {
     private ExecutorService pool;
 
     public CompactionRunner(FileSystem fs, TableName tableName, List<ColumnFamilyDescriptor> hcds,
-      boolean allFiles, ExecutorService pool) {
+        boolean allFiles, ExecutorService pool) {
       super();
       this.fs = fs;
       this.tableName = tableName;
@@ -116,9 +114,9 @@ public class MasterMobCompactionThread {
     @Override
     public void run() {
       // These locks are on dummy table names, and only used for compaction/mob file cleaning.
-      final LockManager.MasterLock lock = master.getLockManager().createMasterLock(
-          MobUtils.getTableLockName(tableName), LockType.EXCLUSIVE,
-          this.getClass().getName() + ": mob compaction");
+      final LockManager.MasterLock lock =
+          master.getLockManager().createMasterLock(MobUtils.getTableLockName(tableName),
+            LockType.EXCLUSIVE, this.getClass().getName() + ": mob compaction");
       try {
         for (ColumnFamilyDescriptor hcd : hcds) {
           MobUtils.doMobCompaction(conf, fs, tableName, hcd, pool, allFiles, lock);

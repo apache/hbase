@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -307,11 +308,10 @@ public class TestScannerFromBucketCache {
     builder.setReadOnly(isReadOnly).setDurability(Durability.SYNC_WAL);
     for (byte[] family : families) {
       builder.setColumnFamily(
-          ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(Integer.MAX_VALUE)
-              .build());
+        ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(Integer.MAX_VALUE).build());
     }
-    return HBaseTestingUtility
-        .createRegionAndWAL(regionInfo, testUtil.getDataTestDir(callingMethod), conf,
-            builder.build(), BlockCacheFactory.createBlockCache(conf));
+    return HBaseTestingUtility.createRegionAndWAL(regionInfo,
+      testUtil.getDataTestDir(callingMethod), conf, builder.build(),
+      BlockCacheFactory.createBlockCache(conf));
   }
 }

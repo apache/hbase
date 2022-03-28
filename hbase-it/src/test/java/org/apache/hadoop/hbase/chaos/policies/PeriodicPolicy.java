@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.policies;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -33,7 +32,7 @@ public abstract class PeriodicPolicy extends Policy {
   @Override
   public void run() {
     // Add some jitter.
-    int jitter = ThreadLocalRandom.current().nextInt((int)periodMs);
+    int jitter = ThreadLocalRandom.current().nextInt((int) periodMs);
     LOG.info("Sleeping for {} ms to add jitter", jitter);
     Threads.sleep(jitter);
 

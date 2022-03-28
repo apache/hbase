@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -87,8 +87,8 @@ class StoreFileListFile {
     try (FSDataInputStream in = fs.open(path)) {
       int length = in.readInt();
       if (length <= 0 || length > MAX_FILE_SIZE) {
-        throw new IOException("Invalid file length " + length +
-          ", either less than 0 or greater then max allowed size " + MAX_FILE_SIZE);
+        throw new IOException("Invalid file length " + length
+            + ", either less than 0 or greater then max allowed size " + MAX_FILE_SIZE);
       }
       data = new byte[length];
       in.readFully(data);
@@ -99,7 +99,7 @@ class StoreFileListFile {
     int calculatedChecksum = (int) crc32.getValue();
     if (expectedChecksum != calculatedChecksum) {
       throw new IOException(
-        "Checksum mismatch, expected " + expectedChecksum + ", actual " + calculatedChecksum);
+          "Checksum mismatch, expected " + expectedChecksum + ", actual " + calculatedChecksum);
     }
     return StoreFileList.parseFrom(data);
   }

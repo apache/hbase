@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,8 +47,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /*
- * This test is for the optimization added in HBASE-15243.
- * FilterList with two MultiRowRangeFilter's is constructed using Operator.MUST_PASS_ONE.
+ * This test is for the optimization added in HBASE-15243. FilterList with two MultiRowRangeFilter's
+ * is constructed using Operator.MUST_PASS_ONE.
  */
 @Category(MediumTests.class)
 public class TestFilterListOrOperatorWithBlkCnt {
@@ -76,9 +76,8 @@ public class TestFilterListOrOperatorWithBlkCnt {
   public static void setUpBeforeClass() throws Exception {
     long blkSize = 4096;
     /*
-     * dfs block size is adjusted so that the specified number of rows would result in
-     * multiple blocks (8 for this test).
-     * Later in the test, assertion is made on the number of blocks read.
+     * dfs block size is adjusted so that the specified number of rows would result in multiple
+     * blocks (8 for this test). Later in the test, assertion is made on the number of blocks read.
      */
     TEST_UTIL.getConfiguration().setLong("dfs.blocksize", blkSize);
     TEST_UTIL.getConfiguration().setLong("dfs.bytes-per-checksum", blkSize);
@@ -155,10 +154,10 @@ public class TestFilterListOrOperatorWithBlkCnt {
   private List<Cell> getScanResult(byte[] startRow, byte[] stopRow, Table ht) throws IOException {
     Scan scan = new Scan();
     scan.setMaxVersions();
-    if(!Bytes.toString(startRow).isEmpty()) {
+    if (!Bytes.toString(startRow).isEmpty()) {
       scan.setStartRow(startRow);
     }
-    if(!Bytes.toString(stopRow).isEmpty()) {
+    if (!Bytes.toString(stopRow).isEmpty()) {
       scan.setStopRow(stopRow);
     }
     ResultScanner scanner = ht.getScanner(scan);

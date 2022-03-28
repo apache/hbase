@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.security.provider;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.NameCallback;
@@ -30,7 +29,6 @@ import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.RealmCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslServer;
-
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
 import org.apache.hadoop.hbase.security.SaslUtil;
@@ -45,15 +43,15 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class DigestSaslServerAuthenticationProvider extends DigestSaslAuthenticationProvider
     implements SaslServerAuthenticationProvider {
-  private static final Logger LOG = LoggerFactory.getLogger(
-      DigestSaslServerAuthenticationProvider.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DigestSaslServerAuthenticationProvider.class);
 
   private AtomicReference<UserGroupInformation> attemptingUser = new AtomicReference<>(null);
 
   @Override
-  public AttemptingUserProvidingSaslServer createServer(
-      SecretManager<TokenIdentifier> secretManager,
-      Map<String, String> saslProps) throws IOException {
+  public AttemptingUserProvidingSaslServer
+      createServer(SecretManager<TokenIdentifier> secretManager, Map<String, String> saslProps)
+          throws IOException {
     if (secretManager == null) {
       throw new AccessDeniedException("Server is not configured to do DIGEST authentication.");
     }
@@ -99,13 +97,13 @@ public class DigestSaslServerAuthenticationProvider extends DigestSaslAuthentica
         }
       }
       if (pc != null) {
-        TokenIdentifier tokenIdentifier = HBaseSaslRpcServer.getIdentifier(
-            nc.getDefaultName(), secretManager);
+        TokenIdentifier tokenIdentifier =
+            HBaseSaslRpcServer.getIdentifier(nc.getDefaultName(), secretManager);
         attemptingUser.set(tokenIdentifier.getUser());
         char[] password = getPassword(tokenIdentifier);
         if (LOG.isTraceEnabled()) {
           LOG.trace("SASL server DIGEST-MD5 callback: setting password for client: {}",
-              tokenIdentifier.getUser());
+            tokenIdentifier.getUser());
         }
         pc.setPassword(password);
       }
@@ -123,8 +121,8 @@ public class DigestSaslServerAuthenticationProvider extends DigestSaslAuthentica
         if (authenticatedUserId.equals(userRequestedToExecuteAs)) {
           ac.setAuthorized(true);
           if (LOG.isTraceEnabled()) {
-            String username = HBaseSaslRpcServer.getIdentifier(
-                userRequestedToExecuteAs, secretManager).getUser().getUserName();
+            String username = HBaseSaslRpcServer
+                .getIdentifier(userRequestedToExecuteAs, secretManager).getUser().getUserName();
             LOG.trace(
               "SASL server DIGEST-MD5 callback: setting " + "canonicalized client ID: " + username);
           }
@@ -148,8 +146,7 @@ public class DigestSaslServerAuthenticationProvider extends DigestSaslAuthentica
     TokenIdentifier tokenId = HBaseSaslRpcServer.getIdentifier(authzId, secretManager);
     authorizedUgi = tokenId.getUser();
     if (authorizedUgi == null) {
-      throw new AccessDeniedException(
-          "Can't retrieve username from tokenIdentifier.");
+      throw new AccessDeniedException("Can't retrieve username from tokenIdentifier.");
     }
     authorizedUgi.addTokenIdentifier(tokenId);
     authorizedUgi.setAuthenticationMethod(getSaslAuthMethod().getAuthMethod());

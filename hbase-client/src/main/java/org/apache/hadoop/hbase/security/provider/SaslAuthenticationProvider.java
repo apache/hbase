@@ -22,13 +22,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Encapsulation of client-side logic to authenticate to HBase via some means over SASL.
- * It is suggested that custom implementations extend the abstract class in the type hierarchy
- * instead of directly implementing this interface (clients have a base class available, but
- * servers presently do not).
- *
- * Implementations of this interface <b>must</b> be unique among each other via the {@code byte}
- * returned by {@link SaslAuthMethod#getCode()} on {@link #getSaslAuthMethod()}.
+ * Encapsulation of client-side logic to authenticate to HBase via some means over SASL. It is
+ * suggested that custom implementations extend the abstract class in the type hierarchy instead of
+ * directly implementing this interface (clients have a base class available, but servers presently
+ * do not). Implementations of this interface <b>must</b> be unique among each other via the
+ * {@code byte} returned by {@link SaslAuthMethod#getCode()} on {@link #getSaslAuthMethod()}.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving

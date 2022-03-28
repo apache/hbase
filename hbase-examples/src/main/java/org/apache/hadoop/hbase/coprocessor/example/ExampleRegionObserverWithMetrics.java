@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -8,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,8 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 package org.apache.hadoop.hbase.coprocessor.example;
 
 import java.io.IOException;
@@ -46,10 +43,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  * metrics from the coprocessor.
  * <p>
  * These metrics will be available through the regular Hadoop metrics2 sinks (ganglia, opentsdb,
- * etc) as well as JMX output. You can view a snapshot of the metrics by going to the http web UI
- * of the regionserver page, something like http://myregionserverhost:16030/jmx
+ * etc) as well as JMX output. You can view a snapshot of the metrics by going to the http web UI of
+ * the regionserver page, something like http://myregionserverhost:16030/jmx
  * </p>
- *
  * @see ExampleMasterObserverWithMetrics
  */
 @InterfaceAudience.Private
@@ -88,22 +84,19 @@ public class ExampleRegionObserverWithMetrics implements RegionCoprocessor {
     }
 
     @Override
-    public void postFlush(
-        ObserverContext<RegionCoprocessorEnvironment> c,
+    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c,
         FlushLifeCycleTracker tracker) throws IOException {
       flushCounter.increment();
     }
 
     @Override
-    public void postFlush(
-        ObserverContext<RegionCoprocessorEnvironment> c, Store store, StoreFile resultFile,
-        FlushLifeCycleTracker tracker) throws IOException {
+    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+        StoreFile resultFile, FlushLifeCycleTracker tracker) throws IOException {
       flushCounter.increment();
     }
 
     @Override
-    public void postCompactSelection(
-        ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+    public void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
         List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
         CompactionRequest request) {
       if (selected != null) {
@@ -120,7 +113,8 @@ public class ExampleRegionObserverWithMetrics implements RegionCoprocessor {
     }
   }
 
-  @Override public Optional<RegionObserver> getRegionObserver() {
+  @Override
+  public Optional<RegionObserver> getRegionObserver() {
     return Optional.of(observer);
   }
 

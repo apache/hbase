@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +33,7 @@ public abstract class AbstractTestRestartCluster {
   protected HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   protected static final TableName[] TABLES = { TableName.valueOf("restartTableOne"),
-    TableName.valueOf("restartTableTwo"), TableName.valueOf("restartTableThree") };
+      TableName.valueOf("restartTableTwo"), TableName.valueOf("restartTableThree") };
 
   protected static final byte[] FAMILY = Bytes.toBytes("family");
 

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
@@ -57,8 +56,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteTableState;
 
 @InterfaceAudience.Private
-public class DeleteTableProcedure
-    extends AbstractStateMachineTableProcedure<DeleteTableState> {
+public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<DeleteTableState> {
   private static final Logger LOG = LoggerFactory.getLogger(DeleteTableProcedure.class);
 
   private List<RegionInfo> regions;
@@ -99,7 +97,7 @@ public class DeleteTableProcedure
           // TODO: Move out... in the acquireLock()
           LOG.debug("Waiting for RIT for {}", this);
           regions = env.getAssignmentManager().getRegionStates()
-            .getRegionsOfTableForDeleting(getTableName());
+              .getRegionsOfTableForDeleting(getTableName());
           assert regions != null && !regions.isEmpty() : "unexpected 0 regions";
           ProcedureSyncWait.waitRegionInTransition(env, regions);
 
@@ -205,16 +203,15 @@ public class DeleteTableProcedure
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
 
     MasterProcedureProtos.DeleteTableStateData.Builder state =
-      MasterProcedureProtos.DeleteTableStateData.newBuilder()
-        .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
-        .setTableName(ProtobufUtil.toProtoTableName(tableName));
+        MasterProcedureProtos.DeleteTableStateData.newBuilder()
+            .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
+            .setTableName(ProtobufUtil.toProtoTableName(tableName));
     if (regions != null) {
-      for (RegionInfo hri: regions) {
+      for (RegionInfo hri : regions) {
         state.addRegionInfo(ProtobufUtil.toRegionInfo(hri));
       }
     }
@@ -222,8 +219,7 @@ public class DeleteTableProcedure
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
 
     MasterProcedureProtos.DeleteTableStateData state =
@@ -234,7 +230,7 @@ public class DeleteTableProcedure
       regions = null;
     } else {
       regions = new ArrayList<>(state.getRegionInfoCount());
-      for (HBaseProtos.RegionInfo hri: state.getRegionInfoList()) {
+      for (HBaseProtos.RegionInfo hri : state.getRegionInfoList()) {
         regions.add(ProtobufUtil.toRegionInfo(hri));
       }
     }
@@ -243,15 +239,14 @@ public class DeleteTableProcedure
   private boolean prepareDelete(final MasterProcedureEnv env) throws IOException {
     try {
       env.getMasterServices().checkTableModifiable(tableName);
-    } catch (TableNotFoundException|TableNotDisabledException e) {
+    } catch (TableNotFoundException | TableNotDisabledException e) {
       setFailure("master-delete-table", e);
       return false;
     }
     return true;
   }
 
-  private boolean preDelete(final MasterProcedureEnv env)
-      throws IOException, InterruptedException {
+  private boolean preDelete(final MasterProcedureEnv env) throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final TableName tableName = this.tableName;
@@ -260,8 +255,7 @@ public class DeleteTableProcedure
     return true;
   }
 
-  private void postDelete(final MasterProcedureEnv env)
-      throws IOException, InterruptedException {
+  private void postDelete(final MasterProcedureEnv env) throws IOException, InterruptedException {
     deleteTableStates(env, tableName);
 
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
@@ -271,9 +265,8 @@ public class DeleteTableProcedure
     }
   }
 
-  protected static void deleteFromFs(final MasterProcedureEnv env,
-      final TableName tableName, final List<RegionInfo> regions,
-      final boolean archive) throws IOException {
+  protected static void deleteFromFs(final MasterProcedureEnv env, final TableName tableName,
+      final List<RegionInfo> regions, final boolean archive) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final FileSystem fs = mfs.getFileSystem();
 
@@ -287,24 +280,23 @@ public class DeleteTableProcedure
           if (RegionReplicaUtil.isDefaultReplica(region)) {
             regionDirList.add(FSUtils.getRegionDirFromTableDir(tableDir, region));
             List<RegionInfo> mergeRegions = MetaTableAccessor
-              .getMergeRegions(env.getMasterServices().getConnection(), region.getRegionName());
+                .getMergeRegions(env.getMasterServices().getConnection(), region.getRegionName());
             if (!CollectionUtils.isEmpty(mergeRegions)) {
-              mergeRegions.stream().forEach(
-                r -> regionDirList.add(FSUtils.getRegionDirFromTableDir(tableDir, r)));
+              mergeRegions.stream()
+                  .forEach(r -> regionDirList.add(FSUtils.getRegionDirFromTableDir(tableDir, r)));
             }
           }
         }
-        HFileArchiver
-          .archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(), tableDir,
-            regionDirList);
+        HFileArchiver.archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(), tableDir,
+          regionDirList);
         if (!regionDirList.isEmpty()) {
           LOG.debug("Archived {} regions", tableName);
         }
       }
 
       // Archive mob data
-      Path mobTableDir =
-        CommonFSUtils.getTableDir(new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME), tableName);
+      Path mobTableDir = CommonFSUtils
+          .getTableDir(new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME), tableName);
       Path regionDir = new Path(mobTableDir, MobUtils.getMobRegionInfo(tableName).getEncodedName());
       if (fs.exists(regionDir)) {
         HFileArchiver.archiveRegion(fs, mfs.getRootDir(), mobTableDir, regionDir);
@@ -339,14 +331,15 @@ public class DeleteTableProcedure
    * See HBASE-12980.
    */
   private static void cleanRegionsInMeta(final MasterProcedureEnv env, final TableName tableName)
-    throws IOException {
+      throws IOException {
     Scan tableScan = MetaTableAccessor.getScanForTableName(env.getMasterConfiguration(), tableName)
-      .setFilter(new KeyOnlyFilter());
+        .setFilter(new KeyOnlyFilter());
     long now = EnvironmentEdgeManager.currentTime();
     List<Delete> deletes = new ArrayList<>();
     try (
-      Table metaTable = env.getMasterServices().getConnection().getTable(TableName.META_TABLE_NAME);
-      ResultScanner scanner = metaTable.getScanner(tableScan)) {
+        Table metaTable =
+            env.getMasterServices().getConnection().getTable(TableName.META_TABLE_NAME);
+        ResultScanner scanner = metaTable.getScanner(tableScan)) {
       for (;;) {
         Result result = scanner.next();
         if (result == null) {
@@ -355,8 +348,8 @@ public class DeleteTableProcedure
         deletes.add(new Delete(result.getRow(), now));
       }
       if (!deletes.isEmpty()) {
-        LOG.warn("Deleting some vestigial " + deletes.size() + " rows of " + tableName + " from " +
-          TableName.META_TABLE_NAME);
+        LOG.warn("Deleting some vestigial " + deletes.size() + " rows of " + tableName + " from "
+            + TableName.META_TABLE_NAME);
         metaTable.delete(deletes);
       }
     }

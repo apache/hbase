@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -60,6 +59,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Will split the table, and move region randomly when testing.
@@ -69,7 +69,7 @@ public class TestAsyncTableGetMultiThreaded {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableGetMultiThreaded.class);
+      HBaseClassTestRule.forClass(TestAsyncTableGetMultiThreaded.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAsyncTableGetMultiThreaded.class);
 
@@ -139,7 +139,7 @@ public class TestAsyncTableGetMultiThreaded {
     AtomicBoolean stop = new AtomicBoolean(false);
     ExecutorService executor = Executors.newFixedThreadPool(numThreads,
       new ThreadFactoryBuilder().setNameFormat("TestAsyncGet-pool-%d").setDaemon(true)
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     List<Future<?>> futures = new ArrayList<>();
     IntStream.range(0, numThreads).forEach(i -> futures.add(executor.submit(() -> {
       run(stop);
@@ -185,8 +185,8 @@ public class TestAsyncTableGetMultiThreaded {
             LOG.warn("Failed to query");
           }
           if (!retrier.shouldRetry()) {
-            throw new IOException("Can not finish compaction in time after attempt " +
-              retrier.getAttemptTimes() + " times");
+            throw new IOException("Can not finish compaction in time after attempt "
+                + retrier.getAttemptTimes() + " times");
           }
           retrier.sleepUntilNextRetry();
         }
@@ -211,7 +211,7 @@ public class TestAsyncTableGetMultiThreaded {
       Thread.sleep(5000);
     }
     List<LogEntry> balancerDecisionRecords =
-      admin.getLogEntries(null, "BALANCER_DECISION", ServerType.MASTER, 2, null);
+        admin.getLogEntries(null, "BALANCER_DECISION", ServerType.MASTER, 2, null);
     Assert.assertEquals(balancerDecisionRecords.size(), 2);
     LOG.info("====== Read test finished, shutdown thread pool ======");
     stop.set(true);

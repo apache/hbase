@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.field.FieldValue;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * Represents a filter that's filtering the metric {@link Record}s.
  */
@@ -32,11 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class RecordFilter {
 
   private enum Operator {
-    EQUAL("="),
-    DOUBLE_EQUALS("=="),
-    GREATER(">"),
-    GREATER_OR_EQUAL(">="),
-    LESS("<"),
+    EQUAL("="), DOUBLE_EQUALS("=="), GREATER(">"), GREATER_OR_EQUAL(">="), LESS("<"),
     LESS_OR_EQUAL("<=");
 
     private final String operator;
@@ -68,7 +63,7 @@ public final class RecordFilter {
 
     StringBuilder fieldString = new StringBuilder();
     while (filterString.length() > index && filterString.charAt(index) != '<'
-      && filterString.charAt(index) != '>' && filterString.charAt(index) != '=') {
+        && filterString.charAt(index) != '>' && filterString.charAt(index) != '=') {
       fieldString.append(filterString.charAt(index++));
     }
 
@@ -82,8 +77,8 @@ public final class RecordFilter {
     }
 
     StringBuilder operatorString = new StringBuilder();
-    while (filterString.length() > index && (filterString.charAt(index) == '<' ||
-      filterString.charAt(index) == '>' || filterString.charAt(index) == '=')) {
+    while (filterString.length() > index && (filterString.charAt(index) == '<'
+        || filterString.charAt(index) == '>' || filterString.charAt(index) == '=')) {
       operatorString.append(filterString.charAt(index++));
     }
 
@@ -138,7 +133,7 @@ public final class RecordFilter {
   private final FieldValue value;
 
   private RecordFilter(boolean ignoreCase, boolean not, Field field, Operator operator,
-    FieldValue value) {
+      FieldValue value) {
     this.ignoreCase = ignoreCase;
     this.not = not;
     this.field = Objects.requireNonNull(field);
@@ -166,8 +161,7 @@ public final class RecordFilter {
       return not != ret;
     }
 
-    int compare = ignoreCase ?
-      fieldValue.compareToIgnoreCase(value) : fieldValue.compareTo(value);
+    int compare = ignoreCase ? fieldValue.compareToIgnoreCase(value) : fieldValue.compareTo(value);
 
     boolean ret;
     switch (operator) {
@@ -212,7 +206,7 @@ public final class RecordFilter {
     }
     RecordFilter filter = (RecordFilter) o;
     return ignoreCase == filter.ignoreCase && not == filter.not && field == filter.field
-      && operator == filter.operator && value.equals(filter.value);
+        && operator == filter.operator && value.equals(filter.value);
   }
 
   @Override

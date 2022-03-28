@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,12 +53,12 @@ public class TestHFileProcedurePrettyPrinter extends RegionProcedureStoreTestBas
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileProcedurePrettyPrinter.class);
+      HBaseClassTestRule.forClass(TestHFileProcedurePrettyPrinter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileProcedurePrettyPrinter.class);
 
   private List<String> checkOutput(BufferedReader reader, MutableLong putCount,
-    MutableLong deleteCount, MutableLong markDeletedCount) throws IOException {
+      MutableLong deleteCount, MutableLong markDeletedCount) throws IOException {
     putCount.setValue(0);
     deleteCount.setValue(0);
     markDeletedCount.setValue(0);
@@ -102,11 +102,12 @@ public class TestHFileProcedurePrettyPrinter extends RegionProcedureStoreTestBas
     store.cleanup();
     store.region.flush(true);
     Path tableDir = CommonFSUtils.getTableDir(
-      new Path(htu.getDataTestDir(), MasterRegionFactory.MASTER_STORE_DIR), MasterRegionFactory.TABLE_NAME);
+      new Path(htu.getDataTestDir(), MasterRegionFactory.MASTER_STORE_DIR),
+      MasterRegionFactory.TABLE_NAME);
     FileSystem fs = tableDir.getFileSystem(htu.getConfiguration());
     Path regionDir =
-      fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]
-        .getPath();
+        fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]
+            .getPath();
     List<Path> storefiles = HFile.getStoreFiles(fs, regionDir);
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(bos);
@@ -119,8 +120,8 @@ public class TestHFileProcedurePrettyPrinter extends RegionProcedureStoreTestBas
       assertEquals(0,
         ToolRunner.run(htu.getConfiguration(), printer, new String[] { "-f", file.toString() }));
       try (BufferedReader reader =
-        new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bos.toByteArray()),
-          StandardCharsets.UTF_8))) {
+          new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bos.toByteArray()),
+              StandardCharsets.UTF_8))) {
         List<String> fileScanned = checkOutput(reader, putCount, deleteCount, markDeletedCount);
         assertEquals(1, fileScanned.size());
         assertEquals(file.toString(), fileScanned.get(0));
@@ -141,8 +142,9 @@ public class TestHFileProcedurePrettyPrinter extends RegionProcedureStoreTestBas
     bos.reset();
     printer = new HFileProcedurePrettyPrinter(out);
     assertEquals(0, ToolRunner.run(htu.getConfiguration(), printer, new String[] { "-a" }));
-    try (BufferedReader reader = new BufferedReader(
-      new InputStreamReader(new ByteArrayInputStream(bos.toByteArray()), StandardCharsets.UTF_8))) {
+    try (BufferedReader reader =
+        new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bos.toByteArray()),
+            StandardCharsets.UTF_8))) {
       List<String> fileScanned = checkOutput(reader, putCount, deleteCount, markDeletedCount);
       assertEquals(3, fileScanned.size());
       assertEquals(10, putCount.longValue());

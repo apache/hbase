@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.test.util;
 
 // Cribbed from
@@ -26,7 +25,7 @@ public class CRC64 {
   private static final int TABLE_LENGTH = 256;
   private static final long[] TABLE = new long[TABLE_LENGTH];
   static {
-  /* Initialize a table constructed from POLY  */
+    /* Initialize a table constructed from POLY */
     for (int n = 0; n < TABLE_LENGTH; ++n) {
       long crc = n;
       for (int i = 0; i < 8; ++i) {
@@ -47,7 +46,7 @@ public class CRC64 {
   }
 
   public void update(byte[] input, int off, int len) {
-    for (int i = off; i < off+len; i++) {
+    for (int i = off; i < off + len; i++) {
       value = TABLE[(input[i] ^ (int) value) & 0xFF] ^ (value >>> 8);
     }
   }

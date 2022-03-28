@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,9 +52,8 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
 
     TEST_UTIL.createMultiRegionTable(tableName, FAMILY, 4);
 
-    ArrayList<ServerName> clusterRegionServers =
-        new ArrayList<>(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).get()
-          .getLiveServerMetrics().keySet());
+    ArrayList<ServerName> clusterRegionServers = new ArrayList<>(admin
+        .getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).get().getLiveServerMetrics().keySet());
 
     assertEquals(TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().size(),
       clusterRegionServers.size());
@@ -75,8 +74,8 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
     ServerName remainingServer = clusterRegionServers.get(0);
 
     // Decommission
-    admin.decommissionRegionServers(new ArrayList<ServerName>(serversToDecommssion.keySet()),
-        true).get();
+    admin.decommissionRegionServers(new ArrayList<ServerName>(serversToDecommssion.keySet()), true)
+        .get();
     assertEquals(1, admin.listDecommissionedRegionServers().get().size());
 
     // Verify the regions have been off the decommissioned servers, all on the remaining server.

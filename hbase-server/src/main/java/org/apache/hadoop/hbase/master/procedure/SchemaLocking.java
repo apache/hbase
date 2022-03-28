@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -133,18 +133,19 @@ class SchemaLocking {
     List<Procedure<?>> waitingProcedures = new ArrayList<>();
 
     queue.filterWaitingQueue(p -> p instanceof LockProcedure)
-      .forEachOrdered(waitingProcedures::add);
+        .forEachOrdered(waitingProcedures::add);
 
     return new LockedResource(resourceType, resourceName, lockType, exclusiveLockOwnerProcedure,
-      sharedLockCount, waitingProcedures);
+        sharedLockCount, waitingProcedures);
   }
 
   private <T> void addToLockedResources(List<LockedResource> lockedResources,
       Map<T, LockAndQueue> locks, Function<T, String> keyTransformer,
       LockedResourceType resourcesType) {
     locks.entrySet().stream().filter(e -> e.getValue().isLocked())
-      .map(e -> createLockedResource(resourcesType, keyTransformer.apply(e.getKey()), e.getValue()))
-      .forEachOrdered(lockedResources::add);
+        .map(
+          e -> createLockedResource(resourcesType, keyTransformer.apply(e.getKey()), e.getValue()))
+        .forEachOrdered(lockedResources::add);
   }
 
   /**
@@ -211,11 +212,11 @@ class SchemaLocking {
 
   @Override
   public String toString() {
-    return "serverLocks=" + filterUnlocked(this.serverLocks) + ", namespaceLocks=" +
-      filterUnlocked(this.namespaceLocks) + ", tableLocks=" + filterUnlocked(this.tableLocks) +
-      ", regionLocks=" + filterUnlocked(this.regionLocks) + ", peerLocks=" +
-      filterUnlocked(this.peerLocks) + ", metaLocks=" +
-      filterUnlocked(ImmutableMap.of(TableName.META_TABLE_NAME, metaLock));
+    return "serverLocks=" + filterUnlocked(this.serverLocks) + ", namespaceLocks="
+        + filterUnlocked(this.namespaceLocks) + ", tableLocks=" + filterUnlocked(this.tableLocks)
+        + ", regionLocks=" + filterUnlocked(this.regionLocks) + ", peerLocks="
+        + filterUnlocked(this.peerLocks) + ", metaLocks="
+        + filterUnlocked(ImmutableMap.of(TableName.META_TABLE_NAME, metaLock));
   }
 
   private String filterUnlocked(Map<?, LockAndQueue> locks) {

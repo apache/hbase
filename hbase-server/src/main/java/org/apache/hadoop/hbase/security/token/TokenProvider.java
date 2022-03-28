@@ -20,10 +20,8 @@ package org.apache.hadoop.hbase.security.token;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
-
 import java.io.IOException;
 import java.util.Collections;
-
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
@@ -45,33 +43,33 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Provides a service for obtaining authentication tokens via the
- * {@link AuthenticationProtos} AuthenticationService coprocessor service.
+ * Provides a service for obtaining authentication tokens via the {@link AuthenticationProtos}
+ * AuthenticationService coprocessor service.
  */
 @CoreCoprocessor
 @InterfaceAudience.Private
-public class TokenProvider implements AuthenticationProtos.AuthenticationService.Interface,
-    RegionCoprocessor {
+public class TokenProvider
+    implements AuthenticationProtos.AuthenticationService.Interface, RegionCoprocessor {
 
   private static final Logger LOG = LoggerFactory.getLogger(TokenProvider.class);
 
   private AuthenticationTokenSecretManager secretManager;
 
-
   @Override
   public void start(CoprocessorEnvironment env) {
     // if running at region
     if (env instanceof RegionCoprocessorEnvironment) {
-      RegionCoprocessorEnvironment regionEnv = (RegionCoprocessorEnvironment)env;
-      /* Getting the RpcServer from a RegionCE is wrong. There cannot be an expectation that Region
-       is hosted inside a RegionServer. If you need RpcServer, then pass in a RegionServerCE.
-       TODO: FIX.
+      RegionCoprocessorEnvironment regionEnv = (RegionCoprocessorEnvironment) env;
+      /*
+       * Getting the RpcServer from a RegionCE is wrong. There cannot be an expectation that Region
+       * is hosted inside a RegionServer. If you need RpcServer, then pass in a RegionServerCE.
+       * TODO: FIX.
        */
-      RegionServerServices rss = ((HasRegionServerServices)regionEnv).getRegionServerServices();
+      RegionServerServices rss = ((HasRegionServerServices) regionEnv).getRegionServerServices();
       RpcServerInterface server = rss.getRpcServer();
-      SecretManager<?> mgr = ((RpcServer)server).getSecretManager();
+      SecretManager<?> mgr = ((RpcServer) server).getSecretManager();
       if (mgr instanceof AuthenticationTokenSecretManager) {
-        secretManager = (AuthenticationTokenSecretManager)mgr;
+        secretManager = (AuthenticationTokenSecretManager) mgr;
       }
     }
   }
@@ -101,28 +99,27 @@ public class TokenProvider implements AuthenticationProtos.AuthenticationService
 
   @Override
   public Iterable<Service> getServices() {
-    return Collections.singleton(
-        AuthenticationProtos.AuthenticationService.newReflectiveService(this));
+    return Collections
+        .singleton(AuthenticationProtos.AuthenticationService.newReflectiveService(this));
   }
 
   @Override
   public void getAuthenticationToken(RpcController controller,
-                                     AuthenticationProtos.GetAuthenticationTokenRequest request,
-                                     RpcCallback<AuthenticationProtos.GetAuthenticationTokenResponse> done) {
+      AuthenticationProtos.GetAuthenticationTokenRequest request,
+      RpcCallback<AuthenticationProtos.GetAuthenticationTokenResponse> done) {
     AuthenticationProtos.GetAuthenticationTokenResponse.Builder response =
         AuthenticationProtos.GetAuthenticationTokenResponse.newBuilder();
 
     try {
       if (secretManager == null) {
-        throw new IOException(
-            "No secret manager configured for token authentication");
+        throw new IOException("No secret manager configured for token authentication");
       }
       User currentUser = RpcServer.getRequestUser()
           .orElseThrow(() -> new AccessDeniedException("No authenticated user for request!"));
       UserGroupInformation ugi = currentUser.getUGI();
       if (!isAllowedDelegationTokenOp(ugi)) {
-        LOG.warn("Token generation denied for user=" + currentUser.getName() + ", authMethod=" +
-            ugi.getAuthenticationMethod());
+        LOG.warn("Token generation denied for user=" + currentUser.getName() + ", authMethod="
+            + ugi.getAuthenticationMethod());
         throw new AccessDeniedException(
             "Token generation only allowed for Kerberos authenticated clients");
       }

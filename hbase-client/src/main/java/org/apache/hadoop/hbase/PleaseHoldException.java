@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,10 +20,10 @@ package org.apache.hadoop.hbase;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This exception is thrown by the master when a region server was shut down and
- * restarted so fast that the master still hasn't processed the server shutdown
- * of the first instance, or when master is initializing and client call admin
- * operations, or when an operation is performed on a region server that is still starting.
+ * This exception is thrown by the master when a region server was shut down and restarted so fast
+ * that the master still hasn't processed the server shutdown of the first instance, or when master
+ * is initializing and client call admin operations, or when an operation is performed on a region
+ * server that is still starting.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public

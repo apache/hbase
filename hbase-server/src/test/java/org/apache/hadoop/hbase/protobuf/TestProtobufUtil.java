@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.protobuf;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -54,12 +55,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.MetaRegionServer;
 
 /**
  * Class to test ProtobufUtil.
  */
-@Category({ MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestProtobufUtil {
 
   @ClassRule
@@ -83,7 +85,6 @@ public class TestProtobufUtil {
 
   /**
    * Test basic Get conversions.
-   *
    * @throws IOException
    */
   @Test
@@ -117,7 +118,6 @@ public class TestProtobufUtil {
 
   /**
    * Test Append Mutate conversions.
-   *
    * @throws IOException
    */
   @Test
@@ -140,15 +140,16 @@ public class TestProtobufUtil {
   }
 
   /**
-   * Older clients may not send along a timestamp in the MutationProto. Check that we
-   * default correctly.
+   * Older clients may not send along a timestamp in the MutationProto. Check that we default
+   * correctly.
    */
   @Test
   public void testAppendNoTimestamp() throws IOException {
     MutationProto mutation = getAppendMutation(null);
     Append append = ProtobufUtil.toAppend(mutation, null);
     assertEquals(HConstants.LATEST_TIMESTAMP, append.getTimestamp());
-    append.getFamilyCellMap().values().forEach(cells -> cells.forEach(cell -> assertEquals(HConstants.LATEST_TIMESTAMP, cell.getTimestamp())));
+    append.getFamilyCellMap().values().forEach(cells -> cells
+        .forEach(cell -> assertEquals(HConstants.LATEST_TIMESTAMP, cell.getTimestamp())));
   }
 
   private MutationProto getAppendMutation(Long timestamp) {
@@ -177,7 +178,6 @@ public class TestProtobufUtil {
 
   /**
    * Test Delete Mutate conversions.
-   *
    * @throws IOException
    */
   @Test
@@ -211,20 +211,16 @@ public class TestProtobufUtil {
 
     // delete always have empty value,
     // add empty value to the original mutate
-    for (ColumnValue.Builder column:
-        mutateBuilder.getColumnValueBuilderList()) {
-      for (QualifierValue.Builder qualifier:
-          column.getQualifierValueBuilderList()) {
+    for (ColumnValue.Builder column : mutateBuilder.getColumnValueBuilderList()) {
+      for (QualifierValue.Builder qualifier : column.getQualifierValueBuilderList()) {
         qualifier.setValue(ByteString.EMPTY);
       }
     }
-    assertEquals(mutateBuilder.build(),
-      ProtobufUtil.toMutation(MutationType.DELETE, delete));
+    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.DELETE, delete));
   }
 
   /**
    * Test Increment Mutate conversions.
-   *
    * @throws IOException
    */
   @Test
@@ -244,18 +240,16 @@ public class TestProtobufUtil {
   }
 
   /**
-   * Older clients may not send along a timestamp in the MutationProto. Check that we
-   * default correctly.
+   * Older clients may not send along a timestamp in the MutationProto. Check that we default
+   * correctly.
    */
   @Test
   public void testIncrementNoTimestamp() throws IOException {
     MutationProto mutation = getIncrementMutation(null);
     Increment increment = ProtobufUtil.toIncrement(mutation, null);
     assertEquals(HConstants.LATEST_TIMESTAMP, increment.getTimestamp());
-    increment.getFamilyCellMap().values()
-      .forEach(cells ->
-        cells.forEach(cell ->
-          assertEquals(HConstants.LATEST_TIMESTAMP, cell.getTimestamp())));
+    increment.getFamilyCellMap().values().forEach(cells -> cells
+        .forEach(cell -> assertEquals(HConstants.LATEST_TIMESTAMP, cell.getTimestamp())));
   }
 
   private MutationProto getIncrementMutation(Long timestamp) {
@@ -281,7 +275,6 @@ public class TestProtobufUtil {
 
   /**
    * Test Put Mutate conversions.
-   *
    * @throws IOException
    */
   @Test
@@ -316,22 +309,18 @@ public class TestProtobufUtil {
     // value level timestamp specified,
     // add the timestamp to the original mutate
     long timestamp = put.getTimestamp();
-    for (ColumnValue.Builder column:
-        mutateBuilder.getColumnValueBuilderList()) {
-      for (QualifierValue.Builder qualifier:
-          column.getQualifierValueBuilderList()) {
+    for (ColumnValue.Builder column : mutateBuilder.getColumnValueBuilderList()) {
+      for (QualifierValue.Builder qualifier : column.getQualifierValueBuilderList()) {
         if (!qualifier.hasTimestamp()) {
           qualifier.setTimestamp(timestamp);
         }
       }
     }
-    assertEquals(mutateBuilder.build(),
-      ProtobufUtil.toMutation(MutationType.PUT, put));
+    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.PUT, put));
   }
 
   /**
    * Test basic Scan conversions.
-   *
    * @throws IOException
    */
   @Test
@@ -365,8 +354,7 @@ public class TestProtobufUtil {
     scanBuilder.setIncludeStopRow(false);
     ClientProtos.Scan expectedProto = scanBuilder.build();
 
-    ClientProtos.Scan actualProto = ProtobufUtil.toScan(
-        ProtobufUtil.toScan(expectedProto));
+    ClientProtos.Scan actualProto = ProtobufUtil.toScan(ProtobufUtil.toScan(expectedProto));
     assertEquals(expectedProto, actualProto);
   }
 
@@ -396,13 +384,12 @@ public class TestProtobufUtil {
   public void testMetaRegionState() throws Exception {
     ServerName serverName = ServerName.valueOf("localhost", 1234, 5678);
     // New region state style.
-    for (RegionState.State state: RegionState.State.values()) {
+    for (RegionState.State state : RegionState.State.values()) {
       RegionState regionState =
           new RegionState(RegionInfoBuilder.FIRST_META_REGIONINFO, state, serverName);
       MetaRegionServer metars = MetaRegionServer.newBuilder()
           .setServer(org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toServerName(serverName))
-          .setRpcVersion(HConstants.RPC_CURRENT_VERSION)
-          .setState(state.convert()).build();
+          .setRpcVersion(HConstants.RPC_CURRENT_VERSION).setState(state.convert()).build();
       // Serialize
       byte[] data = ProtobufUtil.prependPBMagic(metars.toByteArray());
       ProtobufUtil.prependPBMagic(data);
@@ -413,9 +400,8 @@ public class TestProtobufUtil {
       assertEquals(regionState.getState(), regionStateNew.getState());
     }
     // old style.
-    RegionState rs =
-        org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.parseMetaRegionStateFrom(
-            serverName.getVersionedBytes(), 1);
+    RegionState rs = org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil
+        .parseMetaRegionStateFrom(serverName.getVersionedBytes(), 1);
     assertEquals(serverName, rs.getServerName());
     assertEquals(rs.getState(), RegionState.State.OPEN);
   }

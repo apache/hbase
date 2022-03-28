@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -100,12 +100,12 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
   private static boolean hasNonce(HRegion region, long nonce) {
     RegionServerServices rsServices = region.getRegionServerServices();
-    return nonce != HConstants.NO_NONCE && rsServices != null &&
-      rsServices.getNonceManager() != null;
+    return nonce != HConstants.NO_NONCE && rsServices != null
+        && rsServices.getNonceManager() != null;
   }
 
   RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region,
-    long nonceGroup, long nonce) throws IOException {
+      long nonceGroup, long nonce) throws IOException {
     this.region = region;
     this.maxResultSize = scan.getMaxResultSize();
     if (scan.hasFilter()) {
@@ -144,7 +144,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   }
 
   private void initializeScanners(Scan scan, List<KeyValueScanner> additionalScanners)
-    throws IOException {
+      throws IOException {
     // Here we separate all scanners into two lists - scanner that provide data required
     // by the filter to operate (scanners list) and all others (joinedScanners list).
     List<KeyValueScanner> scanners = new ArrayList<>(scan.getFamilyMap().size());
@@ -162,8 +162,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         HStore store = region.getStore(entry.getKey());
         KeyValueScanner scanner = store.getScanner(scan, entry.getValue(), this.readPt);
         instantiatedScanners.add(scanner);
-        if (this.filter == null || !scan.doLoadColumnFamiliesOnDemand() ||
-          this.filter.isFamilyEssential(entry.getKey())) {
+        if (this.filter == null || !scan.doLoadColumnFamiliesOnDemand()
+            || this.filter.isFamilyEssential(entry.getKey())) {
           scanners.add(scanner);
         } else {
           joinedScanners.add(scanner);
@@ -176,7 +176,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   }
 
   protected void initializeKVHeap(List<KeyValueScanner> scanners,
-    List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
+      List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
     this.storeHeap = new KeyValueHeap(scanners, comparator);
     if (!joinedScanners.isEmpty()) {
       this.joinedHeap = new KeyValueHeap(joinedScanners, comparator);
@@ -240,11 +240,11 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
   @Override
   public synchronized boolean next(List<Cell> outResults, ScannerContext scannerContext)
-    throws IOException {
+      throws IOException {
     if (this.filterClosed) {
-      throw new UnknownScannerException("Scanner was closed (timed out?) " +
-        "after we renewed it. Could be caused by a very slow scanner " +
-        "or a lengthy garbage collection");
+      throw new UnknownScannerException("Scanner was closed (timed out?) "
+          + "after we renewed it. Could be caused by a very slow scanner "
+          + "or a lengthy garbage collection");
     }
     region.startRegionOperation(Operation.SCAN);
     try {
@@ -299,10 +299,10 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
    * @return true if more cells exist after this batch, false if scanner is done
    */
   private boolean populateFromJoinedHeap(List<Cell> results, ScannerContext scannerContext)
-    throws IOException {
+      throws IOException {
     assert joinedContinuationRow != null;
     boolean moreValues =
-      populateResult(results, this.joinedHeap, scannerContext, joinedContinuationRow);
+        populateResult(results, this.joinedHeap, scannerContext, joinedContinuationRow);
 
     if (!scannerContext.checkAnyLimitReached(LimitScope.BETWEEN_CELLS)) {
       // We are done with this row, reset the continuation.
@@ -321,7 +321,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
    * @return state of last call to {@link KeyValueHeap#next()}
    */
   private boolean populateResult(List<Cell> results, KeyValueHeap heap,
-    ScannerContext scannerContext, Cell currentRowCell) throws IOException {
+      ScannerContext scannerContext, Cell currentRowCell) throws IOException {
     Cell nextKv;
     boolean moreCellsInRow = false;
     boolean tmpKeepProgress = scannerContext.getKeepProgress();
@@ -348,11 +348,11 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         return scannerContext.setScannerState(NextState.BATCH_LIMIT_REACHED).hasMoreValues();
       } else if (scannerContext.checkSizeLimit(limitScope)) {
         ScannerContext.NextState state =
-          moreCellsInRow ? NextState.SIZE_LIMIT_REACHED_MID_ROW : NextState.SIZE_LIMIT_REACHED;
+            moreCellsInRow ? NextState.SIZE_LIMIT_REACHED_MID_ROW : NextState.SIZE_LIMIT_REACHED;
         return scannerContext.setScannerState(state).hasMoreValues();
       } else if (scannerContext.checkTimeLimit(limitScope)) {
         ScannerContext.NextState state =
-          moreCellsInRow ? NextState.TIME_LIMIT_REACHED_MID_ROW : NextState.TIME_LIMIT_REACHED;
+            moreCellsInRow ? NextState.TIME_LIMIT_REACHED_MID_ROW : NextState.TIME_LIMIT_REACHED;
         return scannerContext.setScannerState(state).hasMoreValues();
       }
     } while (moreCellsInRow);
@@ -390,14 +390,14 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       long afterTime = rpcCall.get().disconnectSince();
       if (afterTime >= 0) {
         throw new CallerDisconnectedException(
-          "Aborting on region " + getRegionInfo().getRegionNameAsString() + ", call " + this +
-            " after " + afterTime + " ms, since " + "caller disconnected");
+            "Aborting on region " + getRegionInfo().getRegionNameAsString() + ", call " + this
+                + " after " + afterTime + " ms, since " + "caller disconnected");
       }
     }
   }
 
   private void resetProgress(ScannerContext scannerContext, int initialBatchProgress,
-    long initialSizeProgress, long initialHeapSizeProgress) {
+      long initialSizeProgress, long initialHeapSizeProgress) {
     // Starting to scan a new row. Reset the scanner progress according to whether or not
     // progress should be kept.
     if (scannerContext.getKeepProgress()) {
@@ -410,7 +410,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   }
 
   private boolean nextInternal(List<Cell> results, ScannerContext scannerContext)
-    throws IOException {
+      throws IOException {
     Preconditions.checkArgument(results.isEmpty(), "First parameter should be an empty list");
     Preconditions.checkArgument(scannerContext != null, "Scanner context cannot be null");
     Optional<RpcCall> rpcCall = RpcServer.getCurrentCall();
@@ -455,8 +455,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       // LimitScope.BETWEEN_ROWS so that those limits are not reached mid-row
       if (hasFilterRow) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("filter#hasFilterRow is true which prevents partial results from being " +
-            " formed. Changing scope of limits that may create partials");
+          LOG.trace("filter#hasFilterRow is true which prevents partial results from being "
+              + " formed. Changing scope of limits that may create partials");
         }
         scannerContext.setSizeLimitScope(LimitScope.BETWEEN_ROWS);
         scannerContext.setTimeLimitScope(LimitScope.BETWEEN_ROWS);
@@ -466,8 +466,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       if (scannerContext.checkTimeLimit(LimitScope.BETWEEN_CELLS)) {
         if (hasFilterRow) {
           throw new IncompatibleFilterException(
-            "Filter whose hasFilterRow() returns true is incompatible with scans that must " +
-              " stop mid-row because of a limit. ScannerContext:" + scannerContext);
+              "Filter whose hasFilterRow() returns true is incompatible with scans that must "
+                  + " stop mid-row because of a limit. ScannerContext:" + scannerContext);
         }
         return true;
       }
@@ -513,8 +513,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         if (scannerContext.checkAnyLimitReached(LimitScope.BETWEEN_CELLS)) {
           if (hasFilterRow) {
             throw new IncompatibleFilterException(
-              "Filter whose hasFilterRow() returns true is incompatible with scans that must " +
-                " stop mid-row because of a limit. ScannerContext:" + scannerContext);
+                "Filter whose hasFilterRow() returns true is incompatible with scans that must "
+                    + " stop mid-row because of a limit. ScannerContext:" + scannerContext);
           }
           return true;
         }
@@ -646,7 +646,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   private boolean joinedHeapMayHaveData(Cell currentRowCell) throws IOException {
     Cell nextJoinedKv = joinedHeap.peek();
     boolean matchCurrentRow =
-      nextJoinedKv != null && CellUtil.matchingRows(nextJoinedKv, currentRowCell);
+        nextJoinedKv != null && CellUtil.matchingRows(nextJoinedKv, currentRowCell);
     boolean matchAfterSeek = false;
 
     // If the next value in the joined heap does not match the current row, try to seek to the
@@ -654,8 +654,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     if (!matchCurrentRow) {
       Cell firstOnCurrentRow = PrivateCellUtil.createFirstOnRow(currentRowCell);
       boolean seekSuccessful = this.joinedHeap.requestSeek(firstOnCurrentRow, true, true);
-      matchAfterSeek = seekSuccessful && joinedHeap.peek() != null &&
-        CellUtil.matchingRows(joinedHeap.peek(), currentRowCell);
+      matchAfterSeek = seekSuccessful && joinedHeap.peek() != null
+          && CellUtil.matchingRows(joinedHeap.peek(), currentRowCell);
     }
 
     return matchCurrentRow || matchAfterSeek;
@@ -716,8 +716,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     resetFilters();
 
     // Calling the hook in CP which allows it to do a fast forward
-    return this.region.getCoprocessorHost() == null ||
-      this.region.getCoprocessorHost().postScannerFilterRow(this, curRowCell);
+    return this.region.getCoprocessorHost() == null
+        || this.region.getCoprocessorHost().postScannerFilterRow(this, curRowCell);
   }
 
   protected boolean shouldStop(Cell currentRowCell) {
@@ -732,7 +732,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
-    justification = "this method is only called inside close which is synchronized")
+      justification = "this method is only called inside close which is synchronized")
   private void closeInternal() {
     if (storeHeap != null) {
       storeHeap.close();

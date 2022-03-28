@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ class TimeoutExecutorThread<TEnvironment> extends StoppableThread {
   private final DelayQueue<DelayedWithTimeout> queue = new DelayQueue<>();
 
   public TimeoutExecutorThread(ProcedureExecutor<TEnvironment> executor, ThreadGroup group,
-    String name) {
+      String name) {
     super(group, name);
     setDaemon(true);
     this.executor = executor;
@@ -53,8 +53,7 @@ class TimeoutExecutorThread<TEnvironment> extends StoppableThread {
   @Override
   public void run() {
     while (executor.isRunning()) {
-      final DelayedWithTimeout task = DelayedUtil.takeWithoutInterrupt(queue, 20,
-        TimeUnit.SECONDS);
+      final DelayedWithTimeout task = DelayedUtil.takeWithoutInterrupt(queue, 20, TimeUnit.SECONDS);
       if (task == null || task == DelayedUtil.DELAYED_POISON) {
         // the executor may be shutting down,
         // and the task is just the shutdown request

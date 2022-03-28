@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -81,9 +81,9 @@ public class TestCompactionScanQueryMatcher extends AbstractTestScanQueryMatcher
     ScanInfo scanInfo = new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE,
         HConstants.DEFAULT_BLOCKSIZE, -1L, rowComparator, false);
 
-    CompactionScanQueryMatcher qm = CompactionScanQueryMatcher.create(scanInfo,
-      ScanType.COMPACT_RETAIN_DELETES, Long.MAX_VALUE, HConstants.OLDEST_TIMESTAMP,
-      HConstants.OLDEST_TIMESTAMP, now, from, to, null);
+    CompactionScanQueryMatcher qm =
+        CompactionScanQueryMatcher.create(scanInfo, ScanType.COMPACT_RETAIN_DELETES, Long.MAX_VALUE,
+          HConstants.OLDEST_TIMESTAMP, HConstants.OLDEST_TIMESTAMP, now, from, to, null);
     List<ScanQueryMatcher.MatchCode> actual = new ArrayList<>(rows.length);
     byte[] prevRow = null;
     for (byte[] row : rows) {

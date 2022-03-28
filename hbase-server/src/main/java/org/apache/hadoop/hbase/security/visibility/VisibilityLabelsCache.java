@@ -26,16 +26,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,8 +96,7 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
 
   /**
    * @return Singleton instance of VisibilityLabelsCache
-   * @throws IllegalStateException
-   *           when this is called before calling
+   * @throws IllegalStateException when this is called before calling
    *           {@link #createAndGet(ZKWatcher, Configuration)}
    */
   public static VisibilityLabelsCache get() {
@@ -239,7 +237,6 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
 
   /**
    * Returns the list of ordinals of labels associated with the user
-   *
    * @param user Not null value.
    * @return the list of ordinals
    */
@@ -255,7 +252,6 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
 
   /**
    * Returns the list of ordinals of labels associated with the groups
-   *
    * @param groups
    * @return the list of ordinals
    */

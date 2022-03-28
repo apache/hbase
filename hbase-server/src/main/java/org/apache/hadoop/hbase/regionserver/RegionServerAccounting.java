@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,16 +21,15 @@ import java.lang.management.MemoryType;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * RegionServerAccounting keeps record of some basic real time information about
- * the Region Server. Currently, it keeps record the global memstore size and global memstore
- * on-heap and off-heap overhead. It also tracks the replay edits per region.
+ * RegionServerAccounting keeps record of some basic real time information about the Region Server.
+ * Currently, it keeps record the global memstore size and global memstore on-heap and off-heap
+ * overhead. It also tracks the replay edits per region.
  */
 @InterfaceAudience.Private
 public class RegionServerAccounting {
@@ -220,7 +218,7 @@ public class RegionServerAccounting {
       return (getGlobalMemStoreHeapSize()) * 1.0 / globalMemStoreLimitLowMark;
     } else {
       return Math.max(getGlobalMemStoreOffHeapSize() * 1.0 / globalMemStoreLimitLowMark,
-          getGlobalMemStoreHeapSize() * 1.0 / globalOnHeapMemstoreLimitLowMark);
+        getGlobalMemStoreHeapSize() * 1.0 / globalOnHeapMemstoreLimitLowMark);
     }
   }
 }

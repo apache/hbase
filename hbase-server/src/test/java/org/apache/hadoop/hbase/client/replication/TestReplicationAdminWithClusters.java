@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -185,10 +185,8 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
   @Test
   public void testEnableReplicationForTableWithRegionReplica() throws Exception {
     TableName tn = TableName.valueOf(name.getMethodName());
-    TableDescriptor td = TableDescriptorBuilder.newBuilder(tn)
-        .setRegionReplication(5)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(noRepfamName).build())
-        .build();
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).setRegionReplication(5)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(noRepfamName).build()).build();
 
     admin1.createTable(td);
 
@@ -249,8 +247,9 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     try {
       adminExt.setPeerTableCFs(peerId, tableCfs);
       admin1.enableTableReplication(TestReplicationBase.tableName);
-      assertFalse("Table should not be created if user has set table cfs explicitly for the "
-          + "peer and this is not part of that collection",
+      assertFalse(
+        "Table should not be created if user has set table cfs explicitly for the "
+            + "peer and this is not part of that collection",
         admin2.isTableAvailable(TestReplicationBase.tableName));
 
       tableCfs.put(TestReplicationBase.tableName, null);
@@ -294,11 +293,13 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
   public static class TestUpdatableReplicationEndpoint extends BaseReplicationEndpoint {
     private static boolean calledBack = false;
-    public static boolean hasCalledBack(){
+
+    public static boolean hasCalledBack() {
       return calledBack;
     }
+
     @Override
-    public synchronized void peerConfigUpdated(ReplicationPeerConfig rpc){
+    public synchronized void peerConfigUpdated(ReplicationPeerConfig rpc) {
       calledBack = true;
       notifyAll();
     }

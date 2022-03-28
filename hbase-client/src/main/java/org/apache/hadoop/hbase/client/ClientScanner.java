@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,12 +40,13 @@ import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.LeaseException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Implements the scanner interface for the HBase client. If there are multiple regions in a table,
@@ -117,7 +118,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
     }
     this.scannerTimeout = conf.getInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
-        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
+      HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
 
     // check if application wants to collect scan metrics
     initScanMetrics(scan);
@@ -140,8 +141,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
   }
 
   protected final int getScanReplicaId() {
-    return scan.getReplicaId() >= RegionReplicaUtil.DEFAULT_REPLICA_ID ? scan.getReplicaId() :
-      RegionReplicaUtil.DEFAULT_REPLICA_ID;
+    return scan.getReplicaId() >= RegionReplicaUtil.DEFAULT_REPLICA_ID ? scan.getReplicaId()
+        : RegionReplicaUtil.DEFAULT_REPLICA_ID;
   }
 
   protected ClusterConnection getConnection() {
@@ -238,8 +239,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
     if (LOG.isDebugEnabled() && this.currentRegion != null) {
       // Only worth logging if NOT first region in scan.
       LOG.debug(
-        "Advancing internal scanner to startKey at '" + Bytes.toStringBinary(scan.getStartRow()) +
-            "', " + (scan.includeStartRow() ? "inclusive" : "exclusive"));
+        "Advancing internal scanner to startKey at '" + Bytes.toStringBinary(scan.getStartRow())
+            + "', " + (scan.includeStartRow() ? "inclusive" : "exclusive"));
     }
     // clear the current region, we will set a new value to it after the first call of the new
     // callable.
@@ -331,8 +332,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
     // old time we always return empty result for a open scanner operation so we add a check here to
     // keep compatible with the old logic. Should remove the isOpenScanner in the future.
     // 2. Server tells us that it has no more results for this region.
-    return (values.length == 0 && !callable.isHeartbeatMessage()) ||
-        callable.moreResultsInRegion() == MoreResults.NO;
+    return (values.length == 0 && !callable.isHeartbeatMessage())
+        || callable.moreResultsInRegion() == MoreResults.NO;
   }
 
   private void closeScannerIfExhausted(boolean exhausted) throws IOException {
@@ -362,10 +363,10 @@ public abstract class ClientScanner extends AbstractClientScanner {
     // If exception is any but the list below throw it back to the client; else setup
     // the scanner and retry.
     Throwable cause = e.getCause();
-    if ((cause != null && cause instanceof NotServingRegionException) ||
-        (cause != null && cause instanceof RegionServerStoppedException) ||
-        e instanceof OutOfOrderScannerNextException || e instanceof UnknownScannerException ||
-        e instanceof ScannerResetException || e instanceof LeaseException) {
+    if ((cause != null && cause instanceof NotServingRegionException)
+        || (cause != null && cause instanceof RegionServerStoppedException)
+        || e instanceof OutOfOrderScannerNextException || e instanceof UnknownScannerException
+        || e instanceof ScannerResetException || e instanceof LeaseException) {
       // Pass. It is easier writing the if loop test as list of what is allowed rather than
       // as a list of what is not allowed... so if in here, it means we do not throw.
       if (retriesLeft <= 0) {
@@ -489,8 +490,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
           // processing of the scan is taking a long time server side. Rather than continue to
           // loop until a limit (e.g. size or caching) is reached, break out early to avoid causing
           // unnecesary delays to the caller
-          LOG.trace("Heartbeat message received and cache contains Results. " +
-            "Breaking out of scan loop");
+          LOG.trace("Heartbeat message received and cache contains Results. "
+              + "Breaking out of scan loop");
           // we know that the region has not been exhausted yet so just break without calling
           // closeScannerIfExhausted
           break;

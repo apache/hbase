@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 public abstract class MasterFailoverWithProceduresTestBase {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(MasterFailoverWithProceduresTestBase.class);
+      LoggerFactory.getLogger(MasterFailoverWithProceduresTestBase.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -63,9 +63,9 @@ public abstract class MasterFailoverWithProceduresTestBase {
   }
 
   protected static void testRecoveryAndDoubleExecution(final HBaseTestingUtility testUtil,
-    final long procId, final int lastStepBeforeFailover) throws Exception {
+      final long procId, final int lastStepBeforeFailover) throws Exception {
     ProcedureExecutor<MasterProcedureEnv> procExec =
-      testUtil.getHBaseCluster().getMaster().getMasterProcedureExecutor();
+        testUtil.getHBaseCluster().getMaster().getMasterProcedureExecutor();
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
     final Procedure<?> proc = procExec.getProcedure(procId);

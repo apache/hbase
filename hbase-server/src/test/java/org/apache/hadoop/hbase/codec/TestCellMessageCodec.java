@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.io.CountingInputStream;
 import org.apache.hbase.thirdparty.com.google.common.io.CountingOutputStream;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestCellMessageCodec {
 
   @ClassRule
@@ -77,8 +77,8 @@ public class TestCellMessageCodec {
     DataOutputStream dos = new DataOutputStream(cos);
     MessageCodec cmc = new MessageCodec();
     Codec.Encoder encoder = cmc.getEncoder(dos);
-    final KeyValue kv =
-      new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"), Bytes.toBytes("v"));
+    final KeyValue kv = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"),
+        Bytes.toBytes("v"));
     encoder.write(kv);
     encoder.flush();
     dos.close();
@@ -87,7 +87,8 @@ public class TestCellMessageCodec {
     DataInputStream dis = new DataInputStream(cis);
     Codec.Decoder decoder = cmc.getDecoder(dis);
     assertTrue(decoder.advance()); // First read should pull in the KV
-    assertFalse(decoder.advance()); // Second read should trip over the end-of-stream  marker and return false
+    assertFalse(decoder.advance()); // Second read should trip over the end-of-stream marker and
+                                    // return false
     dis.close();
     assertEquals(offset, cis.getCount());
   }
@@ -99,9 +100,12 @@ public class TestCellMessageCodec {
     DataOutputStream dos = new DataOutputStream(cos);
     MessageCodec cmc = new MessageCodec();
     Codec.Encoder encoder = cmc.getEncoder(dos);
-    final KeyValue kv1 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("1"), Bytes.toBytes("1"));
-    final KeyValue kv2 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("2"), Bytes.toBytes("2"));
-    final KeyValue kv3 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("3"), Bytes.toBytes("3"));
+    final KeyValue kv1 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("1"),
+        Bytes.toBytes("1"));
+    final KeyValue kv2 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("2"),
+        Bytes.toBytes("2"));
+    final KeyValue kv3 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("3"),
+        Bytes.toBytes("3"));
     encoder.write(kv1);
     encoder.write(kv2);
     encoder.write(kv3);

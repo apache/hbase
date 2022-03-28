@@ -44,8 +44,6 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,8 +126,8 @@ class ZKConnectionRegistry implements ConnectionRegistry {
     future.complete(new RegionLocations(locs));
   }
 
-  private Pair<RegionState.State, ServerName> getStateAndServerName(
-      ZooKeeperProtos.MetaRegionServer proto) {
+  private Pair<RegionState.State, ServerName>
+      getStateAndServerName(ZooKeeperProtos.MetaRegionServer proto) {
     RegionState.State state;
     if (proto.hasState()) {
       state = RegionState.State.convert(proto.getState());
@@ -172,8 +170,9 @@ class ZKConnectionRegistry implements ConnectionRegistry {
           if (stateAndServerName.getFirst() != RegionState.State.OPEN) {
             LOG.warn("Meta region is in state " + stateAndServerName.getFirst());
           }
-          locs.put(replicaId, new HRegionLocation(
-            getRegionInfoForDefaultReplica(FIRST_META_REGIONINFO), stateAndServerName.getSecond()));
+          locs.put(replicaId,
+            new HRegionLocation(getRegionInfoForDefaultReplica(FIRST_META_REGIONINFO),
+                stateAndServerName.getSecond()));
           tryComplete(remaining, locs.values(), future);
         });
       } else {
@@ -190,13 +189,13 @@ class ZKConnectionRegistry implements ConnectionRegistry {
           } else {
             Pair<RegionState.State, ServerName> stateAndServerName = getStateAndServerName(proto);
             if (stateAndServerName.getFirst() != RegionState.State.OPEN) {
-              LOG.warn("Meta region for replica " + replicaId + " is in state " +
-                stateAndServerName.getFirst());
+              LOG.warn("Meta region for replica " + replicaId + " is in state "
+                  + stateAndServerName.getFirst());
               locs.put(replicaId, null);
             } else {
-              locs.put(replicaId, new HRegionLocation(
-                getRegionInfoForReplica(FIRST_META_REGIONINFO, replicaId),
-                  stateAndServerName.getSecond()));
+              locs.put(replicaId,
+                new HRegionLocation(getRegionInfoForReplica(FIRST_META_REGIONINFO, replicaId),
+                    stateAndServerName.getSecond()));
             }
           }
           tryComplete(remaining, locs.values(), future);
@@ -210,8 +209,9 @@ class ZKConnectionRegistry implements ConnectionRegistry {
     return tracedFuture(() -> {
       CompletableFuture<RegionLocations> future = new CompletableFuture<>();
       addListener(
-        zk.list(znodePaths.baseZNode).thenApply(children -> children.stream()
-          .filter(c -> this.znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
+        zk.list(znodePaths.baseZNode)
+            .thenApply(children -> children.stream()
+                .filter(c -> this.znodePaths.isMetaZNodePrefix(c)).collect(Collectors.toList())),
         (metaReplicaZNodes, error) -> {
           if (error != null) {
             future.completeExceptionally(error);
@@ -236,14 +236,14 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   public CompletableFuture<ServerName> getActiveMaster() {
     return tracedFuture(
       () -> getAndConvert(znodePaths.masterAddressZNode, ZKConnectionRegistry::getMasterProto)
-        .thenApply(proto -> {
-          if (proto == null) {
-            return null;
-          }
-          HBaseProtos.ServerName snProto = proto.getMaster();
-          return ServerName.valueOf(snProto.getHostName(), snProto.getPort(),
-            snProto.getStartCode());
-        }),
+          .thenApply(proto -> {
+            if (proto == null) {
+              return null;
+            }
+            HBaseProtos.ServerName snProto = proto.getMaster();
+            return ServerName.valueOf(snProto.getHostName(), snProto.getPort(),
+              snProto.getStartCode());
+          }),
       "ZKConnectionRegistry.getActiveMaster");
   }
 

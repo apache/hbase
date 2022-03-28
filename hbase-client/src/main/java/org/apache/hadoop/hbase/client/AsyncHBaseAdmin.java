@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import com.google.protobuf.RpcChannel;
-
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -206,7 +205,7 @@ class AsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> modifyColumnFamilyStoreFileTracker(TableName tableName,
-    byte[] family, String dstSFT) {
+      byte[] family, String dstSFT) {
     return wrap(rawAdmin.modifyColumnFamilyStoreFileTracker(tableName, family, dstSFT));
   }
 
@@ -276,14 +275,13 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> compact(TableName tableName,
-      CompactType compactType) {
+  public CompletableFuture<Void> compact(TableName tableName, CompactType compactType) {
     return wrap(rawAdmin.compact(tableName, compactType));
   }
 
   @Override
-  public CompletableFuture<Void> compact(TableName tableName,
-      byte[] columnFamily, CompactType compactType) {
+  public CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily,
+      CompactType compactType) {
     return wrap(rawAdmin.compact(tableName, columnFamily, compactType));
   }
 
@@ -409,8 +407,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> addReplicationPeer(String peerId,
-      ReplicationPeerConfig peerConfig, boolean enabled) {
+  public CompletableFuture<Void> addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig,
+      boolean enabled) {
     return wrap(rawAdmin.addReplicationPeer(peerId, peerConfig, enabled));
   }
 
@@ -494,7 +492,7 @@ class AsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot,
-    boolean restoreAcl) {
+      boolean restoreAcl) {
     return wrap(rawAdmin.restoreSnapshot(snapshotName, takeFailSafeSnapshot, restoreAcl));
   }
 
@@ -668,8 +666,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<CompactionState> getCompactionState(
-      TableName tableName, CompactType compactType) {
+  public CompletableFuture<CompactionState> getCompactionState(TableName tableName,
+      CompactType compactType) {
     return wrap(rawAdmin.getCompactionState(tableName, compactType));
   }
 
@@ -684,8 +682,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Optional<Long>> getLastMajorCompactionTimestampForRegion(
-      byte[] regionName) {
+  public CompletableFuture<Optional<Long>>
+      getLastMajorCompactionTimestampForRegion(byte[] regionName) {
     return wrap(rawAdmin.getLastMajorCompactionTimestampForRegion(regionName));
   }
 
@@ -809,8 +807,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Map<TableName, SpaceQuotaSnapshot>> getRegionServerSpaceQuotaSnapshots(
-      ServerName serverName) {
+  public CompletableFuture<Map<TableName, SpaceQuotaSnapshot>>
+      getRegionServerSpaceQuotaSnapshots(ServerName serverName) {
     return wrap(rawAdmin.getRegionServerSpaceQuotaSnapshots(serverName));
   }
 
@@ -848,8 +846,7 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> snapshotCleanupSwitch(final boolean on,
-      final boolean sync) {
+  public CompletableFuture<Boolean> snapshotCleanupSwitch(final boolean on, final boolean sync) {
     return wrap(rawAdmin.snapshotCleanupSwitch(on, sync));
   }
 
@@ -865,8 +862,7 @@ class AsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames,
-      String logType, ServerType serverType, int limit,
-      Map<String, Object> filterParams) {
+      String logType, ServerType serverType, int limit, Map<String, Object> filterParams) {
     return wrap(rawAdmin.getLogEntries(serverNames, logType, serverType, limit, filterParams));
   }
 }

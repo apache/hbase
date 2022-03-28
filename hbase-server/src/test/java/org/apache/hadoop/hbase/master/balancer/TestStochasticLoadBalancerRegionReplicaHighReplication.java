@@ -29,7 +29,7 @@ public class TestStochasticLoadBalancerRegionReplicaHighReplication extends Bala
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplicaHighReplication.class);
+      HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplicaHighReplication.class);
 
   @Test
   public void testRegionReplicasOnMidClusterHighReplication() {

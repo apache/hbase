@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * A metrics which measures a discrete value.
- *
  * @param <T> The value of the Gauge.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)

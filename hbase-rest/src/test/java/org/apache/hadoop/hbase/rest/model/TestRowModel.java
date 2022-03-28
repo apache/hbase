@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +33,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, SmallTests.class})
+@Category({ RestTests.class, SmallTests.class })
 public class TestRowModel extends TestModelBase<RowModel> {
 
   @ClassRule
@@ -48,12 +48,11 @@ public class TestRowModel extends TestModelBase<RowModel> {
   public TestRowModel() throws Exception {
     super(RowModel.class);
     AS_XML =
-      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Row key=\"dGVzdHJvdzE=\">" +
-      "<Cell column=\"dGVzdGNvbHVtbjE=\" timestamp=\"1245219839331\">dGVzdHZhbHVlMQ==</Cell></Row>";
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Row key=\"dGVzdHJvdzE=\">"
+            + "<Cell column=\"dGVzdGNvbHVtbjE=\" timestamp=\"1245219839331\">dGVzdHZhbHVlMQ==</Cell></Row>";
 
-    AS_JSON =
-      "{\"key\":\"dGVzdHJvdzE=\",\"Cell\":[{\"column\":\"dGVzdGNvbHVtbjE=\"," +
-      "\"timestamp\":1245219839331,\"$\":\"dGVzdHZhbHVlMQ==\"}]}";
+    AS_JSON = "{\"key\":\"dGVzdHJvdzE=\",\"Cell\":[{\"column\":\"dGVzdGNvbHVtbjE=\","
+        + "\"timestamp\":1245219839331,\"$\":\"dGVzdHZhbHVlMQ==\"}]}";
   }
 
   @Override
@@ -78,7 +77,7 @@ public class TestRowModel extends TestModelBase<RowModel> {
 
   @Override
   public void testFromPB() throws Exception {
-    //do nothing row model has no PB
+    // do nothing row model has no PB
   }
 
   @Test
@@ -102,4 +101,3 @@ public class TestRowModel extends TestModelBase<RowModel> {
     assertTrue(StringUtils.contains(rowModel.toString(), expectedRowKey));
   }
 }
-

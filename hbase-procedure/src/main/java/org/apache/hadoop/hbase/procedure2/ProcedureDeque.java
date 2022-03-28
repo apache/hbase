@@ -1,5 +1,4 @@
-/**
-
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -12,20 +11,18 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUTKey WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.procedure2;
 
 import java.util.ArrayDeque;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Type class.
- * For conceptual purpose only. Seeing ProcedureDeque as type instead of just ArrayDeque gives
- * more understanding that it's a queue of waiting procedures.
+ * Type class. For conceptual purpose only. Seeing ProcedureDeque as type instead of just ArrayDeque
+ * gives more understanding that it's a queue of waiting procedures.
  */
 @InterfaceAudience.Private
 public class ProcedureDeque extends ArrayDeque<Procedure> {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -85,8 +85,7 @@ public class TestSnapshotFromClient {
   protected static final int NUM_RS = 2;
   protected static final String STRING_TABLE_NAME = "test";
   protected static final byte[] TEST_FAM = Bytes.toBytes("fam");
-  protected static final TableName TABLE_NAME =
-      TableName.valueOf(STRING_TABLE_NAME);
+  protected static final TableName TABLE_NAME = TableName.valueOf(STRING_TABLE_NAME);
   private static final Pattern MATCH_ALL = Pattern.compile(".*");
 
   @Rule
@@ -125,7 +124,7 @@ public class TestSnapshotFromClient {
     // Enable snapshot
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-        ConstantSizeRegionSplitPolicy.class.getName());
+      ConstantSizeRegionSplitPolicy.class.getName());
   }
 
   @Before
@@ -135,8 +134,8 @@ public class TestSnapshotFromClient {
 
   protected void createTable() throws Exception {
     TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(getNumReplicas())
-        .setValue(StoreFileTrackerFactory.TRACKER_IMPL, trackerImpl.name()).build();
+        TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(getNumReplicas())
+            .setValue(StoreFileTrackerFactory.TRACKER_IMPL, trackerImpl.name()).build();
     UTIL.createTable(htd, new byte[][] { TEST_FAM }, null);
   }
 
@@ -179,7 +178,6 @@ public class TestSnapshotFromClient {
 
   /**
    * Test HBaseAdmin#deleteSnapshots(String) which deletes snapshots whose names match the parameter
-   *
    * @throws Exception
    */
   @Test
@@ -214,6 +212,7 @@ public class TestSnapshotFromClient {
     admin.deleteSnapshot(snapshot3);
     admin.close();
   }
+
   /**
    * Test snapshotting a table that is offline
    * @throws Exception
@@ -243,8 +242,8 @@ public class TestSnapshotFromClient {
     final String SNAPSHOT_NAME = "offlineTableSnapshot";
     byte[] snapshot = Bytes.toBytes(SNAPSHOT_NAME);
 
-    admin.snapshot(new SnapshotDescription(SNAPSHOT_NAME, TABLE_NAME,
-        SnapshotType.DISABLED, null, -1, SnapshotManifestV1.DESCRIPTOR_VERSION, null));
+    admin.snapshot(new SnapshotDescription(SNAPSHOT_NAME, TABLE_NAME, SnapshotType.DISABLED, null,
+        -1, SnapshotManifestV1.DESCRIPTOR_VERSION, null));
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot
@@ -258,8 +257,8 @@ public class TestSnapshotFromClient {
     CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
       CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     SnapshotTestingUtils.confirmSnapshotValid(
-      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM,
-      rootDir, admin, fs);
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM, rootDir,
+      admin, fs);
 
     admin.deleteSnapshot(snapshot);
     snapshots = admin.listSnapshots();
@@ -276,13 +275,13 @@ public class TestSnapshotFromClient {
     // make sure the table doesn't exist
     boolean fail = false;
     do {
-    try {
-      admin.getTableDescriptor(TableName.valueOf(tableName));
-      fail = true;
-          LOG.error("Table:" + tableName + " already exists, checking a new name");
-      tableName = tableName+"!";
-    } catch (TableNotFoundException e) {
-      fail = false;
+      try {
+        admin.getTableDescriptor(TableName.valueOf(tableName));
+        fail = true;
+        LOG.error("Table:" + tableName + " already exists, checking a new name");
+        tableName = tableName + "!";
+      } catch (TableNotFoundException e) {
+        fail = false;
       }
     } while (fail);
 

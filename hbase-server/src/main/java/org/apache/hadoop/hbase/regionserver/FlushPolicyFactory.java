@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,14 +18,13 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * The class that creates a flush policy from a conf and HTableDescriptor.
@@ -66,10 +65,10 @@ public class FlushPolicyFactory {
       Class<? extends FlushPolicy> clazz = Class.forName(className).asSubclass(FlushPolicy.class);
       return clazz;
     } catch (Exception e) {
-      LOG.warn(
-        "Unable to load configured flush policy '" + className + "' for table '"
-            + htd.getTableName() + "', load default flush policy "
-            + DEFAULT_FLUSH_POLICY_CLASS.getName() + " instead", e);
+      LOG.warn("Unable to load configured flush policy '" + className + "' for table '"
+          + htd.getTableName() + "', load default flush policy "
+          + DEFAULT_FLUSH_POLICY_CLASS.getName() + " instead",
+        e);
       return DEFAULT_FLUSH_POLICY_CLASS;
     }
   }

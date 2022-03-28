@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,7 @@ public class HRegionWALFileSystem extends HRegionFileSystem {
    * @throws IOException if the archiving fails
    */
   public void archiveRecoveredEdits(String familyName, Collection<HStoreFile> storeFiles)
-    throws IOException {
+      throws IOException {
     HFileArchiver.archiveRecoveredEdits(this.conf, this.fs, this.regionInfoForFs,
       Bytes.toBytes(familyName), storeFiles);
   }

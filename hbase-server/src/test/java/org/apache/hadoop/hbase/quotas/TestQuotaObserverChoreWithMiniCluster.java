@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -88,7 +88,7 @@ public class TestQuotaObserverChoreWithMiniCluster {
     Configuration conf = TEST_UTIL.getConfiguration();
     SpaceQuotaHelperForTests.updateConfigForQuotas(conf);
     conf.setClass(SpaceQuotaSnapshotNotifierFactory.SNAPSHOT_NOTIFIER_KEY,
-        SpaceQuotaSnapshotNotifierForTest.class, SpaceQuotaSnapshotNotifier.class);
+      SpaceQuotaSnapshotNotifierForTest.class, SpaceQuotaSnapshotNotifier.class);
     TEST_UTIL.startMiniCluster(1);
   }
 
@@ -113,8 +113,7 @@ public class TestQuotaObserverChoreWithMiniCluster {
     }
 
     master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    snapshotNotifier =
-        (SpaceQuotaSnapshotNotifierForTest) master.getSpaceQuotaSnapshotNotifier();
+    snapshotNotifier = (SpaceQuotaSnapshotNotifierForTest) master.getSpaceQuotaSnapshotNotifier();
     assertNotNull(snapshotNotifier);
     snapshotNotifier.clearSnapshots();
     chore = master.getQuotaObserverChore();
@@ -132,7 +131,7 @@ public class TestQuotaObserverChoreWithMiniCluster {
     // Write more data than should be allowed
     helper.writeData(tn, 3L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
 
-    Map<TableName,SpaceQuotaSnapshot> quotaSnapshots = snapshotNotifier.copySnapshots();
+    Map<TableName, SpaceQuotaSnapshot> quotaSnapshots = snapshotNotifier.copySnapshots();
     boolean foundSnapshot = false;
     while (!foundSnapshot) {
       if (quotaSnapshots.isEmpty()) {
@@ -141,7 +140,8 @@ public class TestQuotaObserverChoreWithMiniCluster {
         sleepWithInterrupt(DEFAULT_WAIT_MILLIS);
         quotaSnapshots = snapshotNotifier.copySnapshots();
       } else {
-        Entry<TableName,SpaceQuotaSnapshot> entry = Iterables.getOnlyElement(quotaSnapshots.entrySet());
+        Entry<TableName, SpaceQuotaSnapshot> entry =
+            Iterables.getOnlyElement(quotaSnapshots.entrySet());
         assertEquals(tn, entry.getKey());
         final SpaceQuotaSnapshot snapshot = entry.getValue();
         if (!snapshot.getQuotaStatus().isInViolation()) {
@@ -155,14 +155,15 @@ public class TestQuotaObserverChoreWithMiniCluster {
     }
 
     Entry<TableName, SpaceQuotaSnapshot> entry =
-      Iterables.getOnlyElement(quotaSnapshots.entrySet());
+        Iterables.getOnlyElement(quotaSnapshots.entrySet());
     assertEquals(tn, entry.getKey());
     final SpaceQuotaSnapshot snapshot = entry.getValue();
     assertEquals("Snapshot was " + snapshot, violationPolicy,
       snapshot.getQuotaStatus().getPolicy().get());
     assertEquals(sizeLimit, snapshot.getLimit());
-    assertTrue("The usage should be greater than the limit, but were " + snapshot.getUsage() +
-      " and " + snapshot.getLimit() + ", respectively", snapshot.getUsage() > snapshot.getLimit());
+    assertTrue("The usage should be greater than the limit, but were " + snapshot.getUsage()
+        + " and " + snapshot.getLimit() + ", respectively",
+      snapshot.getUsage() > snapshot.getLimit());
   }
 
   @Test
@@ -183,21 +184,21 @@ public class TestQuotaObserverChoreWithMiniCluster {
 
     final long sizeLimit = 5L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
     final SpaceViolationPolicy violationPolicy = SpaceViolationPolicy.DISABLE;
-    QuotaSettings settings = QuotaSettingsFactory.limitNamespaceSpace(namespace, sizeLimit, violationPolicy);
+    QuotaSettings settings =
+        QuotaSettingsFactory.limitNamespaceSpace(namespace, sizeLimit, violationPolicy);
     admin.setQuota(settings);
 
     helper.writeData(tn1, 2L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
     admin.flush(tn1);
-    Map<TableName,SpaceQuotaSnapshot> snapshots = snapshotNotifier.copySnapshots();
+    Map<TableName, SpaceQuotaSnapshot> snapshots = snapshotNotifier.copySnapshots();
     for (int i = 0; i < 5; i++) {
       // Check a few times to make sure we don't prematurely move to violation
-      assertEquals(
-          "Should not see any quota violations after writing 2MB of data", 0,
-          numSnapshotsInViolation(snapshots));
+      assertEquals("Should not see any quota violations after writing 2MB of data", 0,
+        numSnapshotsInViolation(snapshots));
       try {
         Thread.sleep(DEFAULT_WAIT_MILLIS);
       } catch (InterruptedException e) {
-        LOG.debug("Interrupted while sleeping." , e);
+        LOG.debug("Interrupted while sleeping.", e);
       }
       snapshots = snapshotNotifier.copySnapshots();
     }
@@ -208,11 +209,11 @@ public class TestQuotaObserverChoreWithMiniCluster {
     for (int i = 0; i < 5; i++) {
       // Check a few times to make sure we don't prematurely move to violation
       assertEquals("Should not see any quota violations after writing 4MB of data", 0,
-          numSnapshotsInViolation(snapshots));
+        numSnapshotsInViolation(snapshots));
       try {
         Thread.sleep(DEFAULT_WAIT_MILLIS);
       } catch (InterruptedException e) {
-        LOG.debug("Interrupted while sleeping." , e);
+        LOG.debug("Interrupted while sleeping.", e);
       }
       snapshots = snapshotNotifier.copySnapshots();
     }
@@ -264,20 +265,20 @@ public class TestQuotaObserverChoreWithMiniCluster {
     final long namespaceSizeLimit = 3L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
     final SpaceViolationPolicy namespaceViolationPolicy = SpaceViolationPolicy.DISABLE;
     QuotaSettings namespaceSettings = QuotaSettingsFactory.limitNamespaceSpace(namespace,
-        namespaceSizeLimit, namespaceViolationPolicy);
+      namespaceSizeLimit, namespaceViolationPolicy);
     admin.setQuota(namespaceSettings);
 
     helper.writeData(tn1, 2L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
     admin.flush(tn1);
-    Map<TableName,SpaceQuotaSnapshot> snapshots = snapshotNotifier.copySnapshots();
+    Map<TableName, SpaceQuotaSnapshot> snapshots = snapshotNotifier.copySnapshots();
     for (int i = 0; i < 5; i++) {
       // Check a few times to make sure we don't prematurely move to violation
       assertEquals("Should not see any quota violations after writing 2MB of data: " + snapshots, 0,
-          numSnapshotsInViolation(snapshots));
+        numSnapshotsInViolation(snapshots));
       try {
         Thread.sleep(DEFAULT_WAIT_MILLIS);
       } catch (InterruptedException e) {
-        LOG.debug("Interrupted while sleeping." , e);
+        LOG.debug("Interrupted while sleeping.", e);
       }
       snapshots = snapshotNotifier.copySnapshots();
     }
@@ -307,8 +308,8 @@ public class TestQuotaObserverChoreWithMiniCluster {
     // Override the namespace quota with a table quota
     final long tableSizeLimit = SpaceQuotaHelperForTests.ONE_MEGABYTE;
     final SpaceViolationPolicy tableViolationPolicy = SpaceViolationPolicy.NO_INSERTS;
-    QuotaSettings tableSettings = QuotaSettingsFactory.limitTableSpace(tn1, tableSizeLimit,
-        tableViolationPolicy);
+    QuotaSettings tableSettings =
+        QuotaSettingsFactory.limitTableSpace(tn1, tableSizeLimit, tableViolationPolicy);
     admin.setQuota(tableSettings);
 
     // Keep checking for the table quota policy to override the namespace quota
@@ -346,7 +347,8 @@ public class TestQuotaObserverChoreWithMiniCluster {
 
     TablesWithQuotas tables = chore.fetchAllTablesWithQuotasDefined();
     assertEquals("Found tables: " + tables, tablesWithQuotas, tables.getTableQuotaTables());
-    assertEquals("Found tables: " + tables, namespaceTablesWithQuotas, tables.getNamespaceQuotaTables());
+    assertEquals("Found tables: " + tables, namespaceTablesWithQuotas,
+      tables.getNamespaceQuotaTables());
   }
 
   @Test
@@ -358,31 +360,32 @@ public class TestQuotaObserverChoreWithMiniCluster {
     helper.partitionTablesByQuotaTarget(quotas, tablesWithQuotas, namespaceTablesWithQuotas);
 
     TableName rpcQuotaTable = helper.createTable();
-    TEST_UTIL.getAdmin().setQuota(QuotaSettingsFactory
-      .throttleTable(rpcQuotaTable, ThrottleType.READ_NUMBER, 6, TimeUnit.MINUTES));
+    TEST_UTIL.getAdmin().setQuota(QuotaSettingsFactory.throttleTable(rpcQuotaTable,
+      ThrottleType.READ_NUMBER, 6, TimeUnit.MINUTES));
 
     // The `rpcQuotaTable` should not be included in this Set
     TablesWithQuotas tables = chore.fetchAllTablesWithQuotasDefined();
     assertEquals("Found tables: " + tables, tablesWithQuotas, tables.getTableQuotaTables());
-    assertEquals("Found tables: " + tables, namespaceTablesWithQuotas, tables.getNamespaceQuotaTables());
+    assertEquals("Found tables: " + tables, namespaceTablesWithQuotas,
+      tables.getNamespaceQuotaTables());
   }
 
   @Test
   public void testFilterRegions() throws Exception {
-    Map<TableName,Integer> mockReportedRegions = new HashMap<>();
+    Map<TableName, Integer> mockReportedRegions = new HashMap<>();
     // Can't mock because of primitive int as a return type -- Mockito
     // can only handle an Integer.
-    TablesWithQuotas tables = new TablesWithQuotas(TEST_UTIL.getConnection(),
-        TEST_UTIL.getConfiguration()) {
-      @Override
-      int getNumReportedRegions(TableName table, QuotaSnapshotStore<TableName> tableStore) {
-        Integer i = mockReportedRegions.get(table);
-        if (i == null) {
-          return 0;
-        }
-        return i;
-      }
-    };
+    TablesWithQuotas tables =
+        new TablesWithQuotas(TEST_UTIL.getConnection(), TEST_UTIL.getConfiguration()) {
+          @Override
+          int getNumReportedRegions(TableName table, QuotaSnapshotStore<TableName> tableStore) {
+            Integer i = mockReportedRegions.get(table);
+            if (i == null) {
+              return 0;
+            }
+            return i;
+          }
+        };
 
     // Create the tables
     TableName tn1 = helper.createTableWithRegions(20);
@@ -407,16 +410,16 @@ public class TestQuotaObserverChoreWithMiniCluster {
 
   @Test
   public void testFetchSpaceQuota() throws Exception {
-    Multimap<TableName,QuotaSettings> tables = helper.createTablesWithSpaceQuotas();
+    Multimap<TableName, QuotaSettings> tables = helper.createTablesWithSpaceQuotas();
     // Can pass in an empty map, we're not consulting it.
     chore.initializeSnapshotStores(Collections.emptyMap());
     // All tables that were created should have a quota defined.
-    for (Entry<TableName,QuotaSettings> entry : tables.entries()) {
+    for (Entry<TableName, QuotaSettings> entry : tables.entries()) {
       final TableName table = entry.getKey();
       final QuotaSettings qs = entry.getValue();
 
       assertTrue("QuotaSettings was an instance of " + qs.getClass(),
-          qs instanceof SpaceLimitSettings);
+        qs instanceof SpaceLimitSettings);
 
       SpaceQuota spaceQuota = null;
       if (qs.getTableName() != null) {
@@ -424,7 +427,8 @@ public class TestQuotaObserverChoreWithMiniCluster {
         assertNotNull("Could not find table space quota for " + table, spaceQuota);
       } else if (qs.getNamespace() != null) {
         spaceQuota = chore.getNamespaceSnapshotStore().getSpaceQuota(table.getNamespaceAsString());
-        assertNotNull("Could not find namespace space quota for " + table.getNamespaceAsString(), spaceQuota);
+        assertNotNull("Could not find namespace space quota for " + table.getNamespaceAsString(),
+          spaceQuota);
       } else {
         fail("Expected table or namespace space quota");
       }
@@ -437,7 +441,7 @@ public class TestQuotaObserverChoreWithMiniCluster {
     assertNull(chore.getTableSnapshotStore().getSpaceQuota(tableWithoutQuota));
   }
 
-  private int numSnapshotsInViolation(Map<TableName,SpaceQuotaSnapshot> snapshots) {
+  private int numSnapshotsInViolation(Map<TableName, SpaceQuotaSnapshot> snapshots) {
     int sum = 0;
     for (SpaceQuotaSnapshot snapshot : snapshots.values()) {
       if (snapshot.getQuotaStatus().isInViolation()) {

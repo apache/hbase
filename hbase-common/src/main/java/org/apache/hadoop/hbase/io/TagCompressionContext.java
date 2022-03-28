@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
@@ -24,7 +23,6 @@ import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
@@ -62,8 +60,7 @@ public class TagCompressionContext {
    * @param length Length of all tag bytes
    * @throws IOException
    */
-  public void compressTags(OutputStream out, byte[] in, int offset, int length)
-      throws IOException {
+  public void compressTags(OutputStream out, byte[] in, int offset, int length) throws IOException {
     int pos = offset;
     int endOffset = pos + length;
     assert pos < endOffset;
@@ -141,8 +138,7 @@ public class TagCompressionContext {
    * @return bytes count read from source to uncompress all tags.
    * @throws IOException
    */
-  public int uncompressTags(ByteBuff src, byte[] dest, int offset, int length)
-      throws IOException {
+  public int uncompressTags(ByteBuff src, byte[] dest, int offset, int length) throws IOException {
     int srcBeginPos = src.position();
     int endOffset = offset + length;
     while (offset < endOffset) {

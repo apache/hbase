@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,7 +60,7 @@ public class TestRaceWhenCreatingReplicationSource {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRaceWhenCreatingReplicationSource.class);
+      HBaseClassTestRule.forClass(TestRaceWhenCreatingReplicationSource.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -146,7 +146,7 @@ public class TestRaceWhenCreatingReplicationSource {
     WRITER = WALFactory.createWALWriter(FS, LOG_PATH, UTIL.getConfiguration());
     UTIL.getAdmin().addReplicationPeer(PEER_ID,
       ReplicationPeerConfig.newBuilder().setClusterKey("127.0.0.1:2181:/hbase")
-        .setReplicationEndpointImpl(LocalReplicationEndpoint.class.getName()).build(),
+          .setReplicationEndpointImpl(LocalReplicationEndpoint.class.getName()).build(),
       true);
   }
 
@@ -163,8 +163,8 @@ public class TestRaceWhenCreatingReplicationSource {
       public boolean evaluate() throws Exception {
         for (RegionServerThread t : UTIL.getMiniHBaseCluster().getRegionServerThreads()) {
           ReplicationSource source =
-            (ReplicationSource) ((Replication) t.getRegionServer().getReplicationSourceService())
-              .getReplicationManager().getSource(PEER_ID);
+              (ReplicationSource) ((Replication) t.getRegionServer().getReplicationSourceService())
+                  .getReplicationManager().getSource(PEER_ID);
           if (source == null || source.getReplicationEndpoint() == null) {
             return false;
           }
@@ -179,7 +179,7 @@ public class TestRaceWhenCreatingReplicationSource {
     });
     UTIL.getAdmin().createTable(
       TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(ColumnFamilyDescriptorBuilder
-        .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
+          .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
     UTIL.waitTableAvailable(TABLE_NAME);
     try (Table table = UTIL.getConnection().getTable(TABLE_NAME)) {
       table.put(new Put(Bytes.toBytes(1)).addColumn(CF, CQ, Bytes.toBytes(1)));

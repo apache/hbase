@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -56,7 +55,7 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
 
       @Override
       public StoreFileWriter createWriterWithStoragePolicy(String fileStoragePolicy)
-        throws IOException {
+          throws IOException {
         return AbstractMultiOutputCompactor.this.createWriter(fd, shouldDropBehind,
           fileStoragePolicy, major);
       }
@@ -79,7 +78,7 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
           e);
       }
     }
-    //this step signals that the target file is no longer writen and can be cleaned up
+    // this step signals that the target file is no longer writen and can be cleaned up
     writer = null;
   }
 }

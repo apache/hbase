@@ -61,6 +61,7 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
@@ -87,18 +88,17 @@ public class TestBulkloadBase {
 
   @Parameterized.Parameters
   public static Collection<Boolean> data() {
-    Boolean[] data = {false, true};
+    Boolean[] data = { false, true };
     return Arrays.asList(data);
   }
 
   @Before
   public void before() throws IOException {
     Bytes.random(randomBytes);
-    if(useFileBasedSFT) {
+    if (useFileBasedSFT) {
       conf.set(StoreFileTrackerFactory.TRACKER_IMPL,
         "org.apache.hadoop.hbase.regionserver.storefiletracker.FileBasedStoreFileTracker");
-    }
-    else {
+    } else {
       conf.unset(StoreFileTrackerFactory.TRACKER_IMPL);
     }
   }
@@ -136,7 +136,7 @@ public class TestBulkloadBase {
 
   protected HRegion testRegionWithFamilies(byte[]... families) throws IOException {
     TableName tableName =
-      TableName.valueOf(name.getMethodName().substring(0, name.getMethodName().indexOf("[")));
+        TableName.valueOf(name.getMethodName().substring(0, name.getMethodName().indexOf("[")));
     return testRegionWithFamiliesAndSpecifiedTableName(tableName, families);
   }
 

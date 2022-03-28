@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,7 @@ class AsyncMetaRegionLocator {
   private final AtomicReference<RegionLocations> metaRegionLocations = new AtomicReference<>();
 
   private final AtomicReference<CompletableFuture<RegionLocations>> metaRelocateFuture =
-    new AtomicReference<>();
+      new AtomicReference<>();
 
   AsyncMetaRegionLocator(ConnectionRegistry registry) {
     this.registry = registry;
@@ -77,8 +77,8 @@ class AsyncMetaRegionLocator {
         }
       }
       HRegionLocation oldLoc = oldLocs.getRegionLocation(replicaId);
-      if (oldLoc != null && (oldLoc.getSeqNum() > loc.getSeqNum() ||
-        oldLoc.getServerName().equals(loc.getServerName()))) {
+      if (oldLoc != null && (oldLoc.getSeqNum() > loc.getSeqNum()
+          || oldLoc.getServerName().equals(loc.getServerName()))) {
         return;
       }
       RegionLocations newLocs = replaceRegionLocation(oldLocs, loc);

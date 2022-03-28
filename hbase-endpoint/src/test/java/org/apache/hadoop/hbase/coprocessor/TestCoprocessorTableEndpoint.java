@@ -45,7 +45,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestCoprocessorTableEndpoint {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -109,19 +109,18 @@ public class TestCoprocessorTableEndpoint {
     return ret;
   }
 
-  private static Map<byte [], Long> sum(final Table table, final byte [] family,
-    final byte [] qualifier, final byte [] start, final byte [] end)
+  private static Map<byte[], Long> sum(final Table table, final byte[] family,
+      final byte[] qualifier, final byte[] start, final byte[] end)
       throws ServiceException, Throwable {
-    return table.coprocessorService(ColumnAggregationProtos.ColumnAggregationService.class,
-      start, end,
-      new Batch.Call<ColumnAggregationProtos.ColumnAggregationService, Long>() {
+    return table.coprocessorService(ColumnAggregationProtos.ColumnAggregationService.class, start,
+      end, new Batch.Call<ColumnAggregationProtos.ColumnAggregationService, Long>() {
         @Override
         public Long call(ColumnAggregationProtos.ColumnAggregationService instance)
-          throws IOException {
+            throws IOException {
           CoprocessorRpcUtils.BlockingRpcCallback<ColumnAggregationProtos.SumResponse> rpcCallback =
               new CoprocessorRpcUtils.BlockingRpcCallback<>();
           ColumnAggregationProtos.SumRequest.Builder builder =
-            ColumnAggregationProtos.SumRequest.newBuilder();
+              ColumnAggregationProtos.SumRequest.newBuilder();
           builder.setFamily(ByteString.copyFrom(family));
           if (qualifier != null && qualifier.length > 0) {
             builder.setQualifier(ByteString.copyFrom(qualifier));
@@ -134,7 +133,7 @@ public class TestCoprocessorTableEndpoint {
 
   private static final void createTable(HTableDescriptor desc) throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
-    admin.createTable(desc, new byte[][]{ROWS[rowSeperator1], ROWS[rowSeperator2]});
+    admin.createTable(desc, new byte[][] { ROWS[rowSeperator1], ROWS[rowSeperator2] });
     TEST_UTIL.waitUntilAllRegionsAssigned(desc.getTableName());
     Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
     try {
@@ -158,8 +157,8 @@ public class TestCoprocessorTableEndpoint {
   private static final void verifyTable(TableName tableName) throws Throwable {
     Table table = TEST_UTIL.getConnection().getTable(tableName);
     try {
-      Map<byte[], Long> results = sum(table, TEST_FAMILY, TEST_QUALIFIER, ROWS[0],
-        ROWS[ROWS.length-1]);
+      Map<byte[], Long> results =
+          sum(table, TEST_FAMILY, TEST_QUALIFIER, ROWS[0], ROWS[ROWS.length - 1]);
       int sumResult = 0;
       int expectedResult = 0;
       for (Map.Entry<byte[], Long> e : results.entrySet()) {
@@ -172,7 +171,7 @@ public class TestCoprocessorTableEndpoint {
 
       // scan: for region 2 and region 3
       results.clear();
-      results = sum(table, TEST_FAMILY, TEST_QUALIFIER, ROWS[rowSeperator1], ROWS[ROWS.length-1]);
+      results = sum(table, TEST_FAMILY, TEST_QUALIFIER, ROWS[rowSeperator1], ROWS[ROWS.length - 1]);
       sumResult = 0;
       expectedResult = 0;
       for (Map.Entry<byte[], Long> e : results.entrySet()) {

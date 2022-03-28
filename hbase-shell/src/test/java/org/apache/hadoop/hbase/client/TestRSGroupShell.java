@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,7 @@ public class TestRSGroupShell extends AbstractTestShell {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupShell.class);
+      HBaseClassTestRule.forClass(TestRSGroupShell.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -44,8 +44,8 @@ public class TestRSGroupShell extends AbstractTestShell {
 
     // enable rs group
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      TEST_UTIL.getConfiguration().get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) + "," +
-        RSGroupAdminEndpoint.class.getName());
+      TEST_UTIL.getConfiguration().get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) + ","
+          + RSGroupAdminEndpoint.class.getName());
     TEST_UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
       RSGroupBasedLoadBalancer.class.getName());
 

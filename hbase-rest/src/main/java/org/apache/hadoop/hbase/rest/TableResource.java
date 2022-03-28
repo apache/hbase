@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
@@ -100,10 +98,9 @@ public class TableResource extends ResourceBase {
   public RowResource getRowResource(
       // We need the @Encoded decorator so Jersey won't urldecode before
       // the RowSpec constructor has a chance to parse
-      final @PathParam("rowspec") @Encoded String rowspec,
-      final @QueryParam("v") String versions,
-      final @QueryParam("check") String check,
-      final @QueryParam("rr") String returnResult) throws IOException {
+      final @PathParam("rowspec") @Encoded String rowspec, final @QueryParam("v") String versions,
+      final @QueryParam("check") String check, final @QueryParam("rr") String returnResult)
+      throws IOException {
     return new RowResource(this, rowspec, versions, check, returnResult);
   }
 
@@ -112,17 +109,15 @@ public class TableResource extends ResourceBase {
       // We need the @Encoded decorator so Jersey won't urldecode before
       // the RowSpec constructor has a chance to parse
       final @PathParam("suffixglobbingspec") @Encoded String suffixglobbingspec,
-      final @QueryParam("v") String versions,
-      final @QueryParam("check") String check,
+      final @QueryParam("v") String versions, final @QueryParam("check") String check,
       final @QueryParam("rr") String returnResult) throws IOException {
     return new RowResource(this, suffixglobbingspec, versions, check, returnResult);
   }
 
   @Path("{scanspec: .*[*]$}")
-  public TableScanResource  getScanResource(
-      final @PathParam("scanspec") String scanSpec,
-      @DefaultValue(Integer.MAX_VALUE + "")
-      @QueryParam(Constants.SCAN_LIMIT) int userRequestedLimit,
+  public TableScanResource getScanResource(final @PathParam("scanspec") String scanSpec,
+      @DefaultValue(Integer.MAX_VALUE
+          + "") @QueryParam(Constants.SCAN_LIMIT) int userRequestedLimit,
       @DefaultValue("") @QueryParam(Constants.SCAN_START_ROW) String startRow,
       @DefaultValue("") @QueryParam(Constants.SCAN_END_ROW) String endRow,
       @QueryParam(Constants.SCAN_COLUMN) List<String> column,
@@ -159,7 +154,7 @@ public class TableResource extends ResourceBase {
       }
       tableScan.setStopRow(Bytes.toBytes(endRow));
       for (String col : column) {
-        byte [][] parts = CellUtil.parseColumn(Bytes.toBytes(col.trim()));
+        byte[][] parts = CellUtil.parseColumn(Bytes.toBytes(col.trim()));
         if (parts.length == 1) {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Scan family : " + Bytes.toStringBinary(parts[0]));
@@ -167,8 +162,8 @@ public class TableResource extends ResourceBase {
           tableScan.addFamily(parts[0]);
         } else if (parts.length == 2) {
           if (LOG.isTraceEnabled()) {
-            LOG.trace("Scan family and column : " + Bytes.toStringBinary(parts[0])
-                + "  " + Bytes.toStringBinary(parts[1]));
+            LOG.trace("Scan family and column : " + Bytes.toStringBinary(parts[0]) + "  "
+                + Bytes.toStringBinary(parts[1]));
           }
           tableScan.addColumn(parts[0], parts[1]);
         } else {

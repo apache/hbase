@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,6 +57,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
@@ -68,7 +69,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFanOutOneBlockAsyncDFSOutput.class);
+      HBaseClassTestRule.forClass(TestFanOutOneBlockAsyncDFSOutput.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFanOutOneBlockAsyncDFSOutput.class);
   private static DistributedFileSystem FS;
@@ -102,7 +103,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
   private static final Random RNG = new Random(); // This test depends on Random#setSeed
 
   static void writeAndVerify(FileSystem fs, Path f, AsyncFSOutput out)
-    throws IOException, InterruptedException, ExecutionException {
+      throws IOException, InterruptedException, ExecutionException {
     List<CompletableFuture<Long>> futures = new ArrayList<>();
     byte[] b = new byte[10];
     // test pipelined flush
@@ -199,12 +200,12 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   @Test
   public void testConnectToDatanodeFailed()
-    throws IOException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
-    InvocationTargetException, InterruptedException, NoSuchFieldException {
+      throws IOException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
+      InvocationTargetException, InterruptedException, NoSuchFieldException {
     Field xceiverServerDaemonField = DataNode.class.getDeclaredField("dataXceiverServer");
     xceiverServerDaemonField.setAccessible(true);
     Class<?> xceiverServerClass =
-      Class.forName("org.apache.hadoop.hdfs.server.datanode.DataXceiverServer");
+        Class.forName("org.apache.hadoop.hdfs.server.datanode.DataXceiverServer");
     Method numPeersMethod = xceiverServerClass.getDeclaredMethod("getNumPeers");
     numPeersMethod.setAccessible(true);
     // make one datanode broken
@@ -223,12 +224,12 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   @Test
   public void testExcludeFailedConnectToDatanode()
-    throws IOException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
-    InvocationTargetException, InterruptedException, NoSuchFieldException {
+      throws IOException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
+      InvocationTargetException, InterruptedException, NoSuchFieldException {
     Field xceiverServerDaemonField = DataNode.class.getDeclaredField("dataXceiverServer");
     xceiverServerDaemonField.setAccessible(true);
     Class<?> xceiverServerClass =
-      Class.forName("org.apache.hadoop.hdfs.server.datanode.DataXceiverServer");
+        Class.forName("org.apache.hadoop.hdfs.server.datanode.DataXceiverServer");
     Method numPeersMethod = xceiverServerClass.getDeclaredMethod("getNumPeers");
     numPeersMethod.setAccessible(true);
     // make one datanode broken
@@ -236,13 +237,13 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     Path f = new Path("/test");
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     ExcludeDatanodeManager excludeDatanodeManager =
-      new ExcludeDatanodeManager(HBaseConfiguration.create());
+        new ExcludeDatanodeManager(HBaseConfiguration.create());
     StreamSlowMonitor streamSlowDNsMonitor =
-      excludeDatanodeManager.getStreamSlowMonitor("testMonitor");
+        excludeDatanodeManager.getStreamSlowMonitor("testMonitor");
     assertEquals(0, excludeDatanodeManager.getExcludeDNs().size());
-    try (FanOutOneBlockAsyncDFSOutput output = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS,
-      f, true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop,
-      CHANNEL_CLASS, streamSlowDNsMonitor)) {
+    try (FanOutOneBlockAsyncDFSOutput output =
+        FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true, false, (short) 3,
+          FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, streamSlowDNsMonitor)) {
       // should exclude the dead dn when retry so here we only have 2 DNs in pipeline
       assertEquals(2, output.getPipeline().length);
       assertEquals(1, excludeDatanodeManager.getExcludeDNs().size());

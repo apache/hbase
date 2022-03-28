@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,12 +29,12 @@ public class TestSnapshotWithAclAsyncAdmin extends SnapshotWithAclTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotWithAclAsyncAdmin.class);
+      HBaseClassTestRule.forClass(TestSnapshotWithAclAsyncAdmin.class);
 
   @Override
   protected void snapshot(String snapshotName, TableName tableName) throws Exception {
     try (AsyncConnection conn =
-      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
+        ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
       conn.getAdmin().snapshot(snapshotName, tableName).get();
     }
   }
@@ -43,7 +43,7 @@ public class TestSnapshotWithAclAsyncAdmin extends SnapshotWithAclTestBase {
   protected void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl)
       throws Exception {
     try (AsyncConnection conn =
-      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
+        ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
       conn.getAdmin().cloneSnapshot(snapshotName, tableName, restoreAcl).get();
     }
   }
@@ -51,7 +51,7 @@ public class TestSnapshotWithAclAsyncAdmin extends SnapshotWithAclTestBase {
   @Override
   protected void restoreSnapshot(String snapshotName, boolean restoreAcl) throws Exception {
     try (AsyncConnection conn =
-      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
+        ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
       conn.getAdmin().restoreSnapshot(snapshotName, false, restoreAcl).get();
     }
   }

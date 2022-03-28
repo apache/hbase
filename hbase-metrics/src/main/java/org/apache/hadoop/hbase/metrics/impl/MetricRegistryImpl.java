@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Gauge;
 import org.apache.hadoop.hbase.metrics.Histogram;
@@ -97,7 +96,7 @@ public class MetricRegistryImpl implements MetricRegistry {
 
   @Override
   public <T> Gauge<T> register(String name, Gauge<T> gauge) {
-    return (Gauge) register(name, (Metric)gauge);
+    return (Gauge) register(name, (Metric) gauge);
   }
 
   @Override

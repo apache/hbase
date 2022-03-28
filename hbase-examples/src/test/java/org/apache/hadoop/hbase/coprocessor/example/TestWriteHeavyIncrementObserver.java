@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,7 +59,7 @@ public class TestWriteHeavyIncrementObserver extends WriteHeavyIncrementObserver
     // we do not hack scan operation so using scan we could get the original values added into the
     // table.
     try (ResultScanner scanner = TABLE.getScanner(new Scan().withStartRow(ROW)
-      .withStopRow(ROW, true).addFamily(FAMILY).readAllVersions().setAllowPartialResults(true))) {
+        .withStopRow(ROW, true).addFamily(FAMILY).readAllVersions().setAllowPartialResults(true))) {
       Result r = scanner.next();
       assertTrue(r.rawCells().length > 2);
     }
@@ -75,7 +75,7 @@ public class TestWriteHeavyIncrementObserver extends WriteHeavyIncrementObserver
     assertSum();
     // Should only have two cells after flush and major compaction
     try (ResultScanner scanner = TABLE.getScanner(new Scan().withStartRow(ROW)
-      .withStopRow(ROW, true).addFamily(FAMILY).readAllVersions().setAllowPartialResults(true))) {
+        .withStopRow(ROW, true).addFamily(FAMILY).readAllVersions().setAllowPartialResults(true))) {
       Result r = scanner.next();
       assertEquals(2, r.rawCells().length);
     }

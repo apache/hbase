@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -81,8 +81,8 @@ public class WriteHeavyIncrementObserver implements RegionCoprocessor, RegionObs
 
   private Cell createCell(byte[] row, byte[] family, byte[] qualifier, long ts, long value) {
     return CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
-        .setType(Cell.Type.Put).setFamily(family).setQualifier(qualifier)
-        .setTimestamp(ts).setValue(Bytes.toBytes(value)).build();
+        .setType(Cell.Type.Put).setFamily(family).setQualifier(qualifier).setTimestamp(ts)
+        .setValue(Bytes.toBytes(value)).build();
   }
 
   private InternalScanner wrap(byte[] family, InternalScanner scanner) {

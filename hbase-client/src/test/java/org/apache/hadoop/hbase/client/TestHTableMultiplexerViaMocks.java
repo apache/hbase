@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,7 +57,8 @@ public class TestHTableMultiplexerViaMocks {
   }
 
   @SuppressWarnings("deprecation")
-  @Test public void testConnectionClosing() throws IOException {
+  @Test
+  public void testConnectionClosing() throws IOException {
     doCallRealMethod().when(mockMultiplexer).close();
     // If the connection is not closed
     when(mockConnection.isClosed()).thenReturn(false);
@@ -69,7 +70,8 @@ public class TestHTableMultiplexerViaMocks {
   }
 
   @SuppressWarnings("deprecation")
-  @Test public void testClosingAlreadyClosedConnection() throws IOException {
+  @Test
+  public void testClosingAlreadyClosedConnection() throws IOException {
     doCallRealMethod().when(mockMultiplexer).close();
     // If the connection is already closed
     when(mockConnection.isClosed()).thenReturn(true);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -77,19 +77,20 @@ public class HFileProcedurePrettyPrinter extends AbstractHBaseTool {
     addOptWithArg("w", "seekToPid", "Seek to this procedure id and print this procedure only");
     OptionGroup files = new OptionGroup();
     files.addOption(new Option("f", "file", true,
-      "File to scan. Pass full-path; e.g. hdfs://a:9000/MasterProcs/master/local/proc/xxx"));
+        "File to scan. Pass full-path; e.g. hdfs://a:9000/MasterProcs/master/local/proc/xxx"));
     files.addOption(new Option("a", "all", false, "Scan the whole procedure region."));
     files.setRequired(true);
     options.addOptionGroup(files);
   }
 
   private void addAllHFiles() throws IOException {
-    Path masterProcDir = new Path(CommonFSUtils.getRootDir(conf), MasterRegionFactory.MASTER_STORE_DIR);
+    Path masterProcDir =
+        new Path(CommonFSUtils.getRootDir(conf), MasterRegionFactory.MASTER_STORE_DIR);
     Path tableDir = CommonFSUtils.getTableDir(masterProcDir, MasterRegionFactory.TABLE_NAME);
     FileSystem fs = tableDir.getFileSystem(conf);
     Path regionDir =
-      fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]
-        .getPath();
+        fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]
+            .getPath();
     List<Path> regionFiles = HFile.getStoreFiles(fs, regionDir);
     files.addAll(regionFiles);
   }
@@ -124,7 +125,7 @@ public class HFileProcedurePrettyPrinter extends AbstractHBaseTool {
         out.println(" V: mark deleted");
       } else {
         Procedure<?> proc = ProcedureUtil.convertToProcedure(ProcedureProtos.Procedure.parser()
-          .parseFrom(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+            .parseFrom(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
         out.println(" V: " + proc.toStringDetails());
       }
     } else {
@@ -136,14 +137,14 @@ public class HFileProcedurePrettyPrinter extends AbstractHBaseTool {
     out.println("Scanning -> " + file);
     FileSystem fs = file.getFileSystem(conf);
     try (HFile.Reader reader = HFile.createReader(fs, file, CacheConfig.DISABLED, true, conf);
-      HFileScanner scanner = reader.getScanner(conf, false, false, false)) {
+        HFileScanner scanner = reader.getScanner(conf, false, false, false)) {
       if (procId != null) {
         if (scanner
-          .seekTo(PrivateCellUtil.createFirstOnRow(Bytes.toBytes(procId.longValue()))) != -1) {
+            .seekTo(PrivateCellUtil.createFirstOnRow(Bytes.toBytes(procId.longValue()))) != -1) {
           do {
             Cell cell = scanner.getCell();
             long currentProcId =
-              Bytes.toLong(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+                Bytes.toLong(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
             if (currentProcId != procId.longValue()) {
               break;
             }

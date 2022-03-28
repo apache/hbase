@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +48,7 @@ public class TestMobCloneSnapshotFromClientCloneLinksAfterDelete
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobCloneSnapshotFromClientCloneLinksAfterDelete.class);
+      HBaseClassTestRule.forClass(TestMobCloneSnapshotFromClientCloneLinksAfterDelete.class);
 
   private static boolean delayFlush = false;
 

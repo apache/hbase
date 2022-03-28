@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,22 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
+
 /**
- * A KeepAlive connection is not physically closed immediately after the close,
- *  but rather kept alive for a few minutes. It makes sense only if it is shared.
- *
- * <p>This interface is implemented on a stub. It allows to have a #close function in a master
- * client.
- *
- * <p>This class is intended to be used internally by HBase classes that need to make invocations
- * against the master on the MasterProtos.MasterService.BlockingInterface; but not by
- * final user code. Hence it's package protected.
+ * A KeepAlive connection is not physically closed immediately after the close, but rather kept
+ * alive for a few minutes. It makes sense only if it is shared.
+ * <p>
+ * This interface is implemented on a stub. It allows to have a #close function in a master client.
+ * <p>
+ * This class is intended to be used internally by HBase classes that need to make invocations
+ * against the master on the MasterProtos.MasterService.BlockingInterface; but not by final user
+ * code. Hence it's package protected.
  */
 @InterfaceAudience.Private
 interface MasterKeepAliveConnection extends MasterProtos.MasterService.BlockingInterface {

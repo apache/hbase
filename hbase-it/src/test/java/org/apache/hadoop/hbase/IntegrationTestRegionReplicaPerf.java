@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +23,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import com.codahale.metrics.Histogram;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -32,7 +30,6 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Callable;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.chaos.actions.MoveRandomRegionOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomRsExceptMetaAction;
@@ -47,7 +44,6 @@ import org.apache.hadoop.hbase.util.YammerHistogramUtils;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.ToolRunner;
-
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,11 +53,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
- * Test for comparing the performance impact of region replicas. Uses
- * components of {@link PerformanceEvaluation}. Does not run from
- * {@code IntegrationTestsDriver} because IntegrationTestBase is incompatible
- * with the JUnit runner. Hence no @Test annotations either. See {@code -help}
- * for full list of options.
+ * Test for comparing the performance impact of region replicas. Uses components of
+ * {@link PerformanceEvaluation}. Does not run from {@code IntegrationTestsDriver} because
+ * IntegrationTestBase is incompatible with the JUnit runner. Hence no @Test annotations either. See
+ * {@code -help} for full list of options.
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
@@ -157,10 +152,8 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-        .add("numRows", numRows)
-        .add("elapsedTime", elapsedTime)
-        .toString();
+      return MoreObjects.toStringHelper(this).add("numRows", numRows)
+          .add("elapsedTime", elapsedTime).toString();
     }
   }
 
@@ -193,25 +186,24 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
   @Override
   public void setUpMonkey() throws Exception {
-    Policy p = new PeriodicRandomActionPolicy(sleepTime,
-      new RestartRandomRsExceptMetaAction(sleepTime),
-      new MoveRandomRegionOfTableAction(tableName));
+    Policy p =
+        new PeriodicRandomActionPolicy(sleepTime, new RestartRandomRsExceptMetaAction(sleepTime),
+            new MoveRandomRegionOfTableAction(tableName));
     this.monkey = new PolicyBasedChaosMonkey(util, p);
     // don't start monkey right away
   }
 
   @Override
   protected void addOptions() {
-    addOptWithArg(TABLE_NAME_KEY, "Alternate table name. Default: '"
-      + TABLE_NAME_DEFAULT + "'");
-    addOptWithArg(SLEEP_TIME_KEY, "How long the monkey sleeps between actions. Default: "
-      + SLEEP_TIME_DEFAULT);
-    addOptWithArg(REPLICA_COUNT_KEY, "Number of region replicas. Default: "
-      + REPLICA_COUNT_DEFAULT);
-    addOptWithArg(PRIMARY_TIMEOUT_KEY, "Overrides hbase.client.primaryCallTimeout. Default: "
-      + PRIMARY_TIMEOUT_DEFAULT + " (10ms)");
-    addOptWithArg(NUM_RS_KEY, "Specify the number of RegionServers to use. Default: "
-        + NUM_RS_DEFAULT);
+    addOptWithArg(TABLE_NAME_KEY, "Alternate table name. Default: '" + TABLE_NAME_DEFAULT + "'");
+    addOptWithArg(SLEEP_TIME_KEY,
+      "How long the monkey sleeps between actions. Default: " + SLEEP_TIME_DEFAULT);
+    addOptWithArg(REPLICA_COUNT_KEY,
+      "Number of region replicas. Default: " + REPLICA_COUNT_DEFAULT);
+    addOptWithArg(PRIMARY_TIMEOUT_KEY,
+      "Overrides hbase.client.primaryCallTimeout. Default: " + PRIMARY_TIMEOUT_DEFAULT + " (10ms)");
+    addOptWithArg(NUM_RS_KEY,
+      "Specify the number of RegionServers to use. Default: " + NUM_RS_DEFAULT);
   }
 
   @Override
@@ -220,15 +212,11 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     sleepTime = Long.parseLong(cmd.getOptionValue(SLEEP_TIME_KEY, SLEEP_TIME_DEFAULT));
     replicaCount = Integer.parseInt(cmd.getOptionValue(REPLICA_COUNT_KEY, REPLICA_COUNT_DEFAULT));
     primaryTimeout =
-      Integer.parseInt(cmd.getOptionValue(PRIMARY_TIMEOUT_KEY, PRIMARY_TIMEOUT_DEFAULT));
+        Integer.parseInt(cmd.getOptionValue(PRIMARY_TIMEOUT_KEY, PRIMARY_TIMEOUT_DEFAULT));
     clusterSize = Integer.parseInt(cmd.getOptionValue(NUM_RS_KEY, NUM_RS_DEFAULT));
-    LOG.debug(MoreObjects.toStringHelper("Parsed Options")
-      .add(TABLE_NAME_KEY, tableName)
-      .add(SLEEP_TIME_KEY, sleepTime)
-      .add(REPLICA_COUNT_KEY, replicaCount)
-      .add(PRIMARY_TIMEOUT_KEY, primaryTimeout)
-      .add(NUM_RS_KEY, clusterSize)
-      .toString());
+    LOG.debug(MoreObjects.toStringHelper("Parsed Options").add(TABLE_NAME_KEY, tableName)
+        .add(SLEEP_TIME_KEY, sleepTime).add(REPLICA_COUNT_KEY, replicaCount)
+        .add(PRIMARY_TIMEOUT_KEY, primaryTimeout).add(NUM_RS_KEY, clusterSize).toString());
   }
 
   @Override
@@ -268,10 +256,10 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     String replicas = "--replicas=" + replicaCount;
     // TODO: splits disabled until "phase 2" is complete.
     String splitPolicy = "--splitPolicy=" + DisabledRegionSplitPolicy.class.getName();
-    String writeOpts = format("%s --nomapred --table=%s --presplit=16 sequentialWrite 4",
-      splitPolicy, tableName);
+    String writeOpts =
+        format("%s --nomapred --table=%s --presplit=16 sequentialWrite 4", splitPolicy, tableName);
     String readOpts =
-      format("--nomapred --table=%s --latency --sampleRate=0.1 randomRead 4", tableName);
+        format("--nomapred --table=%s --latency --sampleRate=0.1 randomRead 4", tableName);
     String replicaReadOpts = format("%s %s", replicas, readOpts);
 
     ArrayList<TimingResult> resultsWithoutReplicas = new ArrayList<>(maxIters);
@@ -283,8 +271,8 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
     // one last sanity check, then send in the clowns!
     assertEquals("Table must be created with DisabledRegionSplitPolicy. Broken test.",
-        DisabledRegionSplitPolicy.class.getName(),
-        util.getAdmin().getTableDescriptor(tableName).getRegionSplitPolicyClassName());
+      DisabledRegionSplitPolicy.class.getName(),
+      util.getAdmin().getTableDescriptor(tableName).getRegionSplitPolicyClassName());
     startMonkey();
 
     // collect a baseline without region replicas.
@@ -316,30 +304,26 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
         calcMean("withoutReplicas", Stat.STDEV, resultsWithoutReplicas);
     double withoutReplicas9999Mean =
         calcMean("withoutReplicas", Stat.FOUR_9S, resultsWithoutReplicas);
-    double withReplicasStdevMean =
-        calcMean("withReplicas", Stat.STDEV, resultsWithReplicas);
-    double withReplicas9999Mean =
-        calcMean("withReplicas", Stat.FOUR_9S, resultsWithReplicas);
+    double withReplicasStdevMean = calcMean("withReplicas", Stat.STDEV, resultsWithReplicas);
+    double withReplicas9999Mean = calcMean("withReplicas", Stat.FOUR_9S, resultsWithReplicas);
 
-    LOG.info(MoreObjects.toStringHelper(this)
-      .add("withoutReplicas", resultsWithoutReplicas)
-      .add("withReplicas", resultsWithReplicas)
-      .add("withoutReplicasStdevMean", withoutReplicasStdevMean)
-      .add("withoutReplicas99.99Mean", withoutReplicas9999Mean)
-      .add("withReplicasStdevMean", withReplicasStdevMean)
-      .add("withReplicas99.99Mean", withReplicas9999Mean)
-      .toString());
+    LOG.info(MoreObjects.toStringHelper(this).add("withoutReplicas", resultsWithoutReplicas)
+        .add("withReplicas", resultsWithReplicas)
+        .add("withoutReplicasStdevMean", withoutReplicasStdevMean)
+        .add("withoutReplicas99.99Mean", withoutReplicas9999Mean)
+        .add("withReplicasStdevMean", withReplicasStdevMean)
+        .add("withReplicas99.99Mean", withReplicas9999Mean).toString());
 
     assertTrue(
       "Running with region replicas under chaos should have less request variance than without. "
-      + "withReplicas.stdev.mean: " + withReplicasStdevMean + "ms "
-      + "withoutReplicas.stdev.mean: " + withoutReplicasStdevMean + "ms.",
+          + "withReplicas.stdev.mean: " + withReplicasStdevMean + "ms "
+          + "withoutReplicas.stdev.mean: " + withoutReplicasStdevMean + "ms.",
       withReplicasStdevMean <= withoutReplicasStdevMean);
     assertTrue(
-        "Running with region replicas under chaos should improve 99.99pct latency. "
-            + "withReplicas.99.99.mean: " + withReplicas9999Mean + "ms "
-            + "withoutReplicas.99.99.mean: " + withoutReplicas9999Mean + "ms.",
-        withReplicas9999Mean <= withoutReplicas9999Mean);
+      "Running with region replicas under chaos should improve 99.99pct latency. "
+          + "withReplicas.99.99.mean: " + withReplicas9999Mean + "ms "
+          + "withoutReplicas.99.99.mean: " + withoutReplicas9999Mean + "ms.",
+      withReplicas9999Mean <= withoutReplicas9999Mean);
   }
 
   public static void main(String[] args) throws Exception {

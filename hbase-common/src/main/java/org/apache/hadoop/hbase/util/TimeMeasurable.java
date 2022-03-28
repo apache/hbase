@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Methods that implement this interface can be measured elapsed time.
- * It works together with {@link MovingAverage} to take effect.
+ * Methods that implement this interface can be measured elapsed time. It works together with
+ * {@link MovingAverage} to take effect.
  */
 @InterfaceAudience.Private
 public interface TimeMeasurable<T> {

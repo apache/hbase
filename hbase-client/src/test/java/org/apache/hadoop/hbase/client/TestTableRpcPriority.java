@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,6 +32,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
@@ -62,20 +63,22 @@ import org.junit.rules.TestName;
 import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
- * Test that correct rpc priority is sent to server from blocking Table calls. Currently
- * only implements checks for scans, but more could be added here.
+ * Test that correct rpc priority is sent to server from blocking Table calls. Currently only
+ * implements checks for scans, but more could be added here.
  */
 @Category({ ClientTests.class, MediumTests.class })
 public class TestTableRpcPriority {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableRpcPriority.class);
+      HBaseClassTestRule.forClass(TestTableRpcPriority.class);
 
   @Rule
   public TestName name = new TestName();
@@ -91,23 +94,23 @@ public class TestTableRpcPriority {
 
     ExecutorService executorService = Executors.newCachedThreadPool();
     conn = new ConnectionImplementation(conf, executorService,
-      UserProvider.instantiate(conf).getCurrent(), new DoNothingConnectionRegistry(conf)) {
+        UserProvider.instantiate(conf).getCurrent(), new DoNothingConnectionRegistry(conf)) {
 
       @Override
       public ClientProtos.ClientService.BlockingInterface getClient(ServerName serverName)
-        throws IOException {
+          throws IOException {
         return stub;
       }
 
       @Override
       public RegionLocations relocateRegion(final TableName tableName, final byte[] row,
-        int replicaId) throws IOException {
+          int replicaId) throws IOException {
         return locateRegion(tableName, row, true, false, replicaId);
       }
 
       @Override
       public RegionLocations locateRegion(TableName tableName, byte[] row, boolean useCache,
-        boolean retry, int replicaId) throws IOException {
+          boolean retry, int replicaId) throws IOException {
         RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
         ServerName serverName = ServerName.valueOf("rs", 16010, 12345);
         HRegionLocation loc = new HRegionLocation(info, serverName);
@@ -123,8 +126,8 @@ public class TestTableRpcPriority {
   }
 
   /**
-   * This test verifies that our closeScanner request honors the original
-   * priority of the scan if it's greater than our expected HIGH_QOS for close calls.
+   * This test verifies that our closeScanner request honors the original priority of the scan if
+   * it's greater than our expected HIGH_QOS for close calls.
    */
   @Test
   public void testScanSuperHighPriority() throws Exception {
@@ -163,19 +166,19 @@ public class TestTableRpcPriority {
     // just verify that the calls happened. verification of priority occurred in the mocking
     // open, next, then several renew lease
     verify(stub, atLeast(3)).scan(any(), any(ClientProtos.ScanRequest.class));
-    verify(stub, times(1)).scan(
-      assertControllerArgs(Math.max(priority.orElse(0), HIGH_QOS)), assertScannerCloseRequest());
+    verify(stub, times(1)).scan(assertControllerArgs(Math.max(priority.orElse(0), HIGH_QOS)),
+      assertScannerCloseRequest());
   }
 
   private void mockScan(int scanPriority) throws ServiceException {
     int scannerId = 1;
 
     doAnswer(new Answer<ClientProtos.ScanResponse>() {
-      @Override public ClientProtos.ScanResponse answer(InvocationOnMock invocation)
-        throws Throwable {
+      @Override
+      public ClientProtos.ScanResponse answer(InvocationOnMock invocation) throws Throwable {
         throw new IllegalArgumentException(
-          "Call not covered by explicit mock for arguments controller="
-          + invocation.getArgument(0) + ", request=" + invocation.getArgument(1));
+            "Call not covered by explicit mock for arguments controller="
+                + invocation.getArgument(0) + ", request=" + invocation.getArgument(1));
       }
     }).when(stub).scan(any(), any());
 
@@ -183,8 +186,7 @@ public class TestTableRpcPriority {
     doAnswer(new Answer<ClientProtos.ScanResponse>() {
 
       @Override
-      public ClientProtos.ScanResponse answer(InvocationOnMock invocation)
-        throws Throwable {
+      public ClientProtos.ScanResponse answer(InvocationOnMock invocation) throws Throwable {
         ClientProtos.ScanRequest req = invocation.getArgument(1);
         assertFalse("close scanner should not come in with scan priority " + scanPriority,
           req.hasCloseScanner() && req.getCloseScanner());
@@ -197,19 +199,18 @@ public class TestTableRpcPriority {
         }
 
         Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
-          .setRow(Bytes.toBytes(scanNextCalled.incrementAndGet())).setFamily(Bytes.toBytes("cf"))
-          .setQualifier(Bytes.toBytes("cq")).setValue(Bytes.toBytes("v")).build();
+            .setRow(Bytes.toBytes(scanNextCalled.incrementAndGet())).setFamily(Bytes.toBytes("cf"))
+            .setQualifier(Bytes.toBytes("cq")).setValue(Bytes.toBytes("v")).build();
         Result result = Result.create(Arrays.asList(cell));
         return builder.setTtl(800).setMoreResultsInRegion(true).setMoreResults(true)
-          .addResults(ProtobufUtil.toResult(result)).build();
+            .addResults(ProtobufUtil.toResult(result)).build();
       }
     }).when(stub).scan(assertControllerArgs(scanPriority), any());
 
     doAnswer(new Answer<ClientProtos.ScanResponse>() {
 
       @Override
-      public ClientProtos.ScanResponse answer(InvocationOnMock invocation)
-        throws Throwable {
+      public ClientProtos.ScanResponse answer(InvocationOnMock invocation) throws Throwable {
         ClientProtos.ScanRequest req = invocation.getArgument(1);
         assertTrue("close request should have scannerId", req.hasScannerId());
         assertEquals("close request's scannerId should match", scannerId, req.getScannerId());

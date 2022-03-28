@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -57,28 +56,26 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService {
 
   @Override
   public void replicateLogEntries(List<AdminProtos.WALEntry> entries, CellScanner cells,
-    String replicationClusterId, String sourceBaseNamespaceDirPath,
-    String sourceHFileArchiveDirPath) throws IOException {
+      String replicationClusterId, String sourceBaseNamespaceDirPath,
+      String sourceHFileArchiveDirPath) throws IOException {
     this.replicationSink.replicateEntries(entries, cells, replicationClusterId,
       sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath);
   }
 
   @Override
   public void initialize(Server server, FileSystem fs, Path logdir, Path oldLogDir,
-    WALFactory walFactory) throws IOException {
+      WALFactory walFactory) throws IOException {
     this.server = server;
     this.conf = server.getConfiguration();
-    this.statsPeriodInSecond =
-      this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
+    this.statsPeriodInSecond = this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
     this.replicationLoad = new ReplicationLoad();
   }
 
   @Override
   public void startReplicationService() throws IOException {
     this.replicationSink = new ReplicationSink(this.conf);
-    this.server.getChoreService().scheduleChore(
-        new ReplicationStatisticsChore("ReplicationSinkStatistics", server,
-            (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
+    this.server.getChoreService().scheduleChore(new ReplicationStatisticsChore(
+        "ReplicationSinkStatistics", server, (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
   }
 
   @Override

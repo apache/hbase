@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -82,8 +82,8 @@ public class TestCellBlockBuilder {
     CellScanner cellScanner = sized ? getSizedCellScanner(cells)
         : CellUtil.createCellScanner(Arrays.asList(cells).iterator());
     ByteBuffer bb = builder.buildCellBlock(codec, compressor, cellScanner);
-    cellScanner = builder.createCellScannerReusingBuffers(codec, compressor,
-        new SingleByteBuff(bb));
+    cellScanner =
+        builder.createCellScannerReusingBuffers(codec, compressor, new SingleByteBuff(bb));
     int i = 0;
     while (cellScanner.advance()) {
       i++;
@@ -176,7 +176,6 @@ public class TestCellBlockBuilder {
 
   /**
    * For running a few tests of methods herein.
-   *
    * @param args the arguments to use for the timer test
    * @throws IOException if creating the build fails
    */

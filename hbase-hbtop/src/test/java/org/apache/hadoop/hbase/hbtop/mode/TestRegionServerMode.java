@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,13 +30,12 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-
 @Category(SmallTests.class)
 public class TestRegionServerMode extends TestModeBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerMode.class);
+      HBaseClassTestRule.forClass(TestRegionServerMode.class);
 
   @Override
   protected Mode getMode() {

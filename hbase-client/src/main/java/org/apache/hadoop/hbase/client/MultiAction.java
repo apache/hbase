@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,8 +29,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Container for Actions (i.e. Get, Delete, or Put), which are grouped by
- * regionName. Intended to be used with {@link AsyncProcess}.
+ * Container for Actions (i.e. Get, Delete, or Put), which are grouped by regionName. Intended to be
+ * used with {@link AsyncProcess}.
  */
 @InterfaceAudience.Private
 public final class MultiAction {
@@ -48,7 +47,6 @@ public final class MultiAction {
 
   /**
    * Get the total number of Actions
-   *
    * @return total number of Actions for all groups in this container.
    */
   public int size() {
@@ -60,10 +58,9 @@ public final class MultiAction {
   }
 
   /**
-   * Add an Action to this container based on it's regionName. If the regionName
-   * is wrong, the initial execution will fail, but will be automatically
-   * retried after looking up the correct region.
-   *
+   * Add an Action to this container based on it's regionName. If the regionName is wrong, the
+   * initial execution will fail, but will be automatically retried after looking up the correct
+   * region.
    * @param regionName
    * @param a
    */
@@ -72,14 +69,13 @@ public final class MultiAction {
   }
 
   /**
-   * Add an Action to this container based on it's regionName. If the regionName
-   * is wrong, the initial execution will fail, but will be automatically
-   * retried after looking up the correct region.
-   *
+   * Add an Action to this container based on it's regionName. If the regionName is wrong, the
+   * initial execution will fail, but will be automatically retried after looking up the correct
+   * region.
    * @param regionName
    * @param actionList list of actions to add for the region
    */
-  public void add(byte[] regionName, List<Action> actionList){
+  public void add(byte[] regionName, List<Action> actionList) {
     List<Action> rsActions = actions.get(regionName);
     if (rsActions == null) {
       rsActions = new ArrayList<>(actionList.size());

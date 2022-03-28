@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,10 +19,10 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
- /**
-   * This implementation is not smart and just treats nonce group and nonce as random bits.
-   */
-  // TODO: we could use pure byte arrays, but then we wouldn't be able to use hash map.
+/**
+ * This implementation is not smart and just treats nonce group and nonce as random bits.
+ */
+// TODO: we could use pure byte arrays, but then we wouldn't be able to use hash map.
 @InterfaceAudience.Private
 public class NonceKey {
   private long group;
@@ -39,13 +38,13 @@ public class NonceKey {
     if (obj == null || !(obj instanceof NonceKey)) {
       return false;
     }
-    NonceKey nk = ((NonceKey)obj);
+    NonceKey nk = ((NonceKey) obj);
     return this.nonce == nk.nonce && this.group == nk.group;
   }
 
   @Override
   public int hashCode() {
-    return (int)((group >> 32) ^ group ^ (nonce >> 32) ^ nonce);
+    return (int) ((group >> 32) ^ group ^ (nonce >> 32) ^ nonce);
   }
 
   @Override

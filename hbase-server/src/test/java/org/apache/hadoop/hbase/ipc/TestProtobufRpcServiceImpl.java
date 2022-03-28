@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,8 +48,8 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProto
 @InterfaceAudience.Private
 public class TestProtobufRpcServiceImpl implements BlockingInterface {
 
-  public static final BlockingService SERVICE = TestProtobufRpcProto
-      .newReflectiveBlockingService(new TestProtobufRpcServiceImpl());
+  public static final BlockingService SERVICE =
+      TestProtobufRpcProto.newReflectiveBlockingService(new TestProtobufRpcServiceImpl());
 
   public static BlockingInterface newBlockingStub(RpcClient client, InetSocketAddress addr)
       throws IOException {
@@ -59,14 +59,14 @@ public class TestProtobufRpcServiceImpl implements BlockingInterface {
   public static BlockingInterface newBlockingStub(RpcClient client, InetSocketAddress addr,
       User user) throws IOException {
     return TestProtobufRpcProto.newBlockingStub(client.createBlockingRpcChannel(
-      ServerName.valueOf(addr.getHostName(), addr.getPort(),
-        EnvironmentEdgeManager.currentTime()), user, 0));
+      ServerName.valueOf(addr.getHostName(), addr.getPort(), EnvironmentEdgeManager.currentTime()),
+      user, 0));
   }
 
   public static Interface newStub(RpcClient client, InetSocketAddress addr) throws IOException {
     return TestProtobufRpcProto.newStub(client.createRpcChannel(
-      ServerName.valueOf(addr.getHostName(), addr.getPort(),
-        EnvironmentEdgeManager.currentTime()), User.getCurrent(), 0));
+      ServerName.valueOf(addr.getHostName(), addr.getPort(), EnvironmentEdgeManager.currentTime()),
+      User.getCurrent(), 0));
   }
 
   @Override

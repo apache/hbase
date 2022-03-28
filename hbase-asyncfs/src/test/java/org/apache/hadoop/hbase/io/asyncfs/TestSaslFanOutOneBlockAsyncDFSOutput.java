@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_ENCRYPTION_ALGORITHM_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -62,6 +63,7 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
@@ -73,11 +75,11 @@ import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestSaslFanOutOneBlockAsyncDFSOutput.class);
+      LoggerFactory.getLogger(TestSaslFanOutOneBlockAsyncDFSOutput.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSaslFanOutOneBlockAsyncDFSOutput.class);
+      HBaseClassTestRule.forClass(TestSaslFanOutOneBlockAsyncDFSOutput.class);
 
   private static DistributedFileSystem FS;
 
@@ -130,7 +132,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   private static void setUpKeyProvider(Configuration conf) throws Exception {
     URI keyProviderUri =
-      new URI("jceks://file" + UTIL.getDataTestDir("test.jks").toUri().toString());
+        new URI("jceks://file" + UTIL.getDataTestDir("test.jks").toUri().toString());
     conf.set("dfs.encryption.key.provider.uri", keyProviderUri.toString());
     KeyProvider keyProvider = KeyProviderFactory.get(keyProviderUri, conf);
     keyProvider.createKey(TEST_KEY_NAME, KeyProvider.options(conf));
@@ -208,7 +210,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   private void createEncryptionZone() throws Exception {
     Method method =
-      DistributedFileSystem.class.getMethod("createEncryptionZone", Path.class, String.class);
+        DistributedFileSystem.class.getMethod("createEncryptionZone", Path.class, String.class);
     method.invoke(FS, entryptionTestDirOnTestFs, TEST_KEY_NAME);
   }
 

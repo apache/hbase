@@ -57,16 +57,16 @@ public class MasterRegistry extends AbstractRpcBasedConnectionRegistry {
 
   /** Configuration key that controls the fan out of requests **/
   public static final String MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY =
-    "hbase.client.master_registry.hedged.fanout";
+      "hbase.client.master_registry.hedged.fanout";
 
   public static final String MASTER_REGISTRY_INITIAL_REFRESH_DELAY_SECS =
-    "hbase.client.master_registry.initial_refresh_delay_secs";
+      "hbase.client.master_registry.initial_refresh_delay_secs";
 
   public static final String MASTER_REGISTRY_PERIODIC_REFRESH_INTERVAL_SECS =
-    "hbase.client.master_registry.refresh_interval_secs";
+      "hbase.client.master_registry.refresh_interval_secs";
 
   public static final String MASTER_REGISTRY_MIN_SECS_BETWEEN_REFRESHES =
-    "hbase.client.master_registry.min_secs_between_refreshes";
+      "hbase.client.master_registry.min_secs_between_refreshes";
 
   private static final String MASTER_ADDRS_CONF_SEPARATOR = ",";
 
@@ -80,7 +80,7 @@ public class MasterRegistry extends AbstractRpcBasedConnectionRegistry {
     String configuredMasters = getMasterAddr(conf);
     for (String masterAddr : configuredMasters.split(MASTER_ADDRS_CONF_SEPARATOR)) {
       HostAndPort masterHostPort =
-        HostAndPort.fromString(masterAddr.trim()).withDefaultPort(HConstants.DEFAULT_MASTER_PORT);
+          HostAndPort.fromString(masterAddr.trim()).withDefaultPort(HConstants.DEFAULT_MASTER_PORT);
       masterAddrs.add(ServerName.valueOf(masterHostPort.toString(), ServerName.NON_STARTCODE));
     }
     Preconditions.checkArgument(!masterAddrs.isEmpty(), "At least one master address is needed");
@@ -91,7 +91,7 @@ public class MasterRegistry extends AbstractRpcBasedConnectionRegistry {
 
   MasterRegistry(Configuration conf) throws IOException {
     super(conf, MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, MASTER_REGISTRY_INITIAL_REFRESH_DELAY_SECS,
-      MASTER_REGISTRY_PERIODIC_REFRESH_INTERVAL_SECS, MASTER_REGISTRY_MIN_SECS_BETWEEN_REFRESHES);
+        MASTER_REGISTRY_PERIODIC_REFRESH_INTERVAL_SECS, MASTER_REGISTRY_MIN_SECS_BETWEEN_REFRESHES);
     connectionString = getConnectionString(conf);
   }
 
@@ -131,16 +131,16 @@ public class MasterRegistry extends AbstractRpcBasedConnectionRegistry {
 
   private static Set<ServerName> transformServerNames(GetMastersResponse resp) {
     return resp.getMasterServersList().stream()
-      .map(s -> ProtobufUtil.toServerName(s.getServerName())).collect(Collectors.toSet());
+        .map(s -> ProtobufUtil.toServerName(s.getServerName())).collect(Collectors.toSet());
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/(.*/MasterRegistry.java|src/test/.*)")
+      allowedOnPath = ".*/(.*/MasterRegistry.java|src/test/.*)")
   CompletableFuture<Set<ServerName>> getMasters() {
     return this
-      .<GetMastersResponse> call(
-        (c, s, d) -> s.getMasters(c, GetMastersRequest.getDefaultInstance(), d),
-        r -> r.getMasterServersCount() != 0, "getMasters()")
-      .thenApply(MasterRegistry::transformServerNames);
+        .<GetMastersResponse> call(
+          (c, s, d) -> s.getMasters(c, GetMastersRequest.getDefaultInstance(), d),
+          r -> r.getMasterServersCount() != 0, "getMasters()")
+        .thenApply(MasterRegistry::transformServerNames);
   }
 }

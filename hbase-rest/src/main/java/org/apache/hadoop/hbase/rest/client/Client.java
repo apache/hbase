@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.client;
 
 import java.io.BufferedInputStream;
@@ -68,8 +66,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A wrapper around HttpClient which provides some useful function and
- * semantics for interacting with the REST gateway.
+ * A wrapper around HttpClient which provides some useful function and semantics for interacting
+ * with the REST gateway.
  */
 @InterfaceAudience.Public
 public class Client {
@@ -111,11 +109,10 @@ public class Client {
       Constants.DEFAULT_REST_CLIENT_CONN_TIMEOUT);
     int socketTimeout = this.conf.getInt(Constants.REST_CLIENT_SOCKET_TIMEOUT,
       Constants.DEFAULT_REST_CLIENT_SOCKET_TIMEOUT);
-    RequestConfig requestConfig = RequestConfig.custom()
-      .setConnectTimeout(connTimeout)
-      .setSocketTimeout(socketTimeout)
-      .setNormalizeUri(false) // URIs should not be normalized, see HBASE-26903
-      .build();
+    RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(connTimeout)
+        .setSocketTimeout(socketTimeout).setNormalizeUri(false) // URIs should not be normalized,
+                                                                // see HBASE-26903
+        .build();
     httpClientBuilder.setDefaultRequestConfig(requestConfig);
 
     // Since HBASE-25267 we don't use the deprecated DefaultHttpClient anymore.
@@ -124,10 +121,10 @@ public class Client {
     // automatic content compression.
     httpClientBuilder.disableContentCompression();
 
-    if(sslEnabled && trustStore.isPresent()) {
+    if (sslEnabled && trustStore.isPresent()) {
       try {
         SSLContext sslcontext =
-          SSLContexts.custom().loadTrustMaterial(trustStore.get(), null).build();
+            SSLContexts.custom().loadTrustMaterial(trustStore.get(), null).build();
         httpClientBuilder.setSSLContext(sslcontext);
       } catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException e) {
         throw new ClientTrustStoreInitializationException("Error while processing truststore", e);
@@ -166,12 +163,10 @@ public class Client {
 
   /**
    * Constructor, allowing to define custom trust store (only for SSL connections)
-   *
    * @param cluster the cluster definition
    * @param trustStorePath custom trust store to use for SSL connections
    * @param trustStorePassword password to use for custom trust store
    * @param trustStoreType type of custom trust store
-   *
    * @throws ClientTrustStoreInitializationException if the trust store file can not be loaded
    */
   public Client(Cluster cluster, String trustStorePath, Optional<String> trustStorePassword,
@@ -181,7 +176,6 @@ public class Client {
 
   /**
    * Constructor, allowing to define custom trust store (only for SSL connections)
-   *
    * @param cluster the cluster definition
    * @param conf Configuration
    * @param trustStorePath custom trust store to use for SSL connections
@@ -201,12 +195,12 @@ public class Client {
     } catch (KeyStoreException e) {
       throw new ClientTrustStoreInitializationException("Invalid trust store type: " + type, e);
     }
-    try (InputStream inputStream = new BufferedInputStream(
-      Files.newInputStream(new File(trustStorePath).toPath()))) {
+    try (InputStream inputStream =
+        new BufferedInputStream(Files.newInputStream(new File(trustStorePath).toPath()))) {
       trustStore.load(inputStream, password);
     } catch (CertificateException | NoSuchAlgorithmException | IOException e) {
       throw new ClientTrustStoreInitializationException("Trust store load error: " + trustStorePath,
-        e);
+          e);
     }
 
     initialize(cluster, conf, true, Optional.of(trustStore));
@@ -226,9 +220,8 @@ public class Client {
   }
 
   /**
-   * Add extra headers.  These extra headers will be applied to all http
-   * methods before they are removed. If any header is not used any more,
-   * client needs to remove it explicitly.
+   * Add extra headers. These extra headers will be applied to all http methods before they are
+   * removed. If any header is not used any more, client needs to remove it explicitly.
    */
   public void addExtraHeader(final String name, final String value) {
     extraHeaders.put(name, value);
@@ -256,11 +249,10 @@ public class Client {
   }
 
   /**
-   * Execute a transaction method given only the path. Will select at random
-   * one of the members of the supplied cluster definition and iterate through
-   * the list until a transaction can be successfully completed. The
-   * definition of success here is a complete HTTP transaction, irrespective
-   * of result code.
+   * Execute a transaction method given only the path. Will select at random one of the members of
+   * the supplied cluster definition and iterate through the list until a transaction can be
+   * successfully completed. The definition of success here is a complete HTTP transaction,
+   * irrespective of result code.
    * @param cluster the cluster definition
    * @param method the transaction method
    * @param headers HTTP header values to send
@@ -268,13 +260,13 @@ public class Client {
    * @return the HTTP response code
    * @throws IOException
    */
-  public HttpResponse executePathOnly(Cluster cluster, HttpUriRequest method,
-      Header[] headers, String path) throws IOException {
+  public HttpResponse executePathOnly(Cluster cluster, HttpUriRequest method, Header[] headers,
+      String path) throws IOException {
     IOException lastException;
     if (cluster.nodes.size() < 1) {
       throw new IOException("Cluster is empty");
     }
-    int start = (int)Math.round((cluster.nodes.size() - 1) * Math.random());
+    int start = (int) Math.round((cluster.nodes.size() - 1) * Math.random());
     int i = start;
     do {
       cluster.lastHost = cluster.nodes.get(i);
@@ -326,11 +318,11 @@ public class Client {
   public HttpResponse executeURI(HttpUriRequest method, Header[] headers, String uri)
       throws IOException {
     // method.setURI(new URI(uri, true));
-    for (Map.Entry<String, String> e: extraHeaders.entrySet()) {
+    for (Map.Entry<String, String> e : extraHeaders.entrySet()) {
       method.addHeader(e.getKey(), e.getValue());
     }
     if (headers != null) {
-      for (Header header: headers) {
+      for (Header header : headers) {
         method.addHeader(header);
       }
     }
@@ -346,16 +338,16 @@ public class Client {
 
     long endTime = EnvironmentEdgeManager.currentTime();
     if (LOG.isTraceEnabled()) {
-      LOG.trace(method.getMethod() + " " + uri + " " + resp.getStatusLine().getStatusCode() + " " +
-          resp.getStatusLine().getReasonPhrase() + " in " + (endTime - startTime) + " ms");
+      LOG.trace(method.getMethod() + " " + uri + " " + resp.getStatusLine().getStatusCode() + " "
+          + resp.getStatusLine().getReasonPhrase() + " in " + (endTime - startTime) + " ms");
     }
     return resp;
   }
 
   /**
-   * Execute a transaction method. Will call either <tt>executePathOnly</tt>
-   * or <tt>executeURI</tt> depending on whether a path only is supplied in
-   * 'path', or if a complete URI is passed instead, respectively.
+   * Execute a transaction method. Will call either <tt>executePathOnly</tt> or <tt>executeURI</tt>
+   * depending on whether a path only is supplied in 'path', or if a complete URI is passed instead,
+   * respectively.
    * @param cluster the cluster definition
    * @param method the HTTP method
    * @param headers HTTP header values to send
@@ -363,8 +355,8 @@ public class Client {
    * @return the HTTP response code
    * @throws IOException
    */
-  public HttpResponse execute(Cluster cluster, HttpUriRequest method, Header[] headers,
-      String path) throws IOException {
+  public HttpResponse execute(Cluster cluster, HttpUriRequest method, Header[] headers, String path)
+      throws IOException {
     if (path.startsWith("/")) {
       return executePathOnly(cluster, method, headers, path);
     }
@@ -437,8 +429,7 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response head(Cluster cluster, String path, Header[] headers)
-      throws IOException {
+  public Response head(Cluster cluster, String path, Header[] headers) throws IOException {
     HttpHead method = new HttpHead(path);
     try {
       HttpResponse resp = execute(cluster, method, null, path);
@@ -488,8 +479,7 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response get(Cluster cluster, String path, String accept)
-      throws IOException {
+  public Response get(Cluster cluster, String path, String accept) throws IOException {
     Header[] headers = new Header[1];
     headers[0] = new BasicHeader("Accept", accept);
     return get(cluster, path, headers);
@@ -498,8 +488,7 @@ public class Client {
   /**
    * Send a GET request
    * @param path the path or URI
-   * @param headers the HTTP headers to include in the request,
-   * <tt>Accept</tt> must be supplied
+   * @param headers the HTTP headers to include in the request, <tt>Accept</tt> must be supplied
    * @return a Response object with response detail
    * @throws IOException
    */
@@ -508,32 +497,28 @@ public class Client {
   }
 
   /**
-   * Returns the response body of the HTTPResponse, if any, as an array of bytes.
-   * If response body is not available or cannot be read, returns <tt>null</tt>
-   *
-   * Note: This will cause the entire response body to be buffered in memory. A
-   * malicious server may easily exhaust all the VM memory. It is strongly
-   * recommended, to use getResponseAsStream if the content length of the response
-   * is unknown or reasonably large.
-   *
+   * Returns the response body of the HTTPResponse, if any, as an array of bytes. If response body
+   * is not available or cannot be read, returns <tt>null</tt> Note: This will cause the entire
+   * response body to be buffered in memory. A malicious server may easily exhaust all the VM
+   * memory. It is strongly recommended, to use getResponseAsStream if the content length of the
+   * response is unknown or reasonably large.
    * @param resp HttpResponse
    * @return The response body, null if body is empty
-   * @throws IOException If an I/O (transport) problem occurs while obtaining the
-   * response body.
+   * @throws IOException If an I/O (transport) problem occurs while obtaining the response body.
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value =
-      "NP_LOAD_OF_KNOWN_NULL_VALUE", justification = "null is possible return value")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_LOAD_OF_KNOWN_NULL_VALUE",
+      justification = "null is possible return value")
   public static byte[] getResponseBody(HttpResponse resp) throws IOException {
     if (resp.getEntity() == null) return null;
     try (InputStream instream = resp.getEntity().getContent()) {
       if (instream != null) {
         long contentLength = resp.getEntity().getContentLength();
         if (contentLength > Integer.MAX_VALUE) {
-          //guard integer cast from overflow
-          throw new IOException("Content too large to be buffered: " + contentLength +" bytes");
+          // guard integer cast from overflow
+          throw new IOException("Content too large to be buffered: " + contentLength + " bytes");
         }
-        ByteArrayOutputStream outstream = new ByteArrayOutputStream(
-            contentLength > 0 ? (int) contentLength : 4*1024);
+        ByteArrayOutputStream outstream =
+            new ByteArrayOutputStream(contentLength > 0 ? (int) contentLength : 4 * 1024);
         byte[] buffer = new byte[4096];
         int len;
         while ((len = instream.read(buffer)) > 0) {
@@ -554,15 +539,14 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response get(Cluster c, String path, Header[] headers)
-      throws IOException {
+  public Response get(Cluster c, String path, Header[] headers) throws IOException {
     if (httpGet != null) {
       httpGet.releaseConnection();
     }
     httpGet = new HttpGet(path);
     HttpResponse resp = execute(c, httpGet, headers, path);
-    return new Response(resp.getStatusLine().getStatusCode(), resp.getAllHeaders(),
-        resp, resp.getEntity() == null ? null : resp.getEntity().getContent());
+    return new Response(resp.getStatusLine().getStatusCode(), resp.getAllHeaders(), resp,
+        resp.getEntity() == null ? null : resp.getEntity().getContent());
   }
 
   /**
@@ -573,8 +557,7 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response put(String path, String contentType, byte[] content)
-      throws IOException {
+  public Response put(String path, String contentType, byte[] content) throws IOException {
     return put(cluster, path, contentType, content);
   }
 
@@ -601,8 +584,8 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException for error
    */
-  public Response put(Cluster cluster, String path, String contentType,
-      byte[] content) throws IOException {
+  public Response put(Cluster cluster, String path, String contentType, byte[] content)
+      throws IOException {
     Header[] headers = new Header[1];
     headers[0] = new BasicHeader("Content-Type", contentType);
     return put(cluster, path, headers, content);
@@ -618,8 +601,8 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException for error
    */
-  public Response put(Cluster cluster, String path, String contentType,
-      byte[] content, Header extraHdr) throws IOException {
+  public Response put(Cluster cluster, String path, String contentType, byte[] content,
+      Header extraHdr) throws IOException {
     int cnt = extraHdr == null ? 1 : 2;
     Header[] headers = new Header[cnt];
     headers[0] = new BasicHeader("Content-Type", contentType);
@@ -632,14 +615,12 @@ public class Client {
   /**
    * Send a PUT request
    * @param path the path or URI
-   * @param headers the HTTP headers to include, <tt>Content-Type</tt> must be
-   * supplied
+   * @param headers the HTTP headers to include, <tt>Content-Type</tt> must be supplied
    * @param content the content bytes
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response put(String path, Header[] headers, byte[] content)
-      throws IOException {
+  public Response put(String path, Header[] headers, byte[] content) throws IOException {
     return put(cluster, path, headers, content);
   }
 
@@ -647,14 +628,13 @@ public class Client {
    * Send a PUT request
    * @param cluster the cluster definition
    * @param path the path or URI
-   * @param headers the HTTP headers to include, <tt>Content-Type</tt> must be
-   * supplied
+   * @param headers the HTTP headers to include, <tt>Content-Type</tt> must be supplied
    * @param content the content bytes
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response put(Cluster cluster, String path, Header[] headers,
-      byte[] content) throws IOException {
+  public Response put(Cluster cluster, String path, Header[] headers, byte[] content)
+      throws IOException {
     HttpPut method = new HttpPut(path);
     try {
       method.setEntity(new InputStreamEntity(new ByteArrayInputStream(content), content.length));
@@ -675,8 +655,7 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response post(String path, String contentType, byte[] content)
-      throws IOException {
+  public Response post(String path, String contentType, byte[] content) throws IOException {
     return post(cluster, path, contentType, content);
   }
 
@@ -703,8 +682,8 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException for error
    */
-  public Response post(Cluster cluster, String path, String contentType,
-      byte[] content) throws IOException {
+  public Response post(Cluster cluster, String path, String contentType, byte[] content)
+      throws IOException {
     Header[] headers = new Header[1];
     headers[0] = new BasicHeader("Content-Type", contentType);
     return post(cluster, path, headers, content);
@@ -720,8 +699,8 @@ public class Client {
    * @return a Response object with response detail
    * @throws IOException for error
    */
-  public Response post(Cluster cluster, String path, String contentType,
-      byte[] content, Header extraHdr) throws IOException {
+  public Response post(Cluster cluster, String path, String contentType, byte[] content,
+      Header extraHdr) throws IOException {
     int cnt = extraHdr == null ? 1 : 2;
     Header[] headers = new Header[cnt];
     headers[0] = new BasicHeader("Content-Type", contentType);
@@ -734,14 +713,12 @@ public class Client {
   /**
    * Send a POST request
    * @param path the path or URI
-   * @param headers the HTTP headers to include, <tt>Content-Type</tt> must be
-   * supplied
+   * @param headers the HTTP headers to include, <tt>Content-Type</tt> must be supplied
    * @param content the content bytes
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response post(String path, Header[] headers, byte[] content)
-      throws IOException {
+  public Response post(String path, Header[] headers, byte[] content) throws IOException {
     return post(cluster, path, headers, content);
   }
 
@@ -749,14 +726,13 @@ public class Client {
    * Send a POST request
    * @param cluster the cluster definition
    * @param path the path or URI
-   * @param headers the HTTP headers to include, <tt>Content-Type</tt> must be
-   * supplied
+   * @param headers the HTTP headers to include, <tt>Content-Type</tt> must be supplied
    * @param content the content bytes
    * @return a Response object with response detail
    * @throws IOException
    */
-  public Response post(Cluster cluster, String path, Header[] headers,
-      byte[] content) throws IOException {
+  public Response post(Cluster cluster, String path, Header[] headers, byte[] content)
+      throws IOException {
     HttpPost method = new HttpPost(path);
     try {
       method.setEntity(new InputStreamEntity(new ByteArrayInputStream(content), content.length));
@@ -828,7 +804,6 @@ public class Client {
       method.releaseConnection();
     }
   }
-
 
   public static class ClientTrustStoreInitializationException extends RuntimeException {
 

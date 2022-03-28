@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -90,7 +92,7 @@ public class TestSpaceQuotaOnBulkLoad {
   public void testNoBulkLoadsWithNoWrites() throws Exception {
     Put p = new Put(Bytes.toBytes("to_reject"));
     p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
     TableName tableName =
         helper.writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_WRITES, p);
 
@@ -141,7 +143,7 @@ public class TestSpaceQuotaOnBulkLoad {
     ActivePolicyEnforcement activePolicies = spaceQuotaManager.getActiveEnforcements();
     SpaceViolationPolicyEnforcement enforcement = activePolicies.getPolicyEnforcement(tn);
     assertTrue("Expected to find Noop policy, but got " + enforcement.getClass().getSimpleName(),
-        enforcement instanceof DefaultViolationPolicyEnforcement);
+      enforcement instanceof DefaultViolationPolicyEnforcement);
 
     // Should generate two files, each of which is over 25KB each
     ClientServiceCallable<Void> callable = helper.generateFileToLoad(tn, 2, 500);
@@ -149,14 +151,14 @@ public class TestSpaceQuotaOnBulkLoad {
     FileStatus[] files =
         fs.listStatus(new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files"));
     for (FileStatus file : files) {
-      assertTrue(
-          "Expected the file, " + file.getPath() + ",  length to be larger than 25KB, but was "
-              + file.getLen(), file.getLen() > 25 * SpaceQuotaHelperForTests.ONE_KILOBYTE);
+      assertTrue("Expected the file, " + file.getPath()
+          + ",  length to be larger than 25KB, but was " + file.getLen(),
+        file.getLen() > 25 * SpaceQuotaHelperForTests.ONE_KILOBYTE);
       LOG.debug(file.getPath() + " -> " + file.getLen() + "B");
     }
 
     RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration());
-    RpcRetryingCaller<Void> caller = factory.<Void>newCaller();
+    RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
     try {
       caller.callWithRetries(callable, Integer.MAX_VALUE);
       fail("Expected the bulk load call to fail!");

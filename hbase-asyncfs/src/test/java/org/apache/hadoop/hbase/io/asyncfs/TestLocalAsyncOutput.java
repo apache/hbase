@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ public class TestLocalAsyncOutput {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLocalAsyncOutput.class);
+      HBaseClassTestRule.forClass(TestLocalAsyncOutput.class);
 
   private static EventLoopGroup GROUP = new NioEventLoopGroup();
 
@@ -61,7 +61,7 @@ public class TestLocalAsyncOutput {
 
   @Test
   public void test() throws IOException, InterruptedException, ExecutionException,
-    CommonFSUtils.StreamLacksCapabilityException {
+      CommonFSUtils.StreamLacksCapabilityException {
     Path f = new Path(TEST_UTIL.getDataTestDir(), "test");
     FileSystem fs = FileSystem.getLocal(TEST_UTIL.getConfiguration());
     AsyncFSOutput out = AsyncFSOutputHelper.createOutput(fs, f, false, true,

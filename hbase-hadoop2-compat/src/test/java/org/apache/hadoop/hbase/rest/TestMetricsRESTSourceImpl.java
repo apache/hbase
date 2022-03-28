@@ -31,7 +31,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test for hadoop 2's version of {@link MetricsRESTSource}.
  */
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsRESTSourceImpl {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -40,7 +40,7 @@ public class TestMetricsRESTSourceImpl {
   @Test
   public void ensureCompatRegistered() {
     assertNotNull(CompatibilitySingletonFactory.getInstance(MetricsRESTSource.class));
-    assertTrue(CompatibilitySingletonFactory.getInstance(MetricsRESTSource.class)
-            instanceof MetricsRESTSourceImpl);
+    assertTrue(CompatibilitySingletonFactory
+        .getInstance(MetricsRESTSource.class) instanceof MetricsRESTSourceImpl);
   }
 }

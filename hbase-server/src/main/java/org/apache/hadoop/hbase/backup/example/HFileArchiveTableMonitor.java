@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,8 +36,7 @@ public class HFileArchiveTableMonitor {
   private final Set<String> archivedTables = new TreeSet<>();
 
   /**
-   * Set the tables to be archived. Internally adds each table and attempts to
-   * register it.
+   * Set the tables to be archived. Internally adds each table and attempts to register it.
    * <p>
    * <b>Note: All previous tables will be removed in favor of these tables.</b>
    * @param tables add each of the tables to be archived.
@@ -48,8 +47,7 @@ public class HFileArchiveTableMonitor {
   }
 
   /**
-   * Add the named table to be those being archived. Attempts to register the
-   * table
+   * Add the named table to be those being archived. Attempts to register the table
    * @param table name of the table to be registered
    */
   public synchronized void addTable(String table) {

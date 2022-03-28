@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  */
 @InterfaceAudience.Private
 public class ClaimReplicationQueuesProcedure extends Procedure<MasterProcedureEnv>
-  implements ServerProcedureInterface {
+    implements ServerProcedureInterface {
 
   private static final Logger LOG = LoggerFactory.getLogger(ClaimReplicationQueuesProcedure.class);
 
@@ -76,7 +76,7 @@ public class ClaimReplicationQueuesProcedure extends Procedure<MasterProcedureEn
 
   @Override
   protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
-    throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     ReplicationQueueStorage storage = env.getReplicationPeerManager().getQueueStorage();
     try {
       List<String> queues = storage.getAllQueues(crashedServer);
@@ -89,16 +89,16 @@ public class ClaimReplicationQueuesProcedure extends Procedure<MasterProcedureEn
       LOG.debug("There are {} replication queues need to be claimed for {}", queues.size(),
         crashedServer);
       List<ServerName> targetServers =
-        env.getMasterServices().getServerManager().getOnlineServersList();
+          env.getMasterServices().getServerManager().getOnlineServersList();
       if (targetServers.isEmpty()) {
         throw new ReplicationException("no region server available");
       }
       Collections.shuffle(targetServers);
       ClaimReplicationQueueRemoteProcedure[] procs =
-        new ClaimReplicationQueueRemoteProcedure[Math.min(queues.size(), targetServers.size())];
+          new ClaimReplicationQueueRemoteProcedure[Math.min(queues.size(), targetServers.size())];
       for (int i = 0; i < procs.length; i++) {
         procs[i] = new ClaimReplicationQueueRemoteProcedure(crashedServer, queues.get(i),
-          targetServers.get(i));
+            targetServers.get(i));
       }
       return procs;
     } catch (ReplicationException e) {
@@ -135,13 +135,13 @@ public class ClaimReplicationQueuesProcedure extends Procedure<MasterProcedureEn
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     serializer.serialize(ClaimReplicationQueuesStateData.newBuilder()
-      .setCrashedServer(ProtobufUtil.toServerName(crashedServer)).build());
+        .setCrashedServer(ProtobufUtil.toServerName(crashedServer)).build());
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     ClaimReplicationQueuesStateData data =
-      serializer.deserialize(ClaimReplicationQueuesStateData.class);
+        serializer.deserialize(ClaimReplicationQueuesStateData.class);
     crashedServer = ProtobufUtil.toServerName(data.getCrashedServer());
   }
 }

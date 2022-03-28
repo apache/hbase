@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -26,8 +26,6 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import java.io.IOException;
 
 /**
  * Utility used composing RegionInfo for 'display'; e.g. on the web UI
@@ -39,17 +37,16 @@ public class RegionInfoDisplay {
   public final static byte[] HIDDEN_START_KEY = Bytes.toBytes("hidden-start-key");
 
   /**
-   * Get the descriptive name as {@link RegionState} does it but with hidden
-   * startkey optionally
+   * Get the descriptive name as {@link RegionState} does it but with hidden startkey optionally
    * @return descriptive string
    */
   public static String getDescriptiveNameFromRegionStateForDisplay(RegionState state,
-                                                                   Configuration conf) {
+      Configuration conf) {
     if (conf.getBoolean(DISPLAY_KEYS_KEY, true)) return state.toDescriptiveString();
     String descriptiveStringFromState = state.toDescriptiveString();
     int idx = descriptiveStringFromState.lastIndexOf(" state=");
     String regionName = getRegionNameAsStringForDisplay(
-    RegionInfoBuilder.newBuilder(state.getRegion()).build(), conf);
+      RegionInfoBuilder.newBuilder(state.getRegion()).build(), conf);
     return regionName + descriptiveStringFromState.substring(idx);
   }
 
@@ -99,17 +96,16 @@ public class RegionInfoDisplay {
       // create a modified regionname with the startkey replaced but preserving
       // the other parts including the encodedname.
       try {
-        byte[][]regionNameParts = RegionInfo.parseRegionName(ri.getRegionName());
-        regionNameParts[1] = HIDDEN_START_KEY; //replace the real startkey
+        byte[][] regionNameParts = RegionInfo.parseRegionName(ri.getRegionName());
+        regionNameParts[1] = HIDDEN_START_KEY; // replace the real startkey
         int len = 0;
         // get the total length
         for (byte[] b : regionNameParts) {
           len += b.length;
         }
-        byte[] encodedRegionName =
-        Bytes.toBytes(RegionInfo.encodeRegionName(ri.getRegionName()));
+        byte[] encodedRegionName = Bytes.toBytes(RegionInfo.encodeRegionName(ri.getRegionName()));
         len += encodedRegionName.length;
-        //allocate some extra bytes for the delimiters and the last '.'
+        // allocate some extra bytes for the delimiters and the last '.'
         byte[] modifiedName = new byte[len + regionNameParts.length + 1];
         int lengthSoFar = 0;
         int loopCount = 0;
@@ -117,17 +113,16 @@ public class RegionInfoDisplay {
           System.arraycopy(b, 0, modifiedName, lengthSoFar, b.length);
           lengthSoFar += b.length;
           if (loopCount++ == 2) modifiedName[lengthSoFar++] = RegionInfo.REPLICA_ID_DELIMITER;
-          else  modifiedName[lengthSoFar++] = HConstants.DELIMITER;
+          else modifiedName[lengthSoFar++] = HConstants.DELIMITER;
         }
         // replace the last comma with '.'
         modifiedName[lengthSoFar - 1] = RegionInfo.ENC_SEPARATOR;
-        System.arraycopy(encodedRegionName, 0, modifiedName, lengthSoFar,
-        encodedRegionName.length);
+        System.arraycopy(encodedRegionName, 0, modifiedName, lengthSoFar, encodedRegionName.length);
         lengthSoFar += encodedRegionName.length;
         modifiedName[lengthSoFar] = RegionInfo.ENC_SEPARATOR;
         return modifiedName;
       } catch (IOException e) {
-        //LOG.warn("Encountered exception " + e);
+        // LOG.warn("Encountered exception " + e);
         throw new RuntimeException(e);
       }
     }

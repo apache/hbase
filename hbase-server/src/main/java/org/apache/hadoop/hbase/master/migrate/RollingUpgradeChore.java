@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.migrate;
 
 import java.io.IOException;
@@ -43,16 +42,16 @@ import org.slf4j.LoggerFactory;
 /**
  * To avoid too many migrating/upgrade threads to be submitted at the time during master
  * initialization, RollingUpgradeChore handles all rolling-upgrade tasks.
- * */
+ */
 @InterfaceAudience.Private
 public class RollingUpgradeChore extends ScheduledChore {
 
   static final String ROLLING_UPGRADE_CHORE_PERIOD_SECONDS_KEY =
-    "hbase.master.rolling.upgrade.chore.period.secs";
+      "hbase.master.rolling.upgrade.chore.period.secs";
   static final int DFAULT_ROLLING_UPGRADE_CHORE_PERIOD_SECONDS = 10; // 10 seconds by default
 
   static final String ROLLING_UPGRADE_CHORE_DELAY_SECONDS_KEY =
-    "hbase.master.rolling.upgrade.chore.delay.secs";
+      "hbase.master.rolling.upgrade.chore.delay.secs";
   static final long DEFAULT_ROLLING_UPGRADE_CHORE_DELAY_SECONDS = 30; // 30 seconds
 
   static final int CONCURRENT_PROCEDURES_COUNT = 5;
@@ -64,18 +63,18 @@ public class RollingUpgradeChore extends ScheduledChore {
 
   public RollingUpgradeChore(MasterServices masterServices) {
     this(masterServices.getConfiguration(), masterServices.getMasterProcedureExecutor(),
-      masterServices.getTableDescriptors(), masterServices);
+        masterServices.getTableDescriptors(), masterServices);
   }
 
   private RollingUpgradeChore(Configuration conf,
-    ProcedureExecutor<MasterProcedureEnv> procedureExecutor, TableDescriptors tableDescriptors,
-    Stoppable stopper) {
-    super(RollingUpgradeChore.class.getSimpleName(), stopper, conf
-        .getInt(ROLLING_UPGRADE_CHORE_PERIOD_SECONDS_KEY,
-          DFAULT_ROLLING_UPGRADE_CHORE_PERIOD_SECONDS), conf
-        .getLong(ROLLING_UPGRADE_CHORE_DELAY_SECONDS_KEY,
+      ProcedureExecutor<MasterProcedureEnv> procedureExecutor, TableDescriptors tableDescriptors,
+      Stoppable stopper) {
+    super(RollingUpgradeChore.class.getSimpleName(), stopper,
+        conf.getInt(ROLLING_UPGRADE_CHORE_PERIOD_SECONDS_KEY,
+          DFAULT_ROLLING_UPGRADE_CHORE_PERIOD_SECONDS),
+        conf.getLong(ROLLING_UPGRADE_CHORE_DELAY_SECONDS_KEY,
           DEFAULT_ROLLING_UPGRADE_CHORE_DELAY_SECONDS),
-      TimeUnit.SECONDS);
+        TimeUnit.SECONDS);
     this.procedureExecutor = procedureExecutor;
     this.tableDescriptors = tableDescriptors;
   }
@@ -88,11 +87,11 @@ public class RollingUpgradeChore extends ScheduledChore {
     }
   }
 
-  private boolean isCompletelyMigrateSFT(int concurrentCount){
+  private boolean isCompletelyMigrateSFT(int concurrentCount) {
     Iterator<InitializeStoreFileTrackerProcedure> iter = processingProcs.iterator();
-    while(iter.hasNext()){
+    while (iter.hasNext()) {
       InitializeStoreFileTrackerProcedure proc = iter.next();
-      if(procedureExecutor.isFinished(proc.getProcId())){
+      if (procedureExecutor.isFinished(proc.getProcId())) {
         iter.remove();
       }
     }
@@ -121,7 +120,7 @@ public class RollingUpgradeChore extends ScheduledChore {
     for (Map.Entry<String, TableDescriptor> entry : migrateSFTTables.entrySet()) {
       TableDescriptor tableDescriptor = entry.getValue();
       InitializeStoreFileTrackerProcedure proc = new InitializeStoreFileTrackerProcedure(
-        procedureExecutor.getEnvironment(), tableDescriptor.getTableName());
+          procedureExecutor.getEnvironment(), tableDescriptor.getTableName());
       procedureExecutor.submitProcedure(proc);
       processingProcs.add(proc);
     }

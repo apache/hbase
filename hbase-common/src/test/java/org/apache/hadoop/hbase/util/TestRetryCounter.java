@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,11 +28,10 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
-* Basic test for some old functionality we don't seem to have used but that looks nice.
+ * Basic test for some old functionality we don't seem to have used but that looks nice.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestRetryCounter {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -42,12 +41,11 @@ public class TestRetryCounter {
   @Test
   public void testBasics() throws InterruptedException {
     int maxAttempts = 10;
-    RetryCounterFactory factory =
-        new RetryCounterFactory(maxAttempts, 10, 1000);
+    RetryCounterFactory factory = new RetryCounterFactory(maxAttempts, 10, 1000);
     RetryCounter retryCounter = factory.create();
     while (retryCounter.shouldRetry()) {
       LOG.info("Attempt={}, backoffTime={}", retryCounter.getAttemptTimes(),
-          retryCounter.getBackoffTime());
+        retryCounter.getBackoffTime());
       retryCounter.sleepUntilNextRetry();
     }
     assertTrue(retryCounter.getAttemptTimes() == maxAttempts);

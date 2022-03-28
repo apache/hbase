@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,15 +16,16 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.client;
+
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This should be implemented by the Get/Scan implementations that
- * talk to replica regions. When an RPC response is received from one
- * of the replicas, the RPCs to the other replicas are cancelled.
+ * This should be implemented by the Get/Scan implementations that talk to replica regions. When an
+ * RPC response is received from one of the replicas, the RPCs to the other replicas are cancelled.
  */
 @InterfaceAudience.Private
 interface Cancellable {
   public void cancel();
+
   public boolean isCancelled();
 }

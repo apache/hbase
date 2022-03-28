@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,13 +23,14 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 
 /**
  * ZK based replication peer storage.
@@ -45,9 +46,9 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
   public static final String PEERS_STATE_ZNODE_DEFAULT = "peer-state";
 
   public static final byte[] ENABLED_ZNODE_BYTES =
-    toByteArray(ReplicationProtos.ReplicationState.State.ENABLED);
+      toByteArray(ReplicationProtos.ReplicationState.State.ENABLED);
   public static final byte[] DISABLED_ZNODE_BYTES =
-    toByteArray(ReplicationProtos.ReplicationState.State.DISABLED);
+      toByteArray(ReplicationProtos.ReplicationState.State.DISABLED);
 
   /**
    * The name of the znode that contains the replication status of a remote slave (i.e. peer)

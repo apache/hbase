@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,7 +51,7 @@ public class TestMasterRegionFlush {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegionFlush.class);
+      HBaseClassTestRule.forClass(TestMasterRegionFlush.class);
 
   private Configuration conf;
 
@@ -73,7 +73,7 @@ public class TestMasterRegionFlush {
     when(store.getStorefilesCount()).thenReturn(1);
     when(region.getStores()).thenReturn(Collections.singletonList(store));
     when(region.getRegionInfo())
-      .thenReturn(RegionInfoBuilder.newBuilder(TableName.valueOf("hbase:local")).build());
+        .thenReturn(RegionInfoBuilder.newBuilder(TableName.valueOf("hbase:local")).build());
     flushCalled = new AtomicInteger(0);
     memstoreHeapSize = new AtomicLong(0);
     memstoreOffHeapSize = new AtomicLong(0);

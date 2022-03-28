@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -70,6 +71,7 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -123,8 +125,8 @@ public abstract class AbstractTestDLS {
     conf.setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, 3);
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     conf.set("hbase.wal.provider", getWalProvider());
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(NUM_MASTERS).numRegionServers(numRS).build();
+    StartMiniClusterOption option =
+        StartMiniClusterOption.builder().numMasters(NUM_MASTERS).numRegionServers(numRS).build();
     TEST_UTIL.startMiniHBaseCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
@@ -195,8 +197,8 @@ public abstract class AbstractTestDLS {
         }
       });
 
-      LOG.info("Current Open Regions After Master Node Starts Up:" +
-          HBaseTestingUtility.getAllOnlineRegions(cluster).size());
+      LOG.info("Current Open Regions After Master Node Starts Up:"
+          + HBaseTestingUtility.getAllOnlineRegions(cluster).size());
 
       assertEquals(numLogLines, TEST_UTIL.countRows(ht));
     }
@@ -372,10 +374,11 @@ public abstract class AbstractTestDLS {
         row = Arrays.copyOfRange(row, 3, 8); // use last 5 bytes because
         // HBaseTestingUtility.createMultiRegions use 5 bytes key
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
-        e.add(new KeyValue(row, COLUMN_FAMILY, qualifier, EnvironmentEdgeManager.currentTime(),
-          value));
+        e.add(
+          new KeyValue(row, COLUMN_FAMILY, qualifier, EnvironmentEdgeManager.currentTime(), value));
         log.appendData(curRegionInfo, new WALKeyImpl(curRegionInfo.getEncodedNameAsBytes(),
-          tableName, EnvironmentEdgeManager.currentTime(), mvcc), e);
+            tableName, EnvironmentEdgeManager.currentTime(), mvcc),
+          e);
         if (0 == i % syncEvery) {
           log.sync();
         }

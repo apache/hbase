@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,7 @@ public class TestShell extends AbstractTestShell {
 
   @Override
   protected String getExcludeList() {
-    return "replication_admin_test.rb,rsgroup_shell_test.rb,admin_test.rb,table_test.rb," +
-        "quotas_test.rb,admin2_test.rb";
+    return "replication_admin_test.rb,rsgroup_shell_test.rb,admin_test.rb,table_test.rb,"
+        + "quotas_test.rb,admin2_test.rb";
   }
 }

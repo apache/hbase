@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +18,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -42,7 +40,6 @@ public class ZooKeeperConnectionException extends IOException {
 
   /**
    * Constructor taking another exception.
-   *
    * @param message the message for this exception
    * @param exception the exception to grab data from
    */

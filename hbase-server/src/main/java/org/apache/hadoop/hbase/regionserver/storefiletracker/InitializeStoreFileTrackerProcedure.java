@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class InitializeStoreFileTrackerProcedure extends ModifyTableDescriptorProcedure {
 
-  public InitializeStoreFileTrackerProcedure(){}
+  public InitializeStoreFileTrackerProcedure() {
+  }
 
   public InitializeStoreFileTrackerProcedure(MasterProcedureEnv env, TableName tableName) {
     super(env, tableName);
@@ -44,8 +45,8 @@ public class InitializeStoreFileTrackerProcedure extends ModifyTableDescriptorPr
       // no tracker impl means it is a table created in previous version, the tracker impl can only
       // be default.
       TableDescriptor td =
-        TableDescriptorBuilder.newBuilder(current).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-          StoreFileTrackerFactory.Trackers.DEFAULT.name()).build();
+          TableDescriptorBuilder.newBuilder(current).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+            StoreFileTrackerFactory.Trackers.DEFAULT.name()).build();
       return Optional.of(td);
     }
     return Optional.empty();

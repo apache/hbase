@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.metrics;
 
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -32,7 +31,6 @@ public interface MetricRegistry extends MetricSet {
 
   /**
    * Get or construct a {@link Timer} used to measure durations and report rates.
-   *
    * @param name the name of the timer.
    * @return An instance of {@link Timer}.
    */
@@ -40,7 +38,6 @@ public interface MetricRegistry extends MetricSet {
 
   /**
    * Get or construct a {@link Histogram} used to measure a distribution of values.
-   *
    * @param name The name of the Histogram.
    * @return An instance of {@link Histogram}.
    */
@@ -49,7 +46,6 @@ public interface MetricRegistry extends MetricSet {
   /**
    * Get or construct a {@link Meter} used to measure durations and report distributions (a
    * combination of a {@link Timer} and a {@link Histogram}.
-   *
    * @param name The name of the Meter.
    * @return An instance of {@link Meter}.
    */
@@ -57,7 +53,6 @@ public interface MetricRegistry extends MetricSet {
 
   /**
    * Get or construct a {@link Counter} used to track a mutable number.
-   *
    * @param name The name of the Counter
    * @return An instance of {@link Counter}.
    */
@@ -96,7 +91,6 @@ public interface MetricRegistry extends MetricSet {
 
   /**
    * Removes the metric with the given name.
-   *
    * @param name the name of the metric
    * @return true if the metric is removed.
    */

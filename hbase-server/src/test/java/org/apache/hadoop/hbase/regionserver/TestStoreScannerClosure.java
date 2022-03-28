@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,8 +64,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This test tests whether parallel {@link StoreScanner#close()} and
- * {@link StoreScanner#updateReaders(List, List)} works perfectly ensuring
- * that there are no references on the existing Storescanner readers.
+ * {@link StoreScanner#updateReaders(List, List)} works perfectly ensuring that there are no
+ * references on the existing Storescanner readers.
  */
 @Category({ RegionServerTests.class, SmallTests.class })
 public class TestStoreScannerClosure {
@@ -128,7 +128,7 @@ public class TestStoreScannerClosure {
       HStore store = region.getStore(fam);
       // use the lock to manually get a new memstore scanner. this is what
       // HStore#notifyChangedReadersObservers does under the lock.(lock is not needed here
-      //since it is just a testcase).
+      // since it is just a testcase).
       store.getStoreEngine().readLock();
       final List<KeyValueScanner> memScanners = store.memstore.getScanners(Long.MAX_VALUE);
       store.getStoreEngine().readUnlock();

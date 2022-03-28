@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ public class RegionServerRegistry implements ConnectionRegistry {
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
     CompletableFuture<RegionLocations> future = new CompletableFuture<>();
     Optional<List<HRegionLocation>> locs =
-      regionServer.getMetaRegionLocationCache().getMetaRegionLocations();
+        regionServer.getMetaRegionLocationCache().getMetaRegionLocations();
     if (locs.isPresent()) {
       List<HRegionLocation> list = locs.get();
       if (list.isEmpty()) {

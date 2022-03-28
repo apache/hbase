@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public class TestFailedMetaReplicaAssigment {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFailedMetaReplicaAssigment.class);
+      HBaseClassTestRule.forClass(TestFailedMetaReplicaAssigment.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -64,7 +64,7 @@ public class TestFailedMetaReplicaAssigment {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HConstants.META_REPLICAS_NUM, 3);
     StartMiniClusterOption option = StartMiniClusterOption.builder().numAlwaysStandByMasters(1)
-      .numMasters(1).numRegionServers(1).masterClass(BrokenMetaReplicaMaster.class).build();
+        .numMasters(1).numRegionServers(1).masterClass(BrokenMetaReplicaMaster.class).build();
     TEST_UTIL.startMiniCluster(option);
   }
 
@@ -82,18 +82,18 @@ public class TestFailedMetaReplicaAssigment {
     AssignmentManager am = master.getAssignmentManager();
     // showing one of the replicas got assigned
     RegionInfo metaReplicaHri =
-      RegionReplicaUtil.getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO, 1);
+        RegionReplicaUtil.getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO, 1);
     // we use assignAsync so we need to wait a bit
     TEST_UTIL.waitFor(30000, () -> {
       RegionStateNode metaReplicaRegionNode =
-        am.getRegionStates().getOrCreateRegionStateNode(metaReplicaHri);
+          am.getRegionStates().getOrCreateRegionStateNode(metaReplicaHri);
       return metaReplicaRegionNode.getRegionLocation() != null;
     });
     // showing one of the replicas failed to be assigned
     RegionInfo metaReplicaHri2 =
-      RegionReplicaUtil.getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO, 2);
+        RegionReplicaUtil.getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO, 2);
     RegionStateNode metaReplicaRegionNode2 =
-      am.getRegionStates().getOrCreateRegionStateNode(metaReplicaHri2);
+        am.getRegionStates().getOrCreateRegionStateNode(metaReplicaHri2);
     // wait for several seconds to make sure that it is not assigned
     for (int i = 0; i < 3; i++) {
       Thread.sleep(2000);
@@ -118,7 +118,7 @@ public class TestFailedMetaReplicaAssigment {
 
     @Override
     protected Procedure[] execute(MasterProcedureEnv env)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+        throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
       throw new ProcedureSuspendedException("Never end procedure!");
     }
   }
@@ -130,7 +130,7 @@ public class TestFailedMetaReplicaAssigment {
 
     @Override
     public AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
+        MasterRegion masterRegion) {
       return new BrokenMasterMetaAssignmentManager(master, masterRegion);
     }
   }
@@ -139,7 +139,7 @@ public class TestFailedMetaReplicaAssigment {
     MasterServices master;
 
     public BrokenMasterMetaAssignmentManager(final MasterServices master,
-      MasterRegion masterRegion) {
+        MasterRegion masterRegion) {
       super(master, masterRegion);
       this.master = master;
     }
@@ -153,7 +153,7 @@ public class TestFailedMetaReplicaAssigment {
           regionNode.lock();
           try {
             procs.add(regionNode.setProcedure(new BrokenTransitRegionStateProcedure(
-              master.getMasterProcedureExecutor().getEnvironment(), hri)));
+                master.getMasterProcedureExecutor().getEnvironment(), hri)));
           } finally {
             regionNode.unlock();
           }

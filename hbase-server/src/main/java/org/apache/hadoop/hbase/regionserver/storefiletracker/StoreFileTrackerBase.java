@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTra
 
 import java.io.IOException;
 import java.util.Collection;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -75,7 +74,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   @Override
   public final void replace(Collection<StoreFileInfo> compactedFiles,
-    Collection<StoreFileInfo> newFiles) throws IOException {
+      Collection<StoreFileInfo> newFiles) throws IOException {
     if (isPrimaryReplica) {
       doAddCompactionResults(compactedFiles, newFiles);
     }
@@ -92,19 +91,22 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
   }
 
   private HFileContext createFileContext(Compression.Algorithm compression,
-    boolean includeMVCCReadpoint, boolean includesTag, Encryption.Context encryptionContext) {
+      boolean includeMVCCReadpoint, boolean includesTag, Encryption.Context encryptionContext) {
     if (compression == null) {
       compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
     }
     ColumnFamilyDescriptor family = ctx.getFamily();
     HFileContext hFileContext = new HFileContextBuilder().withIncludesMvcc(includeMVCCReadpoint)
-      .withIncludesTags(includesTag).withCompression(compression)
-      .withCompressTags(family.isCompressTags()).withChecksumType(StoreUtils.getChecksumType(conf))
-      .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf))
-      .withBlockSize(family.getBlocksize()).withHBaseCheckSum(true)
-      .withDataBlockEncoding(family.getDataBlockEncoding()).withEncryptionContext(encryptionContext)
-      .withCreateTime(EnvironmentEdgeManager.currentTime()).withColumnFamily(family.getName())
-      .withTableName(ctx.getTableName().getName()).withCellComparator(ctx.getComparator()).build();
+        .withIncludesTags(includesTag).withCompression(compression)
+        .withCompressTags(family.isCompressTags())
+        .withChecksumType(StoreUtils.getChecksumType(conf))
+        .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf))
+        .withBlockSize(family.getBlocksize()).withHBaseCheckSum(true)
+        .withDataBlockEncoding(family.getDataBlockEncoding())
+        .withEncryptionContext(encryptionContext)
+        .withCreateTime(EnvironmentEdgeManager.currentTime()).withColumnFamily(family.getName())
+        .withTableName(ctx.getTableName().getName()).withCellComparator(ctx.getComparator())
+        .build();
     return hFileContext;
   }
 
@@ -124,12 +126,13 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
       // if data blocks are to be cached on write
       // during compaction, we should forcefully
       // cache index and bloom blocks as well
-      if (cacheCompactedBlocksOnWrite &&
-        totalCompactedFilesSize <= cacheConf.getCacheCompactedBlocksOnWriteThreshold()) {
+      if (cacheCompactedBlocksOnWrite
+          && totalCompactedFilesSize <= cacheConf.getCacheCompactedBlocksOnWriteThreshold()) {
         writerCacheConf.enableCacheOnWrite();
         if (!cacheOnWriteLogged) {
-          LOG.info("For {} , cacheCompactedBlocksOnWrite is true, hence enabled " +
-            "cacheOnWrite for Data blocks, Index blocks and Bloom filter blocks", this);
+          LOG.info("For {} , cacheCompactedBlocksOnWrite is true, hence enabled "
+              + "cacheOnWrite for Data blocks, Index blocks and Bloom filter blocks",
+            this);
           cacheOnWriteLogged = true;
         }
       } else {
@@ -137,8 +140,8 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
         if (totalCompactedFilesSize > cacheConf.getCacheCompactedBlocksOnWriteThreshold()) {
           // checking condition once again for logging
           LOG.debug(
-            "For {}, setting cacheCompactedBlocksOnWrite as false as total size of compacted " +
-              "files - {}, is greater than cacheCompactedBlocksOnWriteThreshold - {}",
+            "For {}, setting cacheCompactedBlocksOnWrite as false as total size of compacted "
+                + "files - {}, is greater than cacheCompactedBlocksOnWriteThreshold - {}",
             this, totalCompactedFilesSize, cacheConf.getCacheCompactedBlocksOnWriteThreshold());
         }
       }
@@ -147,8 +150,9 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
       if (shouldCacheDataOnWrite) {
         writerCacheConf.enableCacheOnWrite();
         if (!cacheOnWriteLogged) {
-          LOG.info("For {} , cacheDataOnWrite is true, hence enabled cacheOnWrite for " +
-            "Index blocks and Bloom filter blocks", this);
+          LOG.info("For {} , cacheDataOnWrite is true, hence enabled cacheOnWrite for "
+              + "Index blocks and Bloom filter blocks",
+            this);
           cacheOnWriteLogged = true;
         }
       }
@@ -159,22 +163,22 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     Path outputDir;
     if (requireWritingToTmpDirFirst()) {
       outputDir =
-        new Path(ctx.getRegionFileSystem().getTempDir(), ctx.getFamily().getNameAsString());
+          new Path(ctx.getRegionFileSystem().getTempDir(), ctx.getFamily().getNameAsString());
     } else {
       outputDir = ctx.getFamilyStoreDirectoryPath();
     }
-    StoreFileWriter.Builder builder =
-      new StoreFileWriter.Builder(conf, writerCacheConf, ctx.getRegionFileSystem().getFileSystem())
-        .withOutputDir(outputDir).withBloomType(ctx.getBloomFilterType())
-        .withMaxKeyCount(params.maxKeyCount()).withFavoredNodes(ctx.getFavoredNodes())
-        .withFileContext(hFileContext).withShouldDropCacheBehind(params.shouldDropBehind())
-        .withCompactedFilesSupplier(ctx.getCompactedFilesSupplier())
-        .withFileStoragePolicy(params.fileStoragePolicy());
+    StoreFileWriter.Builder builder = new StoreFileWriter.Builder(conf, writerCacheConf,
+        ctx.getRegionFileSystem().getFileSystem()).withOutputDir(outputDir)
+            .withBloomType(ctx.getBloomFilterType()).withMaxKeyCount(params.maxKeyCount())
+            .withFavoredNodes(ctx.getFavoredNodes()).withFileContext(hFileContext)
+            .withShouldDropCacheBehind(params.shouldDropBehind())
+            .withCompactedFilesSupplier(ctx.getCompactedFilesSupplier())
+            .withFileStoragePolicy(params.fileStoragePolicy());
     return builder.build();
   }
 
   protected abstract void doAddNewStoreFiles(Collection<StoreFileInfo> newFiles) throws IOException;
 
   protected abstract void doAddCompactionResults(Collection<StoreFileInfo> compactedFiles,
-    Collection<StoreFileInfo> newFiles) throws IOException;
+      Collection<StoreFileInfo> newFiles) throws IOException;
 }

@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Optional;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -44,12 +43,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({ ReplicationTests.class, MediumTests.class})
+@Category({ ReplicationTests.class, MediumTests.class })
 public class TestReplicationSourceManagerJoin extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationSourceManagerJoin.class);
+      HBaseClassTestRule.forClass(TestReplicationSourceManagerJoin.class);
 
   @Rule
   public TestName testName = new TestName();
@@ -67,9 +66,9 @@ public class TestReplicationSourceManagerJoin extends TestReplicationBase {
     // recovered source end.
     TableName tableName = TableName.valueOf(testName.getMethodName());
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
-        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
+            .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
     hbaseAdmin.createTable(td);
     assertFalse(UTIL2.getAdmin().tableExists(tableName));
     Table table = UTIL1.getConnection().getTable(tableName);
@@ -78,10 +77,9 @@ public class TestReplicationSourceManagerJoin extends TestReplicationBase {
       table.put(new Put(Bytes.toBytes(i)).addColumn(famName, row, row));
     }
     // Kill rs holding table region. There are only TWO servers. We depend on it.
-    Optional<HRegionServer> server =
-      UTIL1.getMiniHBaseCluster().getLiveRegionServerThreads().stream()
-      .map(JVMClusterUtil.RegionServerThread::getRegionServer)
-      .filter(rs -> !rs.getRegions(tableName).isEmpty()).findAny();
+    Optional<HRegionServer> server = UTIL1.getMiniHBaseCluster().getLiveRegionServerThreads()
+        .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
+        .filter(rs -> !rs.getRegions(tableName).isEmpty()).findAny();
     assertTrue(server.isPresent());
     server.get().abort("stopping for test");
 
@@ -89,7 +87,7 @@ public class TestReplicationSourceManagerJoin extends TestReplicationBase {
     UTIL1.waitTableAvailable(tableName);
     // Wait for recovered source running
     HRegionServer rs =
-      UTIL1.getMiniHBaseCluster().getLiveRegionServerThreads().get(0).getRegionServer();
+        UTIL1.getMiniHBaseCluster().getLiveRegionServerThreads().get(0).getRegionServer();
     ReplicationSourceManager manager = rs.getReplicationSourceService().getReplicationManager();
     UTIL1.waitFor(60000, () -> !manager.getOldSources().isEmpty());
 
@@ -98,12 +96,12 @@ public class TestReplicationSourceManagerJoin extends TestReplicationBase {
 
     // Check all sources running before manager.join(), terminated after manager.join().
     Stream.concat(manager.getSources().stream(), manager.getOldSources().stream())
-      .filter(src -> src instanceof ReplicationSource)
-      .forEach(src -> assertTrue(((ReplicationSource) src).sourceRunning));
+        .filter(src -> src instanceof ReplicationSource)
+        .forEach(src -> assertTrue(((ReplicationSource) src).sourceRunning));
     manager.join();
     Stream.concat(manager.getSources().stream(), manager.getOldSources().stream())
-      .filter(src -> src instanceof ReplicationSource)
-      .forEach(src -> assertFalse(((ReplicationSource) src).sourceRunning));
+        .filter(src -> src instanceof ReplicationSource)
+        .forEach(src -> assertFalse(((ReplicationSource) src).sourceRunning));
   }
 
 }

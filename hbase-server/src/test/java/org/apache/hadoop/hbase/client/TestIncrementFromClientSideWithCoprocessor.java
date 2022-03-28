@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,11 +28,9 @@ import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test all {@link Increment} client operations with a coprocessor that
- * just implements the default flush/compact/scan policy.
- *
- * This test takes a long time. The test it derives from is parameterized so we run through both
- * options of the test.
+ * Test all {@link Increment} client operations with a coprocessor that just implements the default
+ * flush/compact/scan policy. This test takes a long time. The test it derives from is parameterized
+ * so we run through both options of the test.
  */
 @Category(LargeTests.class)
 public class TestIncrementFromClientSideWithCoprocessor extends TestIncrementsFromClientSide {
@@ -45,6 +43,6 @@ public class TestIncrementFromClientSideWithCoprocessor extends TestIncrementsFr
   public void before() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        MultiRowMutationEndpoint.class.getName(), NoOpScanPolicyObserver.class.getName());
+      MultiRowMutationEndpoint.class.getName(), NoOpScanPolicyObserver.class.getName());
   }
 }

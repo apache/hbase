@@ -72,10 +72,11 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
-import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 /**
  * <p>
@@ -154,10 +155,8 @@ public class MetaTableAccessor {
 
   @InterfaceAudience.Private
   public enum QueryType {
-    ALL(HConstants.TABLE_FAMILY, HConstants.CATALOG_FAMILY),
-    REGION(HConstants.CATALOG_FAMILY),
-    TABLE(HConstants.TABLE_FAMILY),
-    REPLICATION(HConstants.REPLICATION_BARRIER_FAMILY);
+    ALL(HConstants.TABLE_FAMILY, HConstants.CATALOG_FAMILY), REGION(HConstants.CATALOG_FAMILY),
+    TABLE(HConstants.TABLE_FAMILY), REPLICATION(HConstants.REPLICATION_BARRIER_FAMILY);
 
     private final byte[][] families;
 
@@ -174,8 +173,8 @@ public class MetaTableAccessor {
   static final char META_REPLICA_ID_DELIMITER = '_';
 
   /** A regex for parsing server columns from meta. See above javadoc for meta layout */
-  private static final Pattern SERVER_COLUMN_PATTERN
-    = Pattern.compile("^server(_[0-9a-fA-F]{4})?$");
+  private static final Pattern SERVER_COLUMN_PATTERN =
+      Pattern.compile("^server(_[0-9a-fA-F]{4})?$");
 
   ////////////////////////
   // Reading operations //
@@ -257,12 +256,10 @@ public class MetaTableAccessor {
    * @deprecated use {@link #getRegionLocation(Connection, byte[])} instead
    */
   @Deprecated
-  public static Pair<RegionInfo, ServerName> getRegion(Connection connection, byte [] regionName)
-    throws IOException {
+  public static Pair<RegionInfo, ServerName> getRegion(Connection connection, byte[] regionName)
+      throws IOException {
     HRegionLocation location = getRegionLocation(connection, regionName);
-    return location == null
-      ? null
-      : new Pair<>(location.getRegionInfo(), location.getServerName());
+    return location == null ? null : new Pair<>(location.getRegionInfo(), location.getServerName());
   }
 
   /**
@@ -288,7 +285,7 @@ public class MetaTableAccessor {
     Result r = get(getMetaHTable(connection), get);
     RegionLocations locations = getRegionLocations(r);
     return locations == null ? null
-      : locations.getRegionLocation(parsedInfo == null ? 0 : parsedInfo.getReplicaId());
+        : locations.getRegionLocation(parsedInfo == null ? 0 : parsedInfo.getReplicaId());
   }
 
   /**
@@ -299,8 +296,8 @@ public class MetaTableAccessor {
    */
   public static HRegionLocation getRegionLocation(Connection connection, RegionInfo regionInfo)
       throws IOException {
-    return getRegionLocation(getCatalogFamilyRow(connection, regionInfo),
-        regionInfo, regionInfo.getReplicaId());
+    return getRegionLocation(getCatalogFamilyRow(connection, regionInfo), regionInfo,
+      regionInfo.getReplicaId());
   }
 
   /**
@@ -318,17 +315,17 @@ public class MetaTableAccessor {
     return RegionReplicaUtil.getRegionInfoForDefaultReplica(regionInfo).getRegionName();
   }
 
-  /** Returns an HRI parsed from this regionName. Not all the fields of the HRI
-   * is stored in the name, so the returned object should only be used for the fields
-   * in the regionName.
+  /**
+   * Returns an HRI parsed from this regionName. Not all the fields of the HRI is stored in the
+   * name, so the returned object should only be used for the fields in the regionName.
    */
   // This should be moved to RegionInfo? TODO.
   public static RegionInfo parseRegionInfoFromRegionName(byte[] regionName) throws IOException {
     byte[][] fields = RegionInfo.parseRegionName(regionName);
     long regionId = Long.parseLong(Bytes.toString(fields[2]));
     int replicaId = fields.length > 3 ? Integer.parseInt(Bytes.toString(fields[3]), 16) : 0;
-    return RegionInfoBuilder.newBuilder(TableName.valueOf(fields[0]))
-      .setStartKey(fields[1]).setRegionId(regionId).setReplicaId(replicaId).build();
+    return RegionInfoBuilder.newBuilder(TableName.valueOf(fields[0])).setStartKey(fields[1])
+        .setRegionId(regionId).setReplicaId(replicaId).build();
   }
 
   /**
@@ -337,26 +334,25 @@ public class MetaTableAccessor {
    * @param regionName region we're looking for
    * @return result of the specified region
    */
-  public static Result getRegionResult(Connection connection,
-      byte[] regionName) throws IOException {
+  public static Result getRegionResult(Connection connection, byte[] regionName)
+      throws IOException {
     Get get = new Get(regionName);
     get.addFamily(HConstants.CATALOG_FAMILY);
     return get(getMetaHTable(connection), get);
   }
 
   /**
-   * Scans META table for a row whose key contains the specified <B>regionEncodedName</B>,
-   * returning a single related <code>Result</code> instance if any row is found, null otherwise.
-   *
+   * Scans META table for a row whose key contains the specified <B>regionEncodedName</B>, returning
+   * a single related <code>Result</code> instance if any row is found, null otherwise.
    * @param connection the connection to query META table.
    * @param regionEncodedName the region encoded name to look for at META.
    * @return <code>Result</code> instance with the row related info in META, null otherwise.
    * @throws IOException if any errors occur while querying META.
    */
-  public static Result scanByRegionEncodedName(Connection connection,
-      String regionEncodedName) throws IOException {
-    RowFilter rowFilter = new RowFilter(CompareOperator.EQUAL,
-      new SubstringComparator(regionEncodedName));
+  public static Result scanByRegionEncodedName(Connection connection, String regionEncodedName)
+      throws IOException {
+    RowFilter rowFilter =
+        new RowFilter(CompareOperator.EQUAL, new SubstringComparator(regionEncodedName));
     Scan scan = getMetaScan(connection.getConfiguration(), 1);
     scan.setFilter(rowFilter);
     try (Table table = getMetaHTable(connection);
@@ -366,8 +362,8 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @return Return all regioninfos listed in the 'info:merge*' columns of
-   *   the <code>regionName</code> row.
+   * @return Return all regioninfos listed in the 'info:merge*' columns of the
+   *         <code>regionName</code> row.
    */
   @Nullable
   public static List<RegionInfo> getMergeRegions(Connection connection, byte[] regionName)
@@ -387,12 +383,12 @@ public class MetaTableAccessor {
    *         match the regex 'info:merge.*' in array of <code>cells</code>.
    */
   @Nullable
-  public static Map<String, RegionInfo> getMergeRegionsWithName(Cell [] cells) {
+  public static Map<String, RegionInfo> getMergeRegionsWithName(Cell[] cells) {
     if (cells == null) {
       return null;
     }
     Map<String, RegionInfo> regionsToMerge = null;
-    for (Cell cell: cells) {
+    for (Cell cell : cells) {
       if (!isMergeQualifierPrefix(cell)) {
         continue;
       }
@@ -410,21 +406,21 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @return Deserialized regioninfo values taken from column values that match
-   *   the regex 'info:merge.*' in array of <code>cells</code>.
+   * @return Deserialized regioninfo values taken from column values that match the regex
+   *         'info:merge.*' in array of <code>cells</code>.
    */
   @Nullable
-  public static List<RegionInfo> getMergeRegions(Cell [] cells) {
+  public static List<RegionInfo> getMergeRegions(Cell[] cells) {
     Map<String, RegionInfo> mergeRegionsWithName = getMergeRegionsWithName(cells);
     return (mergeRegionsWithName == null) ? null : new ArrayList<>(mergeRegionsWithName.values());
   }
 
   /**
-   * @return True if any merge regions present in <code>cells</code>; i.e.
-   *   the column in <code>cell</code> matches the regex 'info:merge.*'.
+   * @return True if any merge regions present in <code>cells</code>; i.e. the column in
+   *         <code>cell</code> matches the regex 'info:merge.*'.
    */
-  public static boolean hasMergeRegions(Cell [] cells) {
-    for (Cell cell: cells) {
+  public static boolean hasMergeRegions(Cell[] cells) {
+    for (Cell cell : cells) {
       if (!isMergeQualifierPrefix(cell)) {
         continue;
       }
@@ -438,60 +434,57 @@ public class MetaTableAccessor {
    */
   private static boolean isMergeQualifierPrefix(Cell cell) {
     // Check to see if has family and that qualifier starts with the merge qualifier 'merge'
-    return CellUtil.matchingFamily(cell, HConstants.CATALOG_FAMILY) &&
-      PrivateCellUtil.qualifierStartsWith(cell, HConstants.MERGE_QUALIFIER_PREFIX);
+    return CellUtil.matchingFamily(cell, HConstants.CATALOG_FAMILY)
+        && PrivateCellUtil.qualifierStartsWith(cell, HConstants.MERGE_QUALIFIER_PREFIX);
   }
 
   /**
    * Lists all of the regions currently in META.
-   *
    * @param connection to connect with
    * @param excludeOfflinedSplitParents False if we are to include offlined/splitparents regions,
-   *                                    true and we'll leave out offlined regions from returned list
+   *          true and we'll leave out offlined regions from returned list
    * @return List of all user-space regions.
    */
   public static List<RegionInfo> getAllRegions(Connection connection,
-      boolean excludeOfflinedSplitParents)
-      throws IOException {
+      boolean excludeOfflinedSplitParents) throws IOException {
     List<Pair<RegionInfo, ServerName>> result;
 
-    result = getTableRegionsAndLocations(connection, null,
-        excludeOfflinedSplitParents);
+    result = getTableRegionsAndLocations(connection, null, excludeOfflinedSplitParents);
 
     return getListOfRegionInfos(result);
 
   }
 
   /**
-   * Gets all of the regions of the specified table. Do not use this method
-   * to get meta table regions, use methods in MetaTableLocator instead.
+   * Gets all of the regions of the specified table. Do not use this method to get meta table
+   * regions, use methods in MetaTableLocator instead.
    * @param connection connection we're using
    * @param tableName table we're looking for
    * @return Ordered list of {@link RegionInfo}.
    */
   public static List<RegionInfo> getTableRegions(Connection connection, TableName tableName)
-  throws IOException {
+      throws IOException {
     return getTableRegions(connection, tableName, false);
   }
 
   /**
-   * Gets all of the regions of the specified table. Do not use this method
-   * to get meta table regions, use methods in MetaTableLocator instead.
+   * Gets all of the regions of the specified table. Do not use this method to get meta table
+   * regions, use methods in MetaTableLocator instead.
    * @param connection connection we're using
    * @param tableName table we're looking for
-   * @param excludeOfflinedSplitParents If true, do not include offlined split
-   * parents in the return.
+   * @param excludeOfflinedSplitParents If true, do not include offlined split parents in the
+   *          return.
    * @return Ordered list of {@link RegionInfo}.
    */
   public static List<RegionInfo> getTableRegions(Connection connection, TableName tableName,
       final boolean excludeOfflinedSplitParents) throws IOException {
     List<Pair<RegionInfo, ServerName>> result =
-      getTableRegionsAndLocations(connection, tableName, excludeOfflinedSplitParents);
+        getTableRegionsAndLocations(connection, tableName, excludeOfflinedSplitParents);
     return getListOfRegionInfos(result);
   }
 
-  private static List<RegionInfo> getListOfRegionInfos(
-      final List<Pair<RegionInfo, ServerName>> pairs) {
+  private static List<RegionInfo>
+      getListOfRegionInfos(final List<Pair<RegionInfo, ServerName>> pairs) {
     if (pairs == null || pairs.isEmpty()) {
       return Collections.emptyList();
     }
@@ -511,16 +504,16 @@ public class MetaTableAccessor {
       return null;
     }
     switch (type) {
-    case REGION:
-      byte[] startRow = new byte[tableName.getName().length + 2];
-      System.arraycopy(tableName.getName(), 0, startRow, 0, tableName.getName().length);
-      startRow[startRow.length - 2] = HConstants.DELIMITER;
-      startRow[startRow.length - 1] = HConstants.DELIMITER;
-      return startRow;
-    case ALL:
-    case TABLE:
-    default:
-      return tableName.getName();
+      case REGION:
+        byte[] startRow = new byte[tableName.getName().length + 2];
+        System.arraycopy(tableName.getName(), 0, startRow, 0, tableName.getName().length);
+        startRow[startRow.length - 2] = HConstants.DELIMITER;
+        startRow[startRow.length - 1] = HConstants.DELIMITER;
+        return startRow;
+      case ALL:
+      case TABLE:
+      default:
+        return tableName.getName();
     }
   }
 
@@ -534,30 +527,28 @@ public class MetaTableAccessor {
     }
     final byte[] stopRow;
     switch (type) {
-    case REGION:
-      stopRow = new byte[tableName.getName().length + 3];
-      System.arraycopy(tableName.getName(), 0, stopRow, 0, tableName.getName().length);
-      stopRow[stopRow.length - 3] = ' ';
-      stopRow[stopRow.length - 2] = HConstants.DELIMITER;
-      stopRow[stopRow.length - 1] = HConstants.DELIMITER;
-      break;
-    case ALL:
-    case TABLE:
-    default:
-      stopRow = new byte[tableName.getName().length + 1];
-      System.arraycopy(tableName.getName(), 0, stopRow, 0, tableName.getName().length);
-      stopRow[stopRow.length - 1] = ' ';
-      break;
+      case REGION:
+        stopRow = new byte[tableName.getName().length + 3];
+        System.arraycopy(tableName.getName(), 0, stopRow, 0, tableName.getName().length);
+        stopRow[stopRow.length - 3] = ' ';
+        stopRow[stopRow.length - 2] = HConstants.DELIMITER;
+        stopRow[stopRow.length - 1] = HConstants.DELIMITER;
+        break;
+      case ALL:
+      case TABLE:
+      default:
+        stopRow = new byte[tableName.getName().length + 1];
+        System.arraycopy(tableName.getName(), 0, stopRow, 0, tableName.getName().length);
+        stopRow[stopRow.length - 1] = ' ';
+        break;
     }
     return stopRow;
   }
 
   /**
-   * This method creates a Scan object that will only scan catalog rows that
-   * belong to the specified table. It doesn't specify any columns.
-   * This is a better alternative to just using a start row and scan until
-   * it hits a new table since that requires parsing the HRI to get the table
-   * name.
+   * This method creates a Scan object that will only scan catalog rows that belong to the specified
+   * table. It doesn't specify any columns. This is a better alternative to just using a start row
+   * and scan until it hits a new table since that requires parsing the HRI to get the table name.
    * @param tableName bytes of table's name
    * @return configured Scan object
    */
@@ -595,8 +586,7 @@ public class MetaTableAccessor {
    * @return Return list of regioninfos and server.
    */
   public static List<Pair<RegionInfo, ServerName>>
-    getTableRegionsAndLocations(Connection connection, TableName tableName)
-      throws IOException {
+      getTableRegionsAndLocations(Connection connection, TableName tableName) throws IOException {
     return getTableRegionsAndLocations(connection, tableName, true);
   }
 
@@ -612,56 +602,52 @@ public class MetaTableAccessor {
       Connection connection, @Nullable final TableName tableName,
       final boolean excludeOfflinedSplitParents) throws IOException {
     if (tableName != null && tableName.equals(TableName.META_TABLE_NAME)) {
-      throw new IOException("This method can't be used to locate meta regions;"
-        + " use MetaTableLocator instead");
+      throw new IOException(
+          "This method can't be used to locate meta regions;" + " use MetaTableLocator instead");
     }
     // Make a version of CollectingVisitor that collects RegionInfo and ServerAddress
     CollectingVisitor<Pair<RegionInfo, ServerName>> visitor =
-      new CollectingVisitor<Pair<RegionInfo, ServerName>>() {
-        private RegionLocations current = null;
+        new CollectingVisitor<Pair<RegionInfo, ServerName>>() {
+          private RegionLocations current = null;
 
-        @Override
-        public boolean visit(Result r) throws IOException {
-          current = getRegionLocations(r);
-          if (current == null || current.getRegionLocation().getRegion() == null) {
-            LOG.warn("No serialized RegionInfo in " + r);
-            return true;
+          @Override
+          public boolean visit(Result r) throws IOException {
+            current = getRegionLocations(r);
+            if (current == null || current.getRegionLocation().getRegion() == null) {
+              LOG.warn("No serialized RegionInfo in " + r);
+              return true;
+            }
+            RegionInfo hri = current.getRegionLocation().getRegion();
+            if (excludeOfflinedSplitParents && hri.isSplitParent()) return true;
+            // Else call super and add this Result to the collection.
+            return super.visit(r);
           }
-          RegionInfo hri = current.getRegionLocation().getRegion();
-          if (excludeOfflinedSplitParents && hri.isSplitParent()) return true;
-          // Else call super and add this Result to the collection.
-          return super.visit(r);
-        }
 
-        @Override
-        void add(Result r) {
-          if (current == null) {
-            return;
-          }
-          for (HRegionLocation loc : current.getRegionLocations()) {
-            if (loc != null) {
-              this.results.add(new Pair<>(loc.getRegion(), loc.getServerName()));
+          @Override
+          void add(Result r) {
+            if (current == null) {
+              return;
+            }
+            for (HRegionLocation loc : current.getRegionLocations()) {
+              if (loc != null) {
+                this.results.add(new Pair<>(loc.getRegion(), loc.getServerName()));
+              }
             }
           }
-        }
-      };
-    scanMeta(connection,
-        getTableStartRowForMeta(tableName, QueryType.REGION),
-        getTableStopRowForMeta(tableName, QueryType.REGION),
-        QueryType.REGION, visitor);
+        };
+    scanMeta(connection, getTableStartRowForMeta(tableName, QueryType.REGION),
+      getTableStopRowForMeta(tableName, QueryType.REGION), QueryType.REGION, visitor);
     return visitor.getResults();
   }
 
   /**
    * @param connection connection we're using
    * @param serverName server whose regions we're interested in
-   * @return List of user regions installed on this server (does not include
-   * catalog regions).
+   * @return List of user regions installed on this server (does not include catalog regions).
    * @throws IOException
    */
-  public static NavigableMap<RegionInfo, Result>
-  getServerUserRegions(Connection connection, final ServerName serverName)
-    throws IOException {
+  public static NavigableMap<RegionInfo, Result> getServerUserRegions(Connection connection,
+      final ServerName serverName) throws IOException {
     final NavigableMap<RegionInfo, Result> hris = new TreeMap<>();
     // Fill the above hris map with entries from hbase:meta that have the passed
     // servername.
@@ -684,10 +670,9 @@ public class MetaTableAccessor {
     return hris;
   }
 
-  public static void fullScanMetaAndPrint(Connection connection)
-    throws IOException {
+  public static void fullScanMetaAndPrint(Connection connection) throws IOException {
     Visitor v = r -> {
-      if (r ==  null || r.isEmpty()) {
+      if (r == null || r.isEmpty()) {
         return true;
       }
       LOG.info("fullScanMetaAndPrint.Current Meta Row: " + r);
@@ -729,10 +714,10 @@ public class MetaTableAccessor {
   /**
    * Performs a scan of META table for given table starting from given row.
    * @param connection connection we're using
-   * @param visitor    visitor to call
-   * @param tableName  table withing we scan
-   * @param row        start scan from this row
-   * @param rowLimit   max number of rows to return
+   * @param visitor visitor to call
+   * @param tableName table withing we scan
+   * @param row start scan from this row
+   * @param rowLimit max number of rows to return
    */
   public static void scanMeta(Connection connection, final Visitor visitor,
       final TableName tableName, final byte[] row, final int rowLimit) throws IOException {
@@ -742,8 +727,8 @@ public class MetaTableAccessor {
       startRow = getTableStartRowForMeta(tableName, QueryType.REGION);
       if (row != null) {
         RegionInfo closestRi = getClosestRegionInfo(connection, tableName, row);
-        startRow =
-          RegionInfo.createRegionName(tableName, closestRi.getStartKey(), HConstants.ZEROES, false);
+        startRow = RegionInfo.createRegionName(tableName, closestRi.getStartKey(),
+          HConstants.ZEROES, false);
       }
       stopRow = getTableStopRowForMeta(tableName, QueryType.REGION);
     }
@@ -753,16 +738,14 @@ public class MetaTableAccessor {
   /**
    * Performs a scan of META table.
    * @param connection connection we're using
-   * @param startRow Where to start the scan. Pass null if want to begin scan
-   *                 at first row.
-   * @param stopRow Where to stop the scan. Pass null if want to scan all rows
-   *                from the start one
+   * @param startRow Where to start the scan. Pass null if want to begin scan at first row.
+   * @param stopRow Where to stop the scan. Pass null if want to scan all rows from the start one
    * @param type scanned part of meta
    * @param maxRows maximum rows to return
    * @param visitor Visitor invoked against each row.
    */
   static void scanMeta(Connection connection, @Nullable final byte[] startRow,
-        @Nullable final byte[] stopRow, QueryType type, int maxRows, final Visitor visitor)
+      @Nullable final byte[] stopRow, QueryType type, int maxRows, final Visitor visitor)
       throws IOException {
     scanMeta(connection, startRow, stopRow, type, null, maxRows, visitor);
   }
@@ -787,9 +770,9 @@ public class MetaTableAccessor {
     }
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Scanning META" + " starting at row=" + Bytes.toStringBinary(startRow) +
-        " stopping at row=" + Bytes.toStringBinary(stopRow) + " for max=" + rowUpperLimit +
-        " with caching=" + scan.getCaching());
+      LOG.trace("Scanning META" + " starting at row=" + Bytes.toStringBinary(startRow)
+          + " stopping at row=" + Bytes.toStringBinary(stopRow) + " for max=" + rowUpperLimit
+          + " with caching=" + scan.getCaching());
     }
 
     int currentRow = 0;
@@ -827,13 +810,13 @@ public class MetaTableAccessor {
     try (ResultScanner resultScanner = getMetaHTable(connection).getScanner(scan)) {
       Result result = resultScanner.next();
       if (result == null) {
-        throw new TableNotFoundException("Cannot find row in META " +
-            " for table: " + tableName + ", row=" + Bytes.toStringBinary(row));
+        throw new TableNotFoundException("Cannot find row in META " + " for table: " + tableName
+            + ", row=" + Bytes.toStringBinary(row));
       }
       RegionInfo regionInfo = getRegionInfo(result);
       if (regionInfo == null) {
-        throw new IOException("RegionInfo was null or empty in Meta for " +
-            tableName + ", row=" + Bytes.toStringBinary(row));
+        throw new IOException("RegionInfo was null or empty in Meta for " + tableName + ", row="
+            + Bytes.toStringBinary(row));
       }
       return regionInfo;
     }
@@ -907,10 +890,9 @@ public class MetaTableAccessor {
    * @return a byte[] for server column qualifier
    */
   public static byte[] getServerColumn(int replicaId) {
-    return replicaId == 0
-      ? HConstants.SERVER_QUALIFIER
-      : Bytes.toBytes(HConstants.SERVER_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
-      + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0 ? HConstants.SERVER_QUALIFIER
+        : Bytes.toBytes(HConstants.SERVER_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+            + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
@@ -919,10 +901,9 @@ public class MetaTableAccessor {
    * @return a byte[] for server start code column qualifier
    */
   public static byte[] getStartCodeColumn(int replicaId) {
-    return replicaId == 0
-      ? HConstants.STARTCODE_QUALIFIER
-      : Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
-      + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0 ? HConstants.STARTCODE_QUALIFIER
+        : Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+            + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
@@ -931,15 +912,14 @@ public class MetaTableAccessor {
    * @return a byte[] for seqNum column qualifier
    */
   public static byte[] getSeqNumColumn(int replicaId) {
-    return replicaId == 0
-      ? HConstants.SEQNUM_QUALIFIER
-      : Bytes.toBytes(HConstants.SEQNUM_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
-      + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0 ? HConstants.SEQNUM_QUALIFIER
+        : Bytes.toBytes(HConstants.SEQNUM_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+            + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
-   * Parses the replicaId from the server column qualifier. See top of the class javadoc
-   * for the actual meta layout
+   * Parses the replicaId from the server column qualifier. See top of the class javadoc for the
+   * actual meta layout
    * @param serverColumn the column qualifier
    * @return an int for the replicaId
    */
@@ -969,14 +949,14 @@ public class MetaTableAccessor {
     byte[] serverColumn = getServerColumn(replicaId);
     Cell cell = r.getColumnLatestCell(getCatalogFamily(), serverColumn);
     if (cell == null || cell.getValueLength() == 0) return null;
-    String hostAndPort = Bytes.toString(
-      cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+    String hostAndPort =
+        Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
     byte[] startcodeColumn = getStartCodeColumn(replicaId);
     cell = r.getColumnLatestCell(getCatalogFamily(), startcodeColumn);
     if (cell == null || cell.getValueLength() == 0) return null;
     try {
       return ServerName.valueOf(hostAndPort,
-          Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+        Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
     } catch (IllegalArgumentException e) {
       LOG.error("Ignoring invalid region for server " + hostAndPort + "; cell=" + cell, e);
       return null;
@@ -987,15 +967,14 @@ public class MetaTableAccessor {
    * Returns the {@link ServerName} from catalog table {@link Result} where the region is
    * transitioning on. It should be the same as {@link MetaTableAccessor#getServerName(Result,int)}
    * if the server is at OPEN state.
-   *
    * @param r Result to pull the transitioning server name from
-   * @return A ServerName instance or {@link MetaTableAccessor#getServerName(Result,int)}
-   * if necessary fields not found or empty.
+   * @return A ServerName instance or {@link MetaTableAccessor#getServerName(Result,int)} if
+   *         necessary fields not found or empty.
    */
   @Nullable
   public static ServerName getTargetServerName(final Result r, final int replicaId) {
-    final Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-      getServerNameColumn(replicaId));
+    final Cell cell =
+        r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getServerNameColumn(replicaId));
     if (cell == null || cell.getValueLength() == 0) {
       RegionLocations locations = MetaTableAccessor.getRegionLocations(r);
       if (locations != null) {
@@ -1006,13 +985,13 @@ public class MetaTableAccessor {
       }
       return null;
     }
-    return ServerName.parseServerName(Bytes.toString(cell.getValueArray(), cell.getValueOffset(),
-      cell.getValueLength()));
+    return ServerName.parseServerName(
+      Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
   }
 
   /**
-   * The latest seqnum that the server writing to meta observed when opening the region.
-   * E.g. the seqNum when the result of {@link #getServerName(Result, int)} was written.
+   * The latest seqnum that the server writing to meta observed when opening the region. E.g. the
+   * seqNum when the result of {@link #getServerName(Result, int)} was written.
    * @param r Result to pull the seqNum from
    * @return SeqNum, or HConstants.NO_SEQNUM if there's no value written.
    */
@@ -1023,8 +1002,7 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Returns the daughter regions by reading the corresponding columns of the catalog table
-   * Result.
+   * Returns the daughter regions by reading the corresponding columns of the catalog table Result.
    * @param data a Result object from the catalog table scan
    * @return pair of RegionInfo or PairOfSameType(null, null) if region is not a split parent
    */
@@ -1036,8 +1014,8 @@ public class MetaTableAccessor {
 
   /**
    * Returns an HRegionLocationList extracted from the result.
-   * @return an HRegionLocationList containing all locations for the region range or null if
-   *  we can't deserialize the result.
+   * @return an HRegionLocationList containing all locations for the region range or null if we
+   *         can't deserialize the result.
    */
   @Nullable
   public static RegionLocations getRegionLocations(final Result r) {
@@ -1046,7 +1024,7 @@ public class MetaTableAccessor {
     if (regionInfo == null) return null;
 
     List<HRegionLocation> locations = new ArrayList<>(1);
-    NavigableMap<byte[],NavigableMap<byte[],byte[]>> familyMap = r.getNoVersionMap();
+    NavigableMap<byte[], NavigableMap<byte[], byte[]>> familyMap = r.getNoVersionMap();
 
     locations.add(getRegionLocation(r, regionInfo, 0));
 
@@ -1080,16 +1058,15 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Returns the HRegionLocation parsed from the given meta row Result
-   * for the given regionInfo and replicaId. The regionInfo can be the default region info
-   * for the replica.
+   * Returns the HRegionLocation parsed from the given meta row Result for the given regionInfo and
+   * replicaId. The regionInfo can be the default region info for the replica.
    * @param r the meta row result
    * @param regionInfo RegionInfo for default replica
    * @param replicaId the replicaId for the HRegionLocation
    * @return HRegionLocation parsed from the given meta row Result for the given replicaId
    */
   private static HRegionLocation getRegionLocation(final Result r, final RegionInfo regionInfo,
-                                                   final int replicaId) {
+      final int replicaId) {
     ServerName serverName = getServerName(r, replicaId);
     long seqNum = getSeqNumDuringOpen(r, replicaId);
     RegionInfo replicaInfo = RegionReplicaUtil.getRegionInfoForReplica(regionInfo, replicaId);
@@ -1098,8 +1075,7 @@ public class MetaTableAccessor {
 
   /**
    * Returns RegionInfo object from the column
-   * HConstants.CATALOG_FAMILY:HConstants.REGIONINFO_QUALIFIER of the catalog
-   * table Result.
+   * HConstants.CATALOG_FAMILY:HConstants.REGIONINFO_QUALIFIER of the catalog table Result.
    * @param data a Result object from the catalog table scan
    * @return RegionInfo or null
    */
@@ -1115,11 +1091,11 @@ public class MetaTableAccessor {
    * @return An RegionInfo instance or null.
    */
   @Nullable
-  public static RegionInfo getRegionInfo(final Result r, byte [] qualifier) {
+  public static RegionInfo getRegionInfo(final Result r, byte[] qualifier) {
     Cell cell = r.getColumnLatestCell(getCatalogFamily(), qualifier);
     if (cell == null) return null;
-    return RegionInfo.parseFromOrNull(cell.getValueArray(),
-      cell.getValueOffset(), cell.getValueLength());
+    return RegionInfo.parseFromOrNull(cell.getValueArray(), cell.getValueOffset(),
+      cell.getValueLength());
   }
 
   /**
@@ -1128,8 +1104,7 @@ public class MetaTableAccessor {
    * @param tableName table to fetch state for
    */
   @Nullable
-  public static TableState getTableState(Connection conn, TableName tableName)
-      throws IOException {
+  public static TableState getTableState(Connection conn, TableName tableName) throws IOException {
     if (tableName.equals(TableName.META_TABLE_NAME)) {
       return new TableState(tableName, TableState.State.ENABLED);
     }
@@ -1144,8 +1119,7 @@ public class MetaTableAccessor {
    * @param conn connection to use
    * @return map {tableName -&gt; state}
    */
-  public static Map<TableName, TableState> getTableStates(Connection conn)
-      throws IOException {
+  public static Map<TableName, TableState> getTableStates(Connection conn) throws IOException {
     final Map<TableName, TableState> states = new LinkedHashMap<>();
     Visitor collector = r -> {
       TableState state = getTableState(r);
@@ -1159,19 +1133,17 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Updates state in META
-   * Do not use. For internal use only.
+   * Updates state in META Do not use. For internal use only.
    * @param conn connection to use
    * @param tableName table to look for
    */
-  public static void updateTableState(Connection conn, TableName tableName,
-      TableState.State actual) throws IOException {
+  public static void updateTableState(Connection conn, TableName tableName, TableState.State actual)
+      throws IOException {
     updateTableState(conn, new TableState(tableName, actual));
   }
 
   /**
-   * Decode table state from META Result.
-   * Should contain cell from HConstants.TABLE_FAMILY
+   * Decode table state from META Result. Should contain cell from HConstants.TABLE_FAMILY
    * @return null if not found
    */
   @Nullable
@@ -1196,8 +1168,7 @@ public class MetaTableAccessor {
     /**
      * Visit the catalog table row.
      * @param r A row from catalog table
-     * @return True if we are to proceed scanning the table, else false if
-     * we are to stop now.
+     * @return True if we are to proceed scanning the table, else false if we are to stop now.
      */
     boolean visit(final Result r) throws IOException;
   }
@@ -1213,6 +1184,7 @@ public class MetaTableAccessor {
    */
   static abstract class CollectingVisitor<T> implements Visitor {
     final List<T> results = new ArrayList<>();
+
     @Override
     public boolean visit(Result r) throws IOException {
       if (r != null && !r.isEmpty()) {
@@ -1224,8 +1196,7 @@ public class MetaTableAccessor {
     abstract void add(Result r);
 
     /**
-     * @return Collected results; wait till visits complete to collect all
-     * possible results
+     * @return Collected results; wait till visits complete to collect all possible results
      */
     List<T> getResults() {
       return this.results;
@@ -1260,7 +1231,7 @@ public class MetaTableAccessor {
         return true;
       }
 
-      //skip over offline and split regions
+      // skip over offline and split regions
       if (!(info.isOffline() || info.isSplit())) {
         return visitInternal(rowResult);
       }
@@ -1269,10 +1240,10 @@ public class MetaTableAccessor {
   }
 
   /**
-   * A Visitor for a table. Provides a consistent view of the table's
-   * hbase:meta entries during concurrent splits (see HBASE-5986 for details). This class
-   * does not guarantee ordered traversal of meta entries, and can block until the
-   * hbase:meta entries for daughters are available during splits.
+   * A Visitor for a table. Provides a consistent view of the table's hbase:meta entries during
+   * concurrent splits (see HBASE-5986 for details). This class does not guarantee ordered traversal
+   * of meta entries, and can block until the hbase:meta entries for daughters are available during
+   * splits.
    */
   public static abstract class TableVisitorBase extends DefaultVisitorBase {
     private TableName tableName;
@@ -1323,24 +1294,16 @@ public class MetaTableAccessor {
   private static Put addDaughtersToPut(Put put, RegionInfo splitA, RegionInfo splitB)
       throws IOException {
     if (splitA != null) {
-      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-                .setRow(put.getRow())
-                .setFamily(HConstants.CATALOG_FAMILY)
-                .setQualifier(HConstants.SPLITA_QUALIFIER)
-                .setTimestamp(put.getTimestamp())
-                .setType(Type.Put)
-                .setValue(RegionInfo.toByteArray(splitA))
-                .build());
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
+          .setFamily(HConstants.CATALOG_FAMILY).setQualifier(HConstants.SPLITA_QUALIFIER)
+          .setTimestamp(put.getTimestamp()).setType(Type.Put)
+          .setValue(RegionInfo.toByteArray(splitA)).build());
     }
     if (splitB != null) {
-      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-                .setRow(put.getRow())
-                .setFamily(HConstants.CATALOG_FAMILY)
-                .setQualifier(HConstants.SPLITB_QUALIFIER)
-                .setTimestamp(put.getTimestamp())
-                .setType(Type.Put)
-                .setValue(RegionInfo.toByteArray(splitB))
-                .build());
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
+          .setFamily(HConstants.CATALOG_FAMILY).setQualifier(HConstants.SPLITB_QUALIFIER)
+          .setTimestamp(put.getTimestamp()).setType(Type.Put)
+          .setValue(RegionInfo.toByteArray(splitB)).build());
     }
     return put;
   }
@@ -1401,7 +1364,7 @@ public class MetaTableAccessor {
   /**
    * Delete the passed <code>deletes</code> from the <code>hbase:meta</code> table.
    * @param connection connection we're using
-   * @param deletes Deletes to add to hbase:meta  This list should support #remove.
+   * @param deletes Deletes to add to hbase:meta This list should support #remove.
    */
   private static void deleteFromMetaTable(final Connection connection, final List<Delete> deletes)
       throws IOException {
@@ -1412,14 +1375,10 @@ public class MetaTableAccessor {
   }
 
   private static Put addRegionStateToPut(Put put, RegionState.State state) throws IOException {
-    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-        .setRow(put.getRow())
-        .setFamily(HConstants.CATALOG_FAMILY)
-        .setQualifier(getRegionStateColumn())
-        .setTimestamp(put.getTimestamp())
-        .setType(Cell.Type.Put)
-        .setValue(Bytes.toBytes(state.name()))
-        .build());
+    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
+        .setFamily(HConstants.CATALOG_FAMILY).setQualifier(getRegionStateColumn())
+        .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put)
+        .setValue(Bytes.toBytes(state.name())).build());
     return put;
   }
 
@@ -1430,15 +1389,15 @@ public class MetaTableAccessor {
       RegionState.State state) throws IOException {
     Put put = new Put(RegionReplicaUtil.getRegionInfoForDefaultReplica(ri).getRegionName());
     MetaTableAccessor.putsToMetaTable(connection,
-        Collections.singletonList(addRegionStateToPut(put, state)));
+      Collections.singletonList(addRegionStateToPut(put, state)));
   }
 
   /**
    * Adds daughter region infos to hbase:meta row for the specified region. Note that this does not
    * add its daughter's as different rows, but adds information about the daughters in the same row
    * as the parent. Use
-   * {@link #splitRegion(Connection, RegionInfo, long, RegionInfo, RegionInfo, ServerName, int)}
-   * if you want to do that.
+   * {@link #splitRegion(Connection, RegionInfo, long, RegionInfo, RegionInfo, ServerName, int)} if
+   * you want to do that.
    * @param connection connection we're using
    * @param regionInfo RegionInfo of parent region
    * @param splitA first split daughter of the parent regionInfo
@@ -1458,10 +1417,10 @@ public class MetaTableAccessor {
 
   /**
    * Adds a (single) hbase:meta row for the specified new region and its daughters. Note that this
-   * does not add its daughter's as different rows, but adds information about the daughters
-   * in the same row as the parent. Use
-   * {@link #splitRegion(Connection, RegionInfo, long, RegionInfo, RegionInfo, ServerName, int)}
-   * if you want to do that.
+   * does not add its daughter's as different rows, but adds information about the daughters in the
+   * same row as the parent. Use
+   * {@link #splitRegion(Connection, RegionInfo, long, RegionInfo, RegionInfo, ServerName, int)} if
+   * you want to do that.
    * @param connection connection we're using
    * @param regionInfo region information
    * @throws IOException if problem connecting or updating meta
@@ -1472,8 +1431,8 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Adds a hbase:meta row for each of the specified new regions. Initial state for new regions
-   * is CLOSED.
+   * Adds a hbase:meta row for each of the specified new regions. Initial state for new regions is
+   * CLOSED.
    * @param connection connection we're using
    * @param regionInfos region information list
    * @throws IOException if problem connecting or updating meta
@@ -1485,8 +1444,8 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Adds a hbase:meta row for each of the specified new regions. Initial state for new regions
-   * is CLOSED.
+   * Adds a hbase:meta row for each of the specified new regions. Initial state for new regions is
+   * CLOSED.
    * @param connection connection we're using
    * @param regionInfos region information list
    * @param ts desired timestamp
@@ -1517,41 +1476,36 @@ public class MetaTableAccessor {
     int max = mergeRegions.size();
     if (max > limit) {
       // Should never happen!!!!! But just in case.
-      throw new RuntimeException("Can't merge " + max + " regions in one go; " + limit +
-          " is upper-limit.");
+      throw new RuntimeException(
+          "Can't merge " + max + " regions in one go; " + limit + " is upper-limit.");
     }
     int counter = 0;
-    for (RegionInfo ri: mergeRegions) {
+    for (RegionInfo ri : mergeRegions) {
       String qualifier = String.format(HConstants.MERGE_QUALIFIER_PREFIX_STR + "%04d", counter++);
-      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).
-          setRow(put.getRow()).
-          setFamily(HConstants.CATALOG_FAMILY).
-          setQualifier(Bytes.toBytes(qualifier)).
-          setTimestamp(put.getTimestamp()).
-          setType(Type.Put).
-          setValue(RegionInfo.toByteArray(ri)).
-          build());
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
+          .setFamily(HConstants.CATALOG_FAMILY).setQualifier(Bytes.toBytes(qualifier))
+          .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(RegionInfo.toByteArray(ri))
+          .build());
     }
     return put;
   }
 
   /**
-   * Merge regions into one in an atomic operation. Deletes the merging regions in
-   * hbase:meta and adds the merged region.
+   * Merge regions into one in an atomic operation. Deletes the merging regions in hbase:meta and
+   * adds the merged region.
    * @param connection connection we're using
    * @param mergedRegion the merged region
-   * @param parentSeqNum Parent regions to merge and their next open sequence id used
-   *   by serial replication. Set to -1 if not needed by this table.
+   * @param parentSeqNum Parent regions to merge and their next open sequence id used by serial
+   *          replication. Set to -1 if not needed by this table.
    * @param sn the location of the region
    */
   public static void mergeRegions(Connection connection, RegionInfo mergedRegion,
-        Map<RegionInfo, Long> parentSeqNum, ServerName sn, int regionReplication)
-      throws IOException {
+      Map<RegionInfo, Long> parentSeqNum, ServerName sn, int regionReplication) throws IOException {
     try (Table meta = getMetaHTable(connection)) {
       long time = HConstants.LATEST_TIMESTAMP;
       List<Mutation> mutations = new ArrayList<>();
       List<RegionInfo> replicationParents = new ArrayList<>();
-      for (Map.Entry<RegionInfo, Long> e: parentSeqNum.entrySet()) {
+      for (Map.Entry<RegionInfo, Long> e : parentSeqNum.entrySet()) {
         RegionInfo ri = e.getKey();
         long seqNum = e.getValue();
         // Deletes for merging regions
@@ -1611,9 +1565,8 @@ public class MetaTableAccessor {
     try (Table meta = getMetaHTable(connection)) {
       long time = EnvironmentEdgeManager.currentTime();
       // Put for parent
-      Put putParent = makePutFromRegionInfo(RegionInfoBuilder.newBuilder(parent)
-                        .setOffline(true)
-                        .setSplit(true).build(), time);
+      Put putParent = makePutFromRegionInfo(
+        RegionInfoBuilder.newBuilder(parent).setOffline(true).setSplit(true).build(), time);
       addDaughtersToPut(putParent, splitA, splitB);
 
       // Puts for daughters
@@ -1673,8 +1626,7 @@ public class MetaTableAccessor {
    * @param connection to use for deletion
    * @param table to delete state for
    */
-  public static void deleteTableState(Connection connection, TableName table)
-      throws IOException {
+  public static void deleteTableState(Connection connection, TableName table) throws IOException {
     long time = EnvironmentEdgeManager.currentTime();
     Delete delete = new Delete(table.getName());
     delete.addColumns(getTableFamily(), getTableStateColumn(), time);
@@ -1682,14 +1634,14 @@ public class MetaTableAccessor {
     LOG.info("Deleted table " + table + " state from META");
   }
 
-  private static void multiMutate(Table table, byte[] row,
-      Mutation... mutations) throws IOException {
+  private static void multiMutate(Table table, byte[] row, Mutation... mutations)
+      throws IOException {
     multiMutate(table, row, Arrays.asList(mutations));
   }
 
   /**
-   * Performs an atomic multi-mutate operation against the given table. Used by the likes of
-   * merge and split as these want to make atomic mutations across multiple rows.
+   * Performs an atomic multi-mutate operation against the given table. Used by the likes of merge
+   * and split as these want to make atomic mutations across multiple rows.
    * @throws IOException even if we encounter a RuntimeException, we'll still wrap it in an IOE.
    */
   static void multiMutate(final Table table, byte[] row, final List<Mutation> mutations)
@@ -1706,12 +1658,12 @@ public class MetaTableAccessor {
             ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.DELETE, mutation));
         } else {
           throw new DoNotRetryIOException(
-            "multi in MetaEditor doesn't support " + mutation.getClass().getName());
+              "multi in MetaEditor doesn't support " + mutation.getClass().getName());
         }
       }
       ServerRpcController controller = new ServerRpcController();
       CoprocessorRpcUtils.BlockingRpcCallback<MutateRowsResponse> rpcCallback =
-        new CoprocessorRpcUtils.BlockingRpcCallback<>();
+          new CoprocessorRpcUtils.BlockingRpcCallback<>();
       instance.mutateRows(controller, builder.build(), rpcCallback);
       MutateRowsResponse resp = rpcCallback.get();
       if (controller.failedOnException()) {
@@ -1801,8 +1753,7 @@ public class MetaTableAccessor {
    * @param regionsInfo list of regions to be deleted from META
    */
   private static void deleteRegionInfos(Connection connection, List<RegionInfo> regionsInfo,
-        long ts)
-      throws IOException {
+      long ts) throws IOException {
     List<Delete> deletes = new ArrayList<>(regionsInfo.size());
     for (RegionInfo hri : regionsInfo) {
       Delete e = new Delete(hri.getRegionName());
@@ -1863,25 +1814,21 @@ public class MetaTableAccessor {
     // the previous GCMultipleMergedRegionsProcedure is still going on, in this case, the second
     // GCMultipleMergedRegionsProcedure could delete the merged region by accident!
     if (qualifiers.isEmpty()) {
-      LOG.info("No merged qualifiers for region " + mergeRegion.getRegionNameAsString() +
-        " in meta table, they are cleaned up already, Skip.");
+      LOG.info("No merged qualifiers for region " + mergeRegion.getRegionNameAsString()
+          + " in meta table, they are cleaned up already, Skip.");
       return;
     }
 
     deleteFromMetaTable(connection, delete);
-    LOG.info("Deleted merge references in " + mergeRegion.getRegionNameAsString() +
-        ", deleted qualifiers " + qualifiers.stream().map(Bytes::toStringBinary).
-        collect(Collectors.joining(", ")));
+    LOG.info(
+      "Deleted merge references in " + mergeRegion.getRegionNameAsString() + ", deleted qualifiers "
+          + qualifiers.stream().map(Bytes::toStringBinary).collect(Collectors.joining(", ")));
   }
 
-  public static Put addRegionInfo(final Put p, final RegionInfo hri)
-    throws IOException {
-    p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-        .setRow(p.getRow())
-        .setFamily(getCatalogFamily())
-        .setQualifier(HConstants.REGIONINFO_QUALIFIER)
-        .setTimestamp(p.getTimestamp())
-        .setType(Type.Put)
+  public static Put addRegionInfo(final Put p, final RegionInfo hri) throws IOException {
+    p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(p.getRow())
+        .setFamily(getCatalogFamily()).setQualifier(HConstants.REGIONINFO_QUALIFIER)
+        .setTimestamp(p.getTimestamp()).setType(Type.Put)
         // Serialize the Default Replica HRI otherwise scan of hbase:meta
         // shows an info:regioninfo value with encoded name and region
         // name that differs from that of the hbase;meta row.
@@ -1893,30 +1840,16 @@ public class MetaTableAccessor {
   public static Put addLocation(Put p, ServerName sn, long openSeqNum, int replicaId)
       throws IOException {
     CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
-    return p.add(builder.clear()
-              .setRow(p.getRow())
-              .setFamily(getCatalogFamily())
-              .setQualifier(getServerColumn(replicaId))
-              .setTimestamp(p.getTimestamp())
-              .setType(Cell.Type.Put)
-              .setValue(Bytes.toBytes(sn.getAddress().toString()))
-              .build())
-            .add(builder.clear()
-              .setRow(p.getRow())
-              .setFamily(getCatalogFamily())
-              .setQualifier(getStartCodeColumn(replicaId))
-              .setTimestamp(p.getTimestamp())
-              .setType(Cell.Type.Put)
-              .setValue(Bytes.toBytes(sn.getStartcode()))
-              .build())
-            .add(builder.clear()
-              .setRow(p.getRow())
-              .setFamily(getCatalogFamily())
-              .setQualifier(getSeqNumColumn(replicaId))
-              .setTimestamp(p.getTimestamp())
-              .setType(Type.Put)
-              .setValue(Bytes.toBytes(openSeqNum))
-              .build());
+    return p
+        .add(builder.clear().setRow(p.getRow()).setFamily(getCatalogFamily())
+            .setQualifier(getServerColumn(replicaId)).setTimestamp(p.getTimestamp())
+            .setType(Cell.Type.Put).setValue(Bytes.toBytes(sn.getAddress().toString())).build())
+        .add(builder.clear().setRow(p.getRow()).setFamily(getCatalogFamily())
+            .setQualifier(getStartCodeColumn(replicaId)).setTimestamp(p.getTimestamp())
+            .setType(Cell.Type.Put).setValue(Bytes.toBytes(sn.getStartcode())).build())
+        .add(builder.clear().setRow(p.getRow()).setFamily(getCatalogFamily())
+            .setQualifier(getSeqNumColumn(replicaId)).setTimestamp(p.getTimestamp())
+            .setType(Type.Put).setValue(Bytes.toBytes(openSeqNum)).build());
   }
 
   private static void writeRegionName(ByteArrayOutputStream out, byte[] regionName) {
@@ -1964,8 +1897,8 @@ public class MetaTableAccessor {
   private static void addReplicationParent(Put put, List<RegionInfo> parents) throws IOException {
     byte[] value = getParentsBytes(parents);
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
-      .setFamily(HConstants.REPLICATION_BARRIER_FAMILY).setQualifier(REPLICATION_PARENT_QUALIFIER)
-      .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(value).build());
+        .setFamily(HConstants.REPLICATION_BARRIER_FAMILY).setQualifier(REPLICATION_PARENT_QUALIFIER)
+        .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(value).build());
   }
 
   public static Put makePutForReplicationBarrier(RegionInfo regionInfo, long openSeqNum, long ts)
@@ -1979,39 +1912,24 @@ public class MetaTableAccessor {
    * See class comment on SerialReplicationChecker
    */
   public static void addReplicationBarrier(Put put, long openSeqNum) throws IOException {
-    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-      .setRow(put.getRow())
-      .setFamily(HConstants.REPLICATION_BARRIER_FAMILY)
-      .setQualifier(HConstants.SEQNUM_QUALIFIER)
-      .setTimestamp(put.getTimestamp())
-      .setType(Type.Put)
-      .setValue(Bytes.toBytes(openSeqNum))
-      .build());
+    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
+        .setFamily(HConstants.REPLICATION_BARRIER_FAMILY).setQualifier(HConstants.SEQNUM_QUALIFIER)
+        .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(Bytes.toBytes(openSeqNum))
+        .build());
   }
 
   public static Put addEmptyLocation(Put p, int replicaId) throws IOException {
     CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
-    return p.add(builder.clear()
-                .setRow(p.getRow())
-                .setFamily(getCatalogFamily())
-                .setQualifier(getServerColumn(replicaId))
-                .setTimestamp(p.getTimestamp())
-                .setType(Type.Put)
-                .build())
-            .add(builder.clear()
-                .setRow(p.getRow())
-                .setFamily(getCatalogFamily())
-                .setQualifier(getStartCodeColumn(replicaId))
-                .setTimestamp(p.getTimestamp())
-                .setType(Cell.Type.Put)
-                .build())
-            .add(builder.clear()
-                .setRow(p.getRow())
-                .setFamily(getCatalogFamily())
-                .setQualifier(getSeqNumColumn(replicaId))
-                .setTimestamp(p.getTimestamp())
-                .setType(Cell.Type.Put)
-                .build());
+    return p
+        .add(builder.clear().setRow(p.getRow()).setFamily(getCatalogFamily())
+            .setQualifier(getServerColumn(replicaId)).setTimestamp(p.getTimestamp())
+            .setType(Type.Put).build())
+        .add(builder.clear().setRow(p.getRow()).setFamily(getCatalogFamily())
+            .setQualifier(getStartCodeColumn(replicaId)).setTimestamp(p.getTimestamp())
+            .setType(Cell.Type.Put).build())
+        .add(builder.clear().setRow(p.getRow()).setFamily(getCatalogFamily())
+            .setQualifier(getSeqNumColumn(replicaId)).setTimestamp(p.getTimestamp())
+            .setType(Cell.Type.Put).build());
   }
 
   public static final class ReplicationBarrierResult {
@@ -2039,10 +1957,10 @@ public class MetaTableAccessor {
 
     @Override
     public String toString() {
-      return "ReplicationBarrierResult [barriers=" + Arrays.toString(barriers) + ", state=" +
-        state + ", parentRegionNames=" +
-        parentRegionNames.stream().map(Bytes::toStringBinary).collect(Collectors.joining(", ")) +
-        "]";
+      return "ReplicationBarrierResult [barriers=" + Arrays.toString(barriers) + ", state=" + state
+          + ", parentRegionNames="
+          + parentRegionNames.stream().map(Bytes::toStringBinary).collect(Collectors.joining(", "))
+          + "]";
     }
   }
 
@@ -2052,18 +1970,19 @@ public class MetaTableAccessor {
 
   public static long[] getReplicationBarriers(Result result) {
     return result.getColumnCells(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER)
-      .stream().mapToLong(MetaTableAccessor::getReplicationBarrier).sorted().distinct().toArray();
+        .stream().mapToLong(MetaTableAccessor::getReplicationBarrier).sorted().distinct().toArray();
   }
 
   private static ReplicationBarrierResult getReplicationBarrierResult(Result result) {
     long[] barriers = getReplicationBarriers(result);
     byte[] stateBytes = result.getValue(getCatalogFamily(), getRegionStateColumn());
     RegionState.State state =
-      stateBytes != null ? RegionState.State.valueOf(Bytes.toString(stateBytes)) : null;
+        stateBytes != null ? RegionState.State.valueOf(Bytes.toString(stateBytes)) : null;
     byte[] parentRegionsBytes =
-      result.getValue(HConstants.REPLICATION_BARRIER_FAMILY, REPLICATION_PARENT_QUALIFIER);
+        result.getValue(HConstants.REPLICATION_BARRIER_FAMILY, REPLICATION_PARENT_QUALIFIER);
     List<byte[]> parentRegionNames =
-      parentRegionsBytes != null ? parseParentsBytes(parentRegionsBytes) : Collections.emptyList();
+        parentRegionsBytes != null ? parseParentsBytes(parentRegionsBytes)
+            : Collections.emptyList();
     return new ReplicationBarrierResult(barriers, state, parentRegionNames);
   }
 
@@ -2071,11 +1990,11 @@ public class MetaTableAccessor {
       TableName tableName, byte[] row, byte[] encodedRegionName) throws IOException {
     byte[] metaStartKey = RegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
     byte[] metaStopKey =
-      RegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW, "", false);
+        RegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW, "", false);
     Scan scan = new Scan().withStartRow(metaStartKey).withStopRow(metaStopKey)
-      .addColumn(getCatalogFamily(), getRegionStateColumn())
-      .addFamily(HConstants.REPLICATION_BARRIER_FAMILY).readAllVersions().setReversed(true)
-      .setCaching(10);
+        .addColumn(getCatalogFamily(), getRegionStateColumn())
+        .addFamily(HConstants.REPLICATION_BARRIER_FAMILY).readAllVersions().setReversed(true)
+        .setCaching(10);
     try (Table table = getMetaHTable(conn); ResultScanner scanner = table.getScanner(scan)) {
       for (Result result;;) {
         result = scanner.next();
@@ -2099,8 +2018,8 @@ public class MetaTableAccessor {
       throws IOException {
     try (Table table = getMetaHTable(conn)) {
       Result result = table.get(new Get(regionName)
-        .addColumn(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER)
-        .readAllVersions());
+          .addColumn(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER)
+          .readAllVersions());
       return getReplicationBarriers(result);
     }
   }
@@ -2111,7 +2030,7 @@ public class MetaTableAccessor {
     scanMeta(conn, getTableStartRowForMeta(tableName, QueryType.REPLICATION),
       getTableStopRowForMeta(tableName, QueryType.REPLICATION), QueryType.REPLICATION, r -> {
         byte[] value =
-          r.getValue(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER);
+            r.getValue(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER);
         if (value == null) {
           return true;
         }
@@ -2151,13 +2070,9 @@ public class MetaTableAccessor {
   }
 
   private static Put addSequenceNum(Put p, long openSeqNum, int replicaId) throws IOException {
-    return p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-              .setRow(p.getRow())
-              .setFamily(HConstants.CATALOG_FAMILY)
-              .setQualifier(getSeqNumColumn(replicaId))
-              .setTimestamp(p.getTimestamp())
-              .setType(Type.Put)
-              .setValue(Bytes.toBytes(openSeqNum))
-              .build());
+    return p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(p.getRow())
+        .setFamily(HConstants.CATALOG_FAMILY).setQualifier(getSeqNumColumn(replicaId))
+        .setTimestamp(p.getTimestamp()).setType(Type.Put).setValue(Bytes.toBytes(openSeqNum))
+        .build());
   }
 }

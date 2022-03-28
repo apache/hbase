@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -133,15 +132,13 @@ public abstract class AbstractTestWALReplay {
   @Rule
   public final TestName currentTest = new TestName();
 
-
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // The below config supported by 0.20-append and CDH3b2
     conf.setInt("dfs.client.block.recovery.retries", 2);
     TEST_UTIL.startMiniCluster(3);
-    Path hbaseRootDir =
-      TEST_UTIL.getDFSCluster().getFileSystem().makeQualified(new Path("/hbase"));
+    Path hbaseRootDir = TEST_UTIL.getDFSCluster().getFileSystem().makeQualified(new Path("/hbase"));
     LOG.info("hbase.rootdir=" + hbaseRootDir);
     CommonFSUtils.setRootDir(conf, hbaseRootDir);
   }
@@ -157,9 +154,8 @@ public abstract class AbstractTestWALReplay {
     this.fs = TEST_UTIL.getDFSCluster().getFileSystem();
     this.hbaseRootDir = CommonFSUtils.getRootDir(this.conf);
     this.oldLogDir = new Path(this.hbaseRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    String serverName =
-      ServerName.valueOf(currentTest.getMethodName() + "-manual", 16010, ee.currentTime())
-        .toString();
+    String serverName = ServerName
+        .valueOf(currentTest.getMethodName() + "-manual", 16010, ee.currentTime()).toString();
     this.logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
     this.logDir = new Path(this.hbaseRootDir, logName);
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseRootDir)) {
@@ -186,13 +182,11 @@ public abstract class AbstractTestWALReplay {
   }
 
   /**
-   *
    * @throws Exception
    */
   @Test
   public void testReplayEditsAfterRegionMovedWithMultiCF() throws Exception {
-    final TableName tableName =
-        TableName.valueOf("testReplayEditsAfterRegionMovedWithMultiCF");
+    final TableName tableName = TableName.valueOf("testReplayEditsAfterRegionMovedWithMultiCF");
     byte[] family1 = Bytes.toBytes("cf1");
     byte[] family2 = Bytes.toBytes("cf2");
     byte[] qualifier = Bytes.toBytes("q");
@@ -219,7 +213,7 @@ public abstract class AbstractTestWALReplay {
     Region destRegion = regions.get(0);
     int originServerNum = hbaseCluster.getServerWith(destRegion.getRegionInfo().getRegionName());
     assertTrue("Please start more than 1 regionserver",
-        hbaseCluster.getRegionServerThreads().size() > 1);
+      hbaseCluster.getRegionServerThreads().size() > 1);
     int destServerNum = 0;
     while (destServerNum == originServerNum) {
       destServerNum++;
@@ -259,7 +253,7 @@ public abstract class AbstractTestWALReplay {
     Result result = htable.get(new Get(Bytes.toBytes("r1")));
     if (result != null) {
       assertTrue("Row is deleted, but we get" + result.toString(),
-          (result == null) || result.isEmpty());
+        (result == null) || result.isEmpty());
     }
     resultScanner.close();
   }
@@ -273,8 +267,7 @@ public abstract class AbstractTestWALReplay {
   public void test2727() throws Exception {
     // Test being able to have > 1 set of edits in the recovered.edits directory.
     // Ensure edits are replayed properly.
-    final TableName tableName =
-        TableName.valueOf("test2727");
+    final TableName tableName = TableName.valueOf("test2727");
 
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
@@ -284,28 +277,28 @@ public abstract class AbstractTestWALReplay {
     HTableDescriptor htd = createBasic3FamilyHTD(tableName);
     Region region2 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
     HBaseTestingUtility.closeRegionAndWAL(region2);
-    final byte [] rowName = tableName.getName();
+    final byte[] rowName = tableName.getName();
 
     WAL wal1 = createWAL(this.conf, hbaseRootDir, logName);
     // Add 1k to each family.
     final int countPerFamily = 1000;
 
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for(byte[] fam : htd.getFamiliesKeys()) {
+    for (byte[] fam : htd.getFamiliesKeys()) {
       scopes.put(fam, 0);
     }
-    for (HColumnDescriptor hcd: htd.getFamilies()) {
-      addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily, ee,
-          wal1, htd, mvcc, scopes);
+    for (HColumnDescriptor hcd : htd.getFamilies()) {
+      addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily, ee, wal1, htd, mvcc,
+        scopes);
     }
     wal1.shutdown();
     runWALSplit(this.conf);
 
     WAL wal2 = createWAL(this.conf, hbaseRootDir, logName);
     // Add 1k to each family.
-    for (HColumnDescriptor hcd: htd.getFamilies()) {
-      addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily,
-          ee, wal2, htd, mvcc, scopes);
+    for (HColumnDescriptor hcd : htd.getFamilies()) {
+      addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily, ee, wal2, htd, mvcc,
+        scopes);
     }
     wal2.shutdown();
     runWALSplit(this.conf);
@@ -318,8 +311,8 @@ public abstract class AbstractTestWALReplay {
       // When opened, this region would apply 6k edits, and increment the sequenceId by 1
       assertTrue(seqid > mvcc.getWritePoint());
       assertEquals(seqid - 1, mvcc.getWritePoint());
-      LOG.debug("region.getOpenSeqNum(): " + region.getOpenSeqNum() + ", wal3.id: "
-          + mvcc.getReadPoint());
+      LOG.debug(
+        "region.getOpenSeqNum(): " + region.getOpenSeqNum() + ", wal3.id: " + mvcc.getReadPoint());
 
       // TODO: Scan all.
       region.close();
@@ -329,8 +322,7 @@ public abstract class AbstractTestWALReplay {
   }
 
   /**
-   * Test case of HRegion that is only made out of bulk loaded files.  Assert
-   * that we don't 'crash'.
+   * Test case of HRegion that is only made out of bulk loaded files. Assert that we don't 'crash'.
    * @throws IOException
    * @throws IllegalAccessException
    * @throws NoSuchFieldException
@@ -338,11 +330,9 @@ public abstract class AbstractTestWALReplay {
    * @throws SecurityException
    */
   @Test
-  public void testRegionMadeOfBulkLoadedFilesOnly()
-  throws IOException, SecurityException, IllegalArgumentException,
-      NoSuchFieldException, IllegalAccessException, InterruptedException {
-    final TableName tableName =
-        TableName.valueOf("testRegionMadeOfBulkLoadedFilesOnly");
+  public void testRegionMadeOfBulkLoadedFilesOnly() throws IOException, SecurityException,
+      IllegalArgumentException, NoSuchFieldException, IllegalAccessException, InterruptedException {
+    final TableName tableName = TableName.valueOf("testRegionMadeOfBulkLoadedFilesOnly");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = new Path(this.hbaseRootDir, tableName.getNameAsString());
     deleteDir(basedir);
@@ -352,10 +342,10 @@ public abstract class AbstractTestWALReplay {
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
     HRegion region = HRegion.openHRegion(hri, htd, wal, this.conf);
 
-    byte [] family = htd.getFamilies().iterator().next().getName();
-    Path f =  new Path(basedir, "hfile");
+    byte[] family = htd.getFamilies().iterator().next().getName();
+    Path f = new Path(basedir, "hfile");
     HFileTestUtil.createHFile(this.conf, fs, f, family, family, Bytes.toBytes(""),
-        Bytes.toBytes("z"), 10);
+      Bytes.toBytes("z"), 10);
     List<Pair<byte[], String>> hfs = new ArrayList<>(1);
     hfs.add(Pair.newPair(family, f.toString()));
     region.bulkLoadHFiles(hfs, true, null);
@@ -370,21 +360,20 @@ public abstract class AbstractTestWALReplay {
 
     // Now 'crash' the region by stealing its wal
     final Configuration newConf = HBaseConfiguration.create(this.conf);
-    User user = HBaseTestingUtility.getDifferentUser(newConf,
-        tableName.getNameAsString());
+    User user = HBaseTestingUtility.getDifferentUser(newConf, tableName.getNameAsString());
     user.runAs(new PrivilegedExceptionAction() {
       @Override
       public Object run() throws Exception {
         runWALSplit(newConf);
         WAL wal2 = createWAL(newConf, hbaseRootDir, logName);
 
-        HRegion region2 = HRegion.openHRegion(newConf, FileSystem.get(newConf),
-          hbaseRootDir, hri, htd, wal2);
+        HRegion region2 =
+            HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir, hri, htd, wal2);
         long seqid2 = region2.getOpenSeqNum();
         assertTrue(seqid2 > -1);
         assertEquals(rowsInsertedCount, getScannedCount(region2.getScanner(new Scan())));
 
-        // I can't close wal1.  Its been appropriated when we split.
+        // I can't close wal1. Its been appropriated when we split.
         region2.close();
         wal2.close();
         return null;
@@ -394,9 +383,8 @@ public abstract class AbstractTestWALReplay {
 
   /**
    * HRegion test case that is made of a major compacted HFile (created with three bulk loaded
-   * files) and an edit in the memstore.
-   * This is for HBASE-10958 "[dataloss] Bulk loading with seqids can prevent some log entries
-   * from being replayed"
+   * files) and an edit in the memstore. This is for HBASE-10958 "[dataloss] Bulk loading with
+   * seqids can prevent some log entries from being replayed"
    * @throws IOException
    * @throws IllegalAccessException
    * @throws NoSuchFieldException
@@ -404,11 +392,9 @@ public abstract class AbstractTestWALReplay {
    * @throws SecurityException
    */
   @Test
-  public void testCompactedBulkLoadedFiles()
-      throws IOException, SecurityException, IllegalArgumentException,
-      NoSuchFieldException, IllegalAccessException, InterruptedException {
-    final TableName tableName =
-        TableName.valueOf("testCompactedBulkLoadedFiles");
+  public void testCompactedBulkLoadedFiles() throws IOException, SecurityException,
+      IllegalArgumentException, NoSuchFieldException, IllegalAccessException, InterruptedException {
+    final TableName tableName = TableName.valueOf("testCompactedBulkLoadedFiles");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = new Path(this.hbaseRootDir, tableName.getNameAsString());
     deleteDir(basedir);
@@ -419,16 +405,16 @@ public abstract class AbstractTestWALReplay {
     HRegion region = HRegion.openHRegion(hri, htd, wal, this.conf);
 
     // Add an edit so something in the WAL
-    byte [] row = tableName.getName();
-    byte [] family = htd.getFamilies().iterator().next().getName();
+    byte[] row = tableName.getName();
+    byte[] family = htd.getFamilies().iterator().next().getName();
     region.put((new Put(row)).addColumn(family, family, family));
     wal.sync();
 
-    List <Pair<byte[],String>>  hfs= new ArrayList<>(1);
+    List<Pair<byte[], String>> hfs = new ArrayList<>(1);
     for (int i = 0; i < 3; i++) {
-      Path f = new Path(basedir, "hfile"+i);
+      Path f = new Path(basedir, "hfile" + i);
       HFileTestUtil.createHFile(this.conf, fs, f, family, family, Bytes.toBytes(i + "00"),
-          Bytes.toBytes(i + "50"), 10);
+        Bytes.toBytes(i + "50"), 10);
       hfs.add(Pair.newPair(family, f.toString()));
     }
     region.bulkLoadHFiles(hfs, true, null);
@@ -441,21 +427,20 @@ public abstract class AbstractTestWALReplay {
 
     // Now 'crash' the region by stealing its wal
     final Configuration newConf = HBaseConfiguration.create(this.conf);
-    User user = HBaseTestingUtility.getDifferentUser(newConf,
-        tableName.getNameAsString());
+    User user = HBaseTestingUtility.getDifferentUser(newConf, tableName.getNameAsString());
     user.runAs(new PrivilegedExceptionAction() {
       @Override
       public Object run() throws Exception {
         runWALSplit(newConf);
         WAL wal2 = createWAL(newConf, hbaseRootDir, logName);
 
-        HRegion region2 = HRegion.openHRegion(newConf, FileSystem.get(newConf),
-            hbaseRootDir, hri, htd, wal2);
+        HRegion region2 =
+            HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir, hri, htd, wal2);
         long seqid2 = region2.getOpenSeqNum();
         assertTrue(seqid2 > -1);
         assertEquals(rowsInsertedCount, getScannedCount(region2.getScanner(new Scan())));
 
-        // I can't close wal1.  Its been appropriated when we split.
+        // I can't close wal1. Its been appropriated when we split.
         region2.close();
         wal2.close();
         return null;
@@ -463,10 +448,9 @@ public abstract class AbstractTestWALReplay {
     });
   }
 
-
   /**
-   * Test writing edits into an HRegion, closing it, splitting logs, opening
-   * Region again.  Verify seqids.
+   * Test writing edits into an HRegion, closing it, splitting logs, opening Region again. Verify
+   * seqids.
    * @throws IOException
    * @throws IllegalAccessException
    * @throws NoSuchFieldException
@@ -474,11 +458,9 @@ public abstract class AbstractTestWALReplay {
    * @throws SecurityException
    */
   @Test
-  public void testReplayEditsWrittenViaHRegion()
-  throws IOException, SecurityException, IllegalArgumentException,
-      NoSuchFieldException, IllegalAccessException, InterruptedException {
-    final TableName tableName =
-        TableName.valueOf("testReplayEditsWrittenViaHRegion");
+  public void testReplayEditsWrittenViaHRegion() throws IOException, SecurityException,
+      IllegalArgumentException, NoSuchFieldException, IllegalAccessException, InterruptedException {
+    final TableName tableName = TableName.valueOf("testReplayEditsWrittenViaHRegion");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = CommonFSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
@@ -487,14 +469,14 @@ public abstract class AbstractTestWALReplay {
     final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
     HRegion region3 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
     HBaseTestingUtility.closeRegionAndWAL(region3);
-    // Write countPerFamily edits into the three families.  Do a flush on one
+    // Write countPerFamily edits into the three families. Do a flush on one
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
     HRegion region = HRegion.openHRegion(this.conf, this.fs, hbaseRootDir, hri, htd, wal);
     long seqid = region.getOpenSeqNum();
     boolean first = true;
-    for (HColumnDescriptor hcd: htd.getFamilies()) {
+    for (HColumnDescriptor hcd : htd.getFamilies()) {
       addRegionEdits(rowName, hcd.getName(), countPerFamily, this.ee, region, "x");
       if (first) {
         // If first, so we have at least one family w/ different seqid to rest.
@@ -505,8 +487,7 @@ public abstract class AbstractTestWALReplay {
     // Now assert edits made it in.
     final Get g = new Get(rowName);
     Result result = region.get(g);
-    assertEquals(countPerFamily * htd.getFamilies().size(),
-      result.size());
+    assertEquals(countPerFamily * htd.getFamilies().size(), result.size());
     // Now close the region (without flush), split the log, reopen the region and assert that
     // replay of log has the correct effect, that our seqids are calculated correctly so
     // all edits in logs are seen as 'stale'/old.
@@ -520,10 +501,10 @@ public abstract class AbstractTestWALReplay {
     final Result result1b = region2.get(g);
     assertEquals(result.size(), result1b.size());
 
-    // Next test.  Add more edits, then 'crash' this region by stealing its wal
+    // Next test. Add more edits, then 'crash' this region by stealing its wal
     // out from under it and assert that replay of the log adds the edits back
     // correctly when region is opened again.
-    for (HColumnDescriptor hcd: htd.getFamilies()) {
+    for (HColumnDescriptor hcd : htd.getFamilies()) {
       addRegionEdits(rowName, hcd.getName(), countPerFamily, this.ee, region2, "y");
     }
     // Get count of edits.
@@ -531,8 +512,7 @@ public abstract class AbstractTestWALReplay {
     assertEquals(2 * result.size(), result2.size());
     wal2.sync();
     final Configuration newConf = HBaseConfiguration.create(this.conf);
-    User user = HBaseTestingUtility.getDifferentUser(newConf,
-      tableName.getNameAsString());
+    User user = HBaseTestingUtility.getDifferentUser(newConf, tableName.getNameAsString());
     user.runAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {
@@ -552,10 +532,9 @@ public abstract class AbstractTestWALReplay {
         Result result3 = region3.get(g);
         // Assert that count of cells is same as before crash.
         assertEquals(result2.size(), result3.size());
-        assertEquals(htd.getFamilies().size() * countPerFamily,
-          countOfRestoredEdits.get());
+        assertEquals(htd.getFamilies().size() * countPerFamily, countOfRestoredEdits.get());
 
-        // I can't close wal1.  Its been appropriated when we split.
+        // I can't close wal1. Its been appropriated when we split.
         region3.close();
         wal3.close();
         return null;
@@ -564,17 +543,12 @@ public abstract class AbstractTestWALReplay {
   }
 
   /**
-   * Test that we recover correctly when there is a failure in between the
-   * flushes. i.e. Some stores got flushed but others did not.
-   *
-   * Unfortunately, there is no easy hook to flush at a store level. The way
-   * we get around this is by flushing at the region level, and then deleting
-   * the recently flushed store file for one of the Stores. This would put us
-   * back in the situation where all but that store got flushed and the region
-   * died.
-   *
-   * We restart Region again, and verify that the edits were replayed.
-   *
+   * Test that we recover correctly when there is a failure in between the flushes. i.e. Some stores
+   * got flushed but others did not. Unfortunately, there is no easy hook to flush at a store level.
+   * The way we get around this is by flushing at the region level, and then deleting the recently
+   * flushed store file for one of the Stores. This would put us back in the situation where all but
+   * that store got flushed and the region died. We restart Region again, and verify that the edits
+   * were replayed.
    * @throws IOException
    * @throws IllegalAccessException
    * @throws NoSuchFieldException
@@ -582,11 +556,9 @@ public abstract class AbstractTestWALReplay {
    * @throws SecurityException
    */
   @Test
-  public void testReplayEditsAfterPartialFlush()
-  throws IOException, SecurityException, IllegalArgumentException,
-      NoSuchFieldException, IllegalAccessException, InterruptedException {
-    final TableName tableName =
-        TableName.valueOf("testReplayEditsWrittenViaHRegion");
+  public void testReplayEditsAfterPartialFlush() throws IOException, SecurityException,
+      IllegalArgumentException, NoSuchFieldException, IllegalAccessException, InterruptedException {
+    final TableName tableName = TableName.valueOf("testReplayEditsWrittenViaHRegion");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = CommonFSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
@@ -595,21 +567,20 @@ public abstract class AbstractTestWALReplay {
     final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
     HRegion region3 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
     HBaseTestingUtility.closeRegionAndWAL(region3);
-    // Write countPerFamily edits into the three families.  Do a flush on one
+    // Write countPerFamily edits into the three families. Do a flush on one
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
     HRegion region = HRegion.openHRegion(this.conf, this.fs, hbaseRootDir, hri, htd, wal);
     long seqid = region.getOpenSeqNum();
-    for (HColumnDescriptor hcd: htd.getFamilies()) {
+    for (HColumnDescriptor hcd : htd.getFamilies()) {
       addRegionEdits(rowName, hcd.getName(), countPerFamily, this.ee, region, "x");
     }
 
     // Now assert edits made it in.
     final Get g = new Get(rowName);
     Result result = region.get(g);
-    assertEquals(countPerFamily * htd.getFamilies().size(),
-      result.size());
+    assertEquals(countPerFamily * htd.getFamilies().size(), result.size());
 
     // Let us flush the region
     region.flush(true);
@@ -621,13 +592,12 @@ public abstract class AbstractTestWALReplay {
     // we have 3 families. killing the middle one ensures that taking the maximum
     // will make us fail.
     int cf_count = 0;
-    for (HColumnDescriptor hcd: htd.getFamilies()) {
+    for (HColumnDescriptor hcd : htd.getFamilies()) {
       cf_count++;
       if (cf_count == 2) {
         region.getRegionFileSystem().deleteFamily(hcd.getNameAsString());
       }
     }
-
 
     // Let us try to split and recover
     runWALSplit(this.conf);
@@ -639,7 +609,6 @@ public abstract class AbstractTestWALReplay {
     final Result result1b = region2.get(g);
     assertEquals(result.size(), result1b.size());
   }
-
 
   // StoreFlusher implementation used in testReplayEditsAfterAbortingFlush.
   // Only throws exception if throwExceptionWhenFlushing is set true.
@@ -663,15 +632,13 @@ public abstract class AbstractTestWALReplay {
   };
 
   /**
-   * Test that we could recover the data correctly after aborting flush. In the
-   * test, first we abort flush after writing some data, then writing more data
-   * and flush again, at last verify the data.
+   * Test that we could recover the data correctly after aborting flush. In the test, first we abort
+   * flush after writing some data, then writing more data and flush again, at last verify the data.
    * @throws IOException
    */
   @Test
   public void testReplayEditsAfterAbortingFlush() throws IOException {
-    final TableName tableName =
-        TableName.valueOf("testReplayEditsAfterAbortingFlush");
+    final TableName tableName = TableName.valueOf("testReplayEditsAfterAbortingFlush");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = CommonFSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
@@ -688,15 +655,15 @@ public abstract class AbstractTestWALReplay {
     when(rsServices.getConfiguration()).thenReturn(conf);
     Configuration customConf = new Configuration(this.conf);
     customConf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
-        CustomStoreFlusher.class.getName());
+      CustomStoreFlusher.class.getName());
     HRegion region =
-      HRegion.openHRegion(this.hbaseRootDir, hri, htd, wal, customConf, rsServices, null);
+        HRegion.openHRegion(this.hbaseRootDir, hri, htd, wal, customConf, rsServices, null);
     int writtenRowCount = 10;
     List<HColumnDescriptor> families = new ArrayList<>(htd.getFamilies());
     for (int i = 0; i < writtenRowCount; i++) {
       Put put = new Put(Bytes.toBytes(tableName + Integer.toString(i)));
       put.addColumn(families.get(i % families.size()).getName(), Bytes.toBytes("q"),
-          Bytes.toBytes("val"));
+        Bytes.toBytes("val"));
       region.put(put);
     }
 
@@ -721,7 +688,7 @@ public abstract class AbstractTestWALReplay {
     for (int i = writtenRowCount; i < writtenRowCount + moreRow; i++) {
       Put put = new Put(Bytes.toBytes(tableName + Integer.toString(i)));
       put.addColumn(families.get(i % families.size()).getName(), Bytes.toBytes("q"),
-          Bytes.toBytes("val"));
+        Bytes.toBytes("val"));
       region.put(put);
     }
     writtenRowCount += moreRow;
@@ -730,8 +697,8 @@ public abstract class AbstractTestWALReplay {
     try {
       region.flush(true);
     } catch (IOException t) {
-      LOG.info("Expected exception when flushing region because server is stopped,"
-          + t.getMessage());
+      LOG.info(
+        "Expected exception when flushing region because server is stopped," + t.getMessage());
     }
 
     region.close(true);
@@ -742,7 +709,7 @@ public abstract class AbstractTestWALReplay {
     WAL wal2 = createWAL(this.conf, hbaseRootDir, logName);
     Mockito.doReturn(false).when(rsServices).isAborted();
     HRegion region2 =
-      HRegion.openHRegion(this.hbaseRootDir, hri, htd, wal2, this.conf, rsServices, null);
+        HRegion.openHRegion(this.hbaseRootDir, hri, htd, wal2, this.conf, rsServices, null);
     scanner = region2.getScanner(new Scan());
     assertEquals(writtenRowCount, getScannedCount(scanner));
   }
@@ -752,24 +719,20 @@ public abstract class AbstractTestWALReplay {
     List<Cell> results = new ArrayList<>();
     while (true) {
       boolean existMore = scanner.next(results);
-      if (!results.isEmpty())
-        scannedCount++;
-      if (!existMore)
-        break;
+      if (!results.isEmpty()) scannedCount++;
+      if (!existMore) break;
       results.clear();
     }
     return scannedCount;
   }
 
   /**
-   * Create an HRegion with the result of a WAL split and test we only see the
-   * good edits
+   * Create an HRegion with the result of a WAL split and test we only see the good edits
    * @throws Exception
    */
   @Test
   public void testReplayEditsWrittenIntoWAL() throws Exception {
-    final TableName tableName =
-        TableName.valueOf("testReplayEditsWrittenIntoWAL");
+    final TableName tableName = TableName.valueOf("testReplayEditsWrittenIntoWAL");
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = CommonFSUtils.getTableDir(hbaseRootDir, tableName);
@@ -786,12 +749,12 @@ public abstract class AbstractTestWALReplay {
     final int countPerFamily = 1000;
     Set<byte[]> familyNames = new HashSet<>();
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for(byte[] fam : htd.getFamiliesKeys()) {
+    for (byte[] fam : htd.getFamiliesKeys()) {
       scopes.put(fam, 0);
     }
-    for (HColumnDescriptor hcd: htd.getFamilies()) {
-      addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily,
-          ee, wal, htd, mvcc, scopes);
+    for (HColumnDescriptor hcd : htd.getFamilies()) {
+      addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily, ee, wal, htd, mvcc,
+        scopes);
       familyNames.add(hcd.getName());
     }
 
@@ -802,8 +765,7 @@ public abstract class AbstractTestWALReplay {
     // Add an edit to another family, should be skipped.
     WALEdit edit = new WALEdit();
     long now = ee.currentTime();
-    edit.add(new KeyValue(rowName, Bytes.toBytes("another family"), rowName,
-      now, rowName));
+    edit.add(new KeyValue(rowName, Bytes.toBytes("another family"), rowName, now, rowName));
     wal.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes),
       edit);
 
@@ -819,8 +781,7 @@ public abstract class AbstractTestWALReplay {
     // Make a new conf and a new fs for the splitter to run on so we can take
     // over old wal.
     final Configuration newConf = HBaseConfiguration.create(this.conf);
-    User user = HBaseTestingUtility.getDifferentUser(newConf,
-      ".replay.wal.secondtime");
+    User user = HBaseTestingUtility.getDifferentUser(newConf, ".replay.wal.secondtime");
     user.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -857,8 +818,7 @@ public abstract class AbstractTestWALReplay {
           Get get = new Get(rowName);
           Result result = region.get(get);
           // Make sure we only see the good edits
-          assertEquals(countPerFamily * (htd.getFamilies().size() - 1),
-            result.size());
+          assertEquals(countPerFamily * (htd.getFamilies().size() - 1), result.size());
           region.close();
         } finally {
           newWal.close();
@@ -873,8 +833,7 @@ public abstract class AbstractTestWALReplay {
   public void testSequentialEditLogSeqNum() throws IOException {
     final TableName tableName = TableName.valueOf(currentTest.getMethodName());
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
-    final Path basedir =
-      CommonFSUtils.getWALTableDir(conf, tableName);
+    final Path basedir = CommonFSUtils.getWALTableDir(conf, tableName);
     deleteDir(basedir);
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
@@ -907,21 +866,22 @@ public abstract class AbstractTestWALReplay {
     WALSplitter.splitLogFile(hbaseRootDir, listStatus[0], this.fs, this.conf, null, null, null,
       wals, null);
     FileStatus[] listStatus1 =
-      this.fs.listStatus(new Path(CommonFSUtils.getWALTableDir(conf, tableName),
-        new Path(hri.getEncodedName(), "recovered.edits")), new PathFilter() {
-          @Override
-          public boolean accept(Path p) {
-            return !WALSplitUtil.isSequenceIdFile(p);
-          }
-        });
+        this.fs.listStatus(new Path(CommonFSUtils.getWALTableDir(conf, tableName),
+            new Path(hri.getEncodedName(), "recovered.edits")),
+          new PathFilter() {
+            @Override
+            public boolean accept(Path p) {
+              return !WALSplitUtil.isSequenceIdFile(p);
+            }
+          });
     int editCount = 0;
     for (FileStatus fileStatus : listStatus1) {
       editCount = Integer.parseInt(fileStatus.getPath().getName());
     }
     // The sequence number should be same
     assertEquals(
-        "The sequence number of the recoverd.edits and the current edit seq should be same",
-        lastestSeqNumber, editCount);
+      "The sequence number of the recoverd.edits and the current edit seq should be same",
+      lastestSeqNumber, editCount);
   }
 
   /**
@@ -1023,8 +983,8 @@ public abstract class AbstractTestWALReplay {
   /**
    * testcase for https://issues.apache.org/jira/browse/HBASE-14949.
    */
-  private void testNameConflictWhenSplit(boolean largeFirst) throws IOException,
-      StreamLacksCapabilityException {
+  private void testNameConflictWhenSplit(boolean largeFirst)
+      throws IOException, StreamLacksCapabilityException {
     final TableName tableName = TableName.valueOf("testReplayEditsWrittenIntoWAL");
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
@@ -1106,7 +1066,7 @@ public abstract class AbstractTestWALReplay {
     return wal;
   }
 
-  // Flusher used in this test.  Keep count of how often we are called and
+  // Flusher used in this test. Keep count of how often we are called and
   // actually run the flush inside here.
   static class TestFlusher implements FlushRequester {
     private HRegion r;
@@ -1163,10 +1123,10 @@ public abstract class AbstractTestWALReplay {
   }
 
   private FSWALEntry createFSWALEntry(HTableDescriptor htd, HRegionInfo hri, long sequence,
-    byte[] rowName, byte[] family, EnvironmentEdge ee, MultiVersionConcurrencyControl mvcc,
-    int index, NavigableMap<byte[], Integer> scopes) throws IOException {
+      byte[] rowName, byte[] family, EnvironmentEdge ee, MultiVersionConcurrencyControl mvcc,
+      int index, NavigableMap<byte[], Integer> scopes) throws IOException {
     FSWALEntry entry = new FSWALEntry(sequence, createWALKey(htd.getTableName(), hri, mvcc, scopes),
-      createWALEdit(rowName, family, ee, index), hri, true, null);
+        createWALEdit(rowName, family, ee, index), hri, true, null);
     entry.stampRegionSequenceId(mvcc.begin());
     return entry;
   }
@@ -1196,23 +1156,23 @@ public abstract class AbstractTestWALReplay {
   }
 
   /*
-   * Creates an HRI around an HTD that has <code>tableName</code> and three
-   * column families named 'a','b', and 'c'.
+   * Creates an HRI around an HTD that has <code>tableName</code> and three column families named
+   * 'a','b', and 'c'.
    * @param tableName Name of table to use when we create HTableDescriptor.
    */
-   private HRegionInfo createBasic3FamilyHRegionInfo(final TableName tableName) {
+  private HRegionInfo createBasic3FamilyHRegionInfo(final TableName tableName) {
     return new HRegionInfo(tableName, null, null, false);
-   }
+  }
 
   /*
-   * Run the split.  Verify only single split file made.
+   * Run the split. Verify only single split file made.
    * @param c
    * @return The single split file made
    * @throws IOException
    */
   private Path runWALSplit(final Configuration c) throws IOException {
-    List<Path> splits = WALSplitter.split(
-      hbaseRootDir, logDir, oldLogDir, FileSystem.get(c), c, wals);
+    List<Path> splits =
+        WALSplitter.split(hbaseRootDir, logDir, oldLogDir, FileSystem.get(c), c, wals);
     // Split should generate only 1 file since there's only 1 region
     assertEquals("splits=" + splits, 1, splits.size());
     // Make sure the file exists
@@ -1232,8 +1192,8 @@ public abstract class AbstractTestWALReplay {
     return htd;
   }
 
-  private void writerWALFile(Path file, List<FSWALEntry> entries) throws IOException,
-      StreamLacksCapabilityException {
+  private void writerWALFile(Path file, List<FSWALEntry> entries)
+      throws IOException, StreamLacksCapabilityException {
     fs.mkdirs(file.getParent());
     ProtobufLogWriter writer = new ProtobufLogWriter();
     writer.init(fs, file, conf, true, WALUtil.getWALBlockSize(conf, fs, file),

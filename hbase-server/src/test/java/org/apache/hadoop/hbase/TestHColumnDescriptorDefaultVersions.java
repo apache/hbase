@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ import org.junit.rules.TestName;
  * Verify that the HColumnDescriptor version is set correctly by default, hbase-site.xml, and user
  * input
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestHColumnDescriptorDefaultVersions {
 
   @ClassRule
@@ -169,8 +169,7 @@ public class TestHColumnDescriptorDefaultVersions {
   }
 
   private void verifyHColumnDescriptor(int expected, final ColumnFamilyDescriptor[] hcds,
-      final TableName tableName,
-      final byte[]... families) {
+      final TableName tableName, final byte[]... families) {
     for (ColumnFamilyDescriptor hcd : hcds) {
       assertEquals(expected, hcd.getMaxVersions());
     }

@@ -36,16 +36,19 @@ import org.junit.rules.TestRule;
  * </p>
  * Use in combination with {@link ConnectionRule}, for example:
  *
- * <pre>{@code
+ * <pre>
+ * {
+ *   &#64;code
  *   public class TestMyClass {
- *     @ClassRule
+ *     &#64;ClassRule
  *     public static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
  *
- *     @Rule
+ *     &#64;Rule
  *     public final ConnectionRule connectionRule =
- *       ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
+ *         ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
  *   }
- * }</pre>
+ * }
+ * </pre>
  */
 public final class MiniClusterRule extends ExternalResource {
 
@@ -78,11 +81,8 @@ public final class MiniClusterRule extends ExternalResource {
     }
 
     public MiniClusterRule build() {
-      return new MiniClusterRule(
-        conf,
-        miniClusterOption != null
-          ? miniClusterOption
-          : StartMiniClusterOption.builder().build());
+      return new MiniClusterRule(conf,
+          miniClusterOption != null ? miniClusterOption : StartMiniClusterOption.builder().build());
     }
   }
 
@@ -92,7 +92,7 @@ public final class MiniClusterRule extends ExternalResource {
   private MiniHBaseCluster miniCluster;
 
   private MiniClusterRule(final Configuration conf,
-    final StartMiniClusterOption miniClusterOptions) {
+      final StartMiniClusterOption miniClusterOptions) {
     this.testingUtility = new HBaseTestingUtility(conf);
     this.miniClusterOptions = miniClusterOptions;
   }
@@ -109,8 +109,8 @@ public final class MiniClusterRule extends ExternalResource {
   }
 
   /**
-   * Create a {@link Connection} to the managed {@link MiniHBaseCluster}. It's up to the caller
-   * to {@link Connection#close() close()} the connection when finished.
+   * Create a {@link Connection} to the managed {@link MiniHBaseCluster}. It's up to the caller to
+   * {@link Connection#close() close()} the connection when finished.
    */
   public Connection createConnection() {
     if (miniCluster == null) {

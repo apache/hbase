@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,12 +58,13 @@ public class TestMobFileLink {
     String columnFamily = "columnFamily";
     Path regionDir = new Path(tableDir, encodedRegionName);
     Path archivedRegionDir = new Path(archiveDir, encodedRegionName);
-    Path expectedMobFilePath = new Path(MobUtils.getMobFamilyPath(conf, tableName, columnFamily),
-      fileName).makeQualified(fs.getUri(), fs.getWorkingDirectory());
-    Path expectedOriginPath = new Path(new Path(regionDir, columnFamily), fileName).makeQualified(
-      fs.getUri(), fs.getWorkingDirectory());
+    Path expectedMobFilePath =
+        new Path(MobUtils.getMobFamilyPath(conf, tableName, columnFamily), fileName)
+            .makeQualified(fs.getUri(), fs.getWorkingDirectory());
+    Path expectedOriginPath = new Path(new Path(regionDir, columnFamily), fileName)
+        .makeQualified(fs.getUri(), fs.getWorkingDirectory());
     Path expectedArchivePath = new Path(new Path(archivedRegionDir, columnFamily), fileName)
-      .makeQualified(fs.getUri(), fs.getWorkingDirectory());
+        .makeQualified(fs.getUri(), fs.getWorkingDirectory());
 
     String hfileLinkName = tableName.getNameAsString() + "=" + encodedRegionName + "-" + fileName;
     Path hfileLinkPath = new Path(columnFamily, hfileLinkName);

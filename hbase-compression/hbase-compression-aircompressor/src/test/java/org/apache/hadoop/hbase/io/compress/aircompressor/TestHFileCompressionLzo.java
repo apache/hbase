@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +30,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestHFileCompressionLzo extends HFileTestBase {
 
   @ClassRule
@@ -50,7 +50,7 @@ public class TestHFileCompressionLzo extends HFileTestBase {
   @Test
   public void test() throws Exception {
     Path path = new Path(TEST_UTIL.getDataTestDir(),
-      HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
+        HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
     doTest(conf, path, Compression.Algorithm.LZO);
   }
 

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
@@ -47,11 +48,12 @@ public class TestAppendFromClientSide {
       HBaseClassTestRule.forClass(TestAppendFromClientSide.class);
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static byte [] ROW = Bytes.toBytes("testRow");
-  private static byte [] FAMILY = Bytes.toBytes("testFamily");
-  private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
+  private static byte[] ROW = Bytes.toBytes("testRow");
+  private static byte[] FAMILY = Bytes.toBytes("testFamily");
+  private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   @Rule
   public TestName name = new TestName();
+
   @BeforeClass
   public static void beforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();

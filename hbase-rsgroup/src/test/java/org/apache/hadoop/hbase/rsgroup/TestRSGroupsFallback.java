@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -103,10 +102,10 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
 
     // add a new server to default group, regions move to default group
     JVMClusterUtil.RegionServerThread t =
-      TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(60000);
+        TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(60000);
     Address startRSAddress = t.getRegionServer().getServerName().getAddress();
-    TEST_UTIL.waitFor(3000, () -> rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP)
-      .containsServer(startRSAddress));
+    TEST_UTIL.waitFor(3000,
+      () -> rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).containsServer(startRSAddress));
     assertTrue(master.balance().isBalancerRan());
     assertRegionsInGroup(tableName, RSGroupInfo.DEFAULT_GROUP);
 

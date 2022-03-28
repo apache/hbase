@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({IOTests.class, MediumTests.class})
+@Category({ IOTests.class, MediumTests.class })
 public class TestBufferedDataBlockEncoder {
 
   @ClassRule
@@ -63,8 +63,8 @@ public class TestBufferedDataBlockEncoder {
 
   @Test
   public void testEnsureSpaceForKey() {
-    BufferedDataBlockEncoder.SeekerState state = new BufferedDataBlockEncoder.SeekerState(
-        new ObjectIntPair<>(), false);
+    BufferedDataBlockEncoder.SeekerState state =
+        new BufferedDataBlockEncoder.SeekerState(new ObjectIntPair<>(), false);
     for (int i = 1; i <= 65536; ++i) {
       state.keyLength = i;
       state.ensureSpaceForKey();
@@ -113,13 +113,13 @@ public class TestBufferedDataBlockEncoder {
         kv2.getTagsLength());
     KeyValue kv3 = new KeyValue(Bytes.toBytes("r3"), Bytes.toBytes("cf"), Bytes.toBytes("qual"),
         HConstants.LATEST_TIMESTAMP, Bytes.toBytes("3"));
-    BufferedDataBlockEncoder.OffheapDecodedExtendedCell
-        c3 = new BufferedDataBlockEncoder.OffheapDecodedExtendedCell(ByteBuffer.wrap(kv2.getKey()),
-        kv2.getRowLength(), kv2.getFamilyOffset() - KeyValue.ROW_OFFSET, kv2.getFamilyLength(),
-        kv2.getQualifierOffset() - KeyValue.ROW_OFFSET, kv2.getQualifierLength(),
-        kv2.getTimestamp(), kv2.getTypeByte(), ByteBuffer.wrap(kv2.getValueArray()),
-        kv2.getValueOffset(), kv2.getValueLength(), kv2.getSequenceId(),
-        ByteBuffer.wrap(kv2.getTagsArray()), kv2.getTagsOffset(), kv2.getTagsLength());
+    BufferedDataBlockEncoder.OffheapDecodedExtendedCell c3 =
+        new BufferedDataBlockEncoder.OffheapDecodedExtendedCell(ByteBuffer.wrap(kv2.getKey()),
+            kv2.getRowLength(), kv2.getFamilyOffset() - KeyValue.ROW_OFFSET, kv2.getFamilyLength(),
+            kv2.getQualifierOffset() - KeyValue.ROW_OFFSET, kv2.getQualifierLength(),
+            kv2.getTimestamp(), kv2.getTypeByte(), ByteBuffer.wrap(kv2.getValueArray()),
+            kv2.getValueOffset(), kv2.getValueLength(), kv2.getSequenceId(),
+            ByteBuffer.wrap(kv2.getTagsArray()), kv2.getTagsOffset(), kv2.getTagsLength());
     ByteArrayOutputStream os = new ByteArrayOutputStream();
     KeyValueCodecWithTags codec = new KeyValueCodecWithTags();
     Encoder encoder = codec.getEncoder(os);

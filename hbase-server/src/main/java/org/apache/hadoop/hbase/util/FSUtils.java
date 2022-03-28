@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -92,11 +91,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.common.primitives.Ints;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FSProtos;
@@ -127,14 +126,14 @@ public final class FSUtils {
     // If passed an instance of HFileSystem, it fails instanceof DistributedFileSystem.
     // Check its backing fs for dfs-ness.
     if (fs instanceof HFileSystem) {
-      fileSystem = ((HFileSystem)fs).getBackingFs();
+      fileSystem = ((HFileSystem) fs).getBackingFs();
     }
     return fileSystem instanceof DistributedFileSystem;
   }
 
   /**
    * Compare path component of the Path URI; e.g. if hdfs://a/b/c and /a/b/c, it will compare the
-   * '/a/b/c' part. If you passed in 'hdfs://a/b/c and b/c, it would return true.  Does not consider
+   * '/a/b/c' part. If you passed in 'hdfs://a/b/c and b/c, it would return true. Does not consider
    * schema; i.e. if schemas different but path or subpath matches, the two will equate.
    * @param pathToSearch Path we will be trying to match.
    * @param pathTail
@@ -161,10 +160,10 @@ public final class FSUtils {
       if (toSearchName == null || toSearchName.isEmpty()) {
         break;
       }
-      // Move up a parent on each path for next go around.  Path doesn't let us go off the end.
+      // Move up a parent on each path for next go around. Path doesn't let us go off the end.
       tailPath = tailPath.getParent();
       toSearch = toSearch.getParent();
-    } while(tailName.equals(toSearchName));
+    } while (tailName.equals(toSearchName));
     return result;
   }
 
@@ -174,14 +173,14 @@ public final class FSUtils {
    * @throws IOException
    */
   public static boolean deleteRegionDir(final Configuration conf, final RegionInfo hri)
-    throws IOException {
+      throws IOException {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
     return CommonFSUtils.deleteDirectory(fs,
       new Path(CommonFSUtils.getTableDir(rootDir, hri.getTable()), hri.getEncodedName()));
   }
 
- /**
+  /**
    * Create the specified file on the filesystem. By default, this will:
    * <ol>
    * <li>overwrite the file if it exists</li>
@@ -201,7 +200,7 @@ public final class FSUtils {
    * @throws IOException if the file cannot be created
    */
   public static FSDataOutputStream create(Configuration conf, FileSystem fs, Path path,
-    FsPermission perm, InetSocketAddress[] favoredNodes) throws IOException {
+      FsPermission perm, InetSocketAddress[] favoredNodes) throws IOException {
     if (fs instanceof HFileSystem) {
       FileSystem backingFs = ((HFileSystem) fs).getBackingFs();
       if (backingFs instanceof DistributedFileSystem) {
@@ -211,11 +210,12 @@ public final class FSUtils {
           String.valueOf(ColumnFamilyDescriptorBuilder.DEFAULT_DFS_REPLICATION)));
         try {
           return (FSDataOutputStream) (DistributedFileSystem.class
-            .getDeclaredMethod("create", Path.class, FsPermission.class, boolean.class, int.class,
-              short.class, long.class, Progressable.class, InetSocketAddress[].class)
-            .invoke(backingFs, path, perm, true, CommonFSUtils.getDefaultBufferSize(backingFs),
-              replication > 0 ? replication : CommonFSUtils.getDefaultReplication(backingFs, path),
-              CommonFSUtils.getDefaultBlockSize(backingFs, path), null, favoredNodes));
+              .getDeclaredMethod("create", Path.class, FsPermission.class, boolean.class, int.class,
+                short.class, long.class, Progressable.class, InetSocketAddress[].class)
+              .invoke(backingFs, path, perm, true, CommonFSUtils.getDefaultBufferSize(backingFs),
+                replication > 0 ? replication
+                    : CommonFSUtils.getDefaultReplication(backingFs, path),
+                CommonFSUtils.getDefaultBlockSize(backingFs, path), null, favoredNodes));
         } catch (InvocationTargetException ite) {
           // Function was properly called, but threw it's own exception.
           throw new IOException(ite.getCause());
@@ -232,12 +232,10 @@ public final class FSUtils {
 
   /**
    * Checks to see if the specified file system is available
-   *
    * @param fs filesystem
    * @throws IOException e
    */
-  public static void checkFileSystemAvailable(final FileSystem fs)
-  throws IOException {
+  public static void checkFileSystemAvailable(final FileSystem fs) throws IOException {
     if (!(fs instanceof DistributedFileSystem)) {
       return;
     }
@@ -248,8 +246,7 @@ public final class FSUtils {
         return;
       }
     } catch (IOException e) {
-      exception = e instanceof RemoteException ?
-              ((RemoteException)e).unwrapRemoteException() : e;
+      exception = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
     }
     try {
       fs.close();
@@ -261,7 +258,6 @@ public final class FSUtils {
 
   /**
    * Inquire the Active NameNode's safe mode status.
-   *
    * @param dfs A DistributedFileSystem object representing the underlying HDFS.
    * @return whether we're in safe mode
    * @throws IOException
@@ -275,12 +271,11 @@ public final class FSUtils {
    * @param conf
    * @throws IOException
    */
-  public static void checkDfsSafeMode(final Configuration conf)
-  throws IOException {
+  public static void checkDfsSafeMode(final Configuration conf) throws IOException {
     boolean isInSafeMode = false;
     FileSystem fs = FileSystem.get(conf);
     if (fs instanceof DistributedFileSystem) {
-      DistributedFileSystem dfs = (DistributedFileSystem)fs;
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
       isInSafeMode = isInSafeMode(dfs);
     }
     if (isInSafeMode) {
@@ -290,7 +285,6 @@ public final class FSUtils {
 
   /**
    * Verifies current version of file system
-   *
    * @param fs filesystem object
    * @param rootdir root hbase directory
    * @return null if no version file exists, version string otherwise
@@ -298,7 +292,7 @@ public final class FSUtils {
    * @throws DeserializationException if the version data cannot be translated into a version
    */
   public static String getVersion(FileSystem fs, Path rootdir)
-  throws IOException, DeserializationException {
+      throws IOException, DeserializationException {
     final Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
     FileStatus[] status = null;
     try {
@@ -312,7 +306,7 @@ public final class FSUtils {
       return null;
     }
     String version = null;
-    byte [] content = new byte [(int)status[0].getLen()];
+    byte[] content = new byte[(int) status[0].getLen()];
     FSDataInputStream s = fs.open(versionFile);
     try {
       IOUtils.readFully(s, content, 0, content.length);
@@ -338,12 +332,11 @@ public final class FSUtils {
    * @return The version found in the file as a String
    * @throws DeserializationException if the version data cannot be translated into a version
    */
-  static String parseVersionFrom(final byte [] bytes)
-  throws DeserializationException {
+  static String parseVersionFrom(final byte[] bytes) throws DeserializationException {
     ProtobufUtil.expectPBMagicPrefix(bytes);
     int pblen = ProtobufUtil.lengthOfPBMagic();
     FSProtos.HBaseVersionFileContent.Builder builder =
-      FSProtos.HBaseVersionFileContent.newBuilder();
+        FSProtos.HBaseVersionFileContent.newBuilder();
     try {
       ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
       return builder.getVersion();
@@ -356,17 +349,17 @@ public final class FSUtils {
   /**
    * Create the content to write into the ${HBASE_ROOTDIR}/hbase.version file.
    * @param version Version to persist
-   * @return Serialized protobuf with <code>version</code> content and a bit of pb magic for a prefix.
+   * @return Serialized protobuf with <code>version</code> content and a bit of pb magic for a
+   *         prefix.
    */
-  static byte [] toVersionByteArray(final String version) {
+  static byte[] toVersionByteArray(final String version) {
     FSProtos.HBaseVersionFileContent.Builder builder =
-      FSProtos.HBaseVersionFileContent.newBuilder();
+        FSProtos.HBaseVersionFileContent.newBuilder();
     return ProtobufUtil.prependPBMagic(builder.setVersion(version).build().toByteArray());
   }
 
   /**
    * Verifies current version of file system
-   *
    * @param fs file system
    * @param rootdir root directory of HBase installation
    * @param message if true, issues a message on System.out
@@ -374,25 +367,22 @@ public final class FSUtils {
    * @throws DeserializationException if the contents of the version file cannot be parsed
    */
   public static void checkVersion(FileSystem fs, Path rootdir, boolean message)
-  throws IOException, DeserializationException {
+      throws IOException, DeserializationException {
     checkVersion(fs, rootdir, message, 0, HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS);
   }
 
   /**
    * Verifies current version of file system
-   *
    * @param fs file system
    * @param rootdir root directory of HBase installation
    * @param message if true, issues a message on System.out
    * @param wait wait interval
    * @param retries number of times to retry
-   *
    * @throws IOException if the version file cannot be opened
    * @throws DeserializationException if the contents of the version file cannot be parsed
    */
-  public static void checkVersion(FileSystem fs, Path rootdir,
-      boolean message, int wait, int retries)
-  throws IOException, DeserializationException {
+  public static void checkVersion(FileSystem fs, Path rootdir, boolean message, int wait,
+      int retries) throws IOException, DeserializationException {
     String version = getVersion(fs, rootdir);
     String msg;
     if (version == null) {
@@ -402,17 +392,17 @@ public final class FSUtils {
         setVersion(fs, rootdir, wait, retries);
         return;
       } else {
-        msg = "hbase.version file is missing. Is your hbase.rootdir valid? " +
-            "You can restore hbase.version file by running 'HBCK2 filesystem -fix'. " +
-            "See https://github.com/apache/hbase-operator-tools/tree/master/hbase-hbck2";
+        msg = "hbase.version file is missing. Is your hbase.rootdir valid? "
+            + "You can restore hbase.version file by running 'HBCK2 filesystem -fix'. "
+            + "See https://github.com/apache/hbase-operator-tools/tree/master/hbase-hbck2";
       }
     } else if (version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0) {
       return;
     } else {
-      msg = "HBase file layout needs to be upgraded. Current filesystem version is " + version +
-          " but software requires version " + HConstants.FILE_SYSTEM_VERSION +
-          ". Consult http://hbase.apache.org/book.html for further information about " +
-          "upgrading HBase.";
+      msg = "HBase file layout needs to be upgraded. Current filesystem version is " + version
+          + " but software requires version " + HConstants.FILE_SYSTEM_VERSION
+          + ". Consult http://hbase.apache.org/book.html for further information about "
+          + "upgrading HBase.";
     }
 
     // version is deprecated require migration
@@ -425,20 +415,17 @@ public final class FSUtils {
 
   /**
    * Sets version of file system
-   *
    * @param fs filesystem object
    * @param rootdir hbase root
    * @throws IOException e
    */
-  public static void setVersion(FileSystem fs, Path rootdir)
-  throws IOException {
+  public static void setVersion(FileSystem fs, Path rootdir) throws IOException {
     setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION, 0,
       HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS);
   }
 
   /**
    * Sets version of file system
-   *
    * @param fs filesystem object
    * @param rootdir hbase root
    * @param wait time to wait for retry
@@ -446,14 +433,12 @@ public final class FSUtils {
    * @throws IOException e
    */
   public static void setVersion(FileSystem fs, Path rootdir, int wait, int retries)
-  throws IOException {
+      throws IOException {
     setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION, wait, retries);
   }
 
-
   /**
    * Sets version of file system
-   *
    * @param fs filesystem object
    * @param rootdir hbase root directory
    * @param version version to set
@@ -461,11 +446,11 @@ public final class FSUtils {
    * @param retries number of times to retry before throwing an IOException
    * @throws IOException e
    */
-  public static void setVersion(FileSystem fs, Path rootdir, String version,
-      int wait, int retries) throws IOException {
+  public static void setVersion(FileSystem fs, Path rootdir, String version, int wait, int retries)
+      throws IOException {
     Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
-    Path tempVersionFile = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY + Path.SEPARATOR +
-      HConstants.VERSION_FILE_NAME);
+    Path tempVersionFile = new Path(rootdir,
+        HConstants.HBASE_TEMP_DIRECTORY + Path.SEPARATOR + HConstants.VERSION_FILE_NAME);
     while (true) {
       try {
         // Write the version to a temporary file
@@ -487,7 +472,8 @@ public final class FSUtils {
           // Attempt to close the stream on the way out if it is still open.
           try {
             if (s != null) s.close();
-          } catch (IOException ignore) { }
+          } catch (IOException ignore) {
+          }
         }
         LOG.info("Created version file at " + rootdir.toString() + " with version=" + version);
         return;
@@ -500,7 +486,7 @@ public final class FSUtils {
               Thread.sleep(wait);
             }
           } catch (InterruptedException ie) {
-            throw (InterruptedIOException)new InterruptedIOException().initCause(ie);
+            throw (InterruptedIOException) new InterruptedIOException().initCause(ie);
           }
           retries--;
         } else {
@@ -518,8 +504,8 @@ public final class FSUtils {
    * @return <code>true</code> if the file exists, otherwise <code>false</code>
    * @throws IOException if checking the FileSystem fails
    */
-  public static boolean checkClusterIdExists(FileSystem fs, Path rootdir,
-      long wait) throws IOException {
+  public static boolean checkClusterIdExists(FileSystem fs, Path rootdir, long wait)
+      throws IOException {
     while (true) {
       try {
         Path filePath = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
@@ -547,20 +533,19 @@ public final class FSUtils {
    * @return the unique cluster identifier
    * @throws IOException if reading the cluster ID file fails
    */
-  public static ClusterId getClusterId(FileSystem fs, Path rootdir)
-  throws IOException {
+  public static ClusterId getClusterId(FileSystem fs, Path rootdir) throws IOException {
     Path idPath = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
     ClusterId clusterId = null;
-    FileStatus status = fs.exists(idPath)? fs.getFileStatus(idPath):  null;
+    FileStatus status = fs.exists(idPath) ? fs.getFileStatus(idPath) : null;
     if (status != null) {
       int len = Ints.checkedCast(status.getLen());
-      byte [] content = new byte[len];
+      byte[] content = new byte[len];
       FSDataInputStream in = fs.open(idPath);
       try {
         in.readFully(content);
       } catch (EOFException eof) {
         LOG.warn("Cluster ID file {} is empty", idPath);
-      } finally{
+      } finally {
         in.close();
       }
       try {
@@ -594,9 +579,8 @@ public final class FSUtils {
    * @throws IOException
    */
   private static void rewriteAsPb(final FileSystem fs, final Path rootdir, final Path p,
-      final ClusterId cid)
-  throws IOException {
-    // Rewrite the file as pb.  Move aside the old one first, write new
+      final ClusterId cid) throws IOException {
+    // Rewrite the file as pb. Move aside the old one first, write new
     // then delete the moved-aside file.
     Path movedAsideName = new Path(p + "." + EnvironmentEdgeManager.currentTime());
     if (!fs.rename(p, movedAsideName)) throw new IOException("Failed rename of " + p);
@@ -608,21 +592,21 @@ public final class FSUtils {
   }
 
   /**
-   * Writes a new unique identifier for this cluster to the "hbase.id" file
-   * in the HBase root directory
+   * Writes a new unique identifier for this cluster to the "hbase.id" file in the HBase root
+   * directory
    * @param fs the root directory FileSystem
    * @param rootdir the path to the HBase root directory
    * @param clusterId the unique identifier to store
    * @param wait how long (in milliseconds) to wait between retries
    * @throws IOException if writing to the FileSystem fails and no wait value
    */
-  public static void setClusterId(FileSystem fs, Path rootdir, ClusterId clusterId,
-      int wait) throws IOException {
+  public static void setClusterId(FileSystem fs, Path rootdir, ClusterId clusterId, int wait)
+      throws IOException {
     while (true) {
       try {
         Path idFile = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
-        Path tempIdFile = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY +
-          Path.SEPARATOR + HConstants.CLUSTER_ID_FILE_NAME);
+        Path tempIdFile = new Path(rootdir,
+            HConstants.HBASE_TEMP_DIRECTORY + Path.SEPARATOR + HConstants.CLUSTER_ID_FILE_NAME);
         // Write the id file to a temporary location
         FSDataOutputStream s = fs.create(tempIdFile);
         try {
@@ -638,7 +622,8 @@ public final class FSUtils {
           // Attempt to close the stream if still open on the way out
           try {
             if (s != null) s.close();
-          } catch (IOException ignore) { }
+          } catch (IOException ignore) {
+          }
         }
         if (LOG.isDebugEnabled()) {
           LOG.debug("Created cluster ID file at " + idFile.toString() + " with ID: " + clusterId);
@@ -646,12 +631,12 @@ public final class FSUtils {
         return;
       } catch (IOException ioe) {
         if (wait > 0) {
-          LOG.warn("Unable to create cluster ID file in " + rootdir.toString() +
-              ", retrying in " + wait + "msec: " + StringUtils.stringifyException(ioe));
+          LOG.warn("Unable to create cluster ID file in " + rootdir.toString() + ", retrying in "
+              + wait + "msec: " + StringUtils.stringifyException(ioe));
           try {
             Thread.sleep(wait);
           } catch (InterruptedException e) {
-            throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+            throw (InterruptedIOException) new InterruptedIOException().initCause(e);
           }
         } else {
           throw ioe;
@@ -666,12 +651,10 @@ public final class FSUtils {
    * @param wait Sleep between retries
    * @throws IOException e
    */
-  public static void waitOnSafeMode(final Configuration conf,
-    final long wait)
-  throws IOException {
+  public static void waitOnSafeMode(final Configuration conf, final long wait) throws IOException {
     FileSystem fs = FileSystem.get(conf);
     if (!(fs instanceof DistributedFileSystem)) return;
-    DistributedFileSystem dfs = (DistributedFileSystem)fs;
+    DistributedFileSystem dfs = (DistributedFileSystem) fs;
     // Make sure dfs is not in safe mode
     while (isInSafeMode(dfs)) {
       LOG.info("Waiting for dfs to exit safe mode...");
@@ -696,17 +679,16 @@ public final class FSUtils {
   }
 
   /**
-   * Compute HDFS block distribution of a given HdfsDataInputStream. All HdfsDataInputStreams
-   * are backed by a series of LocatedBlocks, which are fetched periodically from the namenode.
-   * This method retrieves those blocks from the input stream and uses them to calculate
-   * HDFSBlockDistribution.
-   *
-   * The underlying method in DFSInputStream does attempt to use locally cached blocks, but
-   * may hit the namenode if the cache is determined to be incomplete. The method also involves
-   * making copies of all LocatedBlocks rather than return the underlying blocks themselves.
+   * Compute HDFS block distribution of a given HdfsDataInputStream. All HdfsDataInputStreams are
+   * backed by a series of LocatedBlocks, which are fetched periodically from the namenode. This
+   * method retrieves those blocks from the input stream and uses them to calculate
+   * HDFSBlockDistribution. The underlying method in DFSInputStream does attempt to use locally
+   * cached blocks, but may hit the namenode if the cache is determined to be incomplete. The method
+   * also involves making copies of all LocatedBlocks rather than return the underlying blocks
+   * themselves.
    */
-  public static HDFSBlocksDistribution computeHDFSBlocksDistribution(
-    HdfsDataInputStream inputStream) throws IOException {
+  public static HDFSBlocksDistribution
+      computeHDFSBlocksDistribution(HdfsDataInputStream inputStream) throws IOException {
     List<LocatedBlock> blocks = inputStream.getAllBlocks();
     HDFSBlocksDistribution blocksDistribution = new HDFSBlocksDistribution();
     for (LocatedBlock block : blocks) {
@@ -735,12 +717,10 @@ public final class FSUtils {
    * @param length length of the portion
    * @return The HDFS blocks distribution
    */
-  static public HDFSBlocksDistribution computeHDFSBlocksDistribution(
-    final FileSystem fs, FileStatus status, long start, long length)
-    throws IOException {
+  static public HDFSBlocksDistribution computeHDFSBlocksDistribution(final FileSystem fs,
+      FileStatus status, long start, long length) throws IOException {
     HDFSBlocksDistribution blocksDistribution = new HDFSBlocksDistribution();
-    BlockLocation [] blockLocations =
-      fs.getFileBlockLocations(status, start, length);
+    BlockLocation[] blockLocations = fs.getFileBlockLocations(status, start, length);
     addToHDFSBlocksDistribution(blocksDistribution, blockLocations);
     return blocksDistribution;
   }
@@ -750,9 +730,8 @@ public final class FSUtils {
    * @param blocksDistribution the hdfs blocks distribution
    * @param blockLocations an array containing block location
    */
-  static public void addToHDFSBlocksDistribution(
-      HDFSBlocksDistribution blocksDistribution, BlockLocation[] blockLocations)
-      throws IOException {
+  static public void addToHDFSBlocksDistribution(HDFSBlocksDistribution blocksDistribution,
+      BlockLocation[] blockLocations) throws IOException {
     for (BlockLocation bl : blockLocations) {
       String[] hosts = bl.getHosts();
       long len = bl.getLength();
@@ -763,31 +742,26 @@ public final class FSUtils {
 
   // TODO move this method OUT of FSUtils. No dependencies to HMaster
   /**
-   * Returns the total overall fragmentation percentage. Includes hbase:meta and
-   * -ROOT- as well.
-   *
-   * @param master  The master defining the HBase root and file system
+   * Returns the total overall fragmentation percentage. Includes hbase:meta and -ROOT- as well.
+   * @param master The master defining the HBase root and file system
    * @return A map for each table and its percentage (never null)
    * @throws IOException When scanning the directory fails
    */
-  public static int getTotalTableFragmentation(final HMaster master)
-  throws IOException {
+  public static int getTotalTableFragmentation(final HMaster master) throws IOException {
     Map<String, Integer> map = getTableFragmentation(master);
-    return map.isEmpty() ? -1 :  map.get("-TOTAL-");
+    return map.isEmpty() ? -1 : map.get("-TOTAL-");
   }
 
   /**
-   * Runs through the HBase rootdir and checks how many stores for each table
-   * have more than one file in them. Checks -ROOT- and hbase:meta too. The total
-   * percentage across all tables is stored under the special key "-TOTAL-".
-   *
-   * @param master  The master defining the HBase root and file system.
+   * Runs through the HBase rootdir and checks how many stores for each table have more than one
+   * file in them. Checks -ROOT- and hbase:meta too. The total percentage across all tables is
+   * stored under the special key "-TOTAL-".
+   * @param master The master defining the HBase root and file system.
    * @return A map for each table and its percentage (never null).
-   *
    * @throws IOException When scanning the directory fails.
    */
   public static Map<String, Integer> getTableFragmentation(final HMaster master)
-    throws IOException {
+      throws IOException {
     Path path = CommonFSUtils.getRootDir(master.getConfiguration());
     // since HMaster.getFileSystem() is package private
     FileSystem fs = path.getFileSystem(master.getConfiguration());
@@ -795,18 +769,16 @@ public final class FSUtils {
   }
 
   /**
-   * Runs through the HBase rootdir and checks how many stores for each table
-   * have more than one file in them. Checks -ROOT- and hbase:meta too. The total
-   * percentage across all tables is stored under the special key "-TOTAL-".
-   *
-   * @param fs  The file system to use
-   * @param hbaseRootDir  The root directory to scan
+   * Runs through the HBase rootdir and checks how many stores for each table have more than one
+   * file in them. Checks -ROOT- and hbase:meta too. The total percentage across all tables is
+   * stored under the special key "-TOTAL-".
+   * @param fs The file system to use
+   * @param hbaseRootDir The root directory to scan
    * @return A map for each table and its percentage (never null)
    * @throws IOException When scanning the directory fails
    */
-  public static Map<String, Integer> getTableFragmentation(
-    final FileSystem fs, final Path hbaseRootDir)
-  throws IOException {
+  public static Map<String, Integer> getTableFragmentation(final FileSystem fs,
+      final Path hbaseRootDir) throws IOException {
     Map<String, Integer> frags = new HashMap<>();
     int cfCountTotal = 0;
     int cfFragTotal = 0;
@@ -835,11 +807,11 @@ public final class FSUtils {
       }
       // compute percentage per table and store in result list
       frags.put(CommonFSUtils.getTableName(d).getNameAsString(),
-        cfCount == 0? 0: Math.round((float) cfFrag / cfCount * 100));
+        cfCount == 0 ? 0 : Math.round((float) cfFrag / cfCount * 100));
     }
     // set overall percentage for all tables
     frags.put("-TOTAL-",
-      cfCountTotal == 0? 0: Math.round((float) cfFragTotal / cfCountTotal * 100));
+      cfCountTotal == 0 ? 0 : Math.round((float) cfFragTotal / cfCountTotal * 100));
     return frags;
   }
 
@@ -880,8 +852,7 @@ public final class FSUtils {
     @SuppressWarnings("unchecked")
     public BlackListDirFilter(final FileSystem fs, final List<String> directoryNameBlackList) {
       this.fs = fs;
-      blacklist =
-        (List<String>) (directoryNameBlackList == null ? Collections.emptyList()
+      blacklist = (List<String>) (directoryNameBlackList == null ? Collections.emptyList()
           : directoryNameBlackList);
     }
 
@@ -895,7 +866,8 @@ public final class FSUtils {
         return isDirectory(fs, isDir, p);
       } catch (IOException e) {
         LOG.warn("An error occurred while verifying if [{}] is a valid directory."
-            + " Returning 'not valid' and continuing.", p, e);
+            + " Returning 'not valid' and continuing.",
+          p, e);
         return false;
       }
     }
@@ -926,8 +898,7 @@ public final class FSUtils {
 
     @Override
     protected boolean isValidName(final String name) {
-      if (!super.isValidName(name))
-        return false;
+      if (!super.isValidName(name)) return false;
 
       try {
         TableName.isLegalTableQualifierName(Bytes.toBytes(name));
@@ -954,8 +925,8 @@ public final class FSUtils {
   /**
    * @param fs
    * @param rootdir
-   * @return All the table directories under <code>rootdir</code>. Ignore non table hbase folders such as
-   * .logs, .oldlogs, .corrupt folders.
+   * @return All the table directories under <code>rootdir</code>. Ignore non table hbase folders
+   *         such as .logs, .oldlogs, .corrupt folders.
    * @throws IOException
    */
   public static List<Path> getLocalTableDirs(final FileSystem fs, final Path rootdir)
@@ -963,7 +934,7 @@ public final class FSUtils {
     // presumes any directory under hbase.rootdir is a table
     FileStatus[] dirs = fs.listStatus(rootdir, new UserTableDirFilter(fs));
     List<Path> tabledirs = new ArrayList<>(dirs.length);
-    for (FileStatus dir: dirs) {
+    for (FileStatus dir : dirs) {
       tabledirs.add(dir.getPath());
     }
     return tabledirs;
@@ -1005,14 +976,15 @@ public final class FSUtils {
    * @return List of paths to valid region directories in table dir.
    * @throws IOException
    */
-  public static List<Path> getRegionDirs(final FileSystem fs, final Path tableDir) throws IOException {
+  public static List<Path> getRegionDirs(final FileSystem fs, final Path tableDir)
+      throws IOException {
     // assumes we are in a table dir.
     List<FileStatus> rds = listStatusWithStatusFilter(fs, tableDir, new RegionDirFilter(fs));
     if (rds == null) {
       return Collections.emptyList();
     }
     List<Path> regionDirs = new ArrayList<>(rds.size());
-    for (FileStatus rdfs: rds) {
+    for (FileStatus rdfs : rds) {
       Path rdPath = rdfs.getPath();
       regionDirs.add(rdPath);
     }
@@ -1025,7 +997,7 @@ public final class FSUtils {
 
   public static Path getRegionDirFromTableDir(Path tableDir, RegionInfo region) {
     return getRegionDirFromTableDir(tableDir,
-        ServerRegionReplicaUtil.getRegionInfoForFs(region).getEncodedName());
+      ServerRegionReplicaUtil.getRegionInfoForFs(region).getEncodedName());
   }
 
   public static Path getRegionDirFromTableDir(Path tableDir, String encodedRegionName) {
@@ -1033,8 +1005,8 @@ public final class FSUtils {
   }
 
   /**
-   * Filter for all dirs that are legal column family names.  This is generally used for colfam
-   * dirs &lt;hbase.rootdir&gt;/&lt;tabledir&gt;/&lt;regiondir&gt;/&lt;colfamdir&gt;.
+   * Filter for all dirs that are legal column family names. This is generally used for colfam dirs
+   * &lt;hbase.rootdir&gt;/&lt;tabledir&gt;/&lt;regiondir&gt;/&lt;colfamdir&gt;.
    */
   public static class FamilyDirFilter extends AbstractFileStatusFilter {
     final FileSystem fs;
@@ -1065,7 +1037,6 @@ public final class FSUtils {
 
   /**
    * Given a particular region dir, return all the familydirs inside it
-   *
    * @param fs A file system for the Path
    * @param regionDir Path to a specific region directory
    * @return List of paths to valid family directories in region dir.
@@ -1091,7 +1062,7 @@ public final class FSUtils {
       final PathFilter pathFilter) throws IOException {
     FileStatus[] fds = fs.listStatus(dir, pathFilter);
     List<Path> files = new ArrayList<>(fds.length);
-    for (FileStatus fdfs: fds) {
+    for (FileStatus fdfs : fds) {
       Path fdPath = fdfs.getPath();
       files.add(fdPath);
     }
@@ -1122,11 +1093,11 @@ public final class FSUtils {
     public boolean accept(Path rd) {
       try {
         // only files can be references.
-        return !fs.getFileStatus(rd).isDirectory() && (StoreFileInfo.isReference(rd) ||
-          HFileLink.isHFileLink(rd));
+        return !fs.getFileStatus(rd).isDirectory()
+            && (StoreFileInfo.isReference(rd) || HFileLink.isHFileLink(rd));
       } catch (IOException ioe) {
         // Maybe the file was moved or the fs was disconnected.
-        LOG.warn("Skipping file " + rd +" due to IOException", ioe);
+        LOG.warn("Skipping file " + rd + " due to IOException", ioe);
         return false;
       }
     }
@@ -1159,8 +1130,8 @@ public final class FSUtils {
   }
 
   /**
-   * Filter for HFileLinks (StoreFiles and HFiles not included).
-   * the filter itself does not consider if a link is file or not.
+   * Filter for HFileLinks (StoreFiles and HFiles not included). the filter itself does not consider
+   * if a link is file or not.
    */
   public static class HFileLinkFilter implements PathFilter {
 
@@ -1196,8 +1167,7 @@ public final class FSUtils {
   }
 
   /**
-   * Called every so-often by storefile map builder getTableStoreFilePathMap to
-   * report progress.
+   * Called every so-often by storefile map builder getTableStoreFilePathMap to report progress.
    */
   interface ProgressReporter {
     /**
@@ -1207,47 +1177,43 @@ public final class FSUtils {
   }
 
   /**
-   * Runs through the HBase rootdir/tablename and creates a reverse lookup map for
-   * table StoreFile names to the full Path.
-   * <br>
+   * Runs through the HBase rootdir/tablename and creates a reverse lookup map for table StoreFile
+   * names to the full Path. <br>
    * Example...<br>
-   * Key = 3944417774205889744  <br>
+   * Key = 3944417774205889744 <br>
    * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
-   *
-   * @param map map to add values.  If null, this method will create and populate one to return
-   * @param fs  The file system to use.
-   * @param hbaseRootDir  The root directory to scan.
+   * @param map map to add values. If null, this method will create and populate one to return
+   * @param fs The file system to use.
+   * @param hbaseRootDir The root directory to scan.
    * @param tableName name of the table to scan.
    * @return Map keyed by StoreFile name with a value of the full Path.
    * @throws IOException When scanning the directory fails.
    * @throws InterruptedException
    */
   public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> map,
-  final FileSystem fs, final Path hbaseRootDir, TableName tableName)
-  throws IOException, InterruptedException {
+      final FileSystem fs, final Path hbaseRootDir, TableName tableName)
+      throws IOException, InterruptedException {
     return getTableStoreFilePathMap(map, fs, hbaseRootDir, tableName, null, null,
-        (ProgressReporter)null);
+      (ProgressReporter) null);
   }
 
   /**
-   * Runs through the HBase rootdir/tablename and creates a reverse lookup map for
-   * table StoreFile names to the full Path.  Note that because this method can be called
-   * on a 'live' HBase system that we will skip files that no longer exist by the time
-   * we traverse them and similarly the user of the result needs to consider that some
-   * entries in this map may not exist by the time this call completes.
-   * <br>
+   * Runs through the HBase rootdir/tablename and creates a reverse lookup map for table StoreFile
+   * names to the full Path. Note that because this method can be called on a 'live' HBase system
+   * that we will skip files that no longer exist by the time we traverse them and similarly the
+   * user of the result needs to consider that some entries in this map may not exist by the time
+   * this call completes. <br>
    * Example...<br>
-   * Key = 3944417774205889744  <br>
+   * Key = 3944417774205889744 <br>
    * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
-   *
-   * @param resultMap map to add values.  If null, this method will create and populate one to return
-   * @param fs  The file system to use.
-   * @param hbaseRootDir  The root directory to scan.
+   * @param resultMap map to add values. If null, this method will create and populate one to return
+   * @param fs The file system to use.
+   * @param hbaseRootDir The root directory to scan.
    * @param tableName name of the table to scan.
    * @param sfFilter optional path filter to apply to store files
    * @param executor optional executor service to parallelize this operation
    * @param progressReporter Instance or null; gets called every time we move to new region of
-   *   family dir and for each store file.
+   *          family dir and for each store file.
    * @return Map keyed by StoreFile name with a value of the full Path.
    * @throws IOException When scanning the directory fails.
    * @deprecated Since 2.3.0. For removal in hbase4. Use ProgressReporter override instead.
@@ -1258,35 +1224,32 @@ public final class FSUtils {
       ExecutorService executor, final HbckErrorReporter progressReporter)
       throws IOException, InterruptedException {
     return getTableStoreFilePathMap(resultMap, fs, hbaseRootDir, tableName, sfFilter, executor,
-        new ProgressReporter() {
-          @Override
-          public void progress(FileStatus status) {
-            // status is not used in this implementation.
-            progressReporter.progress();
-          }
-        });
+      new ProgressReporter() {
+        @Override
+        public void progress(FileStatus status) {
+          // status is not used in this implementation.
+          progressReporter.progress();
+        }
+      });
   }
 
   /**
-   * Runs through the HBase rootdir/tablename and creates a reverse lookup map for
-   * table StoreFile names to the full Path.  Note that because this method can be called
-   * on a 'live' HBase system that we will skip files that no longer exist by the time
-   * we traverse them and similarly the user of the result needs to consider that some
-   * entries in this map may not exist by the time this call completes.
-   * <br>
+   * Runs through the HBase rootdir/tablename and creates a reverse lookup map for table StoreFile
+   * names to the full Path. Note that because this method can be called on a 'live' HBase system
+   * that we will skip files that no longer exist by the time we traverse them and similarly the
+   * user of the result needs to consider that some entries in this map may not exist by the time
+   * this call completes. <br>
    * Example...<br>
-   * Key = 3944417774205889744  <br>
+   * Key = 3944417774205889744 <br>
    * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
-   *
-   * @param resultMap map to add values.  If null, this method will create and populate one
-   *   to return
-   * @param fs  The file system to use.
-   * @param hbaseRootDir  The root directory to scan.
+   * @param resultMap map to add values. If null, this method will create and populate one to return
+   * @param fs The file system to use.
+   * @param hbaseRootDir The root directory to scan.
    * @param tableName name of the table to scan.
    * @param sfFilter optional path filter to apply to store files
    * @param executor optional executor service to parallelize this operation
    * @param progressReporter Instance or null; gets called every time we move to new region of
-   *   family dir and for each store file.
+   *          family dir and for each store file.
    * @return Map keyed by StoreFile name with a value of the full Path.
    * @throws IOException When scanning the directory fails.
    * @throws InterruptedException the thread is interrupted, either before or during the activity.
@@ -1294,20 +1257,21 @@ public final class FSUtils {
   public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> resultMap,
       final FileSystem fs, final Path hbaseRootDir, TableName tableName, final PathFilter sfFilter,
       ExecutorService executor, final ProgressReporter progressReporter)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
 
     final Map<String, Path> finalResultMap =
         resultMap == null ? new ConcurrentHashMap<>(128, 0.75f, 32) : resultMap;
 
     // only include the directory paths to tables
     Path tableDir = CommonFSUtils.getTableDir(hbaseRootDir, tableName);
-    // Inside a table, there are compaction.dir directories to skip.  Otherwise, all else
+    // Inside a table, there are compaction.dir directories to skip. Otherwise, all else
     // should be regions.
     final FamilyDirFilter familyFilter = new FamilyDirFilter(fs);
     final Vector<Exception> exceptions = new Vector<>();
 
     try {
-      List<FileStatus> regionDirs = FSUtils.listStatusWithStatusFilter(fs, tableDir, new RegionDirFilter(fs));
+      List<FileStatus> regionDirs =
+          FSUtils.listStatusWithStatusFilter(fs, tableDir, new RegionDirFilter(fs));
       if (regionDirs == null) {
         return finalResultMap;
       }
@@ -1328,8 +1292,9 @@ public final class FSUtils {
           @Override
           public void run() {
             try {
-              HashMap<String,Path> regionStoreFileMap = new HashMap<>();
-              List<FileStatus> familyDirs = FSUtils.listStatusWithStatusFilter(fs, dd, familyFilter);
+              HashMap<String, Path> regionStoreFileMap = new HashMap<>();
+              List<FileStatus> familyDirs =
+                  FSUtils.listStatusWithStatusFilter(fs, dd, familyFilter);
               if (familyDirs == null) {
                 if (!fs.exists(dd)) {
                   LOG.warn("Skipping region because it no longer exists: " + dd);
@@ -1355,7 +1320,7 @@ public final class FSUtils {
                   }
                   Path sf = sfStatus.getPath();
                   if (sfFilter == null || sfFilter.accept(sf)) {
-                    regionStoreFileMap.put( sf.getName(), sf);
+                    regionStoreFileMap.put(sf.getName(), sf);
                   }
                 }
               }
@@ -1409,7 +1374,7 @@ public final class FSUtils {
   public static int getRegionReferenceFileCount(final FileSystem fs, final Path p) {
     int result = 0;
     try {
-      for (Path familyDir:getFamilyDirs(fs, p)){
+      for (Path familyDir : getFamilyDirs(fs, p)) {
         result += getReferenceFilePaths(fs, familyDir).size();
       }
     } catch (IOException e) {
@@ -1419,80 +1384,70 @@ public final class FSUtils {
   }
 
   /**
-   * Runs through the HBase rootdir and creates a reverse lookup map for
-   * table StoreFile names to the full Path.
-   * <br>
+   * Runs through the HBase rootdir and creates a reverse lookup map for table StoreFile names to
+   * the full Path. <br>
    * Example...<br>
-   * Key = 3944417774205889744  <br>
+   * Key = 3944417774205889744 <br>
    * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
-   *
-   * @param fs  The file system to use.
-   * @param hbaseRootDir  The root directory to scan.
+   * @param fs The file system to use.
+   * @param hbaseRootDir The root directory to scan.
    * @return Map keyed by StoreFile name with a value of the full Path.
    * @throws IOException When scanning the directory fails.
    */
   public static Map<String, Path> getTableStoreFilePathMap(final FileSystem fs,
-      final Path hbaseRootDir)
-  throws IOException, InterruptedException {
-    return getTableStoreFilePathMap(fs, hbaseRootDir, null, null, (ProgressReporter)null);
+      final Path hbaseRootDir) throws IOException, InterruptedException {
+    return getTableStoreFilePathMap(fs, hbaseRootDir, null, null, (ProgressReporter) null);
   }
 
   /**
-   * Runs through the HBase rootdir and creates a reverse lookup map for
-   * table StoreFile names to the full Path.
-   * <br>
+   * Runs through the HBase rootdir and creates a reverse lookup map for table StoreFile names to
+   * the full Path. <br>
    * Example...<br>
-   * Key = 3944417774205889744  <br>
+   * Key = 3944417774205889744 <br>
    * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
-   *
-   * @param fs  The file system to use.
-   * @param hbaseRootDir  The root directory to scan.
+   * @param fs The file system to use.
+   * @param hbaseRootDir The root directory to scan.
    * @param sfFilter optional path filter to apply to store files
    * @param executor optional executor service to parallelize this operation
    * @param progressReporter Instance or null; gets called every time we move to new region of
-   *   family dir and for each store file.
+   *          family dir and for each store file.
    * @return Map keyed by StoreFile name with a value of the full Path.
    * @throws IOException When scanning the directory fails.
-   * @deprecated Since 2.3.0. Will be removed in hbase4. Used {@link
-   *   #getTableStoreFilePathMap(FileSystem, Path, PathFilter, ExecutorService, ProgressReporter)}
+   * @deprecated Since 2.3.0. Will be removed in hbase4. Used
+   *             {@link #getTableStoreFilePathMap(FileSystem, Path, PathFilter, ExecutorService, ProgressReporter)}
    */
   @Deprecated
   public static Map<String, Path> getTableStoreFilePathMap(final FileSystem fs,
       final Path hbaseRootDir, PathFilter sfFilter, ExecutorService executor,
-      HbckErrorReporter progressReporter)
-    throws IOException, InterruptedException {
-    return getTableStoreFilePathMap(fs, hbaseRootDir, sfFilter, executor,
-        new ProgressReporter() {
-          @Override
-          public void progress(FileStatus status) {
-            // status is not used in this implementation.
-            progressReporter.progress();
-          }
-        });
+      HbckErrorReporter progressReporter) throws IOException, InterruptedException {
+    return getTableStoreFilePathMap(fs, hbaseRootDir, sfFilter, executor, new ProgressReporter() {
+      @Override
+      public void progress(FileStatus status) {
+        // status is not used in this implementation.
+        progressReporter.progress();
+      }
+    });
   }
 
   /**
-   * Runs through the HBase rootdir and creates a reverse lookup map for
-   * table StoreFile names to the full Path.
-   * <br>
+   * Runs through the HBase rootdir and creates a reverse lookup map for table StoreFile names to
+   * the full Path. <br>
    * Example...<br>
-   * Key = 3944417774205889744  <br>
+   * Key = 3944417774205889744 <br>
    * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
-   *
-   * @param fs  The file system to use.
-   * @param hbaseRootDir  The root directory to scan.
+   * @param fs The file system to use.
+   * @param hbaseRootDir The root directory to scan.
    * @param sfFilter optional path filter to apply to store files
    * @param executor optional executor service to parallelize this operation
    * @param progressReporter Instance or null; gets called every time we move to new region of
-   *   family dir and for each store file.
+   *          family dir and for each store file.
    * @return Map keyed by StoreFile name with a value of the full Path.
    * @throws IOException When scanning the directory fails.
    * @throws InterruptedException
    */
-  public static Map<String, Path> getTableStoreFilePathMap(
-    final FileSystem fs, final Path hbaseRootDir, PathFilter sfFilter,
-        ExecutorService executor, ProgressReporter progressReporter)
-  throws IOException, InterruptedException {
+  public static Map<String, Path> getTableStoreFilePathMap(final FileSystem fs,
+      final Path hbaseRootDir, PathFilter sfFilter, ExecutorService executor,
+      ProgressReporter progressReporter) throws IOException, InterruptedException {
     ConcurrentHashMap<String, Path> map = new ConcurrentHashMap<>(1024, 0.75f, 32);
 
     // if this method looks similar to 'getTableFragmentation' that is because
@@ -1508,23 +1463,20 @@ public final class FSUtils {
 
   /**
    * Filters FileStatuses in an array and returns a list
-   *
-   * @param input   An array of FileStatuses
-   * @param filter  A required filter to filter the array
-   * @return        A list of FileStatuses
+   * @param input An array of FileStatuses
+   * @param filter A required filter to filter the array
+   * @return A list of FileStatuses
    */
-  public static List<FileStatus> filterFileStatuses(FileStatus[] input,
-      FileStatusFilter filter) {
+  public static List<FileStatus> filterFileStatuses(FileStatus[] input, FileStatusFilter filter) {
     if (input == null) return null;
     return filterFileStatuses(Iterators.forArray(input), filter);
   }
 
   /**
    * Filters FileStatuses in an iterator and returns a list
-   *
-   * @param input   An iterator of FileStatuses
-   * @param filter  A required filter to filter the array
-   * @return        A list of FileStatuses
+   * @param input An iterator of FileStatuses
+   * @param filter A required filter to filter the array
+   * @return A list of FileStatuses
    */
   public static List<FileStatus> filterFileStatuses(Iterator<FileStatus> input,
       FileStatusFilter filter) {
@@ -1540,19 +1492,17 @@ public final class FSUtils {
   }
 
   /**
-   * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
-   * This accommodates differences between hadoop versions, where hadoop 1
-   * does not throw a FileNotFoundException, and return an empty FileStatus[]
-   * while Hadoop 2 will throw FileNotFoundException.
-   *
+   * Calls fs.listStatus() and treats FileNotFoundException as non-fatal This accommodates
+   * differences between hadoop versions, where hadoop 1 does not throw a FileNotFoundException, and
+   * return an empty FileStatus[] while Hadoop 2 will throw FileNotFoundException.
    * @param fs file system
    * @param dir directory
    * @param filter file status filter
    * @return null if dir is empty or doesn't exist, otherwise FileStatus list
    */
-  public static List<FileStatus> listStatusWithStatusFilter(final FileSystem fs,
-      final Path dir, final FileStatusFilter filter) throws IOException {
-    FileStatus [] status = null;
+  public static List<FileStatus> listStatusWithStatusFilter(final FileSystem fs, final Path dir,
+      final FileStatusFilter filter) throws IOException {
+    FileStatus[] status = null;
     try {
       status = fs.listStatus(dir);
     } catch (FileNotFoundException fnfe) {
@@ -1560,7 +1510,7 @@ public final class FSUtils {
       return null;
     }
 
-    if (ArrayUtils.getLength(status) == 0)  {
+    if (ArrayUtils.getLength(status) == 0) {
       return null;
     }
 
@@ -1577,71 +1527,51 @@ public final class FSUtils {
   }
 
   /**
-   * This function is to scan the root path of the file system to get the
-   * degree of locality for each region on each of the servers having at least
-   * one block of that region.
-   * This is used by the tool {@link org.apache.hadoop.hbase.master.RegionPlacementMaintainer}
-   *
-   * @param conf
-   *          the configuration to use
-   * @return the mapping from region encoded name to a map of server names to
-   *           locality fraction
-   * @throws IOException
-   *           in case of file system errors or interrupts
+   * This function is to scan the root path of the file system to get the degree of locality for
+   * each region on each of the servers having at least one block of that region. This is used by
+   * the tool {@link org.apache.hadoop.hbase.master.RegionPlacementMaintainer}
+   * @param conf the configuration to use
+   * @return the mapping from region encoded name to a map of server names to locality fraction
+   * @throws IOException in case of file system errors or interrupts
    */
-  public static Map<String, Map<String, Float>> getRegionDegreeLocalityMappingFromFS(
-      final Configuration conf) throws IOException {
-    return getRegionDegreeLocalityMappingFromFS(
-        conf, null,
-        conf.getInt(THREAD_POOLSIZE, DEFAULT_THREAD_POOLSIZE));
+  public static Map<String, Map<String, Float>>
+      getRegionDegreeLocalityMappingFromFS(final Configuration conf) throws IOException {
+    return getRegionDegreeLocalityMappingFromFS(conf, null,
+      conf.getInt(THREAD_POOLSIZE, DEFAULT_THREAD_POOLSIZE));
 
   }
 
   /**
-   * This function is to scan the root path of the file system to get the
-   * degree of locality for each region on each of the servers having at least
-   * one block of that region.
-   *
-   * @param conf
-   *          the configuration to use
-   * @param desiredTable
-   *          the table you wish to scan locality for
-   * @param threadPoolSize
-   *          the thread pool size to use
-   * @return the mapping from region encoded name to a map of server names to
-   *           locality fraction
-   * @throws IOException
-   *           in case of file system errors or interrupts
+   * This function is to scan the root path of the file system to get the degree of locality for
+   * each region on each of the servers having at least one block of that region.
+   * @param conf the configuration to use
+   * @param desiredTable the table you wish to scan locality for
+   * @param threadPoolSize the thread pool size to use
+   * @return the mapping from region encoded name to a map of server names to locality fraction
+   * @throws IOException in case of file system errors or interrupts
    */
   public static Map<String, Map<String, Float>> getRegionDegreeLocalityMappingFromFS(
-      final Configuration conf, final String desiredTable, int threadPoolSize)
-      throws IOException {
+      final Configuration conf, final String desiredTable, int threadPoolSize) throws IOException {
     Map<String, Map<String, Float>> regionDegreeLocalityMapping = new ConcurrentHashMap<>();
     getRegionLocalityMappingFromFS(conf, desiredTable, threadPoolSize, regionDegreeLocalityMapping);
     return regionDegreeLocalityMapping;
   }
 
   /**
-   * This function is to scan the root path of the file system to get either the
-   * mapping between the region name and its best locality region server or the
-   * degree of locality of each region on each of the servers having at least
-   * one block of that region. The output map parameters are both optional.
-   *
-   * @param conf
-   *          the configuration to use
-   * @param desiredTable
-   *          the table you wish to scan locality for
-   * @param threadPoolSize
-   *          the thread pool size to use
-   * @param regionDegreeLocalityMapping
-   *          the map into which to put the locality degree mapping or null,
-   *          must be a thread-safe implementation
-   * @throws IOException
-   *           in case of file system errors or interrupts
+   * This function is to scan the root path of the file system to get either the mapping between the
+   * region name and its best locality region server or the degree of locality of each region on
+   * each of the servers having at least one block of that region. The output map parameters are
+   * both optional.
+   * @param conf the configuration to use
+   * @param desiredTable the table you wish to scan locality for
+   * @param threadPoolSize the thread pool size to use
+   * @param regionDegreeLocalityMapping the map into which to put the locality degree mapping or
+   *          null, must be a thread-safe implementation
+   * @throws IOException in case of file system errors or interrupts
    */
   private static void getRegionLocalityMappingFromFS(final Configuration conf,
-    final String desiredTable, int threadPoolSize,
-    final Map<String, Map<String, Float>> regionDegreeLocalityMapping) throws IOException {
+      final String desiredTable, int threadPoolSize,
+      final Map<String, Map<String, Float>> regionDegreeLocalityMapping) throws IOException {
     final FileSystem fs = FileSystem.get(conf);
     final Path rootPath = CommonFSUtils.getRootDir(conf);
     final long startTime = EnvironmentEdgeManager.currentTime();
@@ -1649,10 +1579,10 @@ public final class FSUtils {
     // The table files are in ${hbase.rootdir}/data/<namespace>/<table>/*
     if (null == desiredTable) {
       queryPath =
-        new Path(new Path(rootPath, HConstants.BASE_NAMESPACE_DIR).toString() + "/*/*/*/");
+          new Path(new Path(rootPath, HConstants.BASE_NAMESPACE_DIR).toString() + "/*/*/*/");
     } else {
       queryPath = new Path(
-        CommonFSUtils.getTableDir(rootPath, TableName.valueOf(desiredTable)).toString() + "/*/");
+          CommonFSUtils.getTableDir(rootPath, TableName.valueOf(desiredTable)).toString() + "/*/");
     }
 
     // reject all paths that are not appropriate
@@ -1698,7 +1628,7 @@ public final class FSUtils {
     // run in multiple threads
     final ExecutorService tpe = Executors.newFixedThreadPool(threadPoolSize,
       new ThreadFactoryBuilder().setNameFormat("FSRegionQuery-pool-%d").setDaemon(true)
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     try {
       // ignore all file status items that are not of interest
       for (FileStatus regionStatus : statusList) {
@@ -1718,8 +1648,7 @@ public final class FSUtils {
       try {
         // here we wait until TPE terminates, which is either naturally or by
         // exceptions in the execution of the threads
-        while (!tpe.awaitTermination(threadWakeFrequency,
-            TimeUnit.MILLISECONDS)) {
+        while (!tpe.awaitTermination(threadWakeFrequency, TimeUnit.MILLISECONDS)) {
           // printing out rough estimate, so as to not introduce
           // AtomicInteger
           LOG.info("Locality checking is underway: { Scanned Regions : "
@@ -1737,20 +1666,23 @@ public final class FSUtils {
   }
 
   /**
-   * Do our short circuit read setup.
-   * Checks buffer size to use and whether to do checksumming in hbase or hdfs.
+   * Do our short circuit read setup. Checks buffer size to use and whether to do checksumming in
+   * hbase or hdfs.
    * @param conf
    */
   public static void setupShortCircuitRead(final Configuration conf) {
     // Check that the user has not set the "dfs.client.read.shortcircuit.skip.checksum" property.
     boolean shortCircuitSkipChecksum =
-      conf.getBoolean("dfs.client.read.shortcircuit.skip.checksum", false);
+        conf.getBoolean("dfs.client.read.shortcircuit.skip.checksum", false);
     boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
     if (shortCircuitSkipChecksum) {
-      LOG.warn("Configuration \"dfs.client.read.shortcircuit.skip.checksum\" should not " +
-        "be set to true." + (useHBaseChecksum ? " HBase checksum doesn't require " +
-        "it, see https://issues.apache.org/jira/browse/HBASE-6868." : ""));
-      assert !shortCircuitSkipChecksum; //this will fail if assertions are on
+      LOG.warn("Configuration \"dfs.client.read.shortcircuit.skip.checksum\" should not "
+          + "be set to true."
+          + (useHBaseChecksum
+              ? " HBase checksum doesn't require "
+                  + "it, see https://issues.apache.org/jira/browse/HBASE-6868."
+              : ""));
+      assert !shortCircuitSkipChecksum; // this will fail if assertions are on
     }
     checkShortCircuitReadBufferSize(conf);
   }
@@ -1767,7 +1699,7 @@ public final class FSUtils {
     int size = conf.getInt(dfsKey, notSet);
     // If a size is set, return -- we will use it.
     if (size != notSet) return;
-    // But short circuit buffer size is normally not set.  Put in place the hbase wanted size.
+    // But short circuit buffer size is normally not set. Put in place the hbase wanted size.
     int hbaseSize = conf.getInt("hbase." + dfsKey, defaultSize);
     conf.setIfUnset(dfsKey, Integer.toString(hbaseSize));
   }
@@ -1786,25 +1718,25 @@ public final class FSUtils {
     // to the DFS FS instance and make the method getHedgedReadMetrics accessible, then invoke it
     // to get the singleton instance of DFSHedgedReadMetrics shared by DFSClients.
     final String name = "getHedgedReadMetrics";
-    DFSClient dfsclient = ((DistributedFileSystem)FileSystem.get(c)).getClient();
+    DFSClient dfsclient = ((DistributedFileSystem) FileSystem.get(c)).getClient();
     Method m;
     try {
       m = dfsclient.getClass().getDeclaredMethod(name);
     } catch (NoSuchMethodException e) {
-      LOG.warn("Failed find method " + name + " in dfsclient; no hedged read metrics: " +
-          e.getMessage());
+      LOG.warn(
+        "Failed find method " + name + " in dfsclient; no hedged read metrics: " + e.getMessage());
       return null;
     } catch (SecurityException e) {
-      LOG.warn("Failed find method " + name + " in dfsclient; no hedged read metrics: " +
-          e.getMessage());
+      LOG.warn(
+        "Failed find method " + name + " in dfsclient; no hedged read metrics: " + e.getMessage());
       return null;
     }
     m.setAccessible(true);
     try {
-      return (DFSHedgedReadMetrics)m.invoke(dfsclient);
+      return (DFSHedgedReadMetrics) m.invoke(dfsclient);
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      LOG.warn("Failed invoking method " + name + " on dfsclient; no hedged read metrics: " +
-          e.getMessage());
+      LOG.warn("Failed invoking method " + name + " on dfsclient; no hedged read metrics: "
+          + e.getMessage());
       return null;
     }
   }
@@ -1855,14 +1787,14 @@ public final class FSUtils {
    * @return A set containing all namenode addresses of fs
    */
   private static Set<InetSocketAddress> getNNAddresses(DistributedFileSystem fs,
-    Configuration conf) {
+      Configuration conf) {
     Set<InetSocketAddress> addresses = new HashSet<>();
     String serviceName = fs.getCanonicalServiceName();
 
     if (serviceName.startsWith("ha-hdfs")) {
       try {
         Map<String, Map<String, InetSocketAddress>> addressMap =
-          DFSUtil.getNNServiceRpcAddressesForCluster(conf);
+            DFSUtil.getNNServiceRpcAddressesForCluster(conf);
         String nameService = serviceName.substring(serviceName.indexOf(":") + 1);
         if (addressMap.containsKey(nameService)) {
           Map<String, InetSocketAddress> nnMap = addressMap.get(nameService);
@@ -1906,7 +1838,7 @@ public final class FSUtils {
     }
     if (srcServiceName.startsWith("ha-hdfs") && desServiceName.startsWith("ha-hdfs")) {
       Collection<String> internalNameServices =
-        conf.getTrimmedStringCollection("dfs.internal.nameservices");
+          conf.getTrimmedStringCollection("dfs.internal.nameservices");
       if (!internalNameServices.isEmpty()) {
         if (internalNameServices.contains(srcServiceName.split(":")[1])) {
           return true;

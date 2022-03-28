@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +47,7 @@ public abstract class MobCompactor {
   protected ExecutorService pool;
 
   public MobCompactor(Configuration conf, FileSystem fs, TableName tableName,
-                      ColumnFamilyDescriptor column, ExecutorService pool) {
+      ColumnFamilyDescriptor column, ExecutorService pool) {
     this.conf = conf;
     this.fs = fs;
     this.tableName = tableName;
@@ -84,6 +83,5 @@ public abstract class MobCompactor {
    * @return The paths of new mob files generated in the compaction.
    * @throws IOException
    */
-  public abstract List<Path> compact(List<FileStatus> files, boolean allFiles)
-    throws IOException;
+  public abstract List<Path> compact(List<FileStatus> files, boolean allFiles) throws IOException;
 }

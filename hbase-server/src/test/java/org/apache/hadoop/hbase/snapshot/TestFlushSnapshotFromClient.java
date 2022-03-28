@@ -62,12 +62,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 /**
  * Test creating/using/deleting snapshots from the client
  * <p>
- * This is an end-to-end test for the snapshot utility
- *
- * TODO This is essentially a clone of TestSnapshotFromClient.  This is worth refactoring this
- * because there will be a few more flavors of snapshots that need to run these tests.
+ * This is an end-to-end test for the snapshot utility TODO This is essentially a clone of
+ * TestSnapshotFromClient. This is worth refactoring this because there will be a few more flavors
+ * of snapshots that need to run these tests.
  */
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestFlushSnapshotFromClient {
 
   @ClassRule
@@ -103,7 +102,7 @@ public class TestFlushSnapshotFromClient {
     // Enable snapshot
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-        ConstantSizeRegionSplitPolicy.class.getName());
+      ConstantSizeRegionSplitPolicy.class.getName());
   }
 
   @Before
@@ -165,7 +164,7 @@ public class TestFlushSnapshotFromClient {
       ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM);
   }
 
-   /**
+  /**
    * Test snapshotting a table that is online without flushing
    */
   @Test
@@ -203,7 +202,6 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
   }
 
-
   /**
    * Test simple flush snapshotting a table that is online
    */
@@ -223,15 +221,14 @@ public class TestFlushSnapshotFromClient {
     byte[] snapshot = Bytes.toBytes(snapshotString);
     Map<String, String> props = new HashMap<>();
     props.put("table", TABLE_NAME.getNameAsString());
-    admin.execProcedure(SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION,
-        snapshotString, props);
-
+    admin.execProcedure(SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION, snapshotString,
+      props);
 
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot
-    List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertOneSnapshotThatMatches(admin,
-      snapshot, TABLE_NAME);
+    List<SnapshotDescription> snapshots =
+        SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
     LOG.debug("FS state after snapshot:");
@@ -250,13 +247,13 @@ public class TestFlushSnapshotFromClient {
     // make sure the table doesn't exist
     boolean fail = false;
     do {
-    try {
-      admin.getTableDescriptor(tableName);
-      fail = true;
-      LOG.error("Table:" + tableName + " already exists, checking a new name");
-      tableName = TableName.valueOf(tableName+"!");
-    } catch (TableNotFoundException e) {
-      fail = false;
+      try {
+        admin.getTableDescriptor(tableName);
+        fail = true;
+        LOG.error("Table:" + tableName + " already exists, checking a new name");
+        tableName = TableName.valueOf(tableName + "!");
+      } catch (TableNotFoundException e) {
+        fail = false;
       }
     } while (fail);
 
@@ -318,9 +315,9 @@ public class TestFlushSnapshotFromClient {
     int numRegions = admin.getTableRegions(TABLE_NAME).size();
     int numRegionsAfterMerge = numRegions - 2;
     admin.mergeRegionsAsync(regions.get(1).getEncodedNameAsBytes(),
-        regions.get(2).getEncodedNameAsBytes(), true);
+      regions.get(2).getEncodedNameAsBytes(), true);
     admin.mergeRegionsAsync(regions.get(4).getEncodedNameAsBytes(),
-        regions.get(5).getEncodedNameAsBytes(), true);
+      regions.get(5).getEncodedNameAsBytes(), true);
 
     // Verify that there's one region less
     waitRegionsAfterMerge(numRegionsAfterMerge);
@@ -360,9 +357,9 @@ public class TestFlushSnapshotFromClient {
     int numRegions = admin.getTableRegions(TABLE_NAME).size();
     int numRegionsAfterMerge = numRegions - 2;
     admin.mergeRegionsAsync(regions.get(1).getEncodedNameAsBytes(),
-        regions.get(2).getEncodedNameAsBytes(), true);
+      regions.get(2).getEncodedNameAsBytes(), true);
     admin.mergeRegionsAsync(regions.get(4).getEncodedNameAsBytes(),
-        regions.get(5).getEncodedNameAsBytes(), true);
+      regions.get(5).getEncodedNameAsBytes(), true);
 
     waitRegionsAfterMerge(numRegionsAfterMerge);
     assertEquals(numRegionsAfterMerge, admin.getTableRegions(TABLE_NAME).size());
@@ -415,7 +412,6 @@ public class TestFlushSnapshotFromClient {
     }
     SnapshotTestingUtils.waitForTableToBeOnline(UTIL, TABLE_NAME);
   }
-
 
   protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
       long expectedRows) throws IOException {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -117,11 +117,11 @@ public final class ReplicationUtils {
       return false;
     }
     if (rpc1.replicateAllUserTables()) {
-      return isNamespacesEqual(rpc1.getExcludeNamespaces(), rpc2.getExcludeNamespaces()) &&
-        isTableCFsEqual(rpc1.getExcludeTableCFsMap(), rpc2.getExcludeTableCFsMap());
+      return isNamespacesEqual(rpc1.getExcludeNamespaces(), rpc2.getExcludeNamespaces())
+          && isTableCFsEqual(rpc1.getExcludeTableCFsMap(), rpc2.getExcludeTableCFsMap());
     } else {
-      return isNamespacesEqual(rpc1.getNamespaces(), rpc2.getNamespaces()) &&
-        isTableCFsEqual(rpc1.getTableCFsMap(), rpc2.getTableCFsMap());
+      return isNamespacesEqual(rpc1.getNamespaces(), rpc2.getNamespaces())
+          && isTableCFsEqual(rpc1.getTableCFsMap(), rpc2.getTableCFsMap());
     }
   }
 
@@ -135,8 +135,8 @@ public final class ReplicationUtils {
   }
 
   /**
-   * @deprecated Will be removed in HBase 3.
-   *             Use {@link ReplicationPeerConfig#needToReplicate(TableName)} instead.
+   * @deprecated Will be removed in HBase 3. Use
+   *             {@link ReplicationPeerConfig#needToReplicate(TableName)} instead.
    * @param peerConfig configuration for the replication peer cluster
    * @param tableName name of the table
    * @return true if the table need replicate to the peer cluster

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,6 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public class MasterNotRunningException extends HBaseIOException {
   private static final long serialVersionUID = (1L << 23) - 1L;
+
   /** default constructor */
   public MasterNotRunningException() {
     super();

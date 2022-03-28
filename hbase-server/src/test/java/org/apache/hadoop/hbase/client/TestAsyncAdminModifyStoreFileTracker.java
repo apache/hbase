@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,14 +46,14 @@ public class TestAsyncAdminModifyStoreFileTracker extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncAdminModifyStoreFileTracker.class);
+      HBaseClassTestRule.forClass(TestAsyncAdminModifyStoreFileTracker.class);
 
   private static final String SRC_IMPL = "hbase.store.file-tracker.migration.src.impl";
 
   private static final String DST_IMPL = "hbase.store.file-tracker.migration.dst.impl";
 
   private void verifyModifyTableResult(TableName tableName, byte[] family, byte[] qual, byte[] row,
-    byte[] value, String sft) throws IOException {
+      byte[] value, String sft) throws IOException {
     TableDescriptor td = admin.getDescriptor(tableName).join();
     assertEquals(sft, td.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
     // no migration related configs
@@ -75,41 +75,41 @@ public class TestAsyncAdminModifyStoreFileTracker extends TestAsyncAdminBase {
     }
     // change to FILE
     admin.modifyTableStoreFileTracker(tableName, StoreFileTrackerFactory.Trackers.FILE.name())
-      .join();
+        .join();
     verifyModifyTableResult(tableName, family, qual, row, value,
       StoreFileTrackerFactory.Trackers.FILE.name());
 
     // change to FILE again, should have no effect
     admin.modifyTableStoreFileTracker(tableName, StoreFileTrackerFactory.Trackers.FILE.name())
-      .join();
+        .join();
     verifyModifyTableResult(tableName, family, qual, row, value,
       StoreFileTrackerFactory.Trackers.FILE.name());
 
     // change to MIGRATION, and then to FILE
     admin.modifyTable(TableDescriptorBuilder.newBuilder(admin.getDescriptor(tableName).join())
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-        StoreFileTrackerFactory.Trackers.MIGRATION.name())
-      .setValue(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-      .setValue(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build()).join();
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.MIGRATION.name())
+        .setValue(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+        .setValue(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build()).join();
     admin.modifyTableStoreFileTracker(tableName, StoreFileTrackerFactory.Trackers.FILE.name())
-      .join();
+        .join();
     verifyModifyTableResult(tableName, family, qual, row, value,
       StoreFileTrackerFactory.Trackers.FILE.name());
 
     // change to MIGRATION, and then to DEFAULT
     admin.modifyTable(TableDescriptorBuilder.newBuilder(admin.getDescriptor(tableName).join())
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-        StoreFileTrackerFactory.Trackers.MIGRATION.name())
-      .setValue(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-      .setValue(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build()).join();
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.MIGRATION.name())
+        .setValue(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+        .setValue(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build()).join();
     admin.modifyTableStoreFileTracker(tableName, StoreFileTrackerFactory.Trackers.DEFAULT.name())
-      .join();
+        .join();
     verifyModifyTableResult(tableName, family, qual, row, value,
       StoreFileTrackerFactory.Trackers.DEFAULT.name());
   }
 
   private void verifyModifyColumnFamilyResult(TableName tableName, byte[] family, byte[] qual,
-    byte[] row, byte[] value, String sft) throws IOException {
+      byte[] row, byte[] value, String sft) throws IOException {
     TableDescriptor td = admin.getDescriptor(tableName).join();
     ColumnFamilyDescriptor cfd = td.getColumnFamily(family);
     assertEquals(sft, cfd.getConfigurationValue(StoreFileTrackerFactory.TRACKER_IMPL));
@@ -146,13 +146,16 @@ public class TestAsyncAdminModifyStoreFileTracker extends TestAsyncAdminBase {
 
     // change to MIGRATION, and then to FILE
     TableDescriptor current = admin.getDescriptor(tableName).join();
-    admin.modifyTable(TableDescriptorBuilder.newBuilder(current)
-      .modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(current.getColumnFamily(family))
-        .setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL,
-          StoreFileTrackerFactory.Trackers.MIGRATION.name())
-        .setConfiguration(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-        .setConfiguration(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build())
-      .build()).join();
+    admin.modifyTable(
+      TableDescriptorBuilder.newBuilder(current)
+          .modifyColumnFamily(ColumnFamilyDescriptorBuilder
+              .newBuilder(current.getColumnFamily(family))
+              .setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL,
+                StoreFileTrackerFactory.Trackers.MIGRATION.name())
+              .setConfiguration(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+              .setConfiguration(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build())
+          .build())
+        .join();
     admin.modifyColumnFamilyStoreFileTracker(tableName, family,
       StoreFileTrackerFactory.Trackers.FILE.name()).join();
     verifyModifyColumnFamilyResult(tableName, family, qual, row, value,
@@ -160,13 +163,16 @@ public class TestAsyncAdminModifyStoreFileTracker extends TestAsyncAdminBase {
 
     // change to MIGRATION, and then to DEFAULT
     current = admin.getDescriptor(tableName).join();
-    admin.modifyTable(TableDescriptorBuilder.newBuilder(current)
-      .modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(current.getColumnFamily(family))
-        .setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL,
-          StoreFileTrackerFactory.Trackers.MIGRATION.name())
-        .setConfiguration(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
-        .setConfiguration(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build())
-      .build()).join();
+    admin.modifyTable(
+      TableDescriptorBuilder.newBuilder(current)
+          .modifyColumnFamily(ColumnFamilyDescriptorBuilder
+              .newBuilder(current.getColumnFamily(family))
+              .setConfiguration(StoreFileTrackerFactory.TRACKER_IMPL,
+                StoreFileTrackerFactory.Trackers.MIGRATION.name())
+              .setConfiguration(SRC_IMPL, StoreFileTrackerFactory.Trackers.FILE.name())
+              .setConfiguration(DST_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name()).build())
+          .build())
+        .join();
     admin.modifyColumnFamilyStoreFileTracker(tableName, family,
       StoreFileTrackerFactory.Trackers.DEFAULT.name()).join();
     verifyModifyColumnFamilyResult(tableName, family, qual, row, value,
@@ -187,8 +193,9 @@ public class TestAsyncAdminModifyStoreFileTracker extends TestAsyncAdminBase {
       () -> FutureUtils.get(admin.modifyColumnFamilyStoreFileTracker(tableName,
         Bytes.toBytes("not_exists"), StoreFileTrackerFactory.Trackers.FILE.name())));
     // to migration
-    assertThrows(DoNotRetryIOException.class, () -> FutureUtils.get(admin
-      .modifyTableStoreFileTracker(tableName, StoreFileTrackerFactory.Trackers.MIGRATION.name())));
+    assertThrows(DoNotRetryIOException.class,
+      () -> FutureUtils.get(admin.modifyTableStoreFileTracker(tableName,
+        StoreFileTrackerFactory.Trackers.MIGRATION.name())));
     // disabled
     admin.disableTable(tableName).join();
     assertThrows(TableNotEnabledException.class, () -> FutureUtils.get(

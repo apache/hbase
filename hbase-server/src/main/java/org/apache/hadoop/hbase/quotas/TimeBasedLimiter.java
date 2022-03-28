@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
-
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
@@ -145,7 +144,7 @@ public class TimeBasedLimiter implements QuotaLimiter {
     }
     if (!reqSizeLimiter.canExecute(estimateWriteSize + estimateReadSize)) {
       RpcThrottlingException.throwRequestSizeExceeded(
-          reqSizeLimiter.waitInterval(estimateWriteSize + estimateReadSize));
+        reqSizeLimiter.waitInterval(estimateWriteSize + estimateReadSize));
     }
     if (!reqCapacityUnitLimiter.canExecute(estimateWriteCapacityUnit + estimateReadCapacityUnit)) {
       RpcThrottlingException.throwRequestCapacityUnitExceeded(
@@ -157,8 +156,8 @@ public class TimeBasedLimiter implements QuotaLimiter {
         RpcThrottlingException.throwNumWriteRequestsExceeded(writeReqsLimiter.waitInterval());
       }
       if (!writeSizeLimiter.canExecute(estimateWriteSize)) {
-        RpcThrottlingException.throwWriteSizeExceeded(
-            writeSizeLimiter.waitInterval(estimateWriteSize));
+        RpcThrottlingException
+            .throwWriteSizeExceeded(writeSizeLimiter.waitInterval(estimateWriteSize));
       }
       if (!writeCapacityUnitLimiter.canExecute(estimateWriteCapacityUnit)) {
         RpcThrottlingException.throwWriteCapacityUnitExceeded(
@@ -171,8 +170,8 @@ public class TimeBasedLimiter implements QuotaLimiter {
         RpcThrottlingException.throwNumReadRequestsExceeded(readReqsLimiter.waitInterval());
       }
       if (!readSizeLimiter.canExecute(estimateReadSize)) {
-        RpcThrottlingException.throwReadSizeExceeded(
-            readSizeLimiter.waitInterval(estimateReadSize));
+        RpcThrottlingException
+            .throwReadSizeExceeded(readSizeLimiter.waitInterval(estimateReadSize));
       }
       if (!readCapacityUnitLimiter.canExecute(estimateReadCapacityUnit)) {
         RpcThrottlingException.throwReadCapacityUnitExceeded(

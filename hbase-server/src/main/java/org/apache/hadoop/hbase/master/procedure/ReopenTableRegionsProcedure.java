@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,8 +72,7 @@ public class ReopenTableRegionsProcedure
     this.regionNames = Collections.emptyList();
   }
 
-  public ReopenTableRegionsProcedure(final TableName tableName,
-      final List<byte[]> regionNames) {
+  public ReopenTableRegionsProcedure(final TableName tableName, final List<byte[]> regionNames) {
     this.tableName = tableName;
     this.regionNames = regionNames;
   }
@@ -93,7 +92,7 @@ public class ReopenTableRegionsProcedure
       return false;
     }
     RegionStateNode regionNode =
-      env.getAssignmentManager().getRegionStates().getRegionStateNode(loc.getRegion());
+        env.getAssignmentManager().getRegionStates().getRegionStateNode(loc.getRegion());
     // If the region node is null, then at least in the next round we can remove this region to make
     // progress. And the second condition is a normal one, if there are no TRSP with it then we can
     // schedule one to make progress.
@@ -109,15 +108,15 @@ public class ReopenTableRegionsProcedure
           LOG.info("Table {} is disabled, give up reopening its regions", tableName);
           return Flow.NO_MORE_STATE;
         }
-        List<HRegionLocation> tableRegions = env.getAssignmentManager()
-          .getRegionStates().getRegionsOfTableForReopen(tableName);
+        List<HRegionLocation> tableRegions =
+            env.getAssignmentManager().getRegionStates().getRegionsOfTableForReopen(tableName);
         regions = getRegionLocationsForReopen(tableRegions);
         setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
         return Flow.HAS_MORE_STATE;
       case REOPEN_TABLE_REGIONS_REOPEN_REGIONS:
         for (HRegionLocation loc : regions) {
           RegionStateNode regionNode =
-            env.getAssignmentManager().getRegionStates().getRegionStateNode(loc.getRegion());
+              env.getAssignmentManager().getRegionStates().getRegionStateNode(loc.getRegion());
           // this possible, maybe the region has already been merged or split, see HBASE-20921
           if (regionNode == null) {
             continue;
@@ -139,7 +138,7 @@ public class ReopenTableRegionsProcedure
         return Flow.HAS_MORE_STATE;
       case REOPEN_TABLE_REGIONS_CONFIRM_REOPENED:
         regions = regions.stream().map(env.getAssignmentManager().getRegionStates()::checkReopened)
-          .filter(l -> l != null).collect(Collectors.toList());
+            .filter(l -> l != null).collect(Collectors.toList());
         if (regions.isEmpty()) {
           return Flow.NO_MORE_STATE;
         }
@@ -155,8 +154,8 @@ public class ReopenTableRegionsProcedure
         }
         long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
         LOG.info(
-          "There are still {} region(s) which need to be reopened for table {} are in " +
-            "OPENING state, suspend {}secs and try again later",
+          "There are still {} region(s) which need to be reopened for table {} are in "
+              + "OPENING state, suspend {}secs and try again later",
           regions.size(), tableName, backoff / 1000);
         setTimeout(Math.toIntExact(backoff));
         setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
@@ -167,12 +166,12 @@ public class ReopenTableRegionsProcedure
     }
   }
 
-  private List<HRegionLocation> getRegionLocationsForReopen(
-      List<HRegionLocation> tableRegionsForReopen) {
+  private List<HRegionLocation>
+      getRegionLocationsForReopen(List<HRegionLocation> tableRegionsForReopen) {
 
     List<HRegionLocation> regionsToReopen = new ArrayList<>();
-    if (CollectionUtils.isNotEmpty(regionNames) &&
-      CollectionUtils.isNotEmpty(tableRegionsForReopen)) {
+    if (CollectionUtils.isNotEmpty(regionNames)
+        && CollectionUtils.isNotEmpty(tableRegionsForReopen)) {
       for (byte[] regionName : regionNames) {
         for (HRegionLocation hRegionLocation : tableRegionsForReopen) {
           if (Bytes.equals(regionName, hRegionLocation.getRegion().getRegionName())) {
@@ -222,7 +221,7 @@ public class ReopenTableRegionsProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     ReopenTableRegionsStateData.Builder builder = ReopenTableRegionsStateData.newBuilder()
-      .setTableName(ProtobufUtil.toProtoTableName(tableName));
+        .setTableName(ProtobufUtil.toProtoTableName(tableName));
     regions.stream().map(ProtobufUtil::toRegionLocation).forEachOrdered(builder::addRegion);
     if (CollectionUtils.isNotEmpty(regionNames)) {
       // As of this writing, wrapping this statement withing if condition is only required
@@ -244,10 +243,10 @@ public class ReopenTableRegionsProcedure
     ReopenTableRegionsStateData data = serializer.deserialize(ReopenTableRegionsStateData.class);
     tableName = ProtobufUtil.toTableName(data.getTableName());
     regions = data.getRegionList().stream().map(ProtobufUtil::toRegionLocation)
-      .collect(Collectors.toList());
+        .collect(Collectors.toList());
     if (CollectionUtils.isNotEmpty(data.getRegionNamesList())) {
       regionNames = data.getRegionNamesList().stream().map(ByteString::toByteArray)
-        .collect(Collectors.toList());
+          .collect(Collectors.toList());
     } else {
       regionNames = Collections.emptyList();
     }

@@ -17,16 +17,17 @@
  */
 package org.apache.hadoop.hbase.favored;
 
-import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Addressing;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
 
 /**
- * This class differs from ServerName in that start code is always ignored. This is because
- * start code, ServerName.NON_STARTCODE is used to persist favored nodes and keeping this separate
- * from {@link ServerName} is much cleaner. This should only be used by Favored node specific
- * classes and should not be used outside favored nodes.
+ * This class differs from ServerName in that start code is always ignored. This is because start
+ * code, ServerName.NON_STARTCODE is used to persist favored nodes and keeping this separate from
+ * {@link ServerName} is much cleaner. This should only be used by Favored node specific classes and
+ * should not be used outside favored nodes.
  */
 @InterfaceAudience.Private
 class StartcodeAgnosticServerName extends ServerName {
@@ -45,9 +46,10 @@ class StartcodeAgnosticServerName extends ServerName {
         Addressing.parsePort(hostnameAndPort), startcode);
   }
 
-  public static StartcodeAgnosticServerName valueOf(final HostAndPort hostnameAndPort, long startcode) {
-    return new StartcodeAgnosticServerName(hostnameAndPort.getHost(),
-      hostnameAndPort.getPort(), startcode);
+  public static StartcodeAgnosticServerName valueOf(final HostAndPort hostnameAndPort,
+      long startcode) {
+    return new StartcodeAgnosticServerName(hostnameAndPort.getHost(), hostnameAndPort.getPort(),
+        startcode);
   }
 
   @Override

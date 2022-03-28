@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -90,11 +90,11 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   private final RegistryEndpointsRefresher registryEndpointRefresher;
 
   protected AbstractRpcBasedConnectionRegistry(Configuration conf,
-    String hedgedReqsFanoutConfigName, String initialRefreshDelaySecsConfigName,
-    String refreshIntervalSecsConfigName, String minRefreshIntervalSecsConfigName)
-    throws IOException {
+      String hedgedReqsFanoutConfigName, String initialRefreshDelaySecsConfigName,
+      String refreshIntervalSecsConfigName, String minRefreshIntervalSecsConfigName)
+      throws IOException {
     this.hedgedReadFanOut =
-      Math.max(1, conf.getInt(hedgedReqsFanoutConfigName, HEDGED_REQS_FANOUT_DEFAULT));
+        Math.max(1, conf.getInt(hedgedReqsFanoutConfigName, HEDGED_REQS_FANOUT_DEFAULT));
     rpcTimeoutMs = (int) Math.min(Integer.MAX_VALUE,
       conf.getLong(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
     // XXX: we pass cluster id as null here since we do not have a cluster id yet, we have to fetch
@@ -105,8 +105,8 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
     populateStubs(getBootstrapNodes(conf));
     // could return null here is refresh interval is less than zero
     registryEndpointRefresher =
-      RegistryEndpointsRefresher.create(conf, initialRefreshDelaySecsConfigName,
-        refreshIntervalSecsConfigName, minRefreshIntervalSecsConfigName, this::refreshStubs);
+        RegistryEndpointsRefresher.create(conf, initialRefreshDelaySecsConfigName,
+          refreshIntervalSecsConfigName, minRefreshIntervalSecsConfigName, this::refreshStubs);
   }
 
   protected abstract Set<ServerName> getBootstrapNodes(Configuration conf) throws IOException;
@@ -120,7 +120,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   private void populateStubs(Set<ServerName> addrs) throws IOException {
     Preconditions.checkNotNull(addrs);
     ImmutableMap.Builder<ServerName, ClientMetaService.Interface> builder =
-      ImmutableMap.builderWithExpectedSize(addrs.size());
+        ImmutableMap.builderWithExpectedSize(addrs.size());
     User user = User.getCurrent();
     for (ServerName masterAddr : addrs) {
       builder.put(masterAddr,
@@ -144,7 +144,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   }
 
   private <T extends Message> CompletableFuture<T> call(ClientMetaService.Interface stub,
-    Callable<T> callable) {
+      Callable<T> callable) {
     HBaseRpcController controller = rpcControllerFactory.newController();
     CompletableFuture<T> future = new CompletableFuture<>();
     callable.call(controller, stub, resp -> {
@@ -174,8 +174,8 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
    * points have been tried and all of them are failed, we will fail the future.
    */
   private <T extends Message> void groupCall(CompletableFuture<T> future, Set<ServerName> servers,
-    List<ClientMetaService.Interface> stubs, int startIndexInclusive, Callable<T> callable,
-    Predicate<T> isValidResp, String debug, ConcurrentLinkedQueue<Throwable> errors) {
+      List<ClientMetaService.Interface> stubs, int startIndexInclusive, Callable<T> callable,
+      Predicate<T> isValidResp, String debug, ConcurrentLinkedQueue<Throwable> errors) {
     int endIndexExclusive = Math.min(startIndexInclusive + hedgedReadFanOut, stubs.size());
     AtomicInteger remaining = new AtomicInteger(endIndexExclusive - startIndexInclusive);
     for (int i = startIndexInclusive; i < endIndexExclusive; i++) {
@@ -194,7 +194,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
             if (endIndexExclusive == stubs.size()) {
               // we are done, complete the future with exception
               RetriesExhaustedException ex =
-                new RetriesExhaustedException("masters", stubs.size(), new ArrayList<>(errors));
+                  new RetriesExhaustedException("masters", stubs.size(), new ArrayList<>(errors));
               future.completeExceptionally(new MasterRegistryFetchException(servers, ex));
             } else {
               groupCall(future, servers, stubs, endIndexExclusive, callable, isValidResp, debug,
@@ -210,7 +210,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   }
 
   protected final <T extends Message> CompletableFuture<T> call(Callable<T> callable,
-    Predicate<T> isValidResp, String debug) {
+      Predicate<T> isValidResp, String debug) {
     ImmutableMap<ServerName, ClientMetaService.Interface> addr2StubRef = addr2Stub;
     Set<ServerName> servers = addr2StubRef.keySet();
     List<ClientMetaService.Interface> stubs = new ArrayList<>(addr2StubRef.values());
@@ -222,7 +222,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   Set<ServerName> getParsedServers() {
     return addr2Stub.keySet();
   }
@@ -233,7 +233,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   private static RegionLocations transformMetaRegionLocations(GetMetaRegionLocationsResponse resp) {
     List<HRegionLocation> regionLocations = new ArrayList<>();
     resp.getMetaLocationsList()
-      .forEach(location -> regionLocations.add(ProtobufUtil.toRegionLocation(location)));
+        .forEach(location -> regionLocations.add(ProtobufUtil.toRegionLocation(location)));
     return new RegionLocations(regionLocations);
   }
 
@@ -241,12 +241,11 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
     return tracedFuture(
       () -> this
-        .<GetMetaRegionLocationsResponse> call(
-          (c, s, d) -> s.getMetaRegionLocations(c,
-            GetMetaRegionLocationsRequest.getDefaultInstance(), d),
-          r -> r.getMetaLocationsCount() != 0,
-        "getMetaLocationsCount")
-        .thenApply(AbstractRpcBasedConnectionRegistry::transformMetaRegionLocations),
+          .<GetMetaRegionLocationsResponse> call(
+            (c, s, d) -> s.getMetaRegionLocations(c,
+              GetMetaRegionLocationsRequest.getDefaultInstance(), d),
+            r -> r.getMetaLocationsCount() != 0, "getMetaLocationsCount")
+          .thenApply(AbstractRpcBasedConnectionRegistry::transformMetaRegionLocations),
       getClass().getSimpleName() + ".getMetaRegionLocations");
   }
 
@@ -254,10 +253,10 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   public CompletableFuture<String> getClusterId() {
     return tracedFuture(
       () -> this
-        .<GetClusterIdResponse> call(
-          (c, s, d) -> s.getClusterId(c, GetClusterIdRequest.getDefaultInstance(), d),
-          GetClusterIdResponse::hasClusterId, "getClusterId()")
-        .thenApply(GetClusterIdResponse::getClusterId),
+          .<GetClusterIdResponse> call(
+            (c, s, d) -> s.getClusterId(c, GetClusterIdRequest.getDefaultInstance(), d),
+            GetClusterIdResponse::hasClusterId, "getClusterId()")
+          .thenApply(GetClusterIdResponse::getClusterId),
       getClass().getSimpleName() + ".getClusterId");
   }
 
@@ -265,10 +264,10 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   public CompletableFuture<ServerName> getActiveMaster() {
     return tracedFuture(
       () -> this
-        .<GetActiveMasterResponse>call(
-          (c, s, d) -> s.getActiveMaster(c, GetActiveMasterRequest.getDefaultInstance(), d),
-          GetActiveMasterResponse::hasServerName, "getActiveMaster()")
-        .thenApply(resp -> ProtobufUtil.toServerName(resp.getServerName())),
+          .<GetActiveMasterResponse> call(
+            (c, s, d) -> s.getActiveMaster(c, GetActiveMasterRequest.getDefaultInstance(), d),
+            GetActiveMasterResponse::hasServerName, "getActiveMaster()")
+          .thenApply(resp -> ProtobufUtil.toServerName(resp.getServerName())),
       getClass().getSimpleName() + ".getActiveMaster");
   }
 

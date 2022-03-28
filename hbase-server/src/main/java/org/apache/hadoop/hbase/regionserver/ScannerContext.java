@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
@@ -83,17 +82,23 @@ public class ScannerContext {
    * some limits and then repeatedly invoke {@link InternalScanner#next(List)} or
    * {@link RegionScanner#next(List)} where each invocation respects these limits separately.
    * <p>
-   * For example: <pre> {@code
+   * For example:
+   * 
+   * <pre>
+   *  {@code
    * ScannerContext context = new ScannerContext.newBuilder().setBatchLimit(5).build();
    * RegionScanner scanner = ...
    * List<Cell> results = new ArrayList<Cell>();
    * while(scanner.next(results, context)) {
    *   // Do something with a batch of 5 cells
    * }
-   * }</pre> However, in the case of RPCs, the server wants to be able to define a set of
-   * limits for a particular RPC request and have those limits respected across multiple
-   * invocations. This means that the progress made towards the limits in earlier calls will be
-   * saved and considered in future invocations
+   * }
+   * </pre>
+   * 
+   * However, in the case of RPCs, the server wants to be able to define a set of limits for a
+   * particular RPC request and have those limits respected across multiple invocations. This means
+   * that the progress made towards the limits in earlier calls will be saved and considered in
+   * future invocations
    */
   boolean keepProgress;
   private static boolean DEFAULT_KEEP_PROGRESS = false;
@@ -258,9 +263,9 @@ public class ScannerContext {
    *         a limit in the middle of a row
    */
   boolean mayHaveMoreCellsInRow() {
-    return scannerState == NextState.SIZE_LIMIT_REACHED_MID_ROW ||
-        scannerState == NextState.TIME_LIMIT_REACHED_MID_ROW ||
-        scannerState == NextState.BATCH_LIMIT_REACHED;
+    return scannerState == NextState.SIZE_LIMIT_REACHED_MID_ROW
+        || scannerState == NextState.TIME_LIMIT_REACHED_MID_ROW
+        || scannerState == NextState.BATCH_LIMIT_REACHED;
   }
 
   /**
@@ -285,8 +290,8 @@ public class ScannerContext {
    * @return true if the time limit can be enforced in the checker's scope
    */
   boolean hasTimeLimit(LimitScope checkerScope) {
-    return limits.canEnforceTimeLimitFromScope(checkerScope) &&
-      (limits.getTime() > 0 || returnImmediately);
+    return limits.canEnforceTimeLimitFromScope(checkerScope)
+        && (limits.getTime() > 0 || returnImmediately);
   }
 
   /**
@@ -346,8 +351,8 @@ public class ScannerContext {
    * @return true when the limit is enforceable from the checker's scope and it has been reached
    */
   boolean checkTimeLimit(LimitScope checkerScope) {
-    return hasTimeLimit(checkerScope) &&
-      (returnImmediately || EnvironmentEdgeManager.currentTime() >= limits.getTime());
+    return hasTimeLimit(checkerScope)
+        && (returnImmediately || EnvironmentEdgeManager.currentTime() >= limits.getTime());
   }
 
   /**
@@ -449,23 +454,19 @@ public class ScannerContext {
    * The possible states a scanner may be in following a call to {@link InternalScanner#next(List)}
    */
   public enum NextState {
-    MORE_VALUES(true, false),
-    NO_MORE_VALUES(false, false),
-    SIZE_LIMIT_REACHED(true, true),
+    MORE_VALUES(true, false), NO_MORE_VALUES(false, false), SIZE_LIMIT_REACHED(true, true),
 
     /**
      * Special case of size limit reached to indicate that the size limit was reached in the middle
      * of a row and thus a partial results was formed
      */
-    SIZE_LIMIT_REACHED_MID_ROW(true, true),
-    TIME_LIMIT_REACHED(true, true),
+    SIZE_LIMIT_REACHED_MID_ROW(true, true), TIME_LIMIT_REACHED(true, true),
 
     /**
      * Special case of time limit reached to indicate that the time limit was reached in the middle
      * of a row and thus a partial results was formed
      */
-    TIME_LIMIT_REACHED_MID_ROW(true, true),
-    BATCH_LIMIT_REACHED(true, true);
+    TIME_LIMIT_REACHED_MID_ROW(true, true), BATCH_LIMIT_REACHED(true, true);
 
     private final boolean moreValues;
     private final boolean limitReached;
@@ -586,7 +587,7 @@ public class ScannerContext {
     void copy(LimitFields limitsToCopy) {
       if (limitsToCopy != null) {
         setFields(limitsToCopy.getBatch(), limitsToCopy.getSizeScope(), limitsToCopy.getDataSize(),
-            limitsToCopy.getHeapSize(), limitsToCopy.getTimeScope(), limitsToCopy.getTime());
+          limitsToCopy.getHeapSize(), limitsToCopy.getTimeScope(), limitsToCopy.getTime());
       }
     }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,8 +39,8 @@ import org.slf4j.LoggerFactory;
  * roller logic by our own.
  * <p/>
  * We can reuse most of the code for normal wal roller, the only difference is that there is only
- * one region, so in {@link #scheduleFlush(String, List)} method we can just schedule flush
- * for the master local region.
+ * one region, so in {@link #scheduleFlush(String, List)} method we can just schedule flush for the
+ * master local region.
  */
 @InterfaceAudience.Private
 public final class MasterRegionWALRoller extends AbstractWALRoller<Abortable> {
@@ -58,7 +58,7 @@ public final class MasterRegionWALRoller extends AbstractWALRoller<Abortable> {
   private final String archivedWALSuffix;
 
   private MasterRegionWALRoller(String name, Configuration conf, Abortable abortable, FileSystem fs,
-    Path walRootDir, Path globalWALRootDir, String archivedWALSuffix) {
+      Path walRootDir, Path globalWALRootDir, String archivedWALSuffix) {
     super(name, conf, abortable);
     this.fs = fs;
     this.walArchiveDir = new Path(walRootDir, HREGION_OLDLOGDIR_NAME);
@@ -94,8 +94,8 @@ public final class MasterRegionWALRoller extends AbstractWALRoller<Abortable> {
   }
 
   static MasterRegionWALRoller create(String name, Configuration conf, Abortable abortable,
-    FileSystem fs, Path walRootDir, Path globalWALRootDir, String archivedWALSuffix,
-    long rollPeriodMs, long flushSize) {
+      FileSystem fs, Path walRootDir, Path globalWALRootDir, String archivedWALSuffix,
+      long rollPeriodMs, long flushSize) {
     // we can not run with wal disabled, so force set it to true.
     conf.setBoolean(WALFactory.WAL_ENABLED, true);
     // we do not need this feature, so force disable it.
@@ -105,7 +105,7 @@ public final class MasterRegionWALRoller extends AbstractWALRoller<Abortable> {
     conf.setLong(WALUtil.WAL_BLOCK_SIZE, flushSize * 2);
     conf.setFloat(AbstractFSWAL.WAL_ROLL_MULTIPLIER, 0.5f);
     return new MasterRegionWALRoller(name, conf, abortable, fs, walRootDir, globalWALRootDir,
-      archivedWALSuffix);
+        archivedWALSuffix);
   }
 
 }

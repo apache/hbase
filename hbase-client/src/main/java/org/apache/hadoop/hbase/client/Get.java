@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -29,34 +27,33 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Used to perform Get operations on a single row.
  * <p>
- * To get everything for a row, instantiate a Get object with the row to get.
- * To further narrow the scope of what to Get, use the methods below.
+ * To get everything for a row, instantiate a Get object with the row to get. To further narrow the
+ * scope of what to Get, use the methods below.
  * <p>
- * To get all columns from specific families, execute {@link #addFamily(byte[]) addFamily}
- * for each family to retrieve.
+ * To get all columns from specific families, execute {@link #addFamily(byte[]) addFamily} for each
+ * family to retrieve.
  * <p>
- * To get specific columns, execute {@link #addColumn(byte[], byte[]) addColumn}
- * for each column to retrieve.
+ * To get specific columns, execute {@link #addColumn(byte[], byte[]) addColumn} for each column to
+ * retrieve.
  * <p>
- * To only retrieve columns within a specific range of version timestamps,
- * execute {@link #setTimeRange(long, long) setTimeRange}.
+ * To only retrieve columns within a specific range of version timestamps, execute
+ * {@link #setTimeRange(long, long) setTimeRange}.
  * <p>
- * To only retrieve columns with a specific timestamp, execute
- * {@link #setTimestamp(long) setTimestamp}.
+ * To only retrieve columns with a specific timestamp, execute {@link #setTimestamp(long)
+ * setTimestamp}.
  * <p>
  * To limit the number of versions of each column to be returned, execute
  * {@link #setMaxVersions(int) setMaxVersions}.
@@ -67,7 +64,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class Get extends Query implements Row {
   private static final Logger LOG = LoggerFactory.getLogger(Get.class);
 
-  private byte [] row = null;
+  private byte[] row = null;
   private int maxVersions = 1;
   private boolean cacheBlocks = true;
   private int storeLimit = -1;
@@ -75,23 +72,22 @@ public class Get extends Query implements Row {
   private TimeRange tr = TimeRange.allTime();
   private boolean checkExistenceOnly = false;
   private boolean closestRowBefore = false;
-  private Map<byte [], NavigableSet<byte []>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+  private Map<byte[], NavigableSet<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   /**
    * Create a Get operation for the specified row.
    * <p>
-   * If no further operations are done, this will get the latest version of
-   * all columns in all families of the specified row.
+   * If no further operations are done, this will get the latest version of all columns in all
+   * families of the specified row.
    * @param row row key
    */
-  public Get(byte [] row) {
+  public Get(byte[] row) {
     Mutation.checkRow(row);
     this.row = row;
   }
 
   /**
    * Copy-constructor
-   *
    * @param get
    */
   public Get(Get get) {
@@ -109,8 +105,8 @@ public class Get extends Query implements Row {
     this.checkExistenceOnly = get.isCheckExistenceOnly();
     this.loadColumnFamiliesOnDemand = get.getLoadColumnFamiliesOnDemandValue();
     Map<byte[], NavigableSet<byte[]>> fams = get.getFamilyMap();
-    for (Map.Entry<byte[],NavigableSet<byte[]>> entry : fams.entrySet()) {
-      byte [] fam = entry.getKey();
+    for (Map.Entry<byte[], NavigableSet<byte[]>> entry : fams.entrySet()) {
+      byte[] fam = entry.getKey();
       NavigableSet<byte[]> cols = entry.getValue();
       if (cols != null && cols.size() > 0) {
         for (byte[] col : cols) {
@@ -187,7 +183,7 @@ public class Get extends Query implements Row {
    * @param family family name
    * @return the Get object
    */
-  public Get addFamily(byte [] family) {
+  public Get addFamily(byte[] family) {
     familyMap.remove(family);
     familyMap.put(family, null);
     return this;
@@ -201,9 +197,9 @@ public class Get extends Query implements Row {
    * @param qualifier column qualifier
    * @return the Get objec
    */
-  public Get addColumn(byte [] family, byte [] qualifier) {
-    NavigableSet<byte []> set = familyMap.get(family);
-    if(set == null) {
+  public Get addColumn(byte[] family, byte[] qualifier) {
+    NavigableSet<byte[]> set = familyMap.get(family);
+    if (set == null) {
       set = new TreeSet<>(Bytes.BYTES_COMPARATOR);
       familyMap.put(family, set);
     }
@@ -215,8 +211,7 @@ public class Get extends Query implements Row {
   }
 
   /**
-   * Get versions of columns only within the specified timestamp range,
-   * [minStamp, maxStamp).
+   * Get versions of columns only within the specified timestamp range, [minStamp, maxStamp).
    * @param minStamp minimum timestamp value, inclusive
    * @param maxStamp maximum timestamp value, exclusive
    * @throws IOException
@@ -231,8 +226,8 @@ public class Get extends Query implements Row {
    * Get versions of columns with the specified timestamp.
    * @param timestamp version timestamp
    * @return this for invocation chaining
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #setTimestamp(long)} instead
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+   *             {@link #setTimestamp(long)} instead
    */
   @Deprecated
   public Get setTimeStamp(long timestamp) throws IOException {
@@ -247,7 +242,7 @@ public class Get extends Query implements Row {
   public Get setTimestamp(long timestamp) {
     try {
       tr = new TimeRange(timestamp, timestamp + 1);
-    } catch(Exception e) {
+    } catch (Exception e) {
       // This should never happen, unless integer overflow or something extremely wrong...
       LOG.error("TimeRange failed, likely caused by integer overflow. ", e);
       throw e;
@@ -256,7 +251,8 @@ public class Get extends Query implements Row {
     return this;
   }
 
-  @Override public Get setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
+  @Override
+  public Get setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
     return (Get) super.setColumnFamilyTimeRange(cf, minStamp, maxStamp);
   }
 
@@ -344,12 +340,9 @@ public class Get extends Query implements Row {
   /**
    * Set whether blocks should be cached for this Get.
    * <p>
-   * This is true by default.  When true, default settings of the table and
-   * family are used (this will never override caching blocks if the block
-   * cache is disabled for that family or entirely).
-   *
-   * @param cacheBlocks if false, default settings are overridden and blocks
-   * will not be cached
+   * This is true by default. When true, default settings of the table and family are used (this
+   * will never override caching blocks if the block cache is disabled for that family or entirely).
+   * @param cacheBlocks if false, default settings are overridden and blocks will not be cached
    */
   public Get setCacheBlocks(boolean cacheBlocks) {
     this.cacheBlocks = cacheBlocks;
@@ -358,8 +351,7 @@ public class Get extends Query implements Row {
 
   /**
    * Get whether blocks should be cached for this Get.
-   * @return true if default caching should be used, false if blocks should not
-   * be cached
+   * @return true if default caching should be used, false if blocks should not be cached
    */
   public boolean getCacheBlocks() {
     return cacheBlocks;
@@ -370,7 +362,7 @@ public class Get extends Query implements Row {
    * @return row
    */
   @Override
-  public byte [] getRow() {
+  public byte[] getRow() {
     return this.row;
   }
 
@@ -383,8 +375,7 @@ public class Get extends Query implements Row {
   }
 
   /**
-   * Method for retrieving the get's maximum number of values
-   * to return per Column Family
+   * Method for retrieving the get's maximum number of values to return per Column Family
    * @return the maximum number of values to fetch per CF
    */
   public int getMaxResultsPerColumnFamily() {
@@ -392,8 +383,7 @@ public class Get extends Query implements Row {
   }
 
   /**
-   * Method for retrieving the get's offset per row per column
-   * family (#kvs to be skipped)
+   * Method for retrieving the get's offset per row per column family (#kvs to be skipped)
    * @return the row offset
    */
   public int getRowOffsetPerColumnFamily() {
@@ -436,14 +426,13 @@ public class Get extends Query implements Row {
    * Method for retrieving the get's familyMap
    * @return familyMap
    */
-  public Map<byte[],NavigableSet<byte[]>> getFamilyMap() {
+  public Map<byte[], NavigableSet<byte[]>> getFamilyMap() {
     return this.familyMap;
   }
 
   /**
-   * Compile the table and column family (i.e. schema) information
-   * into a String. Useful for parsing and aggregation by debugging,
-   * logging, and administration tools.
+   * Compile the table and column family (i.e. schema) information into a String. Useful for parsing
+   * and aggregation by debugging, logging, and administration tools.
    * @return Map
    */
   @Override
@@ -451,17 +440,16 @@ public class Get extends Query implements Row {
     Map<String, Object> map = new HashMap<>();
     List<String> families = new ArrayList<>(this.familyMap.entrySet().size());
     map.put("families", families);
-    for (Map.Entry<byte [], NavigableSet<byte[]>> entry :
-      this.familyMap.entrySet()) {
+    for (Map.Entry<byte[], NavigableSet<byte[]>> entry : this.familyMap.entrySet()) {
       families.add(Bytes.toStringBinary(entry.getKey()));
     }
     return map;
   }
 
   /**
-   * Compile the details beyond the scope of getFingerprint (row, columns,
-   * timestamps, etc.) into a Map along with the fingerprinted information.
-   * Useful for debugging, logging, and administration tools.
+   * Compile the details beyond the scope of getFingerprint (row, columns, timestamps, etc.) into a
+   * Map along with the fingerprinted information. Useful for debugging, logging, and administration
+   * tools.
    * @param maxCols a limit on the number of columns output prior to truncation
    * @return Map
    */
@@ -483,11 +471,10 @@ public class Get extends Query implements Row {
     map.put("timeRange", timeRange);
     int colCount = 0;
     // iterate through affected families and add details
-    for (Map.Entry<byte [], NavigableSet<byte[]>> entry :
-      this.familyMap.entrySet()) {
+    for (Map.Entry<byte[], NavigableSet<byte[]>> entry : this.familyMap.entrySet()) {
       List<String> familyList = new ArrayList<>();
       columns.put(Bytes.toStringBinary(entry.getKey()), familyList);
-      if(entry.getValue() == null) {
+      if (entry.getValue() == null) {
         colCount++;
         --maxCols;
         familyList.add("ALL");
@@ -496,7 +483,7 @@ public class Get extends Query implements Row {
         if (maxCols <= 0) {
           continue;
         }
-        for (byte [] column : entry.getValue()) {
+        for (byte[] column : entry.getValue()) {
           if (--maxCols <= 0) {
             continue;
           }
@@ -515,16 +502,16 @@ public class Get extends Query implements Row {
     return map;
   }
 
-  //Row
+  // Row
   @Override
   public int compareTo(Row other) {
-    // TODO: This is wrong.  Can't have two gets the same just because on same row.
+    // TODO: This is wrong. Can't have two gets the same just because on same row.
     return Bytes.compareTo(this.getRow(), other.getRow());
   }
 
   @Override
   public int hashCode() {
-    // TODO: This is wrong.  Can't have two gets the same just because on same row.  But it
+    // TODO: This is wrong. Can't have two gets the same just because on same row. But it
     // matches how equals works currently and gets rid of the findbugs warning.
     return Bytes.hashCode(this.getRow());
   }
@@ -538,7 +525,7 @@ public class Get extends Query implements Row {
       return false;
     }
     Row other = (Row) obj;
-    // TODO: This is wrong.  Can't have two gets the same just because on same row.
+    // TODO: This is wrong. Can't have two gets the same just because on same row.
     return compareTo(other) == 0;
   }
 
@@ -579,7 +566,7 @@ public class Get extends Query implements Row {
 
   @Override
   public Get setIsolationLevel(IsolationLevel level) {
-      return (Get) super.setIsolationLevel(level);
+    return (Get) super.setIsolationLevel(level);
   }
 
   @Override

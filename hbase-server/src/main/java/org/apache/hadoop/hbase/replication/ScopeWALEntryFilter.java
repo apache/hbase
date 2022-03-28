@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,6 +47,7 @@ public class ScopeWALEntryFilter implements WALEntryFilter, WALCellFilter {
     Integer scope = scopes.get(family);
     return scope != null && scope.intValue() == HConstants.REPLICATION_SCOPE_GLOBAL;
   }
+
   @Override
   public Cell filterCell(Entry entry, Cell cell) {
     NavigableMap<byte[], Integer> scopes = entry.getKey().getReplicationScopes();

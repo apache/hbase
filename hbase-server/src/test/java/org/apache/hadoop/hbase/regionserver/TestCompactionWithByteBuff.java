@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -109,8 +108,7 @@ public class TestCompactionWithByteBuff {
     }
   }
 
-  private Table createTable(HBaseTestingUtility util, TableName tableName)
-      throws IOException {
+  private Table createTable(HBaseTestingUtility util, TableName tableName) throws IOException {
     TableDescriptor td =
         TableDescriptorBuilder.newBuilder(tableName)
             .setColumnFamily(

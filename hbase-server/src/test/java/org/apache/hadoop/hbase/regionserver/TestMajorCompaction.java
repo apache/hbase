@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -83,7 +83,7 @@ public class TestMajorCompaction {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMajorCompaction.class);
+      HBaseClassTestRule.forClass(TestMajorCompaction.class);
 
   @Parameterized.Parameters
   public static Object[] data() {
@@ -120,7 +120,7 @@ public class TestMajorCompaction {
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     thirdRowBytes = START_KEY_BYTES.clone();
     thirdRowBytes[START_KEY_BYTES.length - 1] =
-      (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
+        (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
   }
 
   @Before
@@ -319,7 +319,7 @@ public class TestMajorCompaction {
 
       // ensure that major compaction time is deterministic
       RatioBasedCompactionPolicy c =
-        (RatioBasedCompactionPolicy) s.storeEngine.getCompactionPolicy();
+          (RatioBasedCompactionPolicy) s.storeEngine.getCompactionPolicy();
       Collection<HStoreFile> storeFiles = s.getStorefiles();
       long mcTime = c.getNextMajorCompactTime(storeFiles);
       for (int i = 0; i < 10; ++i) {
@@ -426,8 +426,9 @@ public class TestMajorCompaction {
       createStoreFile(r);
     }
     store.triggerMajorCompaction();
-    CompactionRequestImpl request = store
-      .requestCompaction(PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null).get().getRequest();
+    CompactionRequestImpl request =
+        store.requestCompaction(PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null).get()
+            .getRequest();
     assertNotNull("Expected to receive a compaction request", request);
     assertEquals(
       "User-requested major compaction should always occur, even if there are too many store files",
@@ -481,7 +482,7 @@ public class TestMajorCompaction {
   }
 
   private void testMajorCompactingWithDeletes(KeepDeletedCells keepDeletedCells)
-    throws IOException {
+      throws IOException {
     createStoreFile(r);
     for (int i = 0; i < compactionThreshold; i++) {
       createStoreFile(r);

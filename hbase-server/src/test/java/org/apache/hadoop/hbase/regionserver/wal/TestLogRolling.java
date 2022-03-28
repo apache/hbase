@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -87,7 +87,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
     /**** configuration for testLogRollOnDatanodeDeath ****/
     // lower the namenode & datanode heartbeat so the namenode
     // quickly detects datanode failures
-    Configuration conf= TEST_UTIL.getConfiguration();
+    Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt("dfs.namenode.heartbeat.recheck-interval", 5000);
     conf.setInt("dfs.heartbeat.interval", 1);
     // the namenode might still try to choose the recently-dead datanode
@@ -141,8 +141,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
         writeData(table, row++);
       }
 
-      assertFalse("Should not have triggered log roll due to SLOW_SYNC",
-        slowSyncHookCalled.get());
+      assertFalse("Should not have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
 
       // Set up for test
       slowSyncHookCalled.set(false);
@@ -156,6 +155,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
         public void close() throws IOException {
           oldWriter1.close();
         }
+
         @Override
         public void sync(boolean forceSync) throws IOException {
           try {
@@ -167,10 +167,12 @@ public class TestLogRolling extends AbstractTestLogRolling {
           }
           oldWriter1.sync(forceSync);
         }
+
         @Override
         public void append(Entry entry) throws IOException {
           oldWriter1.append(entry);
         }
+
         @Override
         public long getLength() {
           return oldWriter1.getLength();
@@ -197,14 +199,14 @@ public class TestLogRolling extends AbstractTestLogRolling {
         public boolean evaluate() throws Exception {
           return log.getWriter() != newWriter1;
         }
+
         @Override
         public String explainFailure() throws Exception {
           return "Waited too long for our test writer to get rolled out";
         }
       });
 
-      assertTrue("Should have triggered log roll due to SLOW_SYNC",
-        slowSyncHookCalled.get());
+      assertTrue("Should have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
 
       // Set up for test
       slowSyncHookCalled.set(false);
@@ -212,12 +214,13 @@ public class TestLogRolling extends AbstractTestLogRolling {
       // Wrap the current writer with the anonymous class below that adds 5000 ms of
       // latency to any sync on the hlog.
       // This will trip the other threshold.
-      final Writer oldWriter2 = (Writer)log.getWriter();
+      final Writer oldWriter2 = (Writer) log.getWriter();
       final Writer newWriter2 = new Writer() {
         @Override
         public void close() throws IOException {
           oldWriter2.close();
         }
+
         @Override
         public void sync(boolean forceSync) throws IOException {
           try {
@@ -229,10 +232,12 @@ public class TestLogRolling extends AbstractTestLogRolling {
           }
           oldWriter2.sync(forceSync);
         }
+
         @Override
         public void append(Entry entry) throws IOException {
           oldWriter2.append(entry);
         }
+
         @Override
         public long getLength() {
           return oldWriter2.getLength();
@@ -256,14 +261,14 @@ public class TestLogRolling extends AbstractTestLogRolling {
         public boolean evaluate() throws Exception {
           return log.getWriter() != newWriter2;
         }
+
         @Override
         public String explainFailure() throws Exception {
           return "Waited too long for our test writer to get rolled out";
         }
       });
 
-      assertTrue("Should have triggered log roll due to SLOW_SYNC",
-        slowSyncHookCalled.get());
+      assertTrue("Should have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
 
       // Set up for test
       slowSyncHookCalled.set(false);
@@ -273,8 +278,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
         writeData(table, row++);
       }
 
-      assertFalse("Should not have triggered log roll due to SLOW_SYNC",
-        slowSyncHookCalled.get());
+      assertFalse("Should not have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
 
     } finally {
       table.close();

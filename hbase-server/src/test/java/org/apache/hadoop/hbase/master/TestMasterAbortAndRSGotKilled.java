@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,11 +49,11 @@ import org.slf4j.LoggerFactory;
 @Category({ MasterTests.class, MediumTests.class })
 public class TestMasterAbortAndRSGotKilled {
   private static Logger LOG =
-    LoggerFactory.getLogger(TestMasterAbortAndRSGotKilled.class.getName());
+      LoggerFactory.getLogger(TestMasterAbortAndRSGotKilled.class.getName());
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterAbortAndRSGotKilled.class);
+      HBaseClassTestRule.forClass(TestMasterAbortAndRSGotKilled.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -82,7 +82,7 @@ public class TestMasterAbortAndRSGotKilled {
   public void test() throws Exception {
     JVMClusterUtil.RegionServerThread rsThread = null;
     for (JVMClusterUtil.RegionServerThread t : UTIL.getMiniHBaseCluster()
-      .getRegionServerThreads()) {
+        .getRegionServerThreads()) {
       if (!t.getRegionServer().getRegions(TABLE_NAME).isEmpty()) {
         rsThread = t;
         break;
@@ -94,16 +94,16 @@ public class TestMasterAbortAndRSGotKilled {
     TransitRegionStateProcedure moveRegionProcedure = TransitRegionStateProcedure.reopen(
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment(), hri);
     RegionStateNode regionNode = UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
-      .getRegionStates().getOrCreateRegionStateNode(hri);
+        .getRegionStates().getOrCreateRegionStateNode(hri);
     regionNode.setProcedure(moveRegionProcedure);
     UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor()
-      .submitProcedure(moveRegionProcedure);
+        .submitProcedure(moveRegionProcedure);
     countDownLatch.await();
     UTIL.getMiniHBaseCluster().stopMaster(0);
     UTIL.getMiniHBaseCluster().startMaster();
     // wait until master initialized
-    UTIL.waitFor(30000, () -> UTIL.getMiniHBaseCluster().getMaster() != null &&
-      UTIL.getMiniHBaseCluster().getMaster().isInitialized());
+    UTIL.waitFor(30000, () -> UTIL.getMiniHBaseCluster().getMaster() != null
+        && UTIL.getMiniHBaseCluster().getMaster().isInitialized());
     Assert.assertTrue("Should be 3 RS after master restart",
       UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size() == 3);
 

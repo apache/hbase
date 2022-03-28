@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
@@ -56,35 +55,66 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   public static final String SOURCE_INITIALIZING = "source.numInitializing";
 
   void setLastShippedAge(long age);
+
   void incrSizeOfLogQueue(int size);
+
   void decrSizeOfLogQueue(int size);
+
   void incrLogEditsFiltered(long size);
+
   void incrBatchesShipped(int batches);
+
   void incrOpsShipped(long ops);
+
   void incrShippedBytes(long size);
+
   void incrLogReadInBytes(long size);
+
   void incrLogReadInEdits(long size);
+
   void clear();
+
   long getLastShippedAge();
+
   int getSizeOfLogQueue();
+
   void incrHFilesShipped(long hfiles);
+
   void incrSizeOfHFileRefsQueue(long size);
+
   void decrSizeOfHFileRefsQueue(long size);
+
   void incrUnknownFileLengthForClosedWAL();
+
   void incrUncleanlyClosedWALs();
+
   long getUncleanlyClosedWALs();
+
   void incrBytesSkippedInUncleanlyClosedWALs(final long bytes);
+
   void incrRestartedWALReading();
+
   void incrRepeatedFileBytes(final long bytes);
+
   void incrCompletedWAL();
+
   void incrCompletedRecoveryQueue();
+
   void incrFailedRecoveryQueue();
+
   long getWALEditsRead();
+
   long getShippedOps();
+
   long getEditsFiltered();
+
   void setOldestWalAge(long age);
+
   long getOldestWalAge();
+
   void incrSourceInitializing();
+
   void decrSourceInitializing();
+
   int getSourceInitializing();
 }

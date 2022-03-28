@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,9 +30,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The implementation of {@link AsyncBufferedMutator}. Simply wrap an {@link AsyncTable}.
@@ -110,13 +111,13 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
   @Override
   public List<CompletableFuture<Void>> mutate(List<? extends Mutation> mutations) {
     List<CompletableFuture<Void>> futures =
-      Stream.<CompletableFuture<Void>> generate(CompletableFuture::new).limit(mutations.size())
-        .collect(Collectors.toList());
+        Stream.<CompletableFuture<Void>> generate(CompletableFuture::new).limit(mutations.size())
+            .collect(Collectors.toList());
     long heapSize = 0;
     for (Mutation mutation : mutations) {
       heapSize += mutation.heapSize();
       if (mutation instanceof Put) {
-        validatePut((Put)mutation, maxKeyValueSize);
+        validatePut((Put) mutation, maxKeyValueSize);
       }
     }
     synchronized (this) {

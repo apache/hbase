@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,7 +58,7 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsBasics.class);
+      HBaseClassTestRule.forClass(TestRSGroupsBasics.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsBasics.class);
 
@@ -120,9 +120,9 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     final TableName tableName = TableName.valueOf(nsName, tablePrefix + "_testCreateAndAssign");
     RSGroupInfo appInfo = addGroup("appInfo", 1);
     admin.createNamespace(NamespaceDescriptor.create(nsName)
-      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "appInfo").build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "appInfo").build());
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     admin.createTable(desc);
     // wait for created table to be assigned
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
@@ -152,9 +152,9 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
 
     final TableName tableName = TableName.valueOf(tablePrefix + "_ns", name.getMethodName());
     admin.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
-      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, appInfo.getName()).build());
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     try {
       admin.createTable(desc);
       fail("Shouldn't create table successfully!");
@@ -180,9 +180,9 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     LOG.info("testDefaultNamespaceCreateAndAssign");
     String tableName = tablePrefix + "_testCreateAndAssign";
     admin.modifyNamespace(NamespaceDescriptor.create("default")
-      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "default").build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "default").build());
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     admin.createTable(desc);
     // wait for created table to be assigned
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
@@ -235,8 +235,8 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return cluster.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS &&
-          !master.getServerManager().areDeadServersInProgress();
+        return cluster.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS
+            && !master.getServerManager().areDeadServersInProgress();
       }
     });
 
@@ -264,8 +264,7 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
 
     // move region servers from default group to "dead server" group
     final int serverCountToMoveToDeadServerGroup = 1;
-    RSGroupInfo deadServerGroup =
-        addGroup("deadServerGroup", serverCountToMoveToDeadServerGroup);
+    RSGroupInfo deadServerGroup = addGroup("deadServerGroup", serverCountToMoveToDeadServerGroup);
 
     // stop 1 region server in "dead server" group
     ServerName serverToStop = getServerName(deadServerGroup.getServers().iterator().next());

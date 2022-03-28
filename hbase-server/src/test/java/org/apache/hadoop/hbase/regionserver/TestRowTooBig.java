@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,10 +39,10 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test case to check HRS throws {@link org.apache.hadoop.hbase.client.RowTooBigException}
- * when row size exceeds configured limits.
+ * Test case to check HRS throws {@link org.apache.hadoop.hbase.client.RowTooBigException} when row
+ * size exceeds configured limits.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestRowTooBig {
 
   @ClassRule
@@ -52,13 +52,12 @@ public class TestRowTooBig {
   private final static HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
   private static Path rootRegionDir;
   private static final HTableDescriptor TEST_HTD =
-    new HTableDescriptor(TableName.valueOf(TestRowTooBig.class.getSimpleName()));
+      new HTableDescriptor(TableName.valueOf(TestRowTooBig.class.getSimpleName()));
 
   @BeforeClass
   public static void before() throws Exception {
     HTU.startMiniCluster();
-    HTU.getConfiguration().setLong(HConstants.TABLE_MAX_ROWSIZE_KEY,
-      10 * 1024 * 1024L);
+    HTU.getConfiguration().setLong(HConstants.TABLE_MAX_ROWSIZE_KEY, 10 * 1024 * 1024L);
     rootRegionDir = HTU.getDataTestDirOnTestFS("TestRowTooBig");
   }
 
@@ -68,14 +67,10 @@ public class TestRowTooBig {
   }
 
   /**
-   * Usecase:
-   *  - create a row with 5 large  cells (5 Mb each)
-   *  - flush memstore but don't compact storefiles.
-   *  - try to Get whole row.
-   *
-   * OOME happened before we actually get to reading results, but
-   * during seeking, as each StoreFile gets it's own scanner,
-   * and each scanner seeks after the first KV.
+   * Usecase: - create a row with 5 large cells (5 Mb each) - flush memstore but don't compact
+   * storefiles. - try to Get whole row. OOME happened before we actually get to reading results,
+   * but during seeking, as each StoreFile gets it's own scanner, and each scanner seeks after the
+   * first KV.
    * @throws IOException
    */
   @Test(expected = RowTooBigException.class)
@@ -92,13 +87,12 @@ public class TestRowTooBig {
     }
 
     final HRegionInfo hri =
-      new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
-        HConstants.EMPTY_END_ROW);
+        new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW, HConstants.EMPTY_END_ROW);
     HRegion region =
         HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir, HTU.getConfiguration(), htd);
     try {
       // Add 5 cells to memstore
-      for (int i = 0; i < 5 ; i++) {
+      for (int i = 0; i < 5; i++) {
         Put put = new Put(row1);
 
         byte[] value = new byte[5 * 1024 * 1024];
@@ -115,14 +109,8 @@ public class TestRowTooBig {
   }
 
   /**
-   * Usecase:
-   *
-   *  - create a row with 1M cells, 10 bytes in each
-   *  - flush & run major compaction
-   *  - try to Get whole row.
-   *
-   *  OOME happened in StoreScanner.next(..).
-   *
+   * Usecase: - create a row with 1M cells, 10 bytes in each - flush & run major compaction - try to
+   * Get whole row. OOME happened in StoreScanner.next(..).
    * @throws IOException
    */
   @Test(expected = RowTooBigException.class)
@@ -139,8 +127,7 @@ public class TestRowTooBig {
     }
 
     final HRegionInfo hri =
-      new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
-        HConstants.EMPTY_END_ROW);
+        new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW, HConstants.EMPTY_END_ROW);
     HRegion region =
         HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir, HTU.getConfiguration(), htd);
     try {

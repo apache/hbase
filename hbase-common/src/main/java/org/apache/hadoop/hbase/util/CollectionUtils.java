@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -25,8 +24,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * @deprecated Since 2.0.6/2.1.3/2.2.0
  */
 @InterfaceAudience.Private
-//HBASE-20215: Marking as deprecated. Although audience is private, there might be references to
-//this class on some client classpath.
+// HBASE-20215: Marking as deprecated. Although audience is private, there might be references to
+// this class on some client classpath.
 @Deprecated
 public class CollectionUtils extends ConcurrentMapUtils {
 

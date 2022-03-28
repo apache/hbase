@@ -70,7 +70,8 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     return TableOperationType.CREATE;
   }
 
-  private static TableDescriptor writeFsLayout(Path rootDir, Configuration conf) throws IOException {
+  private static TableDescriptor writeFsLayout(Path rootDir, Configuration conf)
+      throws IOException {
     LOG.info("BOOTSTRAP: creating hbase:meta region");
     FileSystem fs = rootDir.getFileSystem(conf);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
@@ -82,16 +83,16 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     // not make it in first place. Turn off block caching for bootstrap.
     // Enable after.
     TableDescriptor metaDescriptor =
-      FSTableDescriptors.tryUpdateAndGetMetaTableDescriptor(conf, fs, rootDir);
+        FSTableDescriptors.tryUpdateAndGetMetaTableDescriptor(conf, fs, rootDir);
     HRegion
-      .createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rootDir, conf, metaDescriptor, null)
-      .close();
+        .createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rootDir, conf, metaDescriptor, null)
+        .close();
     return metaDescriptor;
   }
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, InitMetaState state)
-    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     LOG.debug("Execute {}", this);
     try {
       switch (state) {
@@ -105,7 +106,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
         case INIT_META_ASSIGN_META:
           LOG.info("Going to assign meta");
           addChildProcedure(env.getAssignmentManager()
-            .createAssignProcedures(Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO)));
+              .createAssignProcedures(Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO)));
           return Flow.NO_MORE_STATE;
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);
@@ -131,7 +132,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   @Override
   protected void rollbackState(MasterProcedureEnv env, InitMetaState state)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     throw new UnsupportedOperationException();
   }
 
@@ -172,11 +173,11 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
   }
 
   private static boolean deleteMetaTableDirectoryIfPartial(FileSystem rootDirectoryFs,
-    Path metaTableDir) throws IOException {
+      Path metaTableDir) throws IOException {
     boolean shouldDelete = true;
     try {
       TableDescriptor metaDescriptor =
-        FSTableDescriptors.getTableDescriptorFromFs(rootDirectoryFs, metaTableDir);
+          FSTableDescriptors.getTableDescriptorFromFs(rootDirectoryFs, metaTableDir);
       // when entering the state of INIT_META_WRITE_FS_LAYOUT, if a meta table directory is found,
       // the meta table should not have any useful data and considers as partial.
       // if we find any valid HFiles, operator should fix the meta e.g. via HBCK.
@@ -184,8 +185,8 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
         RemoteIterator<LocatedFileStatus> iterator = rootDirectoryFs.listFiles(metaTableDir, true);
         while (iterator.hasNext()) {
           LocatedFileStatus status = iterator.next();
-          if (StoreFileInfo.isHFile(status.getPath()) && HFile
-            .isHFileFormat(rootDirectoryFs, status.getPath())) {
+          if (StoreFileInfo.isHFile(status.getPath())
+              && HFile.isHFileFormat(rootDirectoryFs, status.getPath())) {
             shouldDelete = false;
             break;
           }
@@ -194,8 +195,8 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     } finally {
       if (!shouldDelete) {
         throw new IOException("Meta table is not partial, please sideline this meta directory "
-          + "or run HBCK to fix this meta table, e.g. rebuild the server hostname in ZNode for the "
-          + "meta region");
+            + "or run HBCK to fix this meta table, e.g. rebuild the server hostname in ZNode for the "
+            + "meta region");
       }
       return rootDirectoryFs.delete(metaTableDir, true);
     }

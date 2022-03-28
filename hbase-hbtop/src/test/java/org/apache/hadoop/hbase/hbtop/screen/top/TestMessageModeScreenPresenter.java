@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,14 +32,13 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-
 @Category(SmallTests.class)
 @RunWith(MockitoJUnitRunner.class)
 public class TestMessageModeScreenPresenter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMessageModeScreenPresenter.class);
+      HBaseClassTestRule.forClass(TestMessageModeScreenPresenter.class);
 
   private static final String TEST_MESSAGE = "test message";
 
@@ -53,8 +52,8 @@ public class TestMessageModeScreenPresenter {
 
   @Before
   public void setup() {
-    messageModeScreenPresenter = new MessageModeScreenPresenter(messageModeScreenView,
-      TEST_MESSAGE, topScreenView);
+    messageModeScreenPresenter =
+        new MessageModeScreenPresenter(messageModeScreenView, TEST_MESSAGE, topScreenView);
   }
 
   @Test

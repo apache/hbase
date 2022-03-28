@@ -115,7 +115,7 @@ public final class HBaseKerberosUtils {
    * @param spnegoPrincipal SPNEGO principal used by NN web UI.
    */
   public static void setSecuredConfiguration(Configuration conf, String servicePrincipal,
-    String spnegoPrincipal) {
+      String spnegoPrincipal) {
     setPrincipalForTesting(servicePrincipal);
     setSecuredConfiguration(conf);
     setSecuredHadoopConfiguration(conf, spnegoPrincipal);
@@ -131,7 +131,7 @@ public final class HBaseKerberosUtils {
   }
 
   private static void setSecuredHadoopConfiguration(Configuration conf,
-    String spnegoServerPrincipal) {
+      String spnegoServerPrincipal) {
     String serverPrincipal = System.getProperty(KRB_PRINCIPAL);
     String keytabFilePath = System.getProperty(KRB_KEYTAB_FILE);
     // HDFS
@@ -160,7 +160,7 @@ public final class HBaseKerberosUtils {
    * @throws Exception if unable to set up SSL configuration
    */
   public static void setSSLConfiguration(HBaseCommonTestingUtility utility, Class<?> clazz)
-    throws Exception {
+      throws Exception {
     Configuration conf = utility.getConfiguration();
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
@@ -173,19 +173,19 @@ public final class HBaseKerberosUtils {
   }
 
   public static UserGroupInformation loginAndReturnUGI(Configuration conf, String username)
-    throws IOException {
+      throws IOException {
     String hostname = InetAddress.getLocalHost().getHostName();
     String keyTabFileConfKey = "hbase." + username + ".keytab.file";
     String keyTabFileLocation = conf.get(keyTabFileConfKey);
     String principalConfKey = "hbase." + username + ".kerberos.principal";
     String principal = org.apache.hadoop.security.SecurityUtil
-      .getServerPrincipal(conf.get(principalConfKey), hostname);
+        .getServerPrincipal(conf.get(principalConfKey), hostname);
     if (keyTabFileLocation == null || principal == null) {
       LOG.warn(
         "Principal or key tab file null for : " + principalConfKey + ", " + keyTabFileConfKey);
     }
     UserGroupInformation ugi =
-      UserGroupInformation.loginUserFromKeytabAndReturnUGI(principal, keyTabFileLocation);
+        UserGroupInformation.loginUserFromKeytabAndReturnUGI(principal, keyTabFileLocation);
     return ugi;
   }
 }

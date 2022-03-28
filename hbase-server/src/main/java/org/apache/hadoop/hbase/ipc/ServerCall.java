@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,10 +40,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
@@ -52,22 +54,22 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeader;
 
 /**
- * Datastructure that holds all necessary to a method invocation and then afterward, carries
- * the result.
+ * Datastructure that holds all necessary to a method invocation and then afterward, carries the
+ * result.
  */
 @InterfaceAudience.Private
 public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, RpcResponse {
 
-  protected final int id;                             // the client's call id
+  protected final int id; // the client's call id
   protected final BlockingService service;
   protected final MethodDescriptor md;
   protected final RequestHeader header;
-  protected Message param;                      // the parameter passed
+  protected Message param; // the parameter passed
   // Optional cell data passed outside of protobufs.
   protected final CellScanner cellScanner;
-  protected final T connection;              // connection to client
-  protected final long receiveTime;      // the time received when response is null
-                                 // the time served when response is not null
+  protected final T connection; // connection to client
+  protected final long receiveTime; // the time received when response is null
+  // the time served when response is not null
   protected final int timeout;
   protected long startTime;
   protected final long deadline;// the deadline to handle this call, if exceed we can drop it.
@@ -81,7 +83,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
    */
   protected BufferChain response;
 
-  protected final long size;                          // size of current call
+  protected final long size; // size of current call
   protected boolean isError;
   protected ByteBufferListOutputStream cellBlockStream = null;
   protected CallCleanup reqCleanup = null;
@@ -124,7 +126,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     this.isError = false;
     this.size = size;
     if (connection != null) {
-      this.user =  connection.user;
+      this.user = connection.user;
       this.retryImmediatelySupported = connection.retryImmediatelySupported;
     } else {
       this.user = null;
@@ -140,8 +142,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   }
 
   /**
-   * Call is done. Execution happened and we returned results to client. It is
-   * now safe to cleanup.
+   * Call is done. Execution happened and we returned results to client. It is now safe to cleanup.
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
       justification = "Presume the lock on processing request held by caller is protection enough")
@@ -194,9 +195,9 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
 
   @Override
   public String toString() {
-    return toShortString() + " param: " +
-      (this.param != null? ProtobufUtil.getShortTextFormat(this.param): "") +
-      " connection: " + connection.toString();
+    return toShortString() + " param: "
+        + (this.param != null ? ProtobufUtil.getShortTextFormat(this.param) : "") + " connection: "
+        + connection.toString();
   }
 
   @Override
@@ -215,17 +216,18 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
    */
   @Override
   public String toShortString() {
-    String serviceName = this.connection.service != null ?
-        this.connection.service.getDescriptorForType().getName() : "null";
-    return "callId: " + this.id + " service: " + serviceName +
-        " methodName: " + ((this.md != null) ? this.md.getName() : "n/a") +
-        " size: " + StringUtils.TraditionalBinaryPrefix.long2String(this.size, "", 1) +
-        " connection: " + connection + " deadline: " + deadline;
+    String serviceName =
+        this.connection.service != null ? this.connection.service.getDescriptorForType().getName()
+            : "null";
+    return "callId: " + this.id + " service: " + serviceName + " methodName: "
+        + ((this.md != null) ? this.md.getName() : "n/a") + " size: "
+        + StringUtils.TraditionalBinaryPrefix.long2String(this.size, "", 1) + " connection: "
+        + connection + " deadline: " + deadline;
   }
 
   @Override
   public synchronized void setResponse(Message m, final CellScanner cells, Throwable t,
-    String errorMsg) {
+      String errorMsg) {
     if (this.isError) {
       return;
     }
@@ -272,8 +274,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
         headerBuilder.setCellBlockMeta(cellBlockBuilder.build());
       }
       Message header = headerBuilder.build();
-      ByteBuffer headerBuf =
-          createHeaderAndMessageBytes(m, header, cellBlockSize, cellBlock);
+      ByteBuffer headerBuf = createHeaderAndMessageBytes(m, header, cellBlockSize, cellBlock);
       ByteBuffer[] responseBufs = null;
       int cellBlockBufferSize = 0;
       if (cellBlock != null) {
@@ -313,10 +314,10 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     exceptionBuilder.setStackTrace(errorMsg);
     exceptionBuilder.setDoNotRetry(t instanceof DoNotRetryIOException);
     if (t instanceof RegionMovedException) {
-      // Special casing for this exception.  This is only one carrying a payload.
+      // Special casing for this exception. This is only one carrying a payload.
       // Do this instead of build a generic system for allowing exceptions carry
       // any kind of payload.
-      RegionMovedException rme = (RegionMovedException)t;
+      RegionMovedException rme = (RegionMovedException) t;
       exceptionBuilder.setHostname(rme.getHostname());
       exceptionBuilder.setPort(rme.getPort());
     }
@@ -324,8 +325,8 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     headerBuilder.setException(exceptionBuilder.build());
   }
 
-  static ByteBuffer createHeaderAndMessageBytes(Message result, Message header,
-      int cellBlockSize, List<ByteBuffer> cellBlock) throws IOException {
+  static ByteBuffer createHeaderAndMessageBytes(Message result, Message header, int cellBlockSize,
+      List<ByteBuffer> cellBlock) throws IOException {
     // Organize the response as a set of bytebuffers rather than collect it all together inside
     // one big byte array; save on allocations.
     // for writing the header, we check if there is available space in the buffers
@@ -333,10 +334,8 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     // the last buffer in the cellblock. This applies to the cellblock created from the
     // pool or even the onheap cellblock buffer in case there is no pool enabled.
     // Possible reuse would avoid creating a temporary array for storing the header every time.
-    ByteBuffer possiblePBBuf =
-        (cellBlockSize > 0) ? cellBlock.get(cellBlock.size() - 1) : null;
-    int headerSerializedSize = 0, resultSerializedSize = 0, headerVintSize = 0,
-        resultVintSize = 0;
+    ByteBuffer possiblePBBuf = (cellBlockSize > 0) ? cellBlock.get(cellBlock.size() - 1) : null;
+    int headerSerializedSize = 0, resultSerializedSize = 0, headerVintSize = 0, resultVintSize = 0;
     if (header != null) {
       headerSerializedSize = header.getSerializedSize();
       headerVintSize = CodedOutputStream.computeUInt32SizeNoTag(headerSerializedSize);
@@ -346,15 +345,13 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
       resultVintSize = CodedOutputStream.computeUInt32SizeNoTag(resultSerializedSize);
     }
     // calculate the total size
-    int totalSize = headerSerializedSize + headerVintSize
-        + (resultSerializedSize + resultVintSize)
+    int totalSize = headerSerializedSize + headerVintSize + (resultSerializedSize + resultVintSize)
         + cellBlockSize;
-    int totalPBSize = headerSerializedSize + headerVintSize + resultSerializedSize
-        + resultVintSize + Bytes.SIZEOF_INT;
+    int totalPBSize = headerSerializedSize + headerVintSize + resultSerializedSize + resultVintSize
+        + Bytes.SIZEOF_INT;
     // Only if the last buffer has enough space for header use it. Else allocate
     // a new buffer. Assume they are all flipped
-    if (possiblePBBuf != null
-        && possiblePBBuf.limit() + totalPBSize <= possiblePBBuf.capacity()) {
+    if (possiblePBBuf != null && possiblePBBuf.limit() + totalPBSize <= possiblePBBuf.capacity()) {
       // duplicate the buffer. This is where the header is going to be written
       ByteBuffer pbBuf = possiblePBBuf.duplicate();
       // get the current limit
@@ -401,10 +398,10 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     if (!this.connection.useSasl) {
       return bc;
     }
-    // Looks like no way around this; saslserver wants a byte array.  I have to make it one.
+    // Looks like no way around this; saslserver wants a byte array. I have to make it one.
     // THIS IS A BIG UGLY COPY.
-    byte [] responseBytes = bc.getBytes();
-    byte [] token;
+    byte[] responseBytes = bc.getBytes();
+    byte[] token;
     // synchronization may be needed since there can be multiple Handler
     // threads using saslServer or Crypto AES to wrap responses.
     if (connection.useCryptoAesWrap) {
@@ -418,8 +415,8 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
       }
     }
     if (RpcServer.LOG.isTraceEnabled()) {
-      RpcServer.LOG.trace("Adding saslServer wrapped token of size " + token.length
-          + " as call response.");
+      RpcServer.LOG
+          .trace("Adding saslServer wrapped token of size " + token.length + " as call response.");
     }
 
     ByteBuffer[] responseBufs = new ByteBuffer[2];
@@ -466,6 +463,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   public long getResponseExceptionSize() {
     return exceptionSize;
   }
+
   @Override
   public void incrementResponseExceptionSize(long exSize) {
     exceptionSize += exSize;
@@ -555,8 +553,8 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   public synchronized BufferChain getResponse() {
     if (connection.useWrap) {
       /*
-       * wrapping result with SASL as the last step just before sending it out, so
-       * every message must have the right increasing sequence number
+       * wrapping result with SASL as the last step just before sending it out, so every message
+       * must have the right increasing sequence number
        */
       try {
         return wrapWithSasl(response);

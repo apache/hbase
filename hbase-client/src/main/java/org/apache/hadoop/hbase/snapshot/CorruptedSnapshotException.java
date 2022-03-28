@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class CorruptedSnapshotException extends HBaseSnapshotException {
   /**
    * Snapshot was corrupt for some reason.
-   *
    * @param message message describing the exception
    * @param e the actual cause of the exception
    */
@@ -38,7 +37,6 @@ public class CorruptedSnapshotException extends HBaseSnapshotException {
 
   /**
    * Snapshot was corrupt for some reason.
-   *
    * @param message full description of the failure
    * @param snapshotDescription snapshot that was expected
    */
@@ -48,10 +46,9 @@ public class CorruptedSnapshotException extends HBaseSnapshotException {
 
   /**
    * Snapshot was corrupt for some reason.
-   *
    * @param message message describing the exception
    */
   public CorruptedSnapshotException(String message) {
-    super(message, (SnapshotDescription)null);
+    super(message, (SnapshotDescription) null);
   }
 }

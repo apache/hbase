@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 class StoreFileCostFunction extends CostFromRegionLoadFunction {
 
   private static final String STOREFILE_SIZE_COST_KEY =
-    "hbase.master.balancer.stochastic.storefileSizeCost";
+      "hbase.master.balancer.stochastic.storefileSizeCost";
   private static final float DEFAULT_STOREFILE_SIZE_COST = 5;
 
   StoreFileCostFunction(Configuration conf) {

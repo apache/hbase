@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.util;
 
 import java.io.Closeable;
@@ -23,7 +22,6 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -58,8 +56,8 @@ public class Monkeys implements Closeable {
         LOG.error("Exception occurred when running chaos monkeys: ", e);
       }
     };
-    this.executor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
-        .setDaemon(true).setNameFormat("ChaosMonkey").build());
+    this.executor = Executors.newSingleThreadExecutor(
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("ChaosMonkey").build());
     IntegrationTestingUtility.setUseDistributedCluster(this.conf);
   }
 

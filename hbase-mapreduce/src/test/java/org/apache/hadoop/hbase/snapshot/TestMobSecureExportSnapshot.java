@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Reruns TestMobExportSnapshot using MobExportSnapshot in secure mode.
  */
-@Category({VerySlowRegionServerTests.class, LargeTests.class})
+@Category({ VerySlowRegionServerTests.class, LargeTests.class })
 public class TestMobSecureExportSnapshot extends TestMobExportSnapshot {
 
   @ClassRule

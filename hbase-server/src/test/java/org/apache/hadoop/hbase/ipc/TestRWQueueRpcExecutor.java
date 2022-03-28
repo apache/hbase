@@ -1,5 +1,4 @@
-/**
-
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.ipc.RWQueueRpcExecutor.CALL_QUEUE_READ_SHARE_CONF_KEY;
@@ -25,6 +23,7 @@ import static org.apache.hadoop.hbase.ipc.RpcExecutor.CALL_QUEUE_HANDLER_FACTOR_
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
+
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import org.apache.hadoop.conf.Configuration;
@@ -39,12 +38,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({ RPCTests.class, MediumTests.class})
+@Category({ RPCTests.class, MediumTests.class })
 public class TestRWQueueRpcExecutor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRWQueueRpcExecutor.class);
+      HBaseClassTestRule.forClass(TestRWQueueRpcExecutor.class);
 
   @Rule
   public TestName testName = new TestName();
@@ -63,7 +62,7 @@ public class TestRWQueueRpcExecutor {
   public void itProvidesCorrectQueuesToBalancers() throws InterruptedException {
     PriorityFunction qosFunction = mock(PriorityFunction.class);
     RWQueueRpcExecutor executor =
-      new RWQueueRpcExecutor(testName.getMethodName(), 100, 100, qosFunction, conf, null);
+        new RWQueueRpcExecutor(testName.getMethodName(), 100, 100, qosFunction, conf, null);
 
     QueueBalancer readBalancer = executor.getReadBalancer();
     QueueBalancer writeBalancer = executor.getWriteBalancer();
@@ -87,8 +86,8 @@ public class TestRWQueueRpcExecutor {
 
   }
 
-  private void verifyDistinct(List<BlockingQueue<CallRunner>> queues, List<BlockingQueue<CallRunner>>... others)
-    throws InterruptedException {
+  private void verifyDistinct(List<BlockingQueue<CallRunner>> queues,
+      List<BlockingQueue<CallRunner>>... others) throws InterruptedException {
     CallRunner mock = mock(CallRunner.class);
     for (BlockingQueue<CallRunner> queue : queues) {
       queue.put(mock);

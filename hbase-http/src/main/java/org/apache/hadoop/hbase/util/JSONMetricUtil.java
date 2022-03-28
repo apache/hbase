@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,7 +14,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * */
+ */
 package org.apache.hadoop.hbase.util;
 
 import java.beans.IntrospectionException;
@@ -78,8 +78,8 @@ public final class JSONMetricUtil {
     try {
       value = mbServer.getAttribute(bean, attribute);
     } catch (Exception e) {
-      LOG.error("Unable to get value from MBean= " + bean.toString() + "for attribute=" +
-        attribute + " " + e.getMessage());
+      LOG.error("Unable to get value from MBean= " + bean.toString() + "for attribute=" + attribute
+          + " " + e.getMessage());
     }
     return value;
   }

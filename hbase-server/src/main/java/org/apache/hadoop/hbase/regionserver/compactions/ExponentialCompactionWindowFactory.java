@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,11 +34,11 @@ public class ExponentialCompactionWindowFactory extends CompactionWindowFactory 
       LoggerFactory.getLogger(ExponentialCompactionWindowFactory.class);
 
   public static final String BASE_WINDOW_MILLIS_KEY =
-    "hbase.hstore.compaction.date.tiered.base.window.millis";
+      "hbase.hstore.compaction.date.tiered.base.window.millis";
   public static final String WINDOWS_PER_TIER_KEY =
-    "hbase.hstore.compaction.date.tiered.windows.per.tier";
+      "hbase.hstore.compaction.date.tiered.windows.per.tier";
   public static final String MAX_TIER_AGE_MILLIS_KEY =
-    "hbase.hstore.compaction.date.tiered.max.tier.age.millis";
+      "hbase.hstore.compaction.date.tiered.max.tier.age.millis";
 
   private final class Window extends CompactionWindow {
 
@@ -117,7 +117,7 @@ public class ExponentialCompactionWindowFactory extends CompactionWindowFactory 
       return LongMath.checkedSubtract(now, maxTierAgeMillis);
     } catch (ArithmeticException ae) {
       LOG.warn("Value for " + MAX_TIER_AGE_MILLIS_KEY + ": " + maxTierAgeMillis
-        + ". Will always promote to next tier.");
+          + ". Will always promote to next tier.");
       return Long.MIN_VALUE;
     }
   }
@@ -126,8 +126,8 @@ public class ExponentialCompactionWindowFactory extends CompactionWindowFactory 
     Configuration conf = comConf.conf;
     baseWindowMillis = conf.getLong(BASE_WINDOW_MILLIS_KEY, 3600000 * 6);
     windowsPerTier = conf.getInt(WINDOWS_PER_TIER_KEY, 4);
-    maxTierAgeMillis = conf.getLong(MAX_TIER_AGE_MILLIS_KEY,
-      comConf.getDateTieredMaxStoreFileAgeMillis());
+    maxTierAgeMillis =
+        conf.getLong(MAX_TIER_AGE_MILLIS_KEY, comConf.getDateTieredMaxStoreFileAgeMillis());
     LOG.info(toString());
   }
 

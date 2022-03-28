@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static junit.framework.TestCase.assertTrue;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -34,9 +36,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-
-import static junit.framework.TestCase.assertTrue;
 
 /**
  * Tests the default table lock manager
@@ -87,7 +86,7 @@ public class TestTableStateManager {
     while (!master.isInitialized()) {
       Threads.sleep(1);
     }
-    assertTrue(MetaTableAccessor.getTableState(TEST_UTIL.getConnection(),
-        tableName).getState().equals(TableState.State.DISABLED));
+    assertTrue(MetaTableAccessor.getTableState(TEST_UTIL.getConnection(), tableName).getState()
+        .equals(TableState.State.DISABLED));
   }
 }

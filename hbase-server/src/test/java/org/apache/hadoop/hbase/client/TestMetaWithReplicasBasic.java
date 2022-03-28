@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,7 @@ public class TestMetaWithReplicasBasic extends MetaWithReplicasTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaWithReplicasBasic.class);
+      HBaseClassTestRule.forClass(TestMetaWithReplicasBasic.class);
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -63,9 +63,9 @@ public class TestMetaWithReplicasBasic extends MetaWithReplicasTestBase {
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     Configuration conf = TEST_UTIL.getConfiguration();
     String baseZNode =
-      conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    String primaryMetaZnode =
-      ZNodePaths.joinZNode(baseZNode, conf.get("zookeeper.znode.metaserver", "meta-region-server"));
+        conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+    String primaryMetaZnode = ZNodePaths.joinZNode(baseZNode,
+      conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     // check that the data in the znode is parseable (this would also mean the znode exists)
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
     ProtobufUtil.parseServerNameFrom(data);

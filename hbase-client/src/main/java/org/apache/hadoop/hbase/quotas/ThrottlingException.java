@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,22 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Describe the throttling result.
- *
- * TODO: At some point this will be handled on the client side to prevent
- * operation to go on the server if the waitInterval is grater than the one got
- * as result of this exception.
- *
- * @deprecated  replaced by {@link RpcThrottlingException} since hbase-2.0.0.
+ * Describe the throttling result. TODO: At some point this will be handled on the client side to
+ * prevent operation to go on the server if the waitInterval is grater than the one got as result of
+ * this exception.
+ * @deprecated replaced by {@link RpcThrottlingException} since hbase-2.0.0.
  */
 @Deprecated
 @InterfaceAudience.Public
@@ -39,22 +34,14 @@ public class ThrottlingException extends QuotaExceededException {
 
   @InterfaceAudience.Public
   public enum Type {
-    NumRequestsExceeded,
-    RequestSizeExceeded,
-    NumReadRequestsExceeded,
-    NumWriteRequestsExceeded,
-    WriteSizeExceeded,
-    ReadSizeExceeded,
+    NumRequestsExceeded, RequestSizeExceeded, NumReadRequestsExceeded, NumWriteRequestsExceeded,
+    WriteSizeExceeded, ReadSizeExceeded,
   }
 
-  private static final String[] MSG_TYPE = new String[] {
-    "number of requests exceeded",
-    "request size limit exceeded",
-    "number of read requests exceeded",
-    "number of write requests exceeded",
-    "write size limit exceeded",
-    "read size limit exceeded",
-  };
+  private static final String[] MSG_TYPE =
+      new String[] { "number of requests exceeded", "request size limit exceeded",
+          "number of read requests exceeded", "number of write requests exceeded",
+          "write size limit exceeded", "read size limit exceeded", };
 
   private static final String MSG_WAIT = " - wait ";
 
@@ -91,13 +78,11 @@ public class ThrottlingException extends QuotaExceededException {
     return this.waitInterval;
   }
 
-  public static void throwNumRequestsExceeded(final long waitInterval)
-      throws ThrottlingException {
+  public static void throwNumRequestsExceeded(final long waitInterval) throws ThrottlingException {
     throwThrottlingException(Type.NumRequestsExceeded, waitInterval);
   }
 
-  public static void throwRequestSizeExceeded(final long waitInterval)
-      throws ThrottlingException {
+  public static void throwRequestSizeExceeded(final long waitInterval) throws ThrottlingException {
     throwThrottlingException(Type.RequestSizeExceeded, waitInterval);
   }
 
@@ -111,13 +96,11 @@ public class ThrottlingException extends QuotaExceededException {
     throwThrottlingException(Type.NumWriteRequestsExceeded, waitInterval);
   }
 
-  public static void throwWriteSizeExceeded(final long waitInterval)
-      throws ThrottlingException {
+  public static void throwWriteSizeExceeded(final long waitInterval) throws ThrottlingException {
     throwThrottlingException(Type.WriteSizeExceeded, waitInterval);
   }
 
-  public static void throwReadSizeExceeded(final long waitInterval)
-      throws ThrottlingException {
+  public static void throwReadSizeExceeded(final long waitInterval) throws ThrottlingException {
     throwThrottlingException(Type.ReadSizeExceeded, waitInterval);
   }
 
@@ -129,17 +112,17 @@ public class ThrottlingException extends QuotaExceededException {
 
   public static String formatTime(long timeDiff) {
     StringBuilder buf = new StringBuilder();
-    long hours = timeDiff / (60*60*1000);
-    long rem = (timeDiff % (60*60*1000));
-    long minutes =  rem / (60*1000);
-    rem = rem % (60*1000);
+    long hours = timeDiff / (60 * 60 * 1000);
+    long rem = (timeDiff % (60 * 60 * 1000));
+    long minutes = rem / (60 * 1000);
+    rem = rem % (60 * 1000);
     float seconds = rem / 1000.0f;
 
-    if (hours != 0){
+    if (hours != 0) {
       buf.append(hours);
       buf.append("hrs, ");
     }
-    if (minutes != 0){
+    if (minutes != 0) {
       buf.append(minutes);
       buf.append("mins, ");
     }
@@ -148,11 +131,9 @@ public class ThrottlingException extends QuotaExceededException {
   }
 
   private static long timeFromString(String timeDiff) {
-    Pattern[] patterns = new Pattern[] {
-      Pattern.compile("^(\\d+\\.\\d\\d)sec"),
-      Pattern.compile("^(\\d+)mins, (\\d+\\.\\d\\d)sec"),
-      Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+\\.\\d\\d)sec")
-    };
+    Pattern[] patterns = new Pattern[] { Pattern.compile("^(\\d+\\.\\d\\d)sec"),
+        Pattern.compile("^(\\d+)mins, (\\d+\\.\\d\\d)sec"),
+        Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+\\.\\d\\d)sec") };
 
     for (int i = 0; i < patterns.length; ++i) {
       Matcher m = patterns[i].matcher(timeDiff);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,13 +28,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
 @Category(SmallTests.class)
 public class TestFieldValue {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFieldValue.class);
+      HBaseClassTestRule.forClass(TestFieldValue.class);
 
   @Test
   public void testParseAndAsSomethingMethod() {
@@ -101,7 +100,7 @@ public class TestFieldValue {
 
     // Size
     FieldValue sizeFieldValue =
-      new FieldValue(new Size(100, Size.Unit.MEGABYTE), FieldValueType.SIZE);
+        new FieldValue(new Size(100, Size.Unit.MEGABYTE), FieldValueType.SIZE);
     assertThat(sizeFieldValue.asString(), is("100.0MB"));
     assertThat(sizeFieldValue.asSize(), is(new Size(100, Size.Unit.MEGABYTE)));
 
@@ -122,8 +121,7 @@ public class TestFieldValue {
     }
 
     // Percent
-    FieldValue percentFieldValue =
-      new FieldValue(100f, FieldValueType.PERCENT);
+    FieldValue percentFieldValue = new FieldValue(100f, FieldValueType.PERCENT);
     assertThat(percentFieldValue.asString(), is("100.00%"));
     assertThat(percentFieldValue.asFloat(), is(100f));
 
@@ -184,11 +182,11 @@ public class TestFieldValue {
 
     // Size
     FieldValue size100MBFieldValue =
-      new FieldValue(new Size(100, Size.Unit.MEGABYTE), FieldValueType.SIZE);
+        new FieldValue(new Size(100, Size.Unit.MEGABYTE), FieldValueType.SIZE);
     FieldValue size100MBFieldValue2 =
-      new FieldValue(new Size(100, Size.Unit.MEGABYTE), FieldValueType.SIZE);
+        new FieldValue(new Size(100, Size.Unit.MEGABYTE), FieldValueType.SIZE);
     FieldValue size200MBFieldValue =
-      new FieldValue(new Size(200, Size.Unit.MEGABYTE), FieldValueType.SIZE);
+        new FieldValue(new Size(200, Size.Unit.MEGABYTE), FieldValueType.SIZE);
 
     assertThat(size100MBFieldValue.compareTo(size100MBFieldValue2), is(0));
     assertThat(size200MBFieldValue.compareTo(size100MBFieldValue), is(1));
@@ -228,9 +226,9 @@ public class TestFieldValue {
 
     // Size
     FieldValue sizeFieldValue =
-      new FieldValue(new Size(100, Size.Unit.MEGABYTE), FieldValueType.SIZE);
+        new FieldValue(new Size(100, Size.Unit.MEGABYTE), FieldValueType.SIZE);
     FieldValue sizeFieldValue2 =
-      new FieldValue(new Size(200, Size.Unit.MEGABYTE), FieldValueType.SIZE);
+        new FieldValue(new Size(200, Size.Unit.MEGABYTE), FieldValueType.SIZE);
     assertThat(sizeFieldValue.plus(sizeFieldValue2).asString(), is("300.0MB"));
     assertThat(sizeFieldValue.plus(sizeFieldValue2).asSize(),
       is(new Size(300, Size.Unit.MEGABYTE)));
@@ -255,44 +253,35 @@ public class TestFieldValue {
 
   @Test
   public void testOptimizeSize() {
-    FieldValue sizeFieldValue =
-      new FieldValue(new Size(1, Size.Unit.BYTE), FieldValueType.SIZE);
+    FieldValue sizeFieldValue = new FieldValue(new Size(1, Size.Unit.BYTE), FieldValueType.SIZE);
     assertThat(sizeFieldValue.asString(), is("1.0B"));
 
-    sizeFieldValue =
-      new FieldValue(new Size(1024, Size.Unit.BYTE), FieldValueType.SIZE);
+    sizeFieldValue = new FieldValue(new Size(1024, Size.Unit.BYTE), FieldValueType.SIZE);
     assertThat(sizeFieldValue.asString(), is("1.0KB"));
 
-    sizeFieldValue =
-      new FieldValue(new Size(2 * 1024, Size.Unit.BYTE), FieldValueType.SIZE);
+    sizeFieldValue = new FieldValue(new Size(2 * 1024, Size.Unit.BYTE), FieldValueType.SIZE);
     assertThat(sizeFieldValue.asString(), is("2.0KB"));
 
-    sizeFieldValue =
-      new FieldValue(new Size(2 * 1024, Size.Unit.KILOBYTE), FieldValueType.SIZE);
+    sizeFieldValue = new FieldValue(new Size(2 * 1024, Size.Unit.KILOBYTE), FieldValueType.SIZE);
     assertThat(sizeFieldValue.asString(), is("2.0MB"));
 
-    sizeFieldValue =
-      new FieldValue(new Size(1024 * 1024, Size.Unit.KILOBYTE), FieldValueType.SIZE);
+    sizeFieldValue = new FieldValue(new Size(1024 * 1024, Size.Unit.KILOBYTE), FieldValueType.SIZE);
     assertThat(sizeFieldValue.asString(), is("1.0GB"));
 
     sizeFieldValue =
-      new FieldValue(new Size(2 * 1024 * 1024, Size.Unit.MEGABYTE), FieldValueType.SIZE);
+        new FieldValue(new Size(2 * 1024 * 1024, Size.Unit.MEGABYTE), FieldValueType.SIZE);
     assertThat(sizeFieldValue.asString(), is("2.0TB"));
 
-    sizeFieldValue =
-      new FieldValue(new Size(2 * 1024, Size.Unit.TERABYTE), FieldValueType.SIZE);
+    sizeFieldValue = new FieldValue(new Size(2 * 1024, Size.Unit.TERABYTE), FieldValueType.SIZE);
     assertThat(sizeFieldValue.asString(), is("2.0PB"));
 
-    sizeFieldValue =
-      new FieldValue(new Size(1024 * 1024, Size.Unit.TERABYTE), FieldValueType.SIZE);
+    sizeFieldValue = new FieldValue(new Size(1024 * 1024, Size.Unit.TERABYTE), FieldValueType.SIZE);
     assertThat(sizeFieldValue.asString(), is("1024.0PB"));
 
-    sizeFieldValue =
-      new FieldValue(new Size(1, Size.Unit.PETABYTE), FieldValueType.SIZE);
+    sizeFieldValue = new FieldValue(new Size(1, Size.Unit.PETABYTE), FieldValueType.SIZE);
     assertThat(sizeFieldValue.asString(), is("1.0PB"));
 
-    sizeFieldValue =
-      new FieldValue(new Size(1024, Size.Unit.PETABYTE), FieldValueType.SIZE);
+    sizeFieldValue = new FieldValue(new Size(1024, Size.Unit.PETABYTE), FieldValueType.SIZE);
     assertThat(sizeFieldValue.asString(), is("1024.0PB"));
   }
 }

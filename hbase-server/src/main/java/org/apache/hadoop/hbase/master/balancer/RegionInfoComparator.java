@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,14 +18,13 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.Comparator;
-
 import org.apache.hadoop.hbase.client.RegionInfo;
 
 /**
- * The following comparator assumes that RegionId from HRegionInfo can represent
- * the age of the region - larger RegionId means the region is younger. This
- * comparator is used in balanceCluster() to account for the out-of-band regions
- * which were assigned to the server after some other region server crashed.
+ * The following comparator assumes that RegionId from HRegionInfo can represent the age of the
+ * region - larger RegionId means the region is younger. This comparator is used in balanceCluster()
+ * to account for the out-of-band regions which were assigned to the server after some other region
+ * server crashed.
  */
 class RegionInfoComparator implements Comparator<RegionInfo> {
   @Override

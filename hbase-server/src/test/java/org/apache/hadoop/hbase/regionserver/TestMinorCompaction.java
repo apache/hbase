@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,7 +58,7 @@ import org.junit.rules.TestName;
 /**
  * Test minor compactions
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestMinorCompaction {
 
   @ClassRule
@@ -84,11 +84,11 @@ public class TestMinorCompaction {
 
     @Override
     public CompactionRequestImpl selectCompaction(Collection<HStoreFile> candidateFiles,
-      List<HStoreFile> filesCompacting, boolean isUserCompaction, boolean mayUseOffPeak,
-      boolean forceMajor) throws IOException {
+        List<HStoreFile> filesCompacting, boolean isUserCompaction, boolean mayUseOffPeak,
+        boolean forceMajor) throws IOException {
       return new CompactionRequestImpl(
-        candidateFiles.stream().filter(f -> !filesCompacting.contains(f))
-          .limit(COMPACTION_THRESHOLD).collect(Collectors.toList()));
+          candidateFiles.stream().filter(f -> !filesCompacting.contains(f))
+              .limit(COMPACTION_THRESHOLD).collect(Collectors.toList()));
     }
   }
 
@@ -107,7 +107,7 @@ public class TestMinorCompaction {
     SECOND_ROW_BYTES[START_KEY_BYTES.length - 1]++;
     THIRD_ROW_BYTES = START_KEY_BYTES.clone();
     THIRD_ROW_BYTES[START_KEY_BYTES.length - 1] =
-      (byte) (THIRD_ROW_BYTES[START_KEY_BYTES.length - 1] + 2);
+        (byte) (THIRD_ROW_BYTES[START_KEY_BYTES.length - 1] + 2);
     COL1 = Bytes.toBytes("column1");
     COL2 = Bytes.toBytes("column2");
   }
@@ -143,11 +143,11 @@ public class TestMinorCompaction {
   public void testMinorCompactionWithDeleteColumn2() throws Exception {
     Delete dc = new Delete(SECOND_ROW_BYTES);
     dc.addColumn(fam2, COL2);
-    /* compactionThreshold is 3. The table has 4 versions: 0, 1, 2, and 3.
-     * we only delete the latest version. One might expect to see only
-     * versions 1 and 2. HBase differs, and gives us 0, 1 and 2.
-     * This is okay as well. Since there was no compaction done before the
-     * delete, version 0 seems to stay on.
+    /*
+     * compactionThreshold is 3. The table has 4 versions: 0, 1, 2, and 3. we only delete the latest
+     * version. One might expect to see only versions 1 and 2. HBase differs, and gives us 0, 1 and
+     * 2. This is okay as well. Since there was no compaction done before the delete, version 0
+     * seems to stay on.
      */
     testMinorCompactionWithDelete(dc, 3);
   }
@@ -163,8 +163,9 @@ public class TestMinorCompaction {
   public void testMinorCompactionWithDeleteVersion1() throws Exception {
     Delete deleteVersion = new Delete(SECOND_ROW_BYTES);
     deleteVersion.addColumns(fam2, COL2, 2);
-    /* compactionThreshold is 3. The table has 4 versions: 0, 1, 2, and 3.
-     * We delete versions 0 ... 2. So, we still have one remaining.
+    /*
+     * compactionThreshold is 3. The table has 4 versions: 0, 1, 2, and 3. We delete versions 0 ...
+     * 2. So, we still have one remaining.
      */
     testMinorCompactionWithDelete(deleteVersion, 1);
   }
@@ -174,18 +175,15 @@ public class TestMinorCompaction {
     Delete deleteVersion = new Delete(SECOND_ROW_BYTES);
     deleteVersion.addColumn(fam2, COL2, 1);
     /*
-     * the table has 4 versions: 0, 1, 2, and 3.
-     * We delete 1.
-     * Should have 3 remaining.
+     * the table has 4 versions: 0, 1, 2, and 3. We delete 1. Should have 3 remaining.
      */
     testMinorCompactionWithDelete(deleteVersion, 3);
   }
 
   /*
-   * A helper function to test the minor compaction algorithm. We check that
-   * the delete markers are left behind. Takes delete as an argument, which
-   * can be any delete (row, column, columnfamliy etc), that essentially
-   * deletes row2 and column2. row1 and column1 should be undeleted
+   * A helper function to test the minor compaction algorithm. We check that the delete markers are
+   * left behind. Takes delete as an argument, which can be any delete (row, column, columnfamliy
+   * etc), that essentially deletes row2 and column2. row1 and column1 should be undeleted
    */
   private void testMinorCompactionWithDelete(Delete delete) throws Exception {
     testMinorCompactionWithDelete(delete, 0);
@@ -211,8 +209,8 @@ public class TestMinorCompaction {
     result = r.get(new Get(SECOND_ROW_BYTES).addColumn(fam2, COL2).readVersions(100));
     assertEquals(COMPACTION_THRESHOLD, result.size());
 
-    // Now add deletes to memstore and then flush it.  That will put us over
-    // the compaction threshold of 3 store files.  Compacting these store files
+    // Now add deletes to memstore and then flush it. That will put us over
+    // the compaction threshold of 3 store files. Compacting these store files
     // should result in a compacted store file that has no references to the
     // deleted row.
     r.delete(delete);

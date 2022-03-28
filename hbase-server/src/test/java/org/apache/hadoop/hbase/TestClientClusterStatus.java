@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -66,8 +66,8 @@ public class TestClientClusterStatus {
     Configuration conf = HBaseConfiguration.create();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, MyObserver.class.getName());
     UTIL = new HBaseTestingUtility(conf);
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(MASTERS).numRegionServers(SLAVES).numDataNodes(SLAVES).build();
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(MASTERS)
+        .numRegionServers(SLAVES).numDataNodes(SLAVES).build();
     UTIL.startMiniCluster(option);
     CLUSTER = UTIL.getHBaseCluster();
     CLUSTER.waitForActiveAndReadyMaster();
@@ -85,8 +85,8 @@ public class TestClientClusterStatus {
   @Test
   public void testDefaults() throws Exception {
     ClusterStatus origin = ADMIN.getClusterStatus();
-    ClusterStatus defaults
-        = new ClusterStatus(ADMIN.getClusterMetrics(EnumSet.allOf(Option.class)));
+    ClusterStatus defaults =
+        new ClusterStatus(ADMIN.getClusterMetrics(EnumSet.allOf(Option.class)));
     checkPbObjectNotNull(origin);
     checkPbObjectNotNull(defaults);
     Assert.assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
@@ -108,7 +108,7 @@ public class TestClientClusterStatus {
     // Do a rough compare. More specific compares can fail because all regions not deployed yet
     // or more requests than expected.
     Assert.assertEquals(status0.getLiveServerMetrics().size(),
-        status1.getLiveServerMetrics().size());
+      status1.getLiveServerMetrics().size());
     checkPbObjectNotNull(new ClusterStatus(status0));
     checkPbObjectNotNull(new ClusterStatus(status1));
   }
@@ -129,8 +129,8 @@ public class TestClientClusterStatus {
     Waiter.waitFor(CLUSTER.getConfiguration(), 10 * 1000, 100, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        ClusterStatus status
-          = new ClusterStatus(ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)));
+        ClusterStatus status =
+            new ClusterStatus(ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)));
         Assert.assertNotNull(status);
         return status.getRegionsCount() > 0;
       }
@@ -143,7 +143,7 @@ public class TestClientClusterStatus {
     Assert.assertNotNull(status);
     Assert.assertNotNull(status.getServers());
     // exclude a dead region server
-    Assert.assertEquals(SLAVES -1, numRs);
+    Assert.assertEquals(SLAVES - 1, numRs);
     // live servers = nums of regionservers
     // By default, HMaster don't carry any regions so it won't report its load.
     // Hence, it won't be in the server list.
@@ -185,9 +185,8 @@ public class TestClientClusterStatus {
 
   @Test
   public void testOtherStatusInfos() throws Exception {
-    EnumSet<Option> options =
-        EnumSet.of(Option.MASTER_COPROCESSORS, Option.HBASE_VERSION,
-                   Option.CLUSTER_ID, Option.BALANCER_ON);
+    EnumSet<Option> options = EnumSet.of(Option.MASTER_COPROCESSORS, Option.HBASE_VERSION,
+      Option.CLUSTER_ID, Option.BALANCER_ON);
     ClusterStatus status = new ClusterStatus(ADMIN.getClusterMetrics(options));
     Assert.assertTrue(status.getMasterCoprocessors().length == 1);
     Assert.assertNotNull(status.getHBaseVersion());
@@ -231,17 +230,20 @@ public class TestClientClusterStatus {
     private static final AtomicInteger PRE_COUNT = new AtomicInteger(0);
     private static final AtomicInteger POST_COUNT = new AtomicInteger(0);
 
-    @Override public Optional<MasterObserver> getMasterObserver() {
+    @Override
+    public Optional<MasterObserver> getMasterObserver() {
       return Optional.of(this);
     }
 
-    @Override public void preGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    @Override
+    public void preGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx)
         throws IOException {
       PRE_COUNT.incrementAndGet();
     }
 
-    @Override public void postGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      ClusterMetrics status) throws IOException {
+    @Override
+    public void postGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        ClusterMetrics status) throws IOException {
       POST_COUNT.incrementAndGet();
     }
   }

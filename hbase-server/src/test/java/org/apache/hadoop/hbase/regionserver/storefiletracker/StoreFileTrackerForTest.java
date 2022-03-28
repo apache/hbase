@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,7 @@ public class StoreFileTrackerForTest extends DefaultStoreFileTracker {
 
   private static final Logger LOG = LoggerFactory.getLogger(StoreFileTrackerForTest.class);
   private static ConcurrentMap<String, BlockingQueue<StoreFileInfo>> trackedFiles =
-    new ConcurrentHashMap<>();
+      new ConcurrentHashMap<>();
   private String storeId;
 
   public StoreFileTrackerForTest(Configuration conf, boolean isPrimaryReplica, StoreContext ctx) {

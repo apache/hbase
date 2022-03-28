@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +61,7 @@ public class TestMigrateAndMirrorMetaLocations {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMigrateAndMirrorMetaLocations.class);
+      HBaseClassTestRule.forClass(TestMigrateAndMirrorMetaLocations.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -85,7 +85,7 @@ public class TestMigrateAndMirrorMetaLocations {
       data = removeMetaData(data);
       int prefixLen = lengthOfPBMagic();
       ZooKeeperProtos.MetaRegionServer zkProto = ZooKeeperProtos.MetaRegionServer.parser()
-        .parseFrom(data, prefixLen, data.length - prefixLen);
+          .parseFrom(data, prefixLen, data.length - prefixLen);
       ServerName sn = ProtobufUtil.toServerName(zkProto.getServer());
       assertEquals(locs.getRegionLocation(i).getServerName(), sn);
     }
@@ -95,7 +95,7 @@ public class TestMigrateAndMirrorMetaLocations {
   private void checkMirrorLocation(int replicaCount) throws Exception {
     MasterRegion masterRegion = UTIL.getMiniHBaseCluster().getMaster().getMasterRegion();
     try (RegionScanner scanner =
-      masterRegion.getRegionScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
+        masterRegion.getRegionScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
       List<Cell> cells = new ArrayList<>();
       boolean moreRows = scanner.next(cells);
       // should only have one row as we have only one meta region, different replicas will be in the
@@ -110,7 +110,7 @@ public class TestMigrateAndMirrorMetaLocations {
 
   private void waitUntilNoSCP() throws IOException {
     UTIL.waitFor(30000, () -> UTIL.getMiniHBaseCluster().getMaster().getProcedures().stream()
-      .filter(p -> p instanceof ServerCrashProcedure).allMatch(Procedure::isSuccess));
+        .filter(p -> p instanceof ServerCrashProcedure).allMatch(Procedure::isSuccess));
   }
 
   @Test
@@ -118,14 +118,14 @@ public class TestMigrateAndMirrorMetaLocations {
     checkMirrorLocation(2);
     MasterRegion masterRegion = UTIL.getMiniHBaseCluster().getMaster().getMasterRegion();
     try (RegionScanner scanner =
-      masterRegion.getRegionScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
+        masterRegion.getRegionScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
       List<Cell> cells = new ArrayList<>();
       scanner.next(cells);
       Cell cell = cells.get(0);
       // delete the only row
       masterRegion.update(
         r -> r.delete(new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())
-          .addFamily(HConstants.CATALOG_FAMILY)));
+            .addFamily(HConstants.CATALOG_FAMILY)));
       masterRegion.flush(true);
     }
     // restart the whole cluster, to see if we can migrate the data on zookeeper to master local
@@ -134,7 +134,7 @@ public class TestMigrateAndMirrorMetaLocations {
     UTIL.startMiniHBaseCluster(StartMiniClusterOption.builder().numRegionServers(3).build());
     masterRegion = UTIL.getMiniHBaseCluster().getMaster().getMasterRegion();
     try (RegionScanner scanner =
-      masterRegion.getRegionScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
+        masterRegion.getRegionScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
       List<Cell> cells = new ArrayList<>();
       boolean moreRows = scanner.next(cells);
       assertFalse(moreRows);

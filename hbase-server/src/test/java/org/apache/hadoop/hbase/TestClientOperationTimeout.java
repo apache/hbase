@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -70,7 +70,7 @@ public class TestClientOperationTimeout {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientOperationTimeout.class);
+      HBaseClassTestRule.forClass(TestClientOperationTimeout.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -93,10 +93,10 @@ public class TestClientOperationTimeout {
   public static void setUpClass() throws Exception {
     // Set RegionServer class and use default values for other options.
     StartMiniClusterOption option =
-      StartMiniClusterOption.builder().rsClass(DelayedRegionServer.class).build();
+        StartMiniClusterOption.builder().rsClass(DelayedRegionServer.class).build();
     UTIL.startMiniCluster(option);
     UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TABLE_NAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
 
     Configuration conf = new Configuration(UTIL.getConfiguration());
     conf.setLong(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 500);
@@ -157,8 +157,8 @@ public class TestClientOperationTimeout {
   }
 
   /**
-   * Tests that a batch mutate on a table throws {@link SocketTimeoutException} when the
-   * operation takes longer than 'hbase.client.operation.timeout'.
+   * Tests that a batch mutate on a table throws {@link SocketTimeoutException} when the operation
+   * takes longer than 'hbase.client.operation.timeout'.
    */
   @Test
   public void testMultiPutsTimeout() {

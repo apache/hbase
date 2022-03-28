@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,8 +23,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to view region location information for a single HBase table. Obtain an instance from an
@@ -38,16 +37,18 @@ import org.apache.hadoop.hbase.util.Pair;
 @InterfaceAudience.Public
 public interface RegionLocator extends Closeable {
 
-  /** Configuration for Region Locator's mode when meta replica is configured.
-   * Valid values are: HedgedRead, LoadBalance, None
+  /**
+   * Configuration for Region Locator's mode when meta replica is configured. Valid values are:
+   * HedgedRead, LoadBalance, None
    */
   String LOCATOR_META_REPLICAS_MODE = "hbase.locator.meta.replicas.mode";
 
-  /** Configuration for meta replica selector when Region Locator's LoadBalance mode is configured.
+  /**
+   * Configuration for meta replica selector when Region Locator's LoadBalance mode is configured.
    * The default value is org.apache.hadoop.hbase.client.CatalogReplicaLoadBalanceSimpleSelector.
    */
   String LOCATOR_META_REPLICAS_MODE_LOADBALANCE_SELECTOR =
-    "hbase.locator.meta.replicas.mode.loadbalance.selector";
+      "hbase.locator.meta.replicas.mode.loadbalance.selector";
 
   /**
    * Finds the region on which the given row is being served. Does not reload the cache.
@@ -160,8 +161,8 @@ public interface RegionLocator extends Closeable {
    */
   default Pair<byte[][], byte[][]> getStartEndKeys() throws IOException {
     List<HRegionLocation> regions = getAllRegionLocations().stream()
-      .filter(loc -> RegionReplicaUtil.isDefaultReplica(loc.getRegion()))
-      .collect(Collectors.toList());
+        .filter(loc -> RegionReplicaUtil.isDefaultReplica(loc.getRegion()))
+        .collect(Collectors.toList());
     byte[][] startKeys = new byte[regions.size()][];
     byte[][] endKeys = new byte[regions.size()][];
     for (int i = 0, n = regions.size(); i < n; i++) {

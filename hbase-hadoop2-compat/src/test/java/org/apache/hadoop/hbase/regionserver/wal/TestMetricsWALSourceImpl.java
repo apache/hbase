@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsWALSourceImpl {
 
   @ClassRule
@@ -37,10 +37,8 @@ public class TestMetricsWALSourceImpl {
 
   @Test
   public void testGetInstance() throws Exception {
-    MetricsWALSource walSource =
-        CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
+    MetricsWALSource walSource = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
     assertTrue(walSource instanceof MetricsWALSourceImpl);
-    assertSame(walSource,
-        CompatibilitySingletonFactory.getInstance(MetricsWALSource.class));
+    assertSame(walSource, CompatibilitySingletonFactory.getInstance(MetricsWALSource.class));
   }
 }

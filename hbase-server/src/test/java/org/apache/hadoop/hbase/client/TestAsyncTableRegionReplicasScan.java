@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ public class TestAsyncTableRegionReplicasScan extends AbstractTestAsyncTableRegi
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableRegionReplicasScan.class);
+      HBaseClassTestRule.forClass(TestAsyncTableRegionReplicasScan.class);
 
   private static int ROW_COUNT = 1000;
 

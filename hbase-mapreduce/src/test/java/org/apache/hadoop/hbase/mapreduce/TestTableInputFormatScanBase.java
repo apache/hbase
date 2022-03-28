@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +20,7 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +50,6 @@ import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
  * Tests various scan start and stop row scenarios. This is set in a scan and tested in a MapReduce
  * job to see if that is handed over and done properly too.
@@ -61,7 +60,7 @@ public abstract class TestTableInputFormatScanBase {
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   static final TableName TABLE_NAME = TableName.valueOf("scantest");
-  static final byte[][] INPUT_FAMILYS = {Bytes.toBytes("content1"), Bytes.toBytes("content2")};
+  static final byte[][] INPUT_FAMILYS = { Bytes.toBytes("content1"), Bytes.toBytes("content2") };
   static final String KEY_STARTROW = "startRow";
   static final String KEY_LASTROW = "stpRow";
 
@@ -85,35 +84,32 @@ public abstract class TestTableInputFormatScanBase {
    * Pass the key and value to reduce.
    */
   public static class ScanMapper
-    extends TableMapper<ImmutableBytesWritable, ImmutableBytesWritable> {
+      extends TableMapper<ImmutableBytesWritable, ImmutableBytesWritable> {
 
     /**
      * Pass the key and value to reduce.
-     *
-     * @param key  The key, here "aaa", "aab" etc.
-     * @param value  The value is the same as the key.
-     * @param context  The task context.
+     * @param key The key, here "aaa", "aab" etc.
+     * @param value The value is the same as the key.
+     * @param context The task context.
      * @throws IOException When reading the rows fails.
      */
     @Override
-    public void map(ImmutableBytesWritable key, Result value,
-      Context context)
+    public void map(ImmutableBytesWritable key, Result value, Context context)
         throws IOException, InterruptedException {
       if (value.size() != 2) {
         throw new IOException("There should be two input columns");
       }
-      Map<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
-        cfMap = value.getMap();
+      Map<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> cfMap = value.getMap();
 
       if (!cfMap.containsKey(INPUT_FAMILYS[0]) || !cfMap.containsKey(INPUT_FAMILYS[1])) {
-        throw new IOException("Wrong input columns. Missing: '" +
-          Bytes.toString(INPUT_FAMILYS[0]) + "' or '" + Bytes.toString(INPUT_FAMILYS[1]) + "'.");
+        throw new IOException("Wrong input columns. Missing: '" + Bytes.toString(INPUT_FAMILYS[0])
+            + "' or '" + Bytes.toString(INPUT_FAMILYS[1]) + "'.");
       }
 
       String val0 = Bytes.toStringBinary(value.getValue(INPUT_FAMILYS[0], null));
       String val1 = Bytes.toStringBinary(value.getValue(INPUT_FAMILYS[1], null));
-      LOG.info("map: key -> " + Bytes.toStringBinary(key.get()) +
-               ", value -> (" + val0 + ", " + val1 + ")");
+      LOG.info("map: key -> " + Bytes.toStringBinary(key.get()) + ", value -> (" + val0 + ", "
+          + val1 + ")");
       context.write(key, key);
     }
   }
@@ -122,28 +118,25 @@ public abstract class TestTableInputFormatScanBase {
    * Checks the last and first key seen against the scanner boundaries.
    */
   public static class ScanReducer
-    extends Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
-                    NullWritable, NullWritable> {
+      extends Reducer<ImmutableBytesWritable, ImmutableBytesWritable, NullWritable, NullWritable> {
 
     private String first = null;
     private String last = null;
 
-    protected void reduce(ImmutableBytesWritable key,
-        Iterable<ImmutableBytesWritable> values, Context context)
-      throws IOException ,InterruptedException {
+    protected void reduce(ImmutableBytesWritable key, Iterable<ImmutableBytesWritable> values,
+        Context context) throws IOException, InterruptedException {
       int count = 0;
       for (ImmutableBytesWritable value : values) {
         String val = Bytes.toStringBinary(value.get());
-        LOG.info("reduce: key[" + count + "] -> " +
-          Bytes.toStringBinary(key.get()) + ", value -> " + val);
+        LOG.info(
+          "reduce: key[" + count + "] -> " + Bytes.toStringBinary(key.get()) + ", value -> " + val);
         if (first == null) first = val;
         last = val;
         count++;
       }
     }
 
-    protected void cleanup(Context context)
-        throws IOException, InterruptedException {
+    protected void cleanup(Context context) throws IOException, InterruptedException {
       Configuration c = context.getConfiguration();
       String startRow = c.get(KEY_STARTROW);
       String lastRow = c.get(KEY_LASTROW);
@@ -164,8 +157,8 @@ public abstract class TestTableInputFormatScanBase {
    */
   protected void testScanFromConfiguration(String start, String stop, String last)
       throws IOException, InterruptedException, ClassNotFoundException {
-    String jobName = "ScanFromConfig" + (start != null ? start.toUpperCase(Locale.ROOT) : "Empty") +
-      "To" + (stop != null ? stop.toUpperCase(Locale.ROOT) : "Empty");
+    String jobName = "ScanFromConfig" + (start != null ? start.toUpperCase(Locale.ROOT) : "Empty")
+        + "To" + (stop != null ? stop.toUpperCase(Locale.ROOT) : "Empty");
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     c.set(TableInputFormat.INPUT_TABLE, TABLE_NAME.getNameAsString());
     c.set(TableInputFormat.SCAN_COLUMN_FAMILY,
@@ -198,8 +191,8 @@ public abstract class TestTableInputFormatScanBase {
    */
   protected void testScan(String start, String stop, String last)
       throws IOException, InterruptedException, ClassNotFoundException {
-    String jobName = "Scan" + (start != null ? start.toUpperCase(Locale.ROOT) : "Empty") + "To" +
-      (stop != null ? stop.toUpperCase(Locale.ROOT) : "Empty");
+    String jobName = "Scan" + (start != null ? start.toUpperCase(Locale.ROOT) : "Empty") + "To"
+        + (stop != null ? stop.toUpperCase(Locale.ROOT) : "Empty");
     LOG.info("Before map/reduce startup - job " + jobName);
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     Scan scan = new Scan();
@@ -224,7 +217,6 @@ public abstract class TestTableInputFormatScanBase {
     assertTrue(job.waitForCompletion(true));
     LOG.info("After map/reduce completion - job " + jobName);
   }
-
 
   /**
    * Tests Number of inputSplits for MR job when specify number of mappers for TableInputFormatXXX
@@ -294,7 +286,7 @@ public abstract class TestTableInputFormatScanBase {
     int[] regionLen = { 10, 20, 20, 40, 60 };
     for (int i = 0; i < 5; i++) {
       InputSplit split = new TableSplit(TABLE_NAME, new Scan(), Bytes.toBytes(i),
-        Bytes.toBytes(i + 1), "", "", regionLen[i] * 1048576);
+          Bytes.toBytes(i + 1), "", "", regionLen[i] * 1048576);
       splits.add(split);
     }
     TableInputFormat tif = new TableInputFormat();
@@ -311,4 +303,3 @@ public abstract class TestTableInputFormatScanBase {
     assertNotEquals("The seventh split start key should not be", 4, Bytes.toInt(ts4.getStartRow()));
   }
 }
-

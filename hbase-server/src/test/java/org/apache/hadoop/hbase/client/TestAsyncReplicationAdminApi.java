@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -68,7 +68,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncReplicationAdminApi.class);
+      HBaseClassTestRule.forClass(TestAsyncReplicationAdminApi.class);
 
   private final String ID_ONE = "1";
   private static String KEY_ONE;
@@ -98,7 +98,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     } catch (Exception e) {
     }
     ReplicationQueueStorage queueStorage = ReplicationStorageFactory
-      .getReplicationQueueStorage(TEST_UTIL.getZooKeeperWatcher(), TEST_UTIL.getConfiguration());
+        .getReplicationQueueStorage(TEST_UTIL.getZooKeeperWatcher(), TEST_UTIL.getConfiguration());
     for (ServerName serverName : queueStorage.getListOfReplicators()) {
       for (String queue : queueStorage.getAllQueues(serverName)) {
         queueStorage.removeQueue(serverName, queue);
@@ -196,7 +196,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     tableCFs.put(tableName1, null);
     admin.appendReplicationPeerTableCFs(ID_ONE, tableCFs).join();
     Map<TableName, List<String>> result =
-      admin.getReplicationPeerConfig(ID_ONE).get().getTableCFsMap();
+        admin.getReplicationPeerConfig(ID_ONE).get().getTableCFsMap();
     assertEquals(1, result.size());
     assertEquals(true, result.containsKey(tableName1));
     assertNull(result.get(tableName1));
@@ -310,13 +310,13 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
       tableCFs.clear();
       tableCFs.put(tableName3, null);
       admin.removeReplicationPeerTableCFs(ID_ONE, tableCFs).join();
-      fail("Test case should fail as removing table-cfs from a peer whose" +
-        " table-cfs didn't contain t3");
+      fail("Test case should fail as removing table-cfs from a peer whose"
+          + " table-cfs didn't contain t3");
     } catch (CompletionException e) {
       assertTrue(e.getCause() instanceof ReplicationException);
     }
     Map<TableName, List<String>> result =
-      admin.getReplicationPeerConfig(ID_ONE).get().getTableCFsMap();
+        admin.getReplicationPeerConfig(ID_ONE).get().getTableCFsMap();
     assertEquals(2, result.size());
     assertTrue("Should contain t1", result.containsKey(tableName1));
     assertTrue("Should contain t2", result.containsKey(tableName2));
@@ -488,8 +488,10 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
   @Test
   public void testInvalidReplicationEndpoint() throws InterruptedException {
     try {
-      admin.addReplicationPeer(ID_ONE,
-        ReplicationPeerConfig.newBuilder().setReplicationEndpointImpl("whatever").build()).get();
+      admin
+          .addReplicationPeer(ID_ONE,
+            ReplicationPeerConfig.newBuilder().setReplicationEndpointImpl("whatever").build())
+          .get();
       fail();
     } catch (ExecutionException e) {
       assertThat(e.getCause(), instanceOf(DoNotRetryIOException.class));
@@ -500,18 +502,16 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
   @Test
   public void testSetReplicationEndpoint() throws InterruptedException, ExecutionException {
     // make sure that we do not need to set cluster key when we use customized ReplicationEndpoint
-    admin
-      .addReplicationPeer(ID_ONE,
-        ReplicationPeerConfig.newBuilder()
+    admin.addReplicationPeer(ID_ONE,
+      ReplicationPeerConfig.newBuilder()
           .setReplicationEndpointImpl(VerifyWALEntriesReplicationEndpoint.class.getName()).build())
-      .get();
+        .get();
 
     // but we still need to check cluster key if we specify the default ReplicationEndpoint
     try {
-      admin
-        .addReplicationPeer(ID_TWO, ReplicationPeerConfig.newBuilder()
+      admin.addReplicationPeer(ID_TWO, ReplicationPeerConfig.newBuilder()
           .setReplicationEndpointImpl(HBaseInterClusterReplicationEndpoint.class.getName()).build())
-        .get();
+          .get();
       fail();
     } catch (ExecutionException e) {
       assertThat(e.getCause(), instanceOf(DoNotRetryIOException.class));

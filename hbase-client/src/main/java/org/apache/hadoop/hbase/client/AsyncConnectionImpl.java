@@ -27,6 +27,7 @@ import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRI
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.SERVER_NAME_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.util.Optional;
@@ -56,8 +57,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
@@ -72,9 +75,9 @@ public class AsyncConnectionImpl implements AsyncConnection {
   private static final Logger LOG = LoggerFactory.getLogger(AsyncConnectionImpl.class);
 
   static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
-    new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d").setDaemon(true)
-      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
-    10, TimeUnit.MILLISECONDS);
+      new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d").setDaemon(true)
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+      10, TimeUnit.MILLISECONDS);
 
   private final Configuration conf;
 
@@ -102,7 +105,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
   private final AtomicReference<MasterService.Interface> masterStub = new AtomicReference<>();
 
   private final AtomicReference<CompletableFuture<MasterService.Interface>> masterStubMakeFuture =
-    new AtomicReference<>();
+      new AtomicReference<>();
 
   private final Optional<ServerStatisticTracker> stats;
   private final ClientBackoffPolicy backoffPolicy;
@@ -132,8 +135,8 @@ public class AsyncConnectionImpl implements AsyncConnection {
     }
     this.rpcClient = RpcClientFactory.createClient(conf, clusterId, metrics.orElse(null));
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
-    this.rpcTimeout =
-      (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(connConf.getRpcTimeoutNs()));
+    this.rpcTimeout = (int) Math.min(Integer.MAX_VALUE,
+      TimeUnit.NANOSECONDS.toMillis(connConf.getRpcTimeoutNs()));
     this.locator = new AsyncRegionLocator(this, RETRY_TIMER);
     this.callerFactory = new AsyncRpcRetryingCallerFactory(this, RETRY_TIMER);
     if (conf.getBoolean(CLIENT_NONCES_ENABLED_KEY, true)) {
@@ -289,7 +292,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
           future.completeExceptionally(error);
         } else if (addr == null) {
           future.completeExceptionally(new MasterNotRunningException(
-            "ZooKeeper available but no active master location found"));
+              "ZooKeeper available but no active master location found"));
         } else {
           LOG.debug("The fetched master address is {}", addr);
           try {
@@ -329,13 +332,13 @@ public class AsyncConnectionImpl implements AsyncConnection {
 
   @Override
   public AsyncTableBuilder<ScanResultConsumer> getTableBuilder(TableName tableName,
-    ExecutorService pool) {
+      ExecutorService pool) {
     return new AsyncTableBuilderBase<ScanResultConsumer>(tableName, connConf) {
 
       @Override
       public AsyncTable<ScanResultConsumer> build() {
         RawAsyncTableImpl rawTable =
-          new RawAsyncTableImpl(AsyncConnectionImpl.this, RETRY_TIMER, this);
+            new RawAsyncTableImpl(AsyncConnectionImpl.this, RETRY_TIMER, this);
         return new AsyncTableImpl(rawTable, pool);
       }
     };
@@ -357,7 +360,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
       @Override
       public AsyncAdmin build() {
         RawAsyncHBaseAdmin rawAdmin =
-          new RawAsyncHBaseAdmin(AsyncConnectionImpl.this, RETRY_TIMER, this);
+            new RawAsyncHBaseAdmin(AsyncConnectionImpl.this, RETRY_TIMER, this);
         return new AsyncHBaseAdmin(rawAdmin, pool);
       }
     };
@@ -370,9 +373,9 @@ public class AsyncConnectionImpl implements AsyncConnection {
 
   @Override
   public AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName,
-    ExecutorService pool) {
+      ExecutorService pool) {
     return new AsyncBufferedMutatorBuilderImpl(connConf, getTableBuilder(tableName, pool),
-      RETRY_TIMER);
+        RETRY_TIMER);
   }
 
   private Hbck getHbckInternal(ServerName masterServer) {
@@ -380,8 +383,10 @@ public class AsyncConnectionImpl implements AsyncConnection {
     // we will not create a new connection when creating a new protobuf stub, and for hbck there
     // will be no performance consideration, so for simplification we will create a new stub every
     // time instead of caching the stub here.
-    return new HBaseHbck(MasterProtos.HbckService.newBlockingStub(
-      rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout)), rpcControllerFactory);
+    return new HBaseHbck(
+        MasterProtos.HbckService
+            .newBlockingStub(rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout)),
+        rpcControllerFactory);
   }
 
   @Override

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,15 +41,14 @@ import org.slf4j.LoggerFactory;
 /**
  * Test various scanner timeout issues.
  */
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestScannerTimeout {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestScannerTimeout.class);
 
-  private final static HBaseTestingUtility
-      TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScannerTimeout.class);
   private final static byte[] SOME_BYTES = Bytes.toBytes("f");
@@ -61,7 +60,7 @@ public class TestScannerTimeout {
   private final static int SCANNER_TIMEOUT = 15000;
   private final static int SCANNER_CACHING = 5;
 
-   /**
+  /**
    * @throws java.lang.Exception
    */
   @BeforeClass
@@ -97,8 +96,8 @@ public class TestScannerTimeout {
   }
 
   /**
-   * Test that scanner can continue even if the region server it was reading
-   * from failed. Before 2772, it reused the same scanner id.
+   * Test that scanner can continue even if the region server it was reading from failed. Before
+   * 2772, it reused the same scanner id.
    * @throws Exception
    */
   @Test
@@ -128,8 +127,8 @@ public class TestScannerTimeout {
   }
 
   /**
-   * Test that scanner won't miss any rows if the region server it was reading
-   * from failed. Before 3686, it would skip rows in the scan.
+   * Test that scanner won't miss any rows if the region server it was reading from failed. Before
+   * 3686, it would skip rows in the scan.
    * @throws Exception
    */
   @Test
@@ -147,8 +146,7 @@ public class TestScannerTimeout {
     // Since the RS is already created, this conf is client-side only for
     // this new table
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    conf.setInt(
-        HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT*100);
+    conf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT * 100);
     Connection connection = ConnectionFactory.createConnection(conf);
     Table table = connection.getTable(TABLE_NAME);
     LOG.info("START ************ TEST3686A---22");
@@ -162,8 +160,8 @@ public class TestScannerTimeout {
 
     // Kill after one call to next(), which got 5 rows.
     rs.abort("die!");
-    while(r.next() != null) {
-      count ++;
+    while (r.next() != null) {
+      count++;
     }
     assertEquals(NB_ROWS, count);
     r.close();
@@ -173,9 +171,8 @@ public class TestScannerTimeout {
   }
 
   /**
-   * Make sure that no rows are lost if the scanner timeout is longer on the
-   * client than the server, and the scan times out on the server but not the
-   * client.
+   * Make sure that no rows are lost if the scanner timeout is longer on the client than the server,
+   * and the scan times out on the server but not the client.
    * @throws Exception
    */
   @Test
@@ -196,9 +193,9 @@ public class TestScannerTimeout {
     int count = 1;
     r.next();
     // Sleep, allowing the scan to timeout on the server but not on the client.
-    Thread.sleep(SCANNER_TIMEOUT+2000);
-    while(r.next() != null) {
-      count ++;
+    Thread.sleep(SCANNER_TIMEOUT + 2000);
+    while (r.next() != null) {
+      count++;
     }
     assertEquals(NB_ROWS, count);
     r.close();
@@ -209,4 +206,3 @@ public class TestScannerTimeout {
   }
 
 }
-

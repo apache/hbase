@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,9 +29,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class ReaderContext {
   @InterfaceAudience.Private
   public enum ReaderType {
-    PREAD,
-    STREAM
+    PREAD, STREAM
   }
+
   private final Path filePath;
   private final FSDataInputStreamWrapper fsdis;
   private final long fileSize;
