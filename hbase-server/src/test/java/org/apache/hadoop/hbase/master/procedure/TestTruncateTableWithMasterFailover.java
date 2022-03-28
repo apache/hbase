@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,7 @@ public class TestTruncateTableWithMasterFailover extends MasterFailoverWithProce
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTruncateTableWithMasterFailover.class);
+      HBaseClassTestRule.forClass(TestTruncateTableWithMasterFailover.class);
 
   // ==========================================================================
   // Test Truncate Table
@@ -54,13 +54,13 @@ public class TestTruncateTableWithMasterFailover extends MasterFailoverWithProce
   }
 
   private void testTruncateWithFailoverAtStep(final boolean preserveSplits, final int step)
-    throws Exception {
+      throws Exception {
     final TableName tableName = TableName.valueOf("testTruncateWithFailoverAtStep" + step);
 
     // create the table
     final String[] families = new String[] { "f1", "f2" };
     final byte[][] splitKeys =
-      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
+        new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
       tableName, splitKeys, families);
     // load and verify that there are rows in the table

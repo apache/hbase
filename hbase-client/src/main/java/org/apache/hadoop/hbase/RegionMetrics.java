@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.util.Map;
@@ -26,8 +23,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
-  * Encapsulates per-region load metrics.
-  */
+ * Encapsulates per-region load metrics.
+ */
 @InterfaceAudience.Public
 public interface RegionMetrics {
 
@@ -87,8 +84,8 @@ public interface RegionMetrics {
 
   /**
    * TODO: why we pass the same value to different counters? Currently, the value from
-   * getStoreFileIndexSize() is same with getStoreFileRootLevelIndexSize()
-   * see HRegionServer#createRegionLoad.
+   * getStoreFileIndexSize() is same with getStoreFileRootLevelIndexSize() see
+   * HRegionServer#createRegionLoad.
    * @return The current total size of root-level indexes for the region
    */
   Size getStoreFileIndexSize();
@@ -129,7 +126,6 @@ public interface RegionMetrics {
    */
   Map<byte[], Long> getStoreSequenceId();
 
-
   /**
    * @return the uncompressed size of the storefiles
    */
@@ -151,8 +147,8 @@ public interface RegionMetrics {
   int getStoreRefCount();
 
   /**
-   * @return the max reference count for any store file among all compacted stores files
-   *   of this region
+   * @return the max reference count for any store file among all compacted stores files of this
+   *         region
    */
   int getMaxCompactedStoreFileRefCount();
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,8 +56,8 @@ public class TestValueReplacingCompaction {
   private static final TableName NAME = TableName.valueOf("TestValueReplacement");
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
-  private static final ColumnFamilyDescriptor CFD = ColumnFamilyDescriptorBuilder
-      .newBuilder(FAMILY).build();
+  private static final ColumnFamilyDescriptor CFD =
+      ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build();
   private static final int NUM_ROWS = 5;
   private static final String value = "foo";
   private static final String replacedValue = "bar";
@@ -69,8 +69,8 @@ public class TestValueReplacingCompaction {
         .createTable(TableDescriptorBuilder.newBuilder(NAME)
             .setCoprocessor(ValueRewritingObserver.class.getName())
             .setValue(ValueRewritingObserver.ORIGINAL_VALUE_KEY, value)
-            .setValue(ValueRewritingObserver.REPLACED_VALUE_KEY, replacedValue)
-            .setColumnFamily(CFD).build());
+            .setValue(ValueRewritingObserver.REPLACED_VALUE_KEY, replacedValue).setColumnFamily(CFD)
+            .build());
   }
 
   @AfterClass

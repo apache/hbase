@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.yetus.audience.InterfaceAudience;
-
 import java.io.InterruptedIOException;
 import java.util.List;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The context used to wait for results from one submit call. If submit call is made with
@@ -31,9 +29,13 @@ import java.util.List;
 @InterfaceAudience.Private
 public interface AsyncRequestFuture {
   public boolean hasError();
+
   public RetriesExhaustedWithDetailsException getErrors();
+
   public List<? extends Row> getFailedOperations();
+
   public Object[] getResults() throws InterruptedIOException;
+
   /** Wait until all tasks are executed, successfully or not. */
   public void waitUntilDone() throws InterruptedIOException;
 }

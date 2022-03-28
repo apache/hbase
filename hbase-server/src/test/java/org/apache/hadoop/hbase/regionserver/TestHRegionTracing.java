@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +61,7 @@ public class TestHRegionTracing {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHRegionTracing.class);
+      HBaseClassTestRule.forClass(TestHRegionTracing.class);
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -92,7 +92,7 @@ public class TestHRegionTracing {
   public void setUp() throws IOException {
     TableName tableName = tableNameRule.getTableName();
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
@@ -116,8 +116,8 @@ public class TestHRegionTracing {
         return false;
       }
       List<String> regionNames = span.getAttributes().get(HBaseSemanticAttributes.REGION_NAMES_KEY);
-      return regionNames != null && regionNames.size() == 1 &&
-        regionNames.get(0).equals(region.getRegionInfo().getRegionNameAsString());
+      return regionNames != null && regionNames.size() == 1
+          && regionNames.get(0).equals(region.getRegionInfo().getRegionNameAsString());
     }));
   }
 
@@ -165,7 +165,7 @@ public class TestHRegionTracing {
   @Test
   public void testCheckAndMutate() throws IOException {
     region.checkAndMutate(CheckAndMutate.newBuilder(ROW).ifNotExists(FAMILY, QUALIFIER)
-      .build(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE)));
+        .build(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE)));
     assertSpan("Region.checkAndMutate");
     assertSpan("Region.getRowLock");
   }

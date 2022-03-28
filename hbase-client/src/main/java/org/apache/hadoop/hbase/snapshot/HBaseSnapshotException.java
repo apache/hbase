@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,6 @@ public class HBaseSnapshotException extends DoNotRetryIOException {
 
   /**
    * Some exception happened for a snapshot and don't even know the snapshot that it was about.
-   *
    * @param message the full description of the failure
    */
   public HBaseSnapshotException(String message) {
@@ -40,7 +39,6 @@ public class HBaseSnapshotException extends DoNotRetryIOException {
 
   /**
    * Exception for the given snapshot that has no previous root cause.
-   *
    * @param message the reason why the snapshot failed
    * @param snapshotDescription the description of the snapshot that is failing
    */
@@ -51,7 +49,6 @@ public class HBaseSnapshotException extends DoNotRetryIOException {
 
   /**
    * Exception for the given snapshot due to another exception.
-   *
    * @param message the reason why the snapshot failed
    * @param cause the root cause of the failure
    * @param snapshotDescription the description of the snapshot that is being failed
@@ -65,7 +62,6 @@ public class HBaseSnapshotException extends DoNotRetryIOException {
   /**
    * Exception when the description of the snapshot cannot be determined, due to some root other
    * root cause.
-   *
    * @param message description of what caused the failure
    * @param cause the root cause
    */

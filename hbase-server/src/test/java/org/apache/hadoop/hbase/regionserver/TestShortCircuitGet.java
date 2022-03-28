@@ -168,8 +168,7 @@ public class TestShortCircuitGet {
   }
 
   private static class MyRegionServer extends MiniHBaseClusterRegionServer {
-    public MyRegionServer(Configuration conf)
-        throws IOException, InterruptedException {
+    public MyRegionServer(Configuration conf) throws IOException, InterruptedException {
       super(conf);
     }
 
@@ -181,6 +180,7 @@ public class TestShortCircuitGet {
 
   private static class MyRSRpcServices extends RSRpcServices {
     private static AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>(null);
+
     public MyRSRpcServices(HRegionServer rs) throws IOException {
       super(rs);
     }
@@ -255,6 +255,7 @@ public class TestShortCircuitGet {
 
     private static volatile boolean inCP = false;
     private static AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>(null);
+
     @Override
     public Optional<RegionObserver> getRegionObserver() {
       return Optional.of(this);

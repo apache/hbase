@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -27,11 +26,12 @@ import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.AssignRegionStateData;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Leave here only for checking if we can successfully start the master.
@@ -67,8 +67,8 @@ public class AssignProcedure extends RegionTransitionProcedure {
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     final AssignRegionStateData.Builder state =
-      AssignRegionStateData.newBuilder().setTransitionState(getTransitionState())
-        .setRegionInfo(ProtobufUtil.toRegionInfo(getRegionInfo()));
+        AssignRegionStateData.newBuilder().setTransitionState(getTransitionState())
+            .setRegionInfo(ProtobufUtil.toRegionInfo(getRegionInfo()));
     if (forceNewPlan) {
       state.setForceNewPlan(true);
     }

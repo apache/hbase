@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
@@ -34,7 +33,6 @@ public class DelayPacketsCommandAction extends TCCommandAction {
 
   /**
    * Adds latency to communication on a random region server
-   *
    * @param delay the latency wil be delay +/-50% in milliseconds
    * @param duration the time this issue persists in milliseconds
    * @param timeout the timeout for executing required commands on the region server in milliseconds
@@ -46,7 +44,8 @@ public class DelayPacketsCommandAction extends TCCommandAction {
     this.duration = duration;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -67,8 +66,8 @@ public class DelayPacketsCommandAction extends TCCommandAction {
     getLogger().info("Finished to execute DelayPacketsCommandAction");
   }
 
-  private String getCommand(String operation){
-    return String.format("tc qdisc %s dev %s root netem delay %sms %sms",
-        operation, network, delay, delay/2);
+  private String getCommand(String operation) {
+    return String.format("tc qdisc %s dev %s root netem delay %sms %sms", operation, network, delay,
+      delay / 2);
   }
 }

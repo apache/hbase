@@ -34,13 +34,14 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.RateLimiter;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
  * Consumes normalization request targets ({@link TableName}s) off the
- * {@link RegionNormalizerWorkQueue}, dispatches them to the {@link RegionNormalizer},
- * and executes the resulting {@link NormalizationPlan}s.
+ * {@link RegionNormalizerWorkQueue}, dispatches them to the {@link RegionNormalizer}, and executes
+ * the resulting {@link NormalizationPlan}s.
  */
 @InterfaceAudience.Private
 class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnable {
@@ -49,7 +50,7 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
   private static final Logger LOG = LoggerFactory.getLogger(RegionNormalizerWorker.class);
 
   static final String RATE_LIMIT_BYTES_PER_SEC_KEY =
-    "hbase.normalizer.throughput.max_bytes_per_sec";
+      "hbase.normalizer.throughput.max_bytes_per_sec";
   private static final long RATE_UNLIMITED_BYTES = 1_000_000_000_000L; // 1TB/sec
 
   private final MasterServices masterServices;
@@ -62,12 +63,9 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
   private long splitPlanCount;
   private long mergePlanCount;
 
-  RegionNormalizerWorker(
-    final Configuration configuration,
-    final MasterServices masterServices,
-    final RegionNormalizer regionNormalizer,
-    final RegionNormalizerWorkQueue<TableName> workQueue
-  ) {
+  RegionNormalizerWorker(final Configuration configuration, final MasterServices masterServices,
+      final RegionNormalizer regionNormalizer,
+      final RegionNormalizerWorkQueue<TableName> workQueue) {
     this.masterServices = masterServices;
     this.regionNormalizer = regionNormalizer;
     this.workQueue = workQueue;
@@ -86,7 +84,7 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
   @Override
   public void registerChildren(ConfigurationManager manager) {
     if (regionNormalizer instanceof ConfigurationObserver) {
-      final ConfigurationObserver observer = (ConfigurationObserver)  regionNormalizer;
+      final ConfigurationObserver observer = (ConfigurationObserver) regionNormalizer;
       manager.registerObserver(observer);
     }
   }
@@ -94,7 +92,7 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
   @Override
   public void deregisterChildren(ConfigurationManager manager) {
     if (regionNormalizer instanceof ConfigurationObserver) {
-      final ConfigurationObserver observer = (ConfigurationObserver)  regionNormalizer;
+      final ConfigurationObserver observer = (ConfigurationObserver) regionNormalizer;
       manager.deregisterObserver(observer);
     }
   }
@@ -110,7 +108,7 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
 
   private static long loadRateLimit(final Configuration configuration) {
     long rateLimitBytes =
-      configuration.getLongBytes(RATE_LIMIT_BYTES_PER_SEC_KEY, RATE_UNLIMITED_BYTES);
+        configuration.getLongBytes(RATE_LIMIT_BYTES_PER_SEC_KEY, RATE_UNLIMITED_BYTES);
     long rateLimitMbs = rateLimitBytes / 1_000_000L;
     if (rateLimitMbs <= 0) {
       LOG.warn("Configured value {}={} is <= 1MB. Falling back to default.",
@@ -194,14 +192,14 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
       boolean normalizationEnabled;
       if (tblDesc != null) {
         String defined = tblDesc.getValue(TableDescriptorBuilder.NORMALIZATION_ENABLED);
-        if(defined != null) {
+        if (defined != null) {
           normalizationEnabled = tblDesc.isNormalizationEnabled();
         } else {
           normalizationEnabled = this.defaultNormalizerTableLevel;
         }
         if (!normalizationEnabled) {
-          LOG.debug("Skipping table {} because normalization is disabled in its table properties " +
-              "and normalization is also disabled at table level by default",
+          LOG.debug("Skipping table {} because normalization is disabled in its table properties "
+              + "and normalization is also disabled at table level by default",
             tableName);
           return Collections.emptyList();
         }
@@ -250,10 +248,8 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
   private void submitMergePlan(final MergeNormalizationPlan plan) {
     final int totalSizeMb;
     try {
-      final long totalSizeMbLong = plan.getNormalizationTargets()
-        .stream()
-        .mapToLong(NormalizationTarget::getRegionSizeMb)
-        .reduce(0, Math::addExact);
+      final long totalSizeMbLong = plan.getNormalizationTargets().stream()
+          .mapToLong(NormalizationTarget::getRegionSizeMb).reduce(0, Math::addExact);
       totalSizeMb = Math.toIntExact(totalSizeMbLong);
     } catch (ArithmeticException e) {
       LOG.debug("Sum of merge request size overflows rate limiter data type. {}", plan);
@@ -261,14 +257,11 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
       return;
     }
 
-    final RegionInfo[] infos = plan.getNormalizationTargets()
-      .stream()
-      .map(NormalizationTarget::getRegionInfo)
-      .toArray(RegionInfo[]::new);
+    final RegionInfo[] infos = plan.getNormalizationTargets().stream()
+        .map(NormalizationTarget::getRegionInfo).toArray(RegionInfo[]::new);
     final long pid;
     try {
-      pid = masterServices.mergeRegions(
-        infos, false, HConstants.NO_NONCE, HConstants.NO_NONCE);
+      pid = masterServices.mergeRegions(infos, false, HConstants.NO_NONCE, HConstants.NO_NONCE);
     } catch (IOException e) {
       LOG.info("failed to submit plan {}.", plan, e);
       planSkipped(plan.getType());
@@ -298,8 +291,7 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
 
     final long pid;
     try {
-      pid = masterServices.splitRegion(
-        info, null, HConstants.NO_NONCE, HConstants.NO_NONCE);
+      pid = masterServices.splitRegion(info, null, HConstants.NO_NONCE, HConstants.NO_NONCE);
     } catch (IOException e) {
       LOG.info("failed to submit plan {}.", plan, e);
       planSkipped(plan.getType());

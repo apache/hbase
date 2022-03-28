@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.security.provider;
 
 import java.io.IOException;
 import java.util.Map;
-
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -30,9 +29,9 @@ public class SimpleSaslServerAuthenticationProvider extends SimpleSaslAuthentica
     implements SaslServerAuthenticationProvider {
 
   @Override
-  public AttemptingUserProvidingSaslServer createServer(
-      SecretManager<TokenIdentifier> secretManager,
-      Map<String, String> saslProps) throws IOException {
+  public AttemptingUserProvidingSaslServer
+      createServer(SecretManager<TokenIdentifier> secretManager, Map<String, String> saslProps)
+          throws IOException {
     throw new RuntimeException("HBase SIMPLE authentication doesn't use SASL");
   }
 

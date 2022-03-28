@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -165,7 +164,7 @@ public abstract class ClientZKSyncer extends ZKListener {
    * @throws InterruptedException if the thread is interrupted during process
    */
   private void setDataForClientZkUntilSuccess(String node, byte[] data)
-    throws InterruptedException {
+      throws InterruptedException {
     boolean create = false;
     while (!server.isStopped()) {
       try {
@@ -202,7 +201,7 @@ public abstract class ClientZKSyncer extends ZKListener {
         if (e.code() == KeeperException.Code.SESSIONEXPIRED) {
           reconnectAfterExpiration();
         }
-        
+
       }
     }
   }

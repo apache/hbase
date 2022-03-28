@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public class TestStoreFileTrackerValidationUtils {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStoreFileTrackerValidationUtils.class);
+      HBaseClassTestRule.forClass(TestStoreFileTrackerValidationUtils.class);
 
   @Test
   public void testCheckSFTCompatibility() throws Exception {
@@ -56,10 +56,10 @@ public class TestStoreFileTrackerValidationUtils {
 
     // creating a TD with matching ColumnFamilyDescriptor level setting
     TableDescriptorBuilder snapBuilder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf("TableY"));
+        TableDescriptorBuilder.newBuilder(TableName.valueOf("TableY"));
     snapBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "FILE");
     ColumnFamilyDescriptorBuilder snapCFBuilder =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf"));
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf"));
     snapCFBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "FILE");
     snapBuilder.setColumnFamily(snapCFBuilder.build());
     TableDescriptor snapTd = snapBuilder.build();
@@ -70,10 +70,10 @@ public class TestStoreFileTrackerValidationUtils {
     StoreFileTrackerValidationUtils.validatePreRestoreSnapshot(snapTd, td, conf);
 
     TableDescriptorBuilder defaultBuilder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf("TableY"));
+        TableDescriptorBuilder.newBuilder(TableName.valueOf("TableY"));
     defaultBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "FILE");
     ColumnFamilyDescriptorBuilder defaultCFBuilder =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf"));
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf"));
     defaultCFBuilder.setValue(StoreFileTrackerFactory.TRACKER_IMPL, "DEFAULT");
     defaultBuilder.setColumnFamily(defaultCFBuilder.build());
     TableDescriptor defaultTd = defaultBuilder.build();

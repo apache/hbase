@@ -28,4 +28,3 @@ public class InvalidLabelException extends DoNotRetryIOException {
     super(msg);
   }
 }
-

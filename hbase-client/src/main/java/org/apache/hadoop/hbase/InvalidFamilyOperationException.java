@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,12 +20,13 @@ package org.apache.hadoop.hbase;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Thrown if a request is table schema modification is requested but
- * made for an invalid family name.
+ * Thrown if a request is table schema modification is requested but made for an invalid family
+ * name.
  */
 @InterfaceAudience.Public
 public class InvalidFamilyOperationException extends DoNotRetryIOException {
   private static final long serialVersionUID = (1L << 22) - 1L;
+
   /** default constructor */
   public InvalidFamilyOperationException() {
     super();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +30,7 @@ public class TestTableInputFormatScanOBBToQPP extends TestTableInputFormatScanBa
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableInputFormatScanOBBToQPP.class);
+      HBaseClassTestRule.forClass(TestTableInputFormatScanOBBToQPP.class);
 
   /**
    * Tests a MR scan using specific start and stop rows.

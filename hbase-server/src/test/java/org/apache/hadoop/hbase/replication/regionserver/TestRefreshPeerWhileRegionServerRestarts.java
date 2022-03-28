@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ public class TestRefreshPeerWhileRegionServerRestarts extends TestReplicationBas
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRefreshPeerWhileRegionServerRestarts.class);
+      HBaseClassTestRule.forClass(TestRefreshPeerWhileRegionServerRestarts.class);
 
   private static CountDownLatch ARRIVE;
 
@@ -63,7 +63,7 @@ public class TestRefreshPeerWhileRegionServerRestarts extends TestReplicationBas
 
     @Override
     protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
-      throws IOException {
+        throws IOException {
       if (ARRIVE != null) {
         ARRIVE.countDown();
         ARRIVE = null;
@@ -86,7 +86,7 @@ public class TestRefreshPeerWhileRegionServerRestarts extends TestReplicationBas
     // restart a new region server, and wait until it finish initialization and want to call
     // regionServerReport, so it will load the peer state to peer cache.
     Future<HRegionServer> regionServerFuture = ForkJoinPool.commonPool()
-      .submit(() -> UTIL1.getMiniHBaseCluster().startRegionServer().getRegionServer());
+        .submit(() -> UTIL1.getMiniHBaseCluster().startRegionServer().getRegionServer());
     ARRIVE.await();
     // change the peer state, wait until it reach the last state, where we have already get the
     // region server list for refreshing
@@ -95,8 +95,8 @@ public class TestRefreshPeerWhileRegionServerRestarts extends TestReplicationBas
       UTIL1.waitFor(30000, () -> {
         for (Procedure<?> proc : UTIL1.getMiniHBaseCluster().getMaster().getProcedures()) {
           if (proc instanceof DisablePeerProcedure) {
-            return ((DisablePeerProcedure) proc).getCurrentStateId() ==
-              MasterProcedureProtos.PeerModificationState.POST_PEER_MODIFICATION_VALUE;
+            return ((DisablePeerProcedure) proc)
+                .getCurrentStateId() == MasterProcedureProtos.PeerModificationState.POST_PEER_MODIFICATION_VALUE;
           }
         }
         return false;
@@ -109,7 +109,7 @@ public class TestRefreshPeerWhileRegionServerRestarts extends TestReplicationBas
     future.get();
     // assert that the peer cache on the new region server has also been refreshed
     ReplicationPeer peer = regionServerFuture.get().getReplicationSourceService()
-      .getReplicationManager().getReplicationPeers().getPeer(PEER_ID2);
+        .getReplicationManager().getReplicationPeers().getPeer(PEER_ID2);
     assertEquals(PeerState.DISABLED, peer.getPeerState());
   }
 }

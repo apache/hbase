@@ -20,16 +20,11 @@ package org.apache.hadoop.hbase.zookeeper;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Base class for internal listeners of ZooKeeper events.
- *
- * The {@link ZKWatcher} for a process will execute the appropriate
- * methods of implementations of this class.  In order to receive events from
+ * Base class for internal listeners of ZooKeeper events. The {@link ZKWatcher} for a process will
+ * execute the appropriate methods of implementations of this class. In order to receive events from
  * the watcher, every listener must register itself via {@link ZKWatcher#registerListener}.
- *
- * Subclasses need only override those methods in which they are interested.
- *
- * Note that the watcher will be blocked when invoking methods in listeners so
- * they must not be long-running.
+ * Subclasses need only override those methods in which they are interested. Note that the watcher
+ * will be blocked when invoking methods in listeners so they must not be long-running.
  */
 @InterfaceAudience.Private
 public abstract class ZKListener {

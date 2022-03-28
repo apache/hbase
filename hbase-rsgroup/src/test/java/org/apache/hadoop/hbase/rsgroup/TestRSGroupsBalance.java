@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,7 +56,7 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsBalance.class);
+      HBaseClassTestRule.forClass(TestRSGroupsBalance.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsBalance.class);
 
@@ -127,7 +127,8 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
 
     ServerName first = setupBalanceTest(newGroupName, tableName);
 
-    // run the balancer in dry run mode. it should return true, but should not actually move any regions
+    // run the balancer in dry run mode. it should return true, but should not actually move any
+    // regions
     admin.balancerSwitch(true, true);
     BalanceResponse response = rsGroupAdmin.balanceRSGroup(newGroupName,
       BalanceRequest.newBuilder().setDryRun(true).build());
@@ -142,9 +143,9 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
     addGroup(newGroupName, 3);
 
     admin.createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString())
-      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, newGroupName).build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, newGroupName).build());
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     byte[] startKey = Bytes.toBytes("aaaaa");
     byte[] endKey = Bytes.toBytes("zzzzz");
     admin.createTable(desc, startKey, endKey, 6);
@@ -208,7 +209,7 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
       @Override
       public boolean evaluate() throws Exception {
         ServerName serverName =
-          ServerName.valueOf(RSGroupInfo.getServers().iterator().next().toString(), 1);
+            ServerName.valueOf(RSGroupInfo.getServers().iterator().next().toString(), 1);
         return admin.getConnection().getAdmin().getRegions(serverName).size() == 15;
       }
     });

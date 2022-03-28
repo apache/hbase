@@ -37,8 +37,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class that handles the recovered source of a replication stream, which is transfered from
- * another dead region server. This will be closed when all logs are pushed to peer cluster.
+ * Class that handles the recovered source of a replication stream, which is transfered from another
+ * dead region server. This will be closed when all logs are pushed to peer cluster.
  */
 @InterfaceAudience.Private
 public class RecoveredReplicationSource extends ReplicationSource {
@@ -66,7 +66,7 @@ public class RecoveredReplicationSource extends ReplicationSource {
     boolean hasPathChanged = false;
     PriorityBlockingQueue<Path> queue = logQueue.getQueue(walGroupId);
     PriorityBlockingQueue<Path> newPaths = new PriorityBlockingQueue<Path>(queueSizePerGroup,
-      new AbstractFSWALProvider.WALStartTimeComparator());
+        new AbstractFSWALProvider.WALStartTimeComparator());
     pathsLoop: for (Path path : queue) {
       if (fs.exists(path)) { // still in same location, don't need to do anything
         newPaths.add(path);
@@ -87,9 +87,8 @@ public class RecoveredReplicationSource extends ReplicationSource {
         LOG.info("NB dead servers : " + deadRegionServers.size());
         final Path walDir = CommonFSUtils.getWALRootDir(conf);
         for (ServerName curDeadServerName : deadRegionServers) {
-          final Path deadRsDirectory =
-              new Path(walDir, AbstractFSWALProvider.getWALDirectoryName(curDeadServerName
-                  .getServerName()));
+          final Path deadRsDirectory = new Path(walDir,
+              AbstractFSWALProvider.getWALDirectoryName(curDeadServerName.getServerName()));
           Path[] locs = new Path[] { new Path(deadRsDirectory, path.getName()), new Path(
               deadRsDirectory.suffix(AbstractFSWALProvider.SPLITTING_EXT), path.getName()) };
           for (Path possibleLogLocation : locs) {

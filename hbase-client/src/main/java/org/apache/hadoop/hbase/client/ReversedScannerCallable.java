@@ -1,20 +1,19 @@
-/**
- * Copyright The Apache Software Foundation
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.client;
 
@@ -24,19 +23,17 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStartRow;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
-
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A reversed ScannerCallable which supports backward scanning.
@@ -57,7 +54,7 @@ public class ReversedScannerCallable extends ScannerCallable {
    * @param replicaId the replica id
    */
   public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
-    ScanMetrics scanMetrics, RpcControllerFactory rpcFactory, int replicaId) {
+      ScanMetrics scanMetrics, RpcControllerFactory rpcFactory, int replicaId) {
     super(connection, tableName, scan, scanMetrics, rpcFactory, replicaId);
   }
 
@@ -68,8 +65,7 @@ public class ReversedScannerCallable extends ScannerCallable {
     // when trying to clear cache for an empty row.
     if (location != null && locationSearchKey != null) {
       getConnection().updateCachedLocations(getTableName(),
-          location.getRegionInfo().getRegionName(),
-          locationSearchKey, t, location.getServerName());
+        location.getRegionInfo().getRegionName(), locationSearchKey, t, location.getServerName());
     }
   }
 
@@ -83,7 +79,7 @@ public class ReversedScannerCallable extends ScannerCallable {
     }
 
     if (reload && getTableName() != null && !getTableName().equals(TableName.META_TABLE_NAME)
-      && getConnection().isTableDisabled(getTableName())) {
+        && getConnection().isTableDisabled(getTableName())) {
       throw new TableNotEnabledException(getTableName().getNameAsString() + " is disabled.");
     }
 
@@ -100,16 +96,15 @@ public class ReversedScannerCallable extends ScannerCallable {
         // The locateStart row is an approximation. So we need to search between
         // that and the actual row in order to really find the last region
         byte[] locateStartRow = createCloseRowBefore(getRow());
-        Pair<HRegionLocation, byte[]> lastRegionAndKey = locateLastRegionInRange(
-            locateStartRow, getRow());
+        Pair<HRegionLocation, byte[]> lastRegionAndKey =
+            locateLastRegionInRange(locateStartRow, getRow());
         this.location = lastRegionAndKey.getFirst();
         this.locationSearchKey = lastRegionAndKey.getSecond();
       }
 
       if (location == null || location.getServerName() == null) {
-        throw new IOException("Failed to find location, tableName="
-          + getTableName() + ", row=" + Bytes.toStringBinary(getRow()) + ", reload="
-          + reload);
+        throw new IOException("Failed to find location, tableName=" + getTableName() + ", row="
+            + Bytes.toStringBinary(getRow()) + ", reload=" + reload);
       }
 
       setStub(getConnection().getClient(getLocation().getServerName()));
@@ -127,16 +122,14 @@ public class ReversedScannerCallable extends ScannerCallable {
    * Get the last region before the endkey, which will be used to execute the reverse scan
    * @param startKey Starting row in range, inclusive
    * @param endKey Ending row in range, exclusive
-   * @return The last location, and the rowKey used to find it. May be null,
-   *    if a region could not be found.
+   * @return The last location, and the rowKey used to find it. May be null, if a region could not
+   *         be found.
    */
   private Pair<HRegionLocation, byte[]> locateLastRegionInRange(byte[] startKey, byte[] endKey)
       throws IOException {
-    final boolean endKeyIsEndOfTable = Bytes.equals(endKey,
-        HConstants.EMPTY_END_ROW);
+    final boolean endKeyIsEndOfTable = Bytes.equals(endKey, HConstants.EMPTY_END_ROW);
     if ((Bytes.compareTo(startKey, endKey) > 0) && !endKeyIsEndOfTable) {
-      throw new IllegalArgumentException("Invalid range: "
-          + Bytes.toStringBinary(startKey) + " > "
+      throw new IllegalArgumentException("Invalid range: " + Bytes.toStringBinary(startKey) + " > "
           + Bytes.toStringBinary(endKey));
     }
 
@@ -152,8 +145,8 @@ public class ReversedScannerCallable extends ScannerCallable {
         lastRegion = regionLocation;
       } else {
         throw new DoNotRetryIOException(
-          "Does hbase:meta exist hole? Locating row " + Bytes.toStringBinary(currentKey) +
-            " returns incorrect region " + regionLocation.getRegionInfo());
+            "Does hbase:meta exist hole? Locating row " + Bytes.toStringBinary(currentKey)
+                + " returns incorrect region " + regionLocation.getRegionInfo());
       }
       currentKey = regionLocation.getRegionInfo().getEndKey();
     } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)

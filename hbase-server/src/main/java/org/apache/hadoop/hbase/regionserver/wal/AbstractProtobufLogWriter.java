@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,6 +46,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
 
@@ -79,8 +80,7 @@ public abstract class AbstractProtobufLogWriter {
       builder.setWriterClsName(getWriterClassName());
     }
     if (!builder.hasCellCodecClsName()) {
-      builder.setCellCodecClsName(
-          WALCellCodec.getWALCellCodecClass(conf).getName());
+      builder.setCellCodecClsName(WALCellCodec.getWALCellCodecClass(conf).getName());
     }
     return builder.build();
   }
@@ -111,10 +111,9 @@ public abstract class AbstractProtobufLogWriter {
       // Generate a random encryption key for this WAL
       Key key = cipher.getRandomKey();
       builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(EncryptionUtil.wrapKey(conf,
-          conf.get(HConstants.CRYPTO_WAL_KEY_NAME_CONF_KEY,
-              conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
-                  User.getCurrent().getShortName())),
-          key)));
+        conf.get(HConstants.CRYPTO_WAL_KEY_NAME_CONF_KEY,
+          conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName())),
+        key)));
 
       // Set up the encryptor
       Encryptor encryptor = cipher.getEncryptor();
@@ -141,21 +140,22 @@ public abstract class AbstractProtobufLogWriter {
     if (doCompress) {
       try {
         final boolean useTagCompression =
-          conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
+            conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
         final boolean useValueCompression =
-          conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
+            conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
         final Compression.Algorithm valueCompressionType =
-          useValueCompression ? CompressionContext.getValueCompressionAlgorithm(conf) :
-            Compression.Algorithm.NONE;
+            useValueCompression ? CompressionContext.getValueCompressionAlgorithm(conf)
+                : Compression.Algorithm.NONE;
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Initializing compression context for {}: isRecoveredEdits={}" +
-            ", hasTagCompression={}, hasValueCompression={}, valueCompressionType={}", path,
-            CommonFSUtils.isRecoveredEdits(path), useTagCompression, useValueCompression,
+          LOG.trace(
+            "Initializing compression context for {}: isRecoveredEdits={}"
+                + ", hasTagCompression={}, hasValueCompression={}, valueCompressionType={}",
+            path, CommonFSUtils.isRecoveredEdits(path), useTagCompression, useValueCompression,
             valueCompressionType);
         }
         this.compressionContext =
-          new CompressionContext(LRUDictionary.class, CommonFSUtils.isRecoveredEdits(path),
-            useTagCompression, useValueCompression, valueCompressionType);
+            new CompressionContext(LRUDictionary.class, CommonFSUtils.isRecoveredEdits(path),
+                useTagCompression, useValueCompression, valueCompressionType);
       } catch (Exception e) {
         throw new IOException("Failed to initiate CompressionContext", e);
       }
@@ -164,8 +164,8 @@ public abstract class AbstractProtobufLogWriter {
   }
 
   public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable,
-      long blocksize, StreamSlowMonitor monitor) throws IOException,
-      StreamLacksCapabilityException {
+      long blocksize, StreamSlowMonitor monitor)
+      throws IOException, StreamLacksCapabilityException {
     try {
       this.conf = conf;
       boolean doCompress = initializeCompressionContext(conf, path);
@@ -177,12 +177,11 @@ public abstract class AbstractProtobufLogWriter {
       initOutput(fs, path, overwritable, bufferSize, replication, blocksize, monitor);
 
       boolean doTagCompress =
-        doCompress && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
+          doCompress && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
       boolean doValueCompress =
-        doCompress && conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
-      WALHeader.Builder headerBuilder =
-        WALHeader.newBuilder().setHasCompression(doCompress).setHasTagCompression(doTagCompress)
-          .setHasValueCompression(doValueCompress);
+          doCompress && conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
+      WALHeader.Builder headerBuilder = WALHeader.newBuilder().setHasCompression(doCompress)
+          .setHasTagCompression(doTagCompress).setHasValueCompression(doValueCompress);
       if (doValueCompress) {
         headerBuilder.setValueCompressionAlgorithm(
           CompressionContext.getValueCompressionAlgorithm(conf).ordinal());
@@ -197,7 +196,8 @@ public abstract class AbstractProtobufLogWriter {
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("Initialized protobuf WAL={}, compression={}, tagCompression={}"
-          + ", valueCompression={}", path, doCompress, doTagCompress, doValueCompress);
+            + ", valueCompression={}",
+          path, doCompress, doTagCompress, doValueCompress);
       }
     } catch (Exception e) {
       LOG.warn("Init output failed, path={}", path, e);

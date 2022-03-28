@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,13 +19,12 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Facade to create Cells for HFileOutputFormat. The created Cells are of <code>Put</code> type.
@@ -39,9 +38,9 @@ public class CellCreator {
   private VisibilityExpressionResolver visExpResolver;
 
   public CellCreator(Configuration conf) {
-    Class<? extends VisibilityExpressionResolver> clazz = conf.getClass(
-        VISIBILITY_EXP_RESOLVER_CLASS, DefaultVisibilityExpressionResolver.class,
-        VisibilityExpressionResolver.class);
+    Class<? extends VisibilityExpressionResolver> clazz =
+        conf.getClass(VISIBILITY_EXP_RESOLVER_CLASS, DefaultVisibilityExpressionResolver.class,
+          VisibilityExpressionResolver.class);
     this.visExpResolver = ReflectionUtils.newInstance(clazz, conf);
     this.visExpResolver.init();
   }
@@ -67,7 +66,7 @@ public class CellCreator {
       byte[] qualifier, int qoffset, int qlength, long timestamp, byte[] value, int voffset,
       int vlength) throws IOException {
     return create(row, roffset, rlength, family, foffset, flength, qualifier, qoffset, qlength,
-        timestamp, value, voffset, vlength, (List<Tag>)null);
+      timestamp, value, voffset, vlength, (List<Tag>) null);
   }
 
   /**

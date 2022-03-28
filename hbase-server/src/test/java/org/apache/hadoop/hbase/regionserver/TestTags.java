@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,12 +72,11 @@ import org.junit.rules.TestName;
 /**
  * Class that test tags
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestTags {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTags.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestTags.class);
 
   static boolean useFilter = false;
 
@@ -91,7 +90,7 @@ public class TestTags {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt("hfile.format.version", 3);
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        TestCoprocessorForTags.class.getName());
+      TestCoprocessorForTags.class.getName());
     TEST_UTIL.startMiniCluster(2);
   }
 
@@ -231,8 +230,7 @@ public class TestTags {
           assertEquals(0, current.getTagsLength());
         }
       } finally {
-        if (scanner != null)
-          scanner.close();
+        if (scanner != null) scanner.close();
       }
       admin.compact(tableName);
       while (admin.getCompactionState(tableName) != CompactionState.NONE) {
@@ -429,7 +427,7 @@ public class TestTags {
       assertEquals(2, tags.size());
       // We cannot assume the ordering of tags
       List<String> tagValues = new ArrayList<>();
-      for (Tag tag: tags) {
+      for (Tag tag : tags) {
         tagValues.add(Bytes.toString(Tag.cloneValue(tag)));
       }
       assertTrue(tagValues.contains("tag1"));
@@ -487,7 +485,7 @@ public class TestTags {
       assertEquals(2, tags.size());
       // We cannot assume the ordering of tags
       tagValues.clear();
-      for (Tag tag: tags) {
+      for (Tag tag : tags) {
         tagValues.add(Bytes.toString(Tag.cloneValue(tag)));
       }
       assertTrue(tagValues.contains("tag1"));
@@ -545,8 +543,7 @@ public class TestTags {
       assertTrue(Bytes.equals(next2.getValue(fam, qual), value2));
 
     } finally {
-      if (scanner != null)
-        scanner.close();
+      if (scanner != null) scanner.close();
     }
   }
 

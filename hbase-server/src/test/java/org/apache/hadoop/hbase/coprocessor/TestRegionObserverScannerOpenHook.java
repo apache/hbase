@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -74,7 +74,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestRegionObserverScannerOpenHook {
 
   @ClassRule
@@ -145,8 +145,10 @@ public class TestRegionObserverScannerOpenHook {
     }
 
     @Override
-    public void close() throws IOException {}
+    public void close() throws IOException {
+    }
   };
+
   /**
    * Don't allow any data in a flush by creating a custom {@link StoreScanner}.
    */
@@ -187,8 +189,8 @@ public class TestRegionObserverScannerOpenHook {
     for (byte[] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
     WAL wal = HBaseTestingUtility.createWal(conf, path, info);
@@ -224,7 +226,8 @@ public class TestRegionObserverScannerOpenHook {
     Result r = region.get(get);
     assertNull(
       "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor. Found: "
-          + r, r.listCells());
+          + r,
+      r.listCells());
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
@@ -251,7 +254,8 @@ public class TestRegionObserverScannerOpenHook {
     Result r = region.get(get);
     assertNull(
       "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor. Found: "
-          + r, r.listCells());
+          + r,
+      r.listCells());
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
@@ -262,9 +266,9 @@ public class TestRegionObserverScannerOpenHook {
     private static volatile CountDownLatch compactionStateChangeLatch = null;
 
     @SuppressWarnings("deprecation")
-    public CompactionCompletionNotifyingRegion(Path tableDir, WAL log,
-        FileSystem fs, Configuration confParam, RegionInfo info,
-        TableDescriptor htd, RegionServerServices rsServices) {
+    public CompactionCompletionNotifyingRegion(Path tableDir, WAL log, FileSystem fs,
+        Configuration confParam, RegionInfo info, TableDescriptor htd,
+        RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);
     }
 
@@ -325,8 +329,8 @@ public class TestRegionObserverScannerOpenHook {
     assertEquals("More than 1 region serving test table with 1 row", 1, regions.size());
     Region region = regions.get(0);
     admin.flushRegion(region.getRegionInfo().getRegionName());
-    CountDownLatch latch = ((CompactionCompletionNotifyingRegion)region)
-        .getCompactionStateChangeLatch();
+    CountDownLatch latch =
+        ((CompactionCompletionNotifyingRegion) region).getCompactionStateChangeLatch();
 
     // put another row and flush that too
     put = new Put(Bytes.toBytes("anotherrow"));
@@ -342,13 +346,15 @@ public class TestRegionObserverScannerOpenHook {
     Result r = table.get(get);
     assertNull(
       "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor. Found: "
-          + r, r.listCells());
+          + r,
+      r.listCells());
 
     get = new Get(Bytes.toBytes("anotherrow"));
     r = table.get(get);
     assertNull(
       "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor Found: "
-          + r, r.listCells());
+          + r,
+      r.listCells());
 
     table.close();
     UTIL.shutdownMiniCluster();

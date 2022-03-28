@@ -40,7 +40,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests to ensure that 2.0 is backward compatible in loading CoprocessorService.
  */
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestCoprocessorServiceBackwardCompatibility {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -92,11 +92,11 @@ public class TestCoprocessorServiceBackwardCompatibility {
     TEST_UTIL = new HBaseTestingUtility();
     CONF = TEST_UTIL.getConfiguration();
     CONF.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        DummyCoprocessorService.class.getName());
+      DummyCoprocessorService.class.getName());
     CONF.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-        DummyCoprocessorService.class.getName());
+      DummyCoprocessorService.class.getName());
     CONF.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        DummyCoprocessorService.class.getName());
+      DummyCoprocessorService.class.getName());
     TEST_UTIL.startMiniCluster();
   }
 
@@ -108,21 +108,21 @@ public class TestCoprocessorServiceBackwardCompatibility {
   @Test
   public void testCoprocessorServiceLoadedByMaster() throws Throwable {
     TEST_UTIL.getAdmin().coprocessorService().callBlockingMethod(
-            DummyCoprocessorService.getDescriptor().findMethodByName("dummyCall"), null,
-            DummyRequest.newBuilder().setValue(MASTER).build(), DummyResponse.getDefaultInstance());
+      DummyCoprocessorService.getDescriptor().findMethodByName("dummyCall"), null,
+      DummyRequest.newBuilder().setValue(MASTER).build(), DummyResponse.getDefaultInstance());
     assertEquals(MASTER, DummyCoprocessorService.numMaster);
 
-    TEST_UTIL.getAdmin().coprocessorService(
-        TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName()).callBlockingMethod(
-            DummyCoprocessorService.getDescriptor().findMethodByName("dummyCall"), null,
-            DummyRequest.newBuilder().setValue(REGIONSERVER).build(),
-            DummyResponse.getDefaultInstance());
+    TEST_UTIL.getAdmin()
+        .coprocessorService(TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName())
+        .callBlockingMethod(DummyCoprocessorService.getDescriptor().findMethodByName("dummyCall"),
+          null, DummyRequest.newBuilder().setValue(REGIONSERVER).build(),
+          DummyResponse.getDefaultInstance());
     assertEquals(REGIONSERVER, DummyCoprocessorService.numRegionServer);
 
     TEST_UTIL.getConnection().getTable(TableName.valueOf("hbase:meta")).batchCoprocessorService(
-        DummyCoprocessorService.getDescriptor().findMethodByName("dummyCall"),
-        DummyRequest.newBuilder().setValue(REGION).build(), Bytes.toBytes(""), Bytes.toBytes(""),
-        DummyResponse.getDefaultInstance());
+      DummyCoprocessorService.getDescriptor().findMethodByName("dummyCall"),
+      DummyRequest.newBuilder().setValue(REGION).build(), Bytes.toBytes(""), Bytes.toBytes(""),
+      DummyResponse.getDefaultInstance());
     assertEquals(REGION, DummyCoprocessorService.numRegion);
   }
 }

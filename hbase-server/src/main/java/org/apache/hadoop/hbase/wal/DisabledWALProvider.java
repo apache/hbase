@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,10 +43,8 @@ import org.slf4j.LoggerFactory;
 // imports for things that haven't moved from regionserver.wal yet.
 
 /**
- * No-op implementation of {@link WALProvider} used when the WAL is disabled.
- *
- * Should only be used when severe data loss is acceptable.
- *
+ * No-op implementation of {@link WALProvider} used when the WAL is disabled. Should only be used
+ * when severe data loss is acceptable.
  */
 @InterfaceAudience.Private
 class DisabledWALProvider implements WALProvider {
@@ -100,7 +98,7 @@ class DisabledWALProvider implements WALProvider {
       this.coprocessorHost = new WALCoprocessorHost(this, conf);
       this.path = path;
       if (null != listeners) {
-        for(WALActionsListener listener : listeners) {
+        for (WALActionsListener listener : listeners) {
           registerWALActionsListener(listener);
         }
       }
@@ -147,7 +145,7 @@ class DisabledWALProvider implements WALProvider {
 
     @Override
     public void shutdown() {
-      if(closed.compareAndSet(false, true)) {
+      if (closed.compareAndSet(false, true)) {
         if (!this.listeners.isEmpty()) {
           for (WALActionsListener listener : this.listeners) {
             listener.logCloseRequested();
@@ -167,8 +165,7 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits)
-      throws IOException {
+    public long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException {
       return append(info, key, edits, false);
     }
 
@@ -196,8 +193,10 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public void updateStore(byte[] encodedRegionName, byte[] familyName,
-        Long sequenceid, boolean onlyIfGreater) { return; }
+    public void updateStore(byte[] encodedRegionName, byte[] familyName, Long sequenceid,
+        boolean onlyIfGreater) {
+      return;
+    }
 
     @Override
     public void sync() {
@@ -214,8 +213,8 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public Long startCacheFlush(final byte[] encodedRegionName, Map<byte[], Long>
-        flushedFamilyNamesToSeq) {
+    public Long startCacheFlush(final byte[] encodedRegionName,
+        Map<byte[], Long> flushedFamilyNamesToSeq) {
       return startCacheFlush(encodedRegionName, flushedFamilyNamesToSeq.keySet());
     }
 

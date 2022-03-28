@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,7 +51,7 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationBarrierCleaner.class);
 
   private static final String REPLICATION_BARRIER_CLEANER_INTERVAL =
-    "hbase.master.cleaner.replication.barrier.interval";
+      "hbase.master.cleaner.replication.barrier.interval";
 
   // 12 hour. Usually regions will not be moved so the barrier are rarely updated. Use a large
   // interval.
@@ -112,7 +112,7 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
           } else {
             // not exists, delete all the barriers
             metaTable
-              .delete(new Delete(regionName).addFamily(HConstants.REPLICATION_BARRIER_FAMILY));
+                .delete(new Delete(regionName).addFamily(HConstants.REPLICATION_BARRIER_FAMILY));
             deletedBarriers += barriers.length;
           }
           cleanedRows++;
@@ -141,12 +141,12 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
           // check if the region has already been removed, i.e, no catalog family
           if (!metaTable.exists(new Get(regionName).addFamily(HConstants.CATALOG_FAMILY))) {
             ReplicationQueueStorage queueStorage = peerManager.getQueueStorage();
-            for (String peerId: peerIds) {
+            for (String peerId : peerIds) {
               queueStorage.removeLastSequenceIds(peerId, Arrays.asList(encodedRegionName));
               deletedLastPushedSeqIds++;
             }
             metaTable
-              .delete(new Delete(regionName).addFamily(HConstants.REPLICATION_BARRIER_FAMILY));
+                .delete(new Delete(regionName).addFamily(HConstants.REPLICATION_BARRIER_FAMILY));
             deletedRows++;
             deletedBarriers += barriers.length;
             continue;
@@ -169,9 +169,10 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
       LOG.warn("Failed to clean up replication barrier", e);
     }
     if (totalRows > 0) {
-      LOG.info("TotalRows={}, cleanedRows={}, deletedRows={}, deletedBarriers={}, " +
-          "deletedLastPushedSeqIds={}", totalRows, cleanedRows, deletedRows,
-          deletedBarriers, deletedLastPushedSeqIds);
+      LOG.info(
+        "TotalRows={}, cleanedRows={}, deletedRows={}, deletedBarriers={}, "
+            + "deletedLastPushedSeqIds={}",
+        totalRows, cleanedRows, deletedRows, deletedBarriers, deletedLastPushedSeqIds);
     }
   }
 }

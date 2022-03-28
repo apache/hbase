@@ -19,13 +19,12 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.ZooKeeper;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
 
 /**
  * Methods that help working with ZooKeeper
@@ -39,11 +38,12 @@ public final class ZooKeeperHelper {
   /**
    * Get a ZooKeeper instance and wait until it connected before returning.
    * @param sessionTimeoutMs Used as session timeout passed to the created ZooKeeper AND as the
-   *   timeout to wait on connection establishment.
+   *          timeout to wait on connection establishment.
    */
   public static ZooKeeper getConnectedZooKeeper(String connectString, int sessionTimeoutMs)
       throws IOException {
-    ZooKeeper zookeeper = new ZooKeeper(connectString, sessionTimeoutMs, e -> {});
+    ZooKeeper zookeeper = new ZooKeeper(connectString, sessionTimeoutMs, e -> {
+    });
     return ensureConnectedZooKeeper(zookeeper, sessionTimeoutMs);
   }
 
@@ -58,12 +58,11 @@ public final class ZooKeeperHelper {
     }
     Stopwatch stopWatch = Stopwatch.createStarted();
     // Make sure we are connected before we hand it back.
-    while(!zookeeper.getState().isConnected()) {
+    while (!zookeeper.getState().isConnected()) {
       Threads.sleep(1);
       if (stopWatch.elapsed(TimeUnit.MILLISECONDS) > timeout) {
-        throw new ZooKeeperConnectionException("Failed connect after waiting " +
-            stopWatch.elapsed(TimeUnit.MILLISECONDS) + "ms (zk session timeout); " +
-            zookeeper);
+        throw new ZooKeeperConnectionException("Failed connect after waiting "
+            + stopWatch.elapsed(TimeUnit.MILLISECONDS) + "ms (zk session timeout); " + zookeeper);
       }
     }
     return zookeeper;

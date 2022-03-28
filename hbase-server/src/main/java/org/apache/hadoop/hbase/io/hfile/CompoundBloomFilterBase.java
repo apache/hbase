@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,27 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.util.BloomFilterBase;
-
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.util.BloomFilterBase;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class CompoundBloomFilterBase implements BloomFilterBase {
 
   /**
-   * At read time, the total number of chunks. At write time, the number of
-   * chunks created so far. The first chunk has an ID of 0, and the current
-   * chunk has the ID of numChunks - 1.
+   * At read time, the total number of chunks. At write time, the number of chunks created so far.
+   * The first chunk has an ID of 0, and the current chunk has the ID of numChunks - 1.
    */
   protected int numChunks;
 
   /**
-   * The Bloom filter version. There used to be a DynamicByteBloomFilter which
-   * had version 2.
+   * The Bloom filter version. There used to be a DynamicByteBloomFilter which had version 2.
    */
   public static final int VERSION = 3;
 

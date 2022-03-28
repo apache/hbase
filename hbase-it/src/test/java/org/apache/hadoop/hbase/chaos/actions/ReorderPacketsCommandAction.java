@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
@@ -25,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
  * Reorder network packets on a random regionserver.
  */
 public class ReorderPacketsCommandAction extends TCCommandAction {
@@ -36,7 +34,6 @@ public class ReorderPacketsCommandAction extends TCCommandAction {
 
   /**
    * Reorder network packets on a random regionserver.
-   *
    * @param ratio the ratio of packets reordered
    * @param duration the time this issue persists in milliseconds
    * @param delay the delay between reordered and non-reordered packets in milliseconds
@@ -51,7 +48,8 @@ public class ReorderPacketsCommandAction extends TCCommandAction {
     this.delay = delay;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -72,8 +70,8 @@ public class ReorderPacketsCommandAction extends TCCommandAction {
     getLogger().info("Finished to execute ReorderPacketsCommandAction");
   }
 
-  private String getCommand(String operation){
-    return String.format("tc qdisc %s dev %s root netem delay %sms reorder %s%% 50%%",
-        operation, network, delay, ratio * 100);
+  private String getCommand(String operation) {
+    return String.format("tc qdisc %s dev %s root netem delay %sms reorder %s%% 50%%", operation,
+      network, delay, ratio * 100);
   }
 }

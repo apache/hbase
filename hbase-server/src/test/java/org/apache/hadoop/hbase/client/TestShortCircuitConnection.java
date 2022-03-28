@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -84,8 +84,7 @@ public class TestShortCircuitConnection {
     ClientService.BlockingInterface client = connection.getClient(regionServer.getServerName());
     assertTrue(admin instanceof RSRpcServices);
     assertTrue(
-      client instanceof ServerConnectionUtils.ShortCircuitingClusterConnection
-      .ClientServiceBlockingInterfaceWrapper);
+      client instanceof ServerConnectionUtils.ShortCircuitingClusterConnection.ClientServiceBlockingInterfaceWrapper);
     ServerName anotherSn = ServerName.valueOf(regionServer.getServerName().getAddress(),
       EnvironmentEdgeManager.currentTime());
     admin = connection.getAdmin(anotherSn);

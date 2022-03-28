@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -118,9 +118,9 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
       // disable it first and then enable it.
       PeerState newState = peers.refreshPeerState(peerId);
       // RS need to start work with the new replication config change
-      if (!ReplicationUtils.isNamespacesAndTableCFsEqual(oldConfig, newConfig) ||
-        oldConfig.isSerial() != newConfig.isSerial() ||
-        (oldState.equals(PeerState.ENABLED) && newState.equals(PeerState.DISABLED))) {
+      if (!ReplicationUtils.isNamespacesAndTableCFsEqual(oldConfig, newConfig)
+          || oldConfig.isSerial() != newConfig.isSerial()
+          || (oldState.equals(PeerState.ENABLED) && newState.equals(PeerState.DISABLED))) {
         replicationSourceManager.refreshSources(peerId);
       }
       success = true;
@@ -136,7 +136,7 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
 
   @Override
   public void claimReplicationQueue(ServerName crashedServer, String queue)
-    throws ReplicationException, IOException {
+      throws ReplicationException, IOException {
     replicationSourceManager.claimQueue(crashedServer, queue);
   }
 }

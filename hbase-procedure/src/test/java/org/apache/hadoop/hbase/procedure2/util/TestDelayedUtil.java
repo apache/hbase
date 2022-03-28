@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestDelayedUtil {
 
   @ClassRule
@@ -50,9 +50,8 @@ public class TestDelayedUtil {
     ZeroDelayContainer<Object> o1cb = new ZeroDelayContainer<>(o1);
     ZeroDelayContainer<Object> o2c = new ZeroDelayContainer<>(o2);
 
-    ZeroDelayContainer[] items = new ZeroDelayContainer[] {
-      lnull, l10a, l10b, l15, onull, o1ca, o1cb, o2c,
-    };
+    ZeroDelayContainer[] items =
+        new ZeroDelayContainer[] { lnull, l10a, l10b, l15, onull, o1ca, o1cb, o2c, };
 
     assertContainersEquals(lnull, items, lnull, onull);
     assertContainersEquals(l10a, items, l10a, l10b);
@@ -75,8 +74,8 @@ public class TestDelayedUtil {
         }
       }
       boolean isMatching = src.equals(items[i]);
-      assertEquals(src.getObject() + " unexpectedly match " + items[i].getObject(),
-        shouldMatch, isMatching);
+      assertEquals(src.getObject() + " unexpectedly match " + items[i].getObject(), shouldMatch,
+        isMatching);
     }
   }
 

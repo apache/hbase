@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,10 +20,8 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertFalse;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -35,7 +33,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Make sure we can spin up a HBTU without a hbase-site.xml
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestHBaseTestingUtilSpinup {
 
   @ClassRule

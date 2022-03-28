@@ -32,18 +32,20 @@ import org.junit.rules.ExternalResource;
  * </p>
  * Use in combination with {@link MiniClusterRule}, for example:
  *
- * <pre>{@code
+ * <pre>
+ * {
+ *   &#64;code
  *   public class TestMyClass {
  *     private static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
  *     private static final ConnectionRule connectionRule =
- *       ConnectionRule.createAsyncConnectionRule(miniClusterRule::createConnection);
+ *         ConnectionRule.createAsyncConnectionRule(miniClusterRule::createConnection);
  *
- *     @ClassRule
- *     public static final TestRule rule = RuleChain
- *       .outerRule(miniClusterRule)
- *       .around(connectionRule);
+ *     &#64;ClassRule
+ *     public static final TestRule rule =
+ *         RuleChain.outerRule(miniClusterRule).around(connectionRule);
  *   }
- * }</pre>
+ * }
+ * </pre>
  */
 public final class ConnectionRule extends ExternalResource {
 
@@ -53,29 +55,22 @@ public final class ConnectionRule extends ExternalResource {
   private Connection connection;
   private AsyncConnection asyncConnection;
 
-  public static ConnectionRule createConnectionRule(
-    final Supplier<Connection> connectionSupplier
-  ) {
+  public static ConnectionRule createConnectionRule(final Supplier<Connection> connectionSupplier) {
     return new ConnectionRule(connectionSupplier, null);
   }
 
   public static ConnectionRule createAsyncConnectionRule(
-    final Supplier<CompletableFuture<AsyncConnection>> asyncConnectionSupplier
-  ) {
+      final Supplier<CompletableFuture<AsyncConnection>> asyncConnectionSupplier) {
     return new ConnectionRule(null, asyncConnectionSupplier);
   }
 
-  public static ConnectionRule createConnectionRule(
-    final Supplier<Connection> connectionSupplier,
-    final Supplier<CompletableFuture<AsyncConnection>> asyncConnectionSupplier
-  ) {
+  public static ConnectionRule createConnectionRule(final Supplier<Connection> connectionSupplier,
+      final Supplier<CompletableFuture<AsyncConnection>> asyncConnectionSupplier) {
     return new ConnectionRule(connectionSupplier, asyncConnectionSupplier);
   }
 
-  private ConnectionRule(
-    final Supplier<Connection> connectionSupplier,
-    final Supplier<CompletableFuture<AsyncConnection>> asyncConnectionSupplier
-  ) {
+  private ConnectionRule(final Supplier<Connection> connectionSupplier,
+      final Supplier<CompletableFuture<AsyncConnection>> asyncConnectionSupplier) {
     this.connectionSupplier = connectionSupplier;
     this.asyncConnectionSupplier = asyncConnectionSupplier;
   }
@@ -83,7 +78,7 @@ public final class ConnectionRule extends ExternalResource {
   public Connection getConnection() {
     if (connection == null) {
       throw new IllegalStateException(
-        "ConnectionRule not initialized with a synchronous connection.");
+          "ConnectionRule not initialized with a synchronous connection.");
     }
     return connection;
   }
@@ -91,7 +86,7 @@ public final class ConnectionRule extends ExternalResource {
   public AsyncConnection getAsyncConnection() {
     if (asyncConnection == null) {
       throw new IllegalStateException(
-        "ConnectionRule not initialized with an asynchronous connection.");
+          "ConnectionRule not initialized with an asynchronous connection.");
     }
     return asyncConnection;
   }

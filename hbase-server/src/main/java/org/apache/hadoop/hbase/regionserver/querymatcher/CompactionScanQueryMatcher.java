@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,15 +20,14 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeepDeletedCells;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Query matcher for compaction.
@@ -108,8 +107,8 @@ public abstract class CompactionScanQueryMatcher extends ScanQueryMatcher {
       long readPointToUse, long earliestPutTs, long oldestUnexpiredTS, long now,
       byte[] dropDeletesFromRow, byte[] dropDeletesToRow,
       RegionCoprocessorHost regionCoprocessorHost) throws IOException {
-    Pair<DeleteTracker, ColumnTracker> trackers = getTrackers(regionCoprocessorHost, null,
-        scanInfo,oldestUnexpiredTS, null);
+    Pair<DeleteTracker, ColumnTracker> trackers =
+        getTrackers(regionCoprocessorHost, null, scanInfo, oldestUnexpiredTS, null);
     DeleteTracker deleteTracker = trackers.getFirst();
     ColumnTracker columnTracker = trackers.getSecond();
     if (dropDeletesFromRow == null) {

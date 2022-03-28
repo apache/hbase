@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,21 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.namequeues;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
-import org.apache.hadoop.hbase.slowlog.SlowLogTableAccessor;
-import org.apache.hbase.thirdparty.com.google.common.collect.EvictingQueue;
-import org.apache.hbase.thirdparty.com.google.common.collect.Queues;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.locks.ReentrantLock;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.slowlog.SlowLogTableAccessor;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.EvictingQueue;
+import org.apache.hbase.thirdparty.com.google.common.collect.Queues;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
 
 /**
  * Persistent service provider for Slow/LargeLog events
@@ -42,7 +42,7 @@ public class SlowLogPersistentService {
 
   private static final ReentrantLock LOCK = new ReentrantLock();
   private static final String SYS_TABLE_QUEUE_SIZE =
-    "hbase.regionserver.slowlog.systable.queue.size";
+      "hbase.regionserver.slowlog.systable.queue.size";
   private static final int DEFAULT_SYS_TABLE_QUEUE_SIZE = 1000;
   private static final int SYSTABLE_PUT_BATCH_SIZE = 100;
 
@@ -53,9 +53,9 @@ public class SlowLogPersistentService {
   public SlowLogPersistentService(final Configuration configuration) {
     this.configuration = configuration;
     int sysTableQueueSize =
-      configuration.getInt(SYS_TABLE_QUEUE_SIZE, DEFAULT_SYS_TABLE_QUEUE_SIZE);
+        configuration.getInt(SYS_TABLE_QUEUE_SIZE, DEFAULT_SYS_TABLE_QUEUE_SIZE);
     EvictingQueue<TooSlowLog.SlowLogPayload> evictingQueueForTable =
-      EvictingQueue.create(sysTableQueueSize);
+        EvictingQueue.create(sysTableQueueSize);
     queueForSysTable = Queues.synchronizedQueue(evictingQueueForTable);
   }
 

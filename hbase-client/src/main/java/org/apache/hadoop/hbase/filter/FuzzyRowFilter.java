@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -101,8 +101,8 @@ public class FuzzyRowFilter extends FilterBase {
 
     for (Pair<byte[], byte[]> aFuzzyKeysData : fuzzyKeysData) {
       if (aFuzzyKeysData.getFirst().length != aFuzzyKeysData.getSecond().length) {
-        Pair<String, String> readable =
-          new Pair<>(Bytes.toStringBinary(aFuzzyKeysData.getFirst()), Bytes.toStringBinary(aFuzzyKeysData.getSecond()));
+        Pair<String, String> readable = new Pair<>(Bytes.toStringBinary(aFuzzyKeysData.getFirst()),
+            Bytes.toStringBinary(aFuzzyKeysData.getSecond()));
         throw new IllegalArgumentException("Fuzzy pair lengths do not match: " + readable);
       }
 
@@ -181,9 +181,8 @@ public class FuzzyRowFilter extends FilterBase {
       final int index = i % size;
       Pair<byte[], byte[]> fuzzyData = fuzzyKeysData.get(index);
       idempotentMaskShift(fuzzyData.getSecond());
-      SatisfiesCode satisfiesCode =
-          satisfies(isReversed(), c.getRowArray(), c.getRowOffset(), c.getRowLength(),
-            fuzzyData.getFirst(), fuzzyData.getSecond());
+      SatisfiesCode satisfiesCode = satisfies(isReversed(), c.getRowArray(), c.getRowOffset(),
+        c.getRowLength(), fuzzyData.getFirst(), fuzzyData.getSecond());
       if (satisfiesCode == SatisfiesCode.YES) {
         lastFoundIndex = index;
         return ReturnCode.INCLUDE;
@@ -229,14 +228,14 @@ public class FuzzyRowFilter extends FilterBase {
 
     RowTracker() {
       nextRows = new PriorityQueue<>(fuzzyKeysData.size(),
-              new Comparator<Pair<byte[], Pair<byte[], byte[]>>>() {
-                @Override
-                public int compare(Pair<byte[], Pair<byte[], byte[]>> o1,
-                    Pair<byte[], Pair<byte[], byte[]>> o2) {
-                  return isReversed()? Bytes.compareTo(o2.getFirst(), o1.getFirst()):
-                    Bytes.compareTo(o1.getFirst(), o2.getFirst());
-                }
-              });
+          new Comparator<Pair<byte[], Pair<byte[], byte[]>>>() {
+            @Override
+            public int compare(Pair<byte[], Pair<byte[], byte[]>> o1,
+                Pair<byte[], Pair<byte[], byte[]>> o2) {
+              return isReversed() ? Bytes.compareTo(o2.getFirst(), o1.getFirst())
+                  : Bytes.compareTo(o1.getFirst(), o2.getFirst());
+            }
+          });
     }
 
     byte[] nextRow() {
@@ -265,7 +264,8 @@ public class FuzzyRowFilter extends FilterBase {
     }
 
     boolean lessThan(Cell currentCell, byte[] nextRowKey) {
-      int compareResult = CellComparator.getInstance().compareRows(currentCell, nextRowKey, 0, nextRowKey.length);
+      int compareResult =
+          CellComparator.getInstance().compareRows(currentCell, nextRowKey, 0, nextRowKey.length);
       return (!isReversed() && compareResult < 0) || (isReversed() && compareResult > 0);
     }
 
@@ -290,8 +290,7 @@ public class FuzzyRowFilter extends FilterBase {
    */
   @Override
   public byte[] toByteArray() {
-    FilterProtos.FuzzyRowFilter.Builder builder = FilterProtos.FuzzyRowFilter
-        .newBuilder()
+    FilterProtos.FuzzyRowFilter.Builder builder = FilterProtos.FuzzyRowFilter.newBuilder()
         .setIsMaskV2(processedWildcardMask == V2_PROCESSED_WILDCARD_MASK);
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
       BytesBytesPair.Builder bbpBuilder = BytesBytesPair.newBuilder();
@@ -323,9 +322,9 @@ public class FuzzyRowFilter extends FilterBase {
       byte[] keyMeta = current.getSecond().toByteArray();
       fuzzyKeysData.add(new Pair<>(keyBytes, keyMeta));
     }
-    byte processedWildcardMask = proto.hasIsMaskV2() && proto.getIsMaskV2()
-        ? V2_PROCESSED_WILDCARD_MASK
-        : V1_PROCESSED_WILDCARD_MASK;
+    byte processedWildcardMask =
+        proto.hasIsMaskV2() && proto.getIsMaskV2() ? V2_PROCESSED_WILDCARD_MASK
+            : V1_PROCESSED_WILDCARD_MASK;
     return new FuzzyRowFilter(fuzzyKeysData, processedWildcardMask);
   }
 
@@ -628,29 +627,25 @@ public class FuzzyRowFilter extends FilterBase {
       }
     }
 
-    return reverse? result: trimTrailingZeroes(result, fuzzyKeyMeta, toInc);
+    return reverse ? result : trimTrailingZeroes(result, fuzzyKeyMeta, toInc);
   }
 
   /**
-   * For forward scanner, next cell hint should  not contain any trailing zeroes
-   * unless they are part of fuzzyKeyMeta
-   * hint = '\x01\x01\x01\x00\x00'
-   * will skip valid row '\x01\x01\x01'
-   * 
+   * For forward scanner, next cell hint should not contain any trailing zeroes unless they are part
+   * of fuzzyKeyMeta hint = '\x01\x01\x01\x00\x00' will skip valid row '\x01\x01\x01'
    * @param result
    * @param fuzzyKeyMeta
    * @param toInc - position of incremented byte
    * @return trimmed version of result
    */
-  
+
   private static byte[] trimTrailingZeroes(byte[] result, byte[] fuzzyKeyMeta, int toInc) {
-    int off = fuzzyKeyMeta.length >= result.length? result.length -1:
-           fuzzyKeyMeta.length -1;  
-    for( ; off >= 0; off--){
-      if(fuzzyKeyMeta[off] != 0) break;
+    int off = fuzzyKeyMeta.length >= result.length ? result.length - 1 : fuzzyKeyMeta.length - 1;
+    for (; off >= 0; off--) {
+      if (fuzzyKeyMeta[off] != 0) break;
     }
-    if (off < toInc)  off = toInc;
-    byte[] retValue = new byte[off+1];
+    if (off < toInc) off = toInc;
+    byte[] retValue = new byte[off + 1];
     System.arraycopy(result, 0, retValue, 0, retValue.length);
     return retValue;
   }
@@ -669,8 +664,8 @@ public class FuzzyRowFilter extends FilterBase {
     for (int i = 0; i < fuzzyKeysData.size(); ++i) {
       Pair<byte[], byte[]> thisData = this.fuzzyKeysData.get(i);
       Pair<byte[], byte[]> otherData = other.fuzzyKeysData.get(i);
-      if (!(Bytes.equals(thisData.getFirst(), otherData.getFirst()) && Bytes.equals(
-        thisData.getSecond(), otherData.getSecond()))) {
+      if (!(Bytes.equals(thisData.getFirst(), otherData.getFirst())
+          && Bytes.equals(thisData.getSecond(), otherData.getSecond()))) {
         return false;
       }
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public class TestRaceBetweenGetWALAndGetWALs {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRaceBetweenGetWALAndGetWALs.class);
+      HBaseClassTestRule.forClass(TestRaceBetweenGetWALAndGetWALs.class);
 
   private static Future<List<WAL>> GET_WALS_FUTURE;
 

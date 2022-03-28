@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,7 @@ import org.junit.experimental.categories.Category;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-@Category({MapReduceTests.class, LargeTests.class})
+@Category({ MapReduceTests.class, LargeTests.class })
 public class TestMapReduceExamples {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -97,7 +97,7 @@ public class TestMapReduceExamples {
   public void testMainSampleUploader() throws Exception {
     PrintStream oldPrintStream = System.err;
     SecurityManager SECURITY_MANAGER = System.getSecurityManager();
-    LauncherSecurityManager newSecurityManager= new LauncherSecurityManager();
+    LauncherSecurityManager newSecurityManager = new LauncherSecurityManager();
     System.setSecurityManager(newSecurityManager);
     ByteArrayOutputStream data = new ByteArrayOutputStream();
     String[] args = {};
@@ -151,8 +151,8 @@ public class TestMapReduceExamples {
       }
     }).when(ctx).write(any(), any());
     Result result = mock(Result.class);
-    when(result.getValue(Bytes.toBytes("columnFamily"), Bytes.toBytes("column1"))).thenReturn(
-        Bytes.toBytes("test"));
+    when(result.getValue(Bytes.toBytes("columnFamily"), Bytes.toBytes("column1")))
+        .thenReturn(Bytes.toBytes("test"));
     map.setup(ctx);
     map.map(rowKey, result, ctx);
   }
@@ -164,7 +164,7 @@ public class TestMapReduceExamples {
   public void testMainIndexBuilder() throws Exception {
     PrintStream oldPrintStream = System.err;
     SecurityManager SECURITY_MANAGER = System.getSecurityManager();
-    LauncherSecurityManager newSecurityManager= new LauncherSecurityManager();
+    LauncherSecurityManager newSecurityManager = new LauncherSecurityManager();
     System.setSecurityManager(newSecurityManager);
     ByteArrayOutputStream data = new ByteArrayOutputStream();
     String[] args = {};
@@ -177,8 +177,8 @@ public class TestMapReduceExamples {
       } catch (SecurityException e) {
         assertEquals(-1, newSecurityManager.getExitCode());
         assertTrue(data.toString().contains("arguments supplied, required: 3"));
-        assertTrue(data.toString().contains(
-            "Usage: IndexBuilder <TABLE_NAME> <COLUMN_FAMILY> <ATTR> [<ATTR> ...]"));
+        assertTrue(data.toString()
+            .contains("Usage: IndexBuilder <TABLE_NAME> <COLUMN_FAMILY> <ATTR> [<ATTR> ...]"));
       }
     } finally {
       System.setErr(oldPrintStream);

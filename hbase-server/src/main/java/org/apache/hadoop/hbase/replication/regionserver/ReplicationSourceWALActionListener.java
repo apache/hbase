@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -70,8 +70,8 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
       return;
     }
     // For replay, or if all the cells are markers, do not need to store replication scope.
-    if (logEdit.isReplay() ||
-      logEdit.getCells().stream().allMatch(c -> WALEdit.isMetaEditFamily(c))) {
+    if (logEdit.isReplay()
+        || logEdit.getCells().stream().allMatch(c -> WALEdit.isMetaEditFamily(c))) {
       ((WALKeyImpl) logKey).clearReplicationScope();
     }
   }

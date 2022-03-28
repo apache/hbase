@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,9 +22,8 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The {@code Union} family of {@link DataType}s encode one of a fixed
- * collection of Objects. They provide convenience methods which handle type
- * casting on your behalf.
+ * The {@code Union} family of {@link DataType}s encode one of a fixed collection of Objects. They
+ * provide convenience methods which handle type casting on your behalf.
  * @see Union2
  */
 @SuppressWarnings("unchecked")
@@ -34,8 +33,7 @@ public abstract class Union3<A, B, C> extends Union2<A, B> {
   protected final DataType<C> typeC;
 
   /**
-   * Create an instance of {@code Union3} over the set of specified
-   * types.
+   * Create an instance of {@code Union3} over the set of specified types.
    */
   public Union3(DataType<A> typeA, DataType<B> typeB, DataType<C> typeC) {
     super(typeA, typeB);

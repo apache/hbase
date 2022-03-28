@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,27 +17,19 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
-import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocator;
-import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufOutputStream;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.io.ByteBuffAllocator;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
@@ -50,6 +42,13 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocator;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufOutputStream;
 
 /**
  * Helper class for building cell block.
@@ -71,13 +70,13 @@ class CellBlockBuilder {
 
   public CellBlockBuilder(Configuration conf) {
     this.conf = conf;
-    this.cellBlockDecompressionMultiplier = conf
-        .getInt("hbase.ipc.cellblock.decompression.buffersize.multiplier", 3);
+    this.cellBlockDecompressionMultiplier =
+        conf.getInt("hbase.ipc.cellblock.decompression.buffersize.multiplier", 3);
 
     // Guess that 16k is a good size for rpc buffer. Could go bigger. See the TODO below in
     // #buildCellBlock.
-    this.cellBlockBuildingInitialBufferSize = ClassSize
-        .align(conf.getInt("hbase.ipc.cellblock.building.initial.buffersize", 16 * 1024));
+    this.cellBlockBuildingInitialBufferSize =
+        ClassSize.align(conf.getInt("hbase.ipc.cellblock.building.initial.buffersize", 16 * 1024));
   }
 
   private interface OutputStreamSupplier {
@@ -275,14 +274,14 @@ class CellBlockBuilder {
   private ByteBuffer decompress(CompressionCodec compressor, byte[] compressedCellBlock)
       throws IOException {
     ByteBuffer cellBlock = decompress(compressor, new ByteArrayInputStream(compressedCellBlock),
-        compressedCellBlock.length * this.cellBlockDecompressionMultiplier);
+      compressedCellBlock.length * this.cellBlockDecompressionMultiplier);
     return cellBlock;
   }
 
   private ByteBuff decompress(CompressionCodec compressor, ByteBuff compressedCellBlock)
       throws IOException {
     ByteBuffer cellBlock = decompress(compressor, new ByteBuffInputStream(compressedCellBlock),
-        compressedCellBlock.remaining() * this.cellBlockDecompressionMultiplier);
+      compressedCellBlock.remaining() * this.cellBlockDecompressionMultiplier);
     return new SingleByteBuff(cellBlock);
   }
 

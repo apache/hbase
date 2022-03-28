@@ -28,13 +28,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 class TableSkewCostFunction extends CostFunction {
 
   private static final String TABLE_SKEW_COST_KEY =
-    "hbase.master.balancer.stochastic.tableSkewCost";
+      "hbase.master.balancer.stochastic.tableSkewCost";
   private static final float DEFAULT_TABLE_SKEW_COST = 35;
   DoubleArrayCost[] costsPerTable;
 
   TableSkewCostFunction(Configuration conf) {
     this.setMultiplier(conf.getFloat(TABLE_SKEW_COST_KEY, DEFAULT_TABLE_SKEW_COST));
   }
+
   @Override
   void prepare(BalancerClusterState cluster) {
     super.prepare(cluster);

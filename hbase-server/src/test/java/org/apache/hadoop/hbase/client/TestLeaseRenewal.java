@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -120,11 +120,11 @@ public class TestLeaseRenewal {
     assertTrue(Arrays.equals(rs.next().getRow(), ANOTHERROW));
     // renew the lease a few times, long enough to be sure
     // the lease would have expired otherwise
-    Thread.sleep(leaseTimeout/2);
+    Thread.sleep(leaseTimeout / 2);
     assertTrue(rs.renewLease());
-    Thread.sleep(leaseTimeout/2);
+    Thread.sleep(leaseTimeout / 2);
     assertTrue(rs.renewLease());
-    Thread.sleep(leaseTimeout/2);
+    Thread.sleep(leaseTimeout / 2);
     assertTrue(rs.renewLease());
     // make sure we haven't advanced the scanner
     assertTrue(Arrays.equals(rs.next().getRow(), ROW_BYTES));

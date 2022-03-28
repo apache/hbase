@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestProcedureSchedulerConcurrency {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -105,10 +105,10 @@ public class TestProcedureSchedulerConcurrency {
           }
           if (wakeCount.get() != oldWakeCount) {
             lastUpdate = EnvironmentEdgeManager.currentTime();
-          } else if (wakeCount.get() >= NRUNS &&
-              (EnvironmentEdgeManager.currentTime() - lastUpdate) > WAIT_THRESHOLD) {
-            break;
-          }
+          } else if (wakeCount.get() >= NRUNS
+              && (EnvironmentEdgeManager.currentTime() - lastUpdate) > WAIT_THRESHOLD) {
+                break;
+              }
           Threads.sleepWithoutInterrupt(25);
         }
       }
@@ -119,7 +119,7 @@ public class TestProcedureSchedulerConcurrency {
         @Override
         public void run() {
           while (true) {
-            TestProcedureWithEvent proc = (TestProcedureWithEvent)sched.poll();
+            TestProcedureWithEvent proc = (TestProcedureWithEvent) sched.poll();
             if (proc == null) {
               continue;
             }

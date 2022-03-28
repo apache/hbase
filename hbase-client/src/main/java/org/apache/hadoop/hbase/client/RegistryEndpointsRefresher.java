@@ -80,8 +80,8 @@ final class RegistryEndpointsRefresher {
           }
           // if refreshNow is true, then we will wait until minTimeBetweenRefreshesMs elapsed,
           // otherwise wait until periodicRefreshMs elapsed
-          long waitTime = getRefreshIntervalMs(firstRefresh) -
-            (EnvironmentEdgeManager.currentTime() - lastRefreshTime);
+          long waitTime = getRefreshIntervalMs(firstRefresh)
+              - (EnvironmentEdgeManager.currentTime() - lastRefreshTime);
           if (waitTime <= 0) {
             // we are going to refresh, reset this flag
             firstRefresh = false;
@@ -118,7 +118,7 @@ final class RegistryEndpointsRefresher {
   }
 
   private RegistryEndpointsRefresher(long initialDelayMs, long periodicRefreshMs,
-    long minTimeBetweenRefreshesMs, Refresher refresher) {
+      long minTimeBetweenRefreshesMs, Refresher refresher) {
     this.initialDelayMs = initialDelayMs;
     this.periodicRefreshMs = periodicRefreshMs;
     this.minTimeBetweenRefreshesMs = minTimeBetweenRefreshesMs;
@@ -144,18 +144,18 @@ final class RegistryEndpointsRefresher {
    * refreshing of endpoints.
    */
   static RegistryEndpointsRefresher create(Configuration conf, String initialDelaySecsConfigName,
-    String intervalSecsConfigName, String minIntervalSecsConfigName, Refresher refresher) {
+      String intervalSecsConfigName, String minIntervalSecsConfigName, Refresher refresher) {
     long periodicRefreshMs = TimeUnit.SECONDS
-      .toMillis(conf.getLong(intervalSecsConfigName, PERIODIC_REFRESH_INTERVAL_SECS_DEFAULT));
+        .toMillis(conf.getLong(intervalSecsConfigName, PERIODIC_REFRESH_INTERVAL_SECS_DEFAULT));
     if (periodicRefreshMs <= 0) {
       return null;
     }
     long initialDelayMs = Math.max(1,
       TimeUnit.SECONDS.toMillis(conf.getLong(initialDelaySecsConfigName, periodicRefreshMs / 10)));
     long minTimeBetweenRefreshesMs = TimeUnit.SECONDS
-      .toMillis(conf.getLong(minIntervalSecsConfigName, MIN_SECS_BETWEEN_REFRESHES_DEFAULT));
+        .toMillis(conf.getLong(minIntervalSecsConfigName, MIN_SECS_BETWEEN_REFRESHES_DEFAULT));
     Preconditions.checkArgument(minTimeBetweenRefreshesMs < periodicRefreshMs);
     return new RegistryEndpointsRefresher(initialDelayMs, periodicRefreshMs,
-      minTimeBetweenRefreshesMs, refresher);
+        minTimeBetweenRefreshesMs, refresher);
   }
 }

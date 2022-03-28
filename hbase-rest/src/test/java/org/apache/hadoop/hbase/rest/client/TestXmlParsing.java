@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -66,8 +66,7 @@ public class TestXmlParsing {
 
   @Test
   public void testFailOnExternalEntities() throws Exception {
-    final String externalEntitiesXml =
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+    final String externalEntitiesXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
         + " <!DOCTYPE foo [ <!ENTITY xxe SYSTEM \"/tmp/foo\"> ] >"
         + " <ClusterVersion>&xee;</ClusterVersion>";
     Client client = mock(Client.class);
@@ -80,9 +79,11 @@ public class TestXmlParsing {
       admin.getClusterVersion();
       fail("Expected getClusterVersion() to throw an exception");
     } catch (IOException e) {
-      assertEquals("Cause of exception ought to be a failure to parse the stream due to our " +
-          "invalid external entity. Make sure this isn't just a false positive due to " +
-          "implementation. see HBASE-19020.", UnmarshalException.class, e.getCause().getClass());
+      assertEquals(
+        "Cause of exception ought to be a failure to parse the stream due to our "
+            + "invalid external entity. Make sure this isn't just a false positive due to "
+            + "implementation. see HBASE-19020.",
+        UnmarshalException.class, e.getCause().getClass());
       final String exceptionText = StringUtils.stringifyException(e);
       final String expectedText = "\"xee\"";
       LOG.debug("exception text: '" + exceptionText + "'", e);

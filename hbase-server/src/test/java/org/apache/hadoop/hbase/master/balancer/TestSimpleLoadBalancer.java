@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,7 +51,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test the load balancer that is created by default.
  */
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestSimpleLoadBalancer extends BalancerTestBase {
 
   @ClassRule
@@ -77,38 +77,18 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
   // int[testnum][servernumber] -> numregions
   int[][] clusterStateMocks = new int[][] {
       // 1 node
-      new int[] { 0 },
-      new int[] { 1 },
-      new int[] { 10 },
+      new int[] { 0 }, new int[] { 1 }, new int[] { 10 },
       // 2 node
-      new int[] { 0, 0 },
-      new int[] { 2, 0 },
-      new int[] { 2, 1 },
-      new int[] { 2, 2 },
-      new int[] { 2, 3 },
-      new int[] { 2, 4 },
-      new int[] { 1, 1 },
-      new int[] { 0, 1 },
-      new int[] { 10, 1 },
-      new int[] { 14, 1432 },
-      new int[] { 47, 53 },
+      new int[] { 0, 0 }, new int[] { 2, 0 }, new int[] { 2, 1 }, new int[] { 2, 2 },
+      new int[] { 2, 3 }, new int[] { 2, 4 }, new int[] { 1, 1 }, new int[] { 0, 1 },
+      new int[] { 10, 1 }, new int[] { 14, 1432 }, new int[] { 47, 53 },
       // 3 node
-      new int[] { 0, 1, 2 },
-      new int[] { 1, 2, 3 },
-      new int[] { 0, 2, 2 },
-      new int[] { 0, 3, 0 },
-      new int[] { 0, 4, 0 },
-      new int[] { 20, 20, 0 },
+      new int[] { 0, 1, 2 }, new int[] { 1, 2, 3 }, new int[] { 0, 2, 2 }, new int[] { 0, 3, 0 },
+      new int[] { 0, 4, 0 }, new int[] { 20, 20, 0 },
       // 4 node
-      new int[] { 0, 1, 2, 3 },
-      new int[] { 4, 0, 0, 0 },
-      new int[] { 5, 0, 0, 0 },
-      new int[] { 6, 6, 0, 0 },
-      new int[] { 6, 2, 0, 0 },
-      new int[] { 6, 1, 0, 0 },
-      new int[] { 6, 0, 0, 0 },
-      new int[] { 4, 4, 4, 7 },
-      new int[] { 4, 4, 4, 8 },
+      new int[] { 0, 1, 2, 3 }, new int[] { 4, 0, 0, 0 }, new int[] { 5, 0, 0, 0 },
+      new int[] { 6, 6, 0, 0 }, new int[] { 6, 2, 0, 0 }, new int[] { 6, 1, 0, 0 },
+      new int[] { 6, 0, 0, 0 }, new int[] { 4, 4, 4, 7 }, new int[] { 4, 4, 4, 8 },
       new int[] { 0, 0, 0, 7 },
       // 5 node
       new int[] { 1, 1, 1, 1, 4 },
@@ -124,17 +104,14 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
       new int[] { 0, 0, 144, 1, 0, 4, 1, 1123, 133, 138, 12, 1444 },
       new int[] { 1538, 1392, 1561, 1557, 1535, 1553, 1385, 1542, 1619 } };
 
-  int [] mockUniformCluster = new int[] { 5, 5, 5, 5, 5 ,0};
+  int[] mockUniformCluster = new int[] { 5, 5, 5, 5, 5, 0 };
 
   @Rule
   public TestName name = new TestName();
 
   /**
-   * Test the load balancing algorithm.
-   *
-   * Invariant is that all servers should be hosting either floor(average) or
-   * ceiling(average) at both table level and cluster level
-   *
+   * Test the load balancing algorithm. Invariant is that all servers should be hosting either
+   * floor(average) or ceiling(average) at both table level and cluster level
    */
   @Test
   public void testBalanceClusterOverall() throws Exception {
@@ -155,7 +132,7 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
         List<ServerAndLoad> list = convertToList(servers);
         LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
         List<RegionPlan> partialplans = loadBalancer.balanceTable(tableName, servers);
-        if(partialplans != null) clusterplans.addAll(partialplans);
+        if (partialplans != null) clusterplans.addAll(partialplans);
         List<ServerAndLoad> balancedClusterPerTable = reconcile(list, partialplans, servers);
         LOG.info("Mock Balance : " + printMock(balancedClusterPerTable));
         assertClusterAsBalanced(balancedClusterPerTable);
@@ -170,12 +147,10 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
   }
 
   /**
-   * Test the load balancing algorithm.
-   *
-   * Invariant is that all servers should be hosting either floor(average) or
-   * ceiling(average) at both table level and cluster level
-   * Deliberately generate a special case to show the overall strategy can achieve cluster
-   * level balance while the bytable strategy cannot
+   * Test the load balancing algorithm. Invariant is that all servers should be hosting either
+   * floor(average) or ceiling(average) at both table level and cluster level Deliberately generate
+   * a special case to show the overall strategy can achieve cluster level balance while the bytable
+   * strategy cannot
    * @throws Exception
    */
   @Test

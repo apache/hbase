@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
  * The data and business logic for the top screen.
  */
@@ -66,33 +65,32 @@ public class TopScreenModel {
   private boolean ascendingSort;
 
   public TopScreenModel(Admin admin, Mode initialMode, @Nullable List<Field> initialFields,
-    @Nullable Field initialSortField, @Nullable Boolean initialAscendingSort,
-    @Nullable List<RecordFilter> initialFilters) {
+      @Nullable Field initialSortField, @Nullable Boolean initialAscendingSort,
+      @Nullable List<RecordFilter> initialFilters) {
     this.admin = Objects.requireNonNull(admin);
     switchMode(Objects.requireNonNull(initialMode), initialSortField, false, initialFields,
       initialAscendingSort, initialFilters);
   }
 
   public void switchMode(Mode nextMode, boolean keepSortFieldAndSortOrderIfPossible,
-    List<RecordFilter> initialFilters) {
+      List<RecordFilter> initialFilters) {
     switchMode(nextMode, null, keepSortFieldAndSortOrderIfPossible, null, null, initialFilters);
   }
 
   public void switchMode(Mode nextMode, Field initialSortField,
-    boolean keepSortFieldAndSortOrderIfPossible, @Nullable List<Field> initialFields,
-    @Nullable Boolean initialAscendingSort, @Nullable List<RecordFilter> initialFilters) {
+      boolean keepSortFieldAndSortOrderIfPossible, @Nullable List<Field> initialFields,
+      @Nullable Boolean initialAscendingSort, @Nullable List<RecordFilter> initialFilters) {
     currentMode = nextMode;
     fieldInfos = Collections.unmodifiableList(new ArrayList<>(currentMode.getFieldInfos()));
 
     if (initialFields != null) {
       List<Field> tmp = new ArrayList<>(initialFields);
       tmp.addAll(currentMode.getFieldInfos().stream().map(FieldInfo::getField)
-        .filter(f -> !initialFields.contains(f))
-        .collect(Collectors.toList()));
+          .filter(f -> !initialFields.contains(f)).collect(Collectors.toList()));
       fields = Collections.unmodifiableList(tmp);
     } else {
-      fields = Collections.unmodifiableList(currentMode.getFieldInfos().stream()
-        .map(FieldInfo::getField).collect(Collectors.toList()));
+      fields = Collections.unmodifiableList(
+        currentMode.getFieldInfos().stream().map(FieldInfo::getField).collect(Collectors.toList()));
     }
 
     if (keepSortFieldAndSortOrderIfPossible) {
@@ -146,8 +144,7 @@ public class TopScreenModel {
   }
 
   private void refreshSummary(ClusterMetrics clusterMetrics) {
-    String currentTime = ISO_8601_EXTENDED_TIME_FORMAT
-      .format(EnvironmentEdgeManager.currentTime());
+    String currentTime = ISO_8601_EXTENDED_TIME_FORMAT.format(EnvironmentEdgeManager.currentTime());
     String version = clusterMetrics.getHBaseVersion();
     String clusterId = clusterMetrics.getClusterId();
     int liveServers = clusterMetrics.getLiveServerMetrics().size();
@@ -156,23 +153,22 @@ public class TopScreenModel {
     int ritCount = clusterMetrics.getRegionStatesInTransition().size();
     double averageLoad = clusterMetrics.getAverageLoad();
     long aggregateRequestPerSecond = clusterMetrics.getLiveServerMetrics().entrySet().stream()
-      .mapToLong(e -> e.getValue().getRequestCountPerSecond()).sum();
+        .mapToLong(e -> e.getValue().getRequestCountPerSecond()).sum();
 
-    summary = new Summary(currentTime, version, clusterId, liveServers + deadServers,
-      liveServers, deadServers, regionCount, ritCount, averageLoad, aggregateRequestPerSecond);
+    summary = new Summary(currentTime, version, clusterId, liveServers + deadServers, liveServers,
+        deadServers, regionCount, ritCount, averageLoad, aggregateRequestPerSecond);
   }
 
   private void refreshRecords(ClusterMetrics clusterMetrics) {
     List<Record> records = currentMode.getRecords(clusterMetrics, pushDownFilters);
 
     // Filter and sort
-    records = records.stream()
-      .filter(r -> filters.stream().allMatch(f -> f.execute(r)))
-      .sorted((recordLeft, recordRight) -> {
-        FieldValue left = recordLeft.get(currentSortField);
-        FieldValue right = recordRight.get(currentSortField);
-        return (ascendingSort ? 1 : -1) * left.compareTo(right);
-      }).collect(Collectors.toList());
+    records = records.stream().filter(r -> filters.stream().allMatch(f -> f.execute(r)))
+        .sorted((recordLeft, recordRight) -> {
+          FieldValue left = recordLeft.get(currentSortField);
+          FieldValue right = recordRight.get(currentSortField);
+          return (ascendingSort ? 1 : -1) * left.compareTo(right);
+        }).collect(Collectors.toList());
 
     this.records = Collections.unmodifiableList(records);
   }

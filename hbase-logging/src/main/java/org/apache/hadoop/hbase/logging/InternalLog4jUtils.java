@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,7 @@ final class InternalLog4jUtils {
 
   static void setLogLevel(String loggerName, String levelName) {
     org.apache.logging.log4j.Level level =
-      org.apache.logging.log4j.Level.toLevel(levelName.toUpperCase());
+        org.apache.logging.log4j.Level.toLevel(levelName.toUpperCase());
     if (!level.toString().equalsIgnoreCase(levelName)) {
       throw new IllegalArgumentException("Unsupported log level " + levelName);
     }
@@ -47,7 +47,7 @@ final class InternalLog4jUtils {
 
   static String getEffectiveLevel(String loggerName) {
     org.apache.logging.log4j.Logger logger =
-      org.apache.logging.log4j.LogManager.getLogger(loggerName);
+        org.apache.logging.log4j.LogManager.getLogger(loggerName);
     return logger.getLevel().name();
   }
 
@@ -61,27 +61,28 @@ final class InternalLog4jUtils {
     for (org.apache.logging.log4j.core.Appender appender : coreLogger.getAppenders().values()) {
       if (appender instanceof org.apache.logging.log4j.core.appender.FileAppender) {
         String fileName =
-          ((org.apache.logging.log4j.core.appender.FileAppender) appender).getFileName();
+            ((org.apache.logging.log4j.core.appender.FileAppender) appender).getFileName();
         ret.add(new File(fileName));
       } else if (appender instanceof org.apache.logging.log4j.core.appender.AbstractFileAppender) {
         String fileName =
-          ((org.apache.logging.log4j.core.appender.AbstractFileAppender<?>) appender).getFileName();
+            ((org.apache.logging.log4j.core.appender.AbstractFileAppender<?>) appender)
+                .getFileName();
         ret.add(new File(fileName));
       } else if (appender instanceof org.apache.logging.log4j.core.appender.RollingFileAppender) {
         String fileName =
-          ((org.apache.logging.log4j.core.appender.RollingFileAppender) appender).getFileName();
+            ((org.apache.logging.log4j.core.appender.RollingFileAppender) appender).getFileName();
         ret.add(new File(fileName));
       } else
         if (appender instanceof org.apache.logging.log4j.core.appender.RandomAccessFileAppender) {
           String fileName =
-            ((org.apache.logging.log4j.core.appender.RandomAccessFileAppender) appender)
-              .getFileName();
+              ((org.apache.logging.log4j.core.appender.RandomAccessFileAppender) appender)
+                  .getFileName();
           ret.add(new File(fileName));
         } else
           if (appender instanceof org.apache.logging.log4j.core.appender.MemoryMappedFileAppender) {
             String fileName =
-              ((org.apache.logging.log4j.core.appender.MemoryMappedFileAppender) appender)
-                .getFileName();
+                ((org.apache.logging.log4j.core.appender.MemoryMappedFileAppender) appender)
+                    .getFileName();
             ret.add(new File(fileName));
           }
     }

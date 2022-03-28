@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
-import java.util.TreeSet;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.TreeSet;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 
 @Category({ RegionServerTests.class, SmallTests.class })
 public class TestNewVersionBehaviorTracker {
@@ -218,8 +217,8 @@ public class TestNewVersionBehaviorTracker {
     NewVersionBehaviorTracker tracker =
         new NewVersionBehaviorTracker(null, comparator, 1, 3, 3, 10000);
 
-    KeyValue delete = new KeyValue(row, family, null, 20000, KeyValue.Type.DeleteFamilyVersion,
-        value);
+    KeyValue delete =
+        new KeyValue(row, family, null, 20000, KeyValue.Type.DeleteFamilyVersion, value);
     delete.setSequenceId(1000);
     delete.setTimestamp(20000);
     tracker.add(delete);
@@ -257,54 +256,53 @@ public class TestNewVersionBehaviorTracker {
     keyValue.setSequenceId(1000);
     assertEquals(DeleteResult.NOT_DELETED, tracker.isDeleted(keyValue));
     assertEquals(MatchCode.INCLUDE_AND_SEEK_NEXT_COL,
-        tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
+      tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
     keyValue.setTimestamp(19999);
     keyValue.setSequenceId(999);
     assertEquals(DeleteResult.NOT_DELETED, tracker.isDeleted(keyValue));
-    assertEquals(
-        MatchCode.SEEK_NEXT_COL,
-        tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
+    assertEquals(MatchCode.SEEK_NEXT_COL,
+      tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
     keyValue.setTimestamp(19999);
     keyValue.setSequenceId(998);
     assertEquals(DeleteResult.VERSION_MASKED, tracker.isDeleted(keyValue));
     assertEquals(MatchCode.SEEK_NEXT_COL,
-        tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
+      tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
     keyValue.setTimestamp(19998);
     keyValue.setSequenceId(997);
     assertEquals(DeleteResult.NOT_DELETED, tracker.isDeleted(keyValue));
     assertEquals(MatchCode.SEEK_NEXT_COL,
-        tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
+      tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
     keyValue.setTimestamp(19997);
     keyValue.setSequenceId(996);
     assertEquals(DeleteResult.VERSION_MASKED, tracker.isDeleted(keyValue));
     assertEquals(MatchCode.SEEK_NEXT_COL,
-        tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
+      tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
 
     keyValue = new KeyValue(row, family, col2, 20000, KeyValue.Type.Put, value);
     keyValue.setTimestamp(20000);
     keyValue.setSequenceId(1000);
     assertEquals(DeleteResult.NOT_DELETED, tracker.isDeleted(keyValue));
     assertEquals(MatchCode.INCLUDE_AND_SEEK_NEXT_COL,
-        tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
+      tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
     keyValue.setTimestamp(19999);
     keyValue.setSequenceId(1002);
     assertEquals(DeleteResult.NOT_DELETED, tracker.isDeleted(keyValue));
     assertEquals(MatchCode.SEEK_NEXT_COL,
-        tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
+      tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
     keyValue.setTimestamp(19999);
     keyValue.setSequenceId(1001);
     assertEquals(DeleteResult.VERSION_MASKED, tracker.isDeleted(keyValue));
     assertEquals(MatchCode.SEEK_NEXT_COL,
-        tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
+      tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
     keyValue.setTimestamp(19998);
     keyValue.setSequenceId(1003);
     assertEquals(DeleteResult.NOT_DELETED, tracker.isDeleted(keyValue));
     assertEquals(MatchCode.SEEK_NEXT_COL,
-        tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
+      tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
     keyValue.setTimestamp(19997);
     keyValue.setSequenceId(1004);
     assertEquals(DeleteResult.VERSION_MASKED, tracker.isDeleted(keyValue));
     assertEquals(MatchCode.SEEK_NEXT_COL,
-        tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
+      tracker.checkVersions(keyValue, keyValue.getTimestamp(), keyValue.getTypeByte(), false));
   }
 }

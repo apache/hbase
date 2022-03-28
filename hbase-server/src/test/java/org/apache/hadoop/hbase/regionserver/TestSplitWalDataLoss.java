@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,8 +72,8 @@ public class TestSplitWalDataLoss {
 
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
-  private NamespaceDescriptor namespace = NamespaceDescriptor.create(getClass().getSimpleName())
-      .build();
+  private NamespaceDescriptor namespace =
+      NamespaceDescriptor.create(getClass().getSimpleName()).build();
 
   private TableName tableName = TableName.valueOf(namespace.getName(), "dataloss");
 
@@ -116,8 +116,8 @@ public class TestSplitWalDataLoss {
             reported.wait();
           }
         }
-        rs.getWAL(region.getRegionInfo()).abortCacheFlush(
-          region.getRegionInfo().getEncodedNameAsBytes());
+        rs.getWAL(region.getRegionInfo())
+            .abortCacheFlush(region.getRegionInfo().getEncodedNameAsBytes());
         throw new DroppedSnapshotException("testcase");
       }
     }).when(spiedRegion).internalFlushCacheAndCommit(Matchers.<WAL> any(),
@@ -125,7 +125,7 @@ public class TestSplitWalDataLoss {
       Matchers.<Collection<HStore>> any());
     // Find region key; don't pick up key for hbase:meta by mistake.
     String key = null;
-    for (Map.Entry<String, HRegion> entry: rs.getOnlineRegions().entrySet()) {
+    for (Map.Entry<String, HRegion> entry : rs.getOnlineRegions().entrySet()) {
       if (entry.getValue().getRegionInfo().getTable().equals(this.tableName)) {
         key = entry.getKey();
         break;
@@ -135,8 +135,7 @@ public class TestSplitWalDataLoss {
     Connection conn = testUtil.getConnection();
 
     try (Table table = conn.getTable(tableName)) {
-      table.put(new Put(Bytes.toBytes("row0"))
-              .addColumn(family, qualifier, Bytes.toBytes("val0")));
+      table.put(new Put(Bytes.toBytes("row0")).addColumn(family, qualifier, Bytes.toBytes("val0")));
     }
     long oldestSeqIdOfStore = region.getOldestSeqIdOfStore(family);
     LOG.info("CHANGE OLDEST " + oldestSeqIdOfStore);
@@ -148,8 +147,7 @@ public class TestSplitWalDataLoss {
       }
     }
     try (Table table = conn.getTable(tableName)) {
-      table.put(new Put(Bytes.toBytes("row1"))
-              .addColumn(family, qualifier, Bytes.toBytes("val1")));
+      table.put(new Put(Bytes.toBytes("row1")).addColumn(family, qualifier, Bytes.toBytes("val1")));
     }
     long now = EnvironmentEdgeManager.currentTime();
     rs.tryRegionServerReport(now - 500, now);

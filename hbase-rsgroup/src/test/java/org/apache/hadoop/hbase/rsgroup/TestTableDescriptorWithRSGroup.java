@@ -15,13 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rsgroup;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -45,6 +45,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Category({ LargeTests.class })
@@ -52,7 +53,7 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableDescriptorWithRSGroup.class);
+      HBaseClassTestRule.forClass(TestTableDescriptorWithRSGroup.class);
   private final byte[] familyNameBytes = Bytes.toBytes("f1");
 
   @BeforeClass
@@ -85,8 +86,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
 
     // Create table should fail if specified rs group does not exist.
     try {
-      TableDescriptor desc =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName.getNameAsString() + "_2"))
+      TableDescriptor desc = TableDescriptorBuilder
+          .newBuilder(TableName.valueOf(tableName.getNameAsString() + "_2"))
           .setRegionServerGroup("nonExistingRSGroup")
           .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
           .build();
@@ -101,9 +102,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     // Create table
 
     ColumnFamilyDescriptor f1 = ColumnFamilyDescriptorBuilder.newBuilder(familyNameBytes).build();
-    TableDescriptor desc =
-      TableDescriptorBuilder.newBuilder(tableName).setRegionServerGroup(newGroup)
-        .setColumnFamily(f1).build();
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setRegionServerGroup(newGroup).setColumnFamily(f1).build();
     admin.createTable(desc, getSpitKeys(5));
 
     TEST_UTIL.waitFor(WAIT_TIMEOUT, (Waiter.Predicate<Exception>) () -> {
@@ -196,7 +196,7 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     final String snapshotName = "snapShot2";
     admin.snapshot(snapshotName, tableName);
     final List<SnapshotDescription> snapshotDescriptions =
-      admin.listSnapshots(Pattern.compile("snapShot2"));
+        admin.listSnapshots(Pattern.compile("snapShot2"));
     assertEquals(1, snapshotDescriptions.size());
     assertEquals(snapshotName, snapshotDescriptions.get(0).getName());
 
@@ -221,9 +221,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     assertEquals(rsGroup1.getName(), regionServerGroup.get());
 
     // Delete table's original rs group, clone should fail.
-    rsGroupAdmin
-      .moveServersAndTables(Sets.newHashSet(rsGroup1.getServers()), Sets.newHashSet(clonedTable1),
-        rsGroup2.getName());
+    rsGroupAdmin.moveServersAndTables(Sets.newHashSet(rsGroup1.getServers()),
+      Sets.newHashSet(clonedTable1), rsGroup2.getName());
     rsGroupAdmin.removeRSGroup(rsGroup1.getName());
     // Clone Snapshot
     final TableName clonedTable2 = TableName.valueOf(tableName.getNameAsString() + "_2");
@@ -250,7 +249,7 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     assertEquals(rsGroup1.getName(), regionServerGroup.get());
 
     final TableDescriptor newTableDescriptor =
-      TableDescriptorBuilder.newBuilder(descriptor).setRegionServerGroup("rsGroup2").build();
+        TableDescriptorBuilder.newBuilder(descriptor).setRegionServerGroup("rsGroup2").build();
 
     // ConstraintException as rsGroup2 does not exits
     try {
@@ -287,9 +286,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     TableDescriptor descriptor = admin.getConnection().getTable(tableName).getDescriptor();
 
     RSGroupInfo rsGroup2 = addGroup("rsGroup2", 1);
-    final TableDescriptor newTableDescriptor =
-      TableDescriptorBuilder.newBuilder(descriptor).setRegionServerGroup(rsGroup2.getName())
-        .removeColumnFamily(familyNameBytes).build();
+    final TableDescriptor newTableDescriptor = TableDescriptorBuilder.newBuilder(descriptor)
+        .setRegionServerGroup(rsGroup2.getName()).removeColumnFamily(familyNameBytes).build();
 
     // Removed family to fail pre-check validation
     try {
@@ -310,9 +308,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     assertEquals(0, rsGroup1.getTables().size());
 
     // Create TableDescriptor without a family so creation fails
-    TableDescriptor desc =
-      TableDescriptorBuilder.newBuilder(tableName).setRegionServerGroup(rsGroup1.getName())
-        .build();
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setRegionServerGroup(rsGroup1.getName()).build();
     try {
       admin.createTable(desc, getSpitKeys(5));
       fail("Should have thrown DoNotRetryIOException but no exception thrown.");
@@ -331,9 +328,8 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     assertEquals(0, rsGroup1.getTables().size());
     final TableName tableName = TableName.valueOf("hbase:meta");
     final TableDescriptor descriptor = admin.getConnection().getTable(tableName).getDescriptor();
-    final TableDescriptor newTableDescriptor =
-      TableDescriptorBuilder.newBuilder(descriptor).setRegionServerGroup(rsGroup1.getName())
-        .build();
+    final TableDescriptor newTableDescriptor = TableDescriptorBuilder.newBuilder(descriptor)
+        .setRegionServerGroup(rsGroup1.getName()).build();
     admin.modifyTable(newTableDescriptor);
     final RSGroupInfo rsGroupInfoOfTable = rsGroupAdmin.getRSGroupInfoOfTable(tableName);
     assertEquals(rsGroup1.getName(), rsGroupInfoOfTable.getName());
@@ -341,7 +337,7 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
 
   @Test
   public void testUpdateTableDescriptorOnlyIfRSGroupInfoWasStoredInTableDescriptor()
-    throws Exception {
+      throws Exception {
     RSGroupInfo rsGroup1 = addGroup("rsGroup1", 1);
     assertEquals(0, rsGroup1.getTables().size());
     // create table with rs group info stored in table descriptor
@@ -351,18 +347,19 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
     createTable(table2, null);
     rsGroupAdmin.moveTables(Sets.newHashSet(tableName), rsGroup1.getName());
     assertTrue("RSGroup info is not updated into TableDescriptor when table created",
-      admin.getConnection().getTable(tableName).getDescriptor().getRegionServerGroup()
-        .isPresent());
-    assertFalse("Table descriptor should not have been updated "
-        + "as rs group info was not stored in table descriptor.",
+      admin.getConnection().getTable(tableName).getDescriptor().getRegionServerGroup().isPresent());
+    assertFalse(
+      "Table descriptor should not have been updated "
+          + "as rs group info was not stored in table descriptor.",
       admin.getConnection().getTable(table2).getDescriptor().getRegionServerGroup().isPresent());
 
     final String rsGroup2 = "rsGroup2";
     rsGroupAdmin.renameRSGroup(rsGroup1.getName(), rsGroup2);
     assertEquals(rsGroup2,
       admin.getConnection().getTable(tableName).getDescriptor().getRegionServerGroup().get());
-    assertFalse("Table descriptor should not have been updated "
-        + "as rs group info was not stored in table descriptor.",
+    assertFalse(
+      "Table descriptor should not have been updated "
+          + "as rs group info was not stored in table descriptor.",
       admin.getConnection().getTable(table2).getDescriptor().getRegionServerGroup().isPresent());
   }
 
@@ -386,7 +383,7 @@ public class TestTableDescriptorWithRSGroup extends TestRSGroupsBase {
   private void createTable(TableName tName, String rsGroupName) throws Exception {
     ColumnFamilyDescriptor f1 = ColumnFamilyDescriptorBuilder.newBuilder(familyNameBytes).build();
     final TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(tName).setColumnFamily(f1);
+        TableDescriptorBuilder.newBuilder(tName).setColumnFamily(f1);
     if (rsGroupName != null) {
       builder.setRegionServerGroup(rsGroupName);
     }

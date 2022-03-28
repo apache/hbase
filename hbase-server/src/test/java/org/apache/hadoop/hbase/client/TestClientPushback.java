@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ public class TestClientPushback extends ClientPushbackTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientPushback.class);
+      HBaseClassTestRule.forClass(TestClientPushback.class);
 
   private ConnectionImplementation conn;
 
@@ -90,10 +90,10 @@ public class TestClientPushback extends ClientPushbackTestBase {
       latch.countDown();
     };
     AsyncProcessTask<Result> task =
-      AsyncProcessTask.newBuilder(callback).setPool(mutator.getPool()).setTableName(tableName)
-        .setRowAccess(ops).setSubmittedRows(AsyncProcessTask.SubmittedRows.AT_LEAST_ONE)
-        .setOperationTimeout(conn.getConnectionConfiguration().getOperationTimeout())
-        .setRpcTimeout(60 * 1000).build();
+        AsyncProcessTask.newBuilder(callback).setPool(mutator.getPool()).setTableName(tableName)
+            .setRowAccess(ops).setSubmittedRows(AsyncProcessTask.SubmittedRows.AT_LEAST_ONE)
+            .setOperationTimeout(conn.getConnectionConfiguration().getOperationTimeout())
+            .setRpcTimeout(60 * 1000).build();
     mutator.getAsyncProcess().submit(task);
   }
 

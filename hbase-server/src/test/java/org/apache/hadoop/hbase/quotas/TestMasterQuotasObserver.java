@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -102,8 +102,8 @@ public class TestMasterQuotasObserver {
     assertEquals(0, getNumSpaceQuotas());
 
     // Set space quota
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-        tn, 1024L, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings =
+        QuotaSettingsFactory.limitTableSpace(tn, 1024L, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
     assertEquals(1, getNumSpaceQuotas());
 
@@ -208,8 +208,8 @@ public class TestMasterQuotasObserver {
     assertEquals(0, getNumSpaceQuotas());
 
     // Set a quota
-    QuotaSettings settings = QuotaSettingsFactory.limitNamespaceSpace(
-        ns, 1024L, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings =
+        QuotaSettingsFactory.limitNamespaceSpace(ns, 1024L, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
     assertEquals(1, getNumSpaceQuotas());
 
@@ -310,9 +310,8 @@ public class TestMasterQuotasObserver {
     final HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     final MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
     Set<String> coprocessorNames = cpHost.getCoprocessors();
-    assertTrue(
-        "Did not find MasterQuotasObserver in list of CPs: " + coprocessorNames,
-        coprocessorNames.contains(MasterQuotasObserver.class.getSimpleName()));
+    assertTrue("Did not find MasterQuotasObserver in list of CPs: " + coprocessorNames,
+      coprocessorNames.contains(MasterQuotasObserver.class.getSimpleName()));
   }
 
   public boolean namespaceExists(String ns) throws IOException {
@@ -354,7 +353,7 @@ public class TestMasterQuotasObserver {
     admin.createTable(tableDesc);
   }
 
-  private void dropTable(Admin admin, TableName tn) throws  Exception {
+  private void dropTable(Admin admin, TableName tn) throws Exception {
     admin.disableTable(tn);
     admin.deleteTable(tn);
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -99,8 +99,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
  * will first be initialized to the oldest file's tracker(which is stored in the trailer), using the
  * method {@link ProcedureStoreTracker#resetTo(ProcedureStoreTracker, boolean)}, and then merge it
  * with the tracker of every newer wal files, using the
- * {@link ProcedureStoreTracker#setDeletedIfModifiedInBoth(ProcedureStoreTracker)}.
- * If we find out
+ * {@link ProcedureStoreTracker#setDeletedIfModifiedInBoth(ProcedureStoreTracker)}. If we find out
  * that all the modified procedures for the oldest wal file are modified or deleted in newer wal
  * files, then we can delete it. This is because that, every time we call
  * {@link ProcedureStore#insert(Procedure[])} or {@link ProcedureStore#update(Procedure)}, we will
@@ -119,33 +118,31 @@ public class WALProcedureStore extends ProcedureStoreBase {
   /** Used to construct the name of the log directory for master procedures */
   public static final String MASTER_PROCEDURE_LOGDIR = "MasterProcWALs";
 
-
   public static final String WAL_COUNT_WARN_THRESHOLD_CONF_KEY =
-    "hbase.procedure.store.wal.warn.threshold";
+      "hbase.procedure.store.wal.warn.threshold";
   private static final int DEFAULT_WAL_COUNT_WARN_THRESHOLD = 10;
 
   public static final String EXEC_WAL_CLEANUP_ON_LOAD_CONF_KEY =
-    "hbase.procedure.store.wal.exec.cleanup.on.load";
+      "hbase.procedure.store.wal.exec.cleanup.on.load";
   private static final boolean DEFAULT_EXEC_WAL_CLEANUP_ON_LOAD_CONF_KEY = true;
 
   public static final String MAX_RETRIES_BEFORE_ROLL_CONF_KEY =
-    "hbase.procedure.store.wal.max.retries.before.roll";
+      "hbase.procedure.store.wal.max.retries.before.roll";
   private static final int DEFAULT_MAX_RETRIES_BEFORE_ROLL = 3;
 
   public static final String WAIT_BEFORE_ROLL_CONF_KEY =
-    "hbase.procedure.store.wal.wait.before.roll";
+      "hbase.procedure.store.wal.wait.before.roll";
   private static final int DEFAULT_WAIT_BEFORE_ROLL = 500;
 
-  public static final String ROLL_RETRIES_CONF_KEY =
-    "hbase.procedure.store.wal.max.roll.retries";
+  public static final String ROLL_RETRIES_CONF_KEY = "hbase.procedure.store.wal.max.roll.retries";
   private static final int DEFAULT_ROLL_RETRIES = 3;
 
   public static final String MAX_SYNC_FAILURE_ROLL_CONF_KEY =
-    "hbase.procedure.store.wal.sync.failure.roll.max";
+      "hbase.procedure.store.wal.sync.failure.roll.max";
   private static final int DEFAULT_MAX_SYNC_FAILURE_ROLL = 3;
 
   public static final String PERIODIC_ROLL_CONF_KEY =
-    "hbase.procedure.store.wal.periodic.roll.msec";
+      "hbase.procedure.store.wal.periodic.roll.msec";
   private static final int DEFAULT_PERIODIC_ROLL = 60 * 60 * 1000; // 1h
 
   public static final String SYNC_WAIT_MSEC_CONF_KEY = "hbase.procedure.store.wal.sync.wait.msec";
@@ -236,8 +233,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   public WALProcedureStore(Configuration conf, LeaseRecovery leaseRecovery) throws IOException {
     this(conf, new Path(CommonFSUtils.getWALRootDir(conf), MASTER_PROCEDURE_LOGDIR),
-      new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_OLDLOGDIR_NAME),
-      leaseRecovery);
+        new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_OLDLOGDIR_NAME),
+        leaseRecovery);
   }
 
   public WALProcedureStore(final Configuration conf, final Path walDir, final Path walArchiveDir,
@@ -247,8 +244,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
     this.walDir = walDir;
     this.walArchiveDir = walArchiveDir;
     this.fs = CommonFSUtils.getWALFileSystem(conf);
-    this.enforceStreamCapability = conf.getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE,
-        true);
+    this.enforceStreamCapability =
+        conf.getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true);
 
     // Create the log directory for the procedure store
     if (!fs.exists(walDir)) {
@@ -289,9 +286,9 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
     // Tunings
     walCountWarnThreshold =
-      conf.getInt(WAL_COUNT_WARN_THRESHOLD_CONF_KEY, DEFAULT_WAL_COUNT_WARN_THRESHOLD);
+        conf.getInt(WAL_COUNT_WARN_THRESHOLD_CONF_KEY, DEFAULT_WAL_COUNT_WARN_THRESHOLD);
     maxRetriesBeforeRoll =
-      conf.getInt(MAX_RETRIES_BEFORE_ROLL_CONF_KEY, DEFAULT_MAX_RETRIES_BEFORE_ROLL);
+        conf.getInt(MAX_RETRIES_BEFORE_ROLL_CONF_KEY, DEFAULT_MAX_RETRIES_BEFORE_ROLL);
     maxSyncFailureRoll = conf.getInt(MAX_SYNC_FAILURE_ROLL_CONF_KEY, DEFAULT_MAX_SYNC_FAILURE_ROLL);
     waitBeforeRoll = conf.getInt(WAIT_BEFORE_ROLL_CONF_KEY, DEFAULT_WAIT_BEFORE_ROLL);
     rollRetries = conf.getInt(ROLL_RETRIES_CONF_KEY, DEFAULT_ROLL_RETRIES);
@@ -301,8 +298,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
     useHsync = conf.getBoolean(USE_HSYNC_CONF_KEY, DEFAULT_USE_HSYNC);
 
     // WebUI
-    syncMetricsQueue = new CircularFifoQueue<>(
-      conf.getInt(STORE_WAL_SYNC_STATS_COUNT, DEFAULT_SYNC_STATS_COUNT));
+    syncMetricsQueue =
+        new CircularFifoQueue<>(conf.getInt(STORE_WAL_SYNC_STATS_COUNT, DEFAULT_SYNC_STATS_COUNT));
 
     // Init sync thread
     syncThread = new Thread("WALProcedureStoreSyncThread") {
@@ -327,8 +324,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
       return;
     }
 
-    LOG.info("Stopping the WAL Procedure Store, isAbort=" + abort +
-      (isSyncAborted() ? " (self aborting)" : ""));
+    LOG.info("Stopping the WAL Procedure Store, isAbort=" + abort
+        + (isSyncAborted() ? " (self aborting)" : ""));
     sendStopSignal();
     if (!isSyncAborted()) {
       try {
@@ -348,7 +345,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     // Close the old logs
     // they should be already closed, this is just in case the load fails
     // and we call start() and then stop()
-    for (ProcedureWALFile log: logs) {
+    for (ProcedureWALFile log : logs) {
       log.close();
     }
     logs.clear();
@@ -403,8 +400,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
       while (isRunning()) {
         // Don't sleep before first attempt
         if (afterFirstAttempt) {
-          LOG.trace("Sleep {} ms after first lease recovery attempt.",
-              waitBeforeRoll);
+          LOG.trace("Sleep {} ms after first lease recovery attempt.", waitBeforeRoll);
           Threads.sleepWithoutInterrupt(waitBeforeRoll);
         } else {
           afterFirstAttempt = true;
@@ -550,8 +546,9 @@ public class WALProcedureStore extends ProcedureStoreBase {
     } catch (IOException e) {
       // We are not able to serialize the procedure.
       // this is a code error, and we are not able to go on.
-      LOG.error(HBaseMarkers.FATAL, "Unable to serialize one of the procedure: proc=" +
-          proc + ", subprocs=" + Arrays.toString(subprocs), e);
+      LOG.error(HBaseMarkers.FATAL, "Unable to serialize one of the procedure: proc=" + proc
+          + ", subprocs=" + Arrays.toString(subprocs),
+        e);
       throw new RuntimeException(e);
     } finally {
       releaseSlot(slot);
@@ -579,8 +576,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
     } catch (IOException e) {
       // We are not able to serialize the procedure.
       // this is a code error, and we are not able to go on.
-      LOG.error(HBaseMarkers.FATAL, "Unable to serialize one of the procedure: " +
-          Arrays.toString(procs), e);
+      LOG.error(HBaseMarkers.FATAL,
+        "Unable to serialize one of the procedure: " + Arrays.toString(procs), e);
       throw new RuntimeException(e);
     } finally {
       releaseSlot(slot);
@@ -704,10 +701,12 @@ public class WALProcedureStore extends ProcedureStoreBase {
     slotsCache.offer(slot);
   }
 
-  private enum PushType { INSERT, UPDATE, DELETE };
+  private enum PushType {
+    INSERT, UPDATE, DELETE
+  };
 
-  private long pushData(final PushType type, final ByteSlot slot,
-      final long procId, final long[] subProcIds) {
+  private long pushData(final PushType type, final ByteSlot slot, final long procId,
+      final long[] subProcIds) {
     if (!isRunning()) {
       throw new RuntimeException("the store must be running before inserting data");
     }
@@ -766,8 +765,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return logId;
   }
 
-  private void updateStoreTracker(final PushType type,
-      final long procId, final long[] subProcIds) {
+  private void updateStoreTracker(final PushType type, final long procId, final long[] subProcIds) {
     switch (type) {
       case INSERT:
         if (subProcIds == null) {
@@ -817,8 +815,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
             if (LOG.isTraceEnabled()) {
               float rollTsSec = getMillisFromLastRoll() / 1000.0f;
               LOG.trace(String.format("Waiting for data. flushed=%s (%s/sec)",
-                        StringUtils.humanSize(totalSynced.get()),
-                        StringUtils.humanSize(totalSynced.get() / rollTsSec)));
+                StringUtils.humanSize(totalSynced.get()),
+                StringUtils.humanSize(totalSynced.get() / rollTsSec)));
             }
 
             waitCond.await(getMillisToNextPeriodicRoll(), TimeUnit.MILLISECONDS);
@@ -841,9 +839,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
           final float syncedPerSec = totalSyncedToStore / rollSec;
           if (LOG.isTraceEnabled() && (syncWaitMs > 10 || slotIndex < syncMaxSlot)) {
             LOG.trace(String.format("Sync wait %s, slotIndex=%s , totalSynced=%s (%s/sec)",
-                      StringUtils.humanTimeDiff(syncWaitMs), slotIndex,
-                      StringUtils.humanSize(totalSyncedToStore),
-                      StringUtils.humanSize(syncedPerSec)));
+              StringUtils.humanTimeDiff(syncWaitMs), slotIndex,
+              StringUtils.humanSize(totalSyncedToStore), StringUtils.humanSize(syncedPerSec)));
           }
 
           // update webui circular buffers (TODO: get rid of allocations)
@@ -931,8 +928,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
     sendPostSyncSignal();
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Sync slots=" + count + '/' + syncMaxSlot +
-                ", flushed=" + StringUtils.humanSize(totalSynced));
+      LOG.trace("Sync slots=" + count + '/' + syncMaxSlot + ", flushed="
+          + StringUtils.humanSize(totalSynced));
     }
     return totalSynced;
   }
@@ -1005,7 +1002,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     lock.lock();
     try {
       removeInactiveLogs();
-    } finally  {
+    } finally {
       lock.unlock();
     }
   }
@@ -1059,11 +1056,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
     assert lock.isHeldByCurrentThread() : "expected to be the lock owner. " + lock.isLocked();
 
     ProcedureWALHeader header = ProcedureWALHeader.newBuilder()
-      .setVersion(ProcedureWALFormat.HEADER_VERSION)
-      .setType(ProcedureWALFormat.LOG_TYPE_STREAM)
-      .setMinProcId(storeTracker.getActiveMinProcId())
-      .setLogId(logId)
-      .build();
+        .setVersion(ProcedureWALFormat.HEADER_VERSION).setType(ProcedureWALFormat.LOG_TYPE_STREAM)
+        .setMinProcId(storeTracker.getActiveMinProcId()).setLogId(logId).build();
 
     FSDataOutputStream newStream = null;
     Path newLogFile = null;
@@ -1083,11 +1077,11 @@ public class WALProcedureStore extends ProcedureStoreBase {
     // to provide.
     final String durability = useHsync ? StreamCapabilities.HSYNC : StreamCapabilities.HFLUSH;
     if (enforceStreamCapability && !newStream.hasCapability(durability)) {
-      throw new IllegalStateException("The procedure WAL relies on the ability to " + durability +
-          " for proper operation during component failures, but the underlying filesystem does " +
-          "not support doing so. Please check the config value of '" + USE_HSYNC_CONF_KEY +
-          "' to set the desired level of robustness and ensure the config value of '" +
-          CommonFSUtils.HBASE_WAL_DIR + "' points to a FileSystem mount that can provide it.");
+      throw new IllegalStateException("The procedure WAL relies on the ability to " + durability
+          + " for proper operation during component failures, but the underlying filesystem does "
+          + "not support doing so. Please check the config value of '" + USE_HSYNC_CONF_KEY
+          + "' to set the desired level of robustness and ensure the config value of '"
+          + CommonFSUtils.HBASE_WAL_DIR + "' points to a FileSystem mount that can provide it.");
     }
     try {
       ProcedureWALFormat.writeHeader(newStream, header);
@@ -1112,8 +1106,9 @@ public class WALProcedureStore extends ProcedureStoreBase {
     if (logs.size() == 2) {
       buildHoldingCleanupTracker();
     } else if (logs.size() > walCountWarnThreshold) {
-      LOG.warn("procedure WALs count={} above the warning threshold {}. check running procedures" +
-        " to see if something is stuck.", logs.size(), walCountWarnThreshold);
+      LOG.warn("procedure WALs count={} above the warning threshold {}. check running procedures"
+          + " to see if something is stuck.",
+        logs.size(), walCountWarnThreshold);
       // This is just like what we have done at RS side when there are too many wal files. For RS,
       // if there are too many wal files, we will find out the wal entries in the oldest file, and
       // tell the upper layer to flush these regions so the wal entries will be useless and then we
@@ -1160,7 +1155,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   // ==========================================================================
-  //  Log Files cleaner helpers
+  // Log Files cleaner helpers
   // ==========================================================================
   private void removeInactiveLogs() throws IOException {
     // We keep track of which procedures are holding the oldest WAL in 'holdingCleanupTracker'.
@@ -1246,7 +1241,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   // ==========================================================================
-  //  FileSystem Log Files helpers
+  // FileSystem Log Files helpers
   // ==========================================================================
   public Path getWALDir() {
     return this.walDir;
@@ -1280,13 +1275,13 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   private static final Comparator<FileStatus> FILE_STATUS_ID_COMPARATOR =
       new Comparator<FileStatus>() {
-    @Override
-    public int compare(FileStatus a, FileStatus b) {
-      final long aId = getLogIdFromName(a.getPath().getName());
-      final long bId = getLogIdFromName(b.getPath().getName());
-      return Long.compare(aId, bId);
-    }
-  };
+        @Override
+        public int compare(FileStatus a, FileStatus b) {
+          final long aId = getLogIdFromName(a.getPath().getName());
+          final long bId = getLogIdFromName(b.getPath().getName());
+          return Long.compare(aId, bId);
+        }
+      };
 
   private FileStatus[] getLogFiles() throws IOException {
     try {
@@ -1392,27 +1387,27 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   /**
-   * Parses a directory of WALs building up ProcedureState.
-   * For testing parse and profiling.
+   * Parses a directory of WALs building up ProcedureState. For testing parse and profiling.
    * @param args Include pointer to directory of WAL files for a store instance to parse & load.
    */
-  public static void main(String [] args) throws IOException {
+  public static void main(String[] args) throws IOException {
     Configuration conf = HBaseConfiguration.create();
     if (args == null || args.length != 1) {
       System.out.println("ERROR: Empty arguments list; pass path to MASTERPROCWALS_DIR.");
       System.out.println("Usage: WALProcedureStore MASTERPROCWALS_DIR");
       System.exit(-1);
     }
-    WALProcedureStore store = new WALProcedureStore(conf, new Path(args[0]), null,
-      new LeaseRecovery() {
-        @Override
-        public void recoverFileLease(FileSystem fs, Path path) throws IOException {
-          // no-op
-        }
-      });
+    WALProcedureStore store =
+        new WALProcedureStore(conf, new Path(args[0]), null, new LeaseRecovery() {
+          @Override
+          public void recoverFileLease(FileSystem fs, Path path) throws IOException {
+            // no-op
+          }
+        });
     try {
       store.start(16);
-      ProcedureExecutor<?> pe = new ProcedureExecutor<>(conf, new Object()/*Pass anything*/, store);
+      ProcedureExecutor<?> pe =
+          new ProcedureExecutor<>(conf, new Object()/* Pass anything */, store);
       pe.init(1, true);
     } finally {
       store.stop(true);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +48,7 @@ public class ClaimReplicationQueueCallable extends BaseRSProcedureCallable {
   @Override
   protected void initParameter(byte[] parameter) throws InvalidProtocolBufferException {
     ClaimReplicationQueueRemoteParameter param =
-      ClaimReplicationQueueRemoteParameter.parseFrom(parameter);
+        ClaimReplicationQueueRemoteParameter.parseFrom(parameter);
     crashedServer = ProtobufUtil.toServerName(param.getCrashedServer());
     queue = param.getQueue();
   }

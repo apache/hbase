@@ -15,13 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.security.access.Permission.Action.READ;
 import static org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclController.SnapshotScannerHDFSAclStorage.hasUserTableHdfsAcl;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -86,7 +86,7 @@ public class TestSnapshotScannerHDFSAclController2 {
 
     TEST_UTIL.startMiniCluster();
     SnapshotScannerHDFSAclController coprocessor = TEST_UTIL.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(SnapshotScannerHDFSAclController.class);
+        .getMasterCoprocessorHost().findCoprocessor(SnapshotScannerHDFSAclController.class);
     TEST_UTIL.waitFor(30000, () -> coprocessor.checkInitialized("check initialized"));
     TEST_UTIL.waitTableAvailable(PermissionStorage.ACL_TABLE_NAME);
 
@@ -158,9 +158,8 @@ public class TestSnapshotScannerHDFSAclController2 {
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, 6);
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot2, 10);
       assertTrue(hasUserTableHdfsAcl(aclTable, grantUserName, table));
-      TestSnapshotScannerHDFSAclController.
-        checkUserAclEntry(FS, helper.getTableRootPaths(table, false),
-          grantUserName, true, true);
+      TestSnapshotScannerHDFSAclController.checkUserAclEntry(FS,
+        helper.getTableRootPaths(table, false), grantUserName, true, true);
 
       // delete
       admin.disableTable(table);
@@ -174,12 +173,10 @@ public class TestSnapshotScannerHDFSAclController2 {
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot2, -1);
       TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot3, -1);
       assertFalse(hasUserTableHdfsAcl(aclTable, grantUserName, table));
-      TestSnapshotScannerHDFSAclController.
-        checkUserAclEntry(FS, helper.getPathHelper().getDataTableDir(table),
-          grantUserName, false, false);
-      TestSnapshotScannerHDFSAclController.
-        checkUserAclEntry(FS, helper.getPathHelper().getArchiveTableDir(table),
-          grantUserName, true, false);
+      TestSnapshotScannerHDFSAclController.checkUserAclEntry(FS,
+        helper.getPathHelper().getDataTableDir(table), grantUserName, false, false);
+      TestSnapshotScannerHDFSAclController.checkUserAclEntry(FS,
+        helper.getPathHelper().getArchiveTableDir(table), grantUserName, true, false);
     }
   }
 }

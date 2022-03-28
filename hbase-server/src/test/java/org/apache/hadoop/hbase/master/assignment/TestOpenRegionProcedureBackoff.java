@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public class TestOpenRegionProcedureBackoff {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOpenRegionProcedureBackoff.class);
+      HBaseClassTestRule.forClass(TestOpenRegionProcedureBackoff.class);
 
   private static volatile boolean FAIL = false;
 
@@ -80,7 +80,7 @@ public class TestOpenRegionProcedureBackoff {
 
     @Override
     protected AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
+        MasterRegion masterRegion) {
       return new AssignmentManagerForTest(master, masterRegion);
     }
   }
@@ -97,8 +97,8 @@ public class TestOpenRegionProcedureBackoff {
     conf.setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
     UTIL.startMiniCluster(1);
     UTIL.waitFor(10000, () -> {
-      try (
-        RegionLocator locator = UTIL.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+      try (RegionLocator locator =
+          UTIL.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
         return locator.getRegionLocation(HConstants.EMPTY_START_ROW) != null;
       } catch (Exception e) {
         return false;
@@ -120,11 +120,11 @@ public class TestOpenRegionProcedureBackoff {
   public void testBackoff() throws IOException, InterruptedException, ExecutionException {
     FAIL = true;
     try (AsyncConnection conn =
-      ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get()) {
+        ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get()) {
       AsyncAdmin admin = conn.getAdminBuilder().setRpcTimeout(5, TimeUnit.MINUTES)
-        .setOperationTimeout(10, TimeUnit.MINUTES).build();
+          .setOperationTimeout(10, TimeUnit.MINUTES).build();
       CompletableFuture<?> future = admin.createTable(TableDescriptorBuilder.newBuilder(NAME)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build());
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build());
       assertBackoffIncrease();
       FAIL = false;
       future.get();

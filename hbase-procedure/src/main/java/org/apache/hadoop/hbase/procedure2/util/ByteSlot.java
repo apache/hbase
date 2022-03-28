@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,20 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2.util;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Similar to the ByteArrayOutputStream, with the exception that we can prepend an header.
- * e.g. you write some data and you want to prepend an header that contains the data len or cksum.
- * <code>
+ * Similar to the ByteArrayOutputStream, with the exception that we can prepend an header. e.g. you
+ * write some data and you want to prepend an header that contains the data len or cksum. <code>
  * ByteSlot slot = new ByteSlot();
  * // write data
  * slot.write(...);
@@ -78,13 +75,13 @@ public class ByteSlot extends OutputStream {
 
   public void writeAt(int offset, int b) {
     head = Math.min(head, offset);
-    buf[offset] = (byte)b;
+    buf[offset] = (byte) b;
   }
 
   @Override
   public void write(int b) {
     ensureCapacity(size + 1);
-    buf[size++] = (byte)b;
+    buf[size++] = (byte) b;
   }
 
   @Override

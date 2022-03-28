@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.util.Threads.sleep;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -55,7 +56,7 @@ public class TestCheckAndMutateWithByteBuff {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCheckAndMutateWithByteBuff.class);
+      HBaseClassTestRule.forClass(TestCheckAndMutateWithByteBuff.class);
 
   @Rule
   public TestName name = new TestName();
@@ -96,10 +97,12 @@ public class TestCheckAndMutateWithByteBuff {
     // Tests for HBASE-26777.
     // As most HBase.getRegion() calls have been factored out from HBase, you'd need to revert
     // both HBASE-26777, and the HBase.get() replacements from HBASE-26036 for this test to fail
-    testCheckAndMutateWithByteBuff(TableName.valueOf(name.getMethodName()), DataBlockEncoding.FAST_DIFF);
+    testCheckAndMutateWithByteBuff(TableName.valueOf(name.getMethodName()),
+      DataBlockEncoding.FAST_DIFF);
   }
 
-  private void testCheckAndMutateWithByteBuff(TableName tableName, DataBlockEncoding dbe) throws Exception {
+  private void testCheckAndMutateWithByteBuff(TableName tableName, DataBlockEncoding dbe)
+      throws Exception {
     Table testTable = createTable(tableName, dbe);
     byte[] checkRow = Bytes.toBytes("checkRow");
     byte[] checkQualifier = Bytes.toBytes("cq");
@@ -110,20 +113,14 @@ public class TestCheckAndMutateWithByteBuff {
     testTable.put(put);
     admin.flush(testTable.getName());
 
-    assertTrue(testTable.checkAndMutate(checkRow, CF).qualifier(checkQualifier).
-      ifEquals(checkValue)
-      .thenPut(new Put(checkRow).addColumn(CF, Bytes.toBytes("q1"),
-        Bytes.toBytes("testValue"))));
+    assertTrue(testTable.checkAndMutate(checkRow, CF).qualifier(checkQualifier).ifEquals(checkValue)
+        .thenPut(new Put(checkRow).addColumn(CF, Bytes.toBytes("q1"), Bytes.toBytes("testValue"))));
   }
 
-  private Table createTable(TableName tableName, DataBlockEncoding dbe)
-    throws IOException {
-    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF)
-        .setBlocksize(100)
-        .setDataBlockEncoding(dbe)
-        .build())
-      .build();
+  private Table createTable(TableName tableName, DataBlockEncoding dbe) throws IOException {
+    TableDescriptor td =
+        TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
+            .newBuilder(CF).setBlocksize(100).setDataBlockEncoding(dbe).build()).build();
     return TEST_UTIL.createTable(td, null);
   }
 
@@ -132,12 +129,12 @@ public class TestCheckAndMutateWithByteBuff {
    */
   public static class TestCheckAndMutateRegion extends HRegion {
     public TestCheckAndMutateRegion(Path tableDir, WAL log, FileSystem fs, Configuration confParam,
-      RegionInfo info, TableDescriptor htd, RegionServerServices rsServices) {
+        RegionInfo info, TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);
     }
 
     public TestCheckAndMutateRegion(HRegionFileSystem fs, WAL wal, Configuration confParam,
-      TableDescriptor htd, RegionServerServices rsServices) {
+        TableDescriptor htd, RegionServerServices rsServices) {
       super(fs, wal, confParam, htd, rsServices);
     }
 

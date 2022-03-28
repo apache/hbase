@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,18 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.metrics;
 
 import java.util.Map;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * A set of named metrics.
- *
  * @see MetricRegistry#registerAll(MetricSet)
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
@@ -34,7 +31,6 @@ import org.apache.yetus.audience.InterfaceStability;
 public interface MetricSet extends Metric {
   /**
    * A map of metric names to metrics.
-   *
    * @return the metrics
    */
   Map<String, Metric> getMetrics();

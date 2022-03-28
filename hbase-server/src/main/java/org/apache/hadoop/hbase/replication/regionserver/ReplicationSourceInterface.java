@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -105,21 +104,18 @@ public interface ReplicationSourceInterface {
 
   /**
    * Get the queue id that the source is replicating to
-   *
    * @return queue id
    */
   String getQueueId();
 
   /**
    * Get the id that the source is replicating to.
-   *
    * @return peer id
    */
   String getPeerId();
 
   /**
-   * Get a string representation of the current statistics
-   * for this source
+   * Get a string representation of the current statistics for this source
    * @return printable stats
    */
   String getStats();
@@ -195,10 +191,10 @@ public interface ReplicationSourceInterface {
   ReplicationQueueStorage getReplicationQueueStorage();
 
   /**
-   * Log the current position to storage. Also clean old logs from the replication queue.
-   * Use to bypass the default call to
-   * {@link ReplicationSourceManager#logPositionAndCleanOldLogs(ReplicationSourceInterface,
-   * WALEntryBatch)} whem implementation does not need to persist state to backing storage.
+   * Log the current position to storage. Also clean old logs from the replication queue. Use to
+   * bypass the default call to
+   * {@link ReplicationSourceManager#logPositionAndCleanOldLogs(ReplicationSourceInterface, WALEntryBatch)}
+   * whem implementation does not need to persist state to backing storage.
    * @param entryBatch the wal entry batch we just shipped
    * @return The instance of queueStorage used by this ReplicationSource.
    */

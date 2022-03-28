@@ -1,8 +1,6 @@
-<?xml version="1.0"?>
-<project xmlns="https://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <!--
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <!--
       /**
        * Licensed to the Apache Software Foundation (ASF) under one
        * or more contributor license agreements.  See the NOTICE file
@@ -23,8 +21,8 @@
       -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-build-configuration</artifactId>
     <version>2.6.0-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
@@ -32,8 +30,8 @@
   <name>Apache HBase - Testing Util</name>
   <description>HBase Testing Utilities.</description>
   <dependencies>
-        <!-- Intra-project dependencies -->
-        <!-- we do not want to introduce this to downstream users so still set the scope to test -->
+    <!-- Intra-project dependencies -->
+    <!-- we do not want to introduce this to downstream users so still set the scope to test -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-logging</artifactId>
@@ -163,17 +161,17 @@
   </dependencies>
 
   <profiles>
-        <!-- Profiles for building against different hadoop versions -->
-        <!-- There are a lot of common dependencies used here, should investigate
+    <!-- Profiles for building against different hadoop versions -->
+    <!-- There are a lot of common dependencies used here, should investigate
         if we can combine these profiles somehow -->
 
-        <!-- profile for building against Hadoop 2.x. This is the default -->
+    <!-- profile for building against Hadoop 2.x. This is the default -->
     <profile>
       <id>hadoop-2.0</id>
       <activation>
         <property>
-                    <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-                    <!--h2-->
+          <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+          <!--h2-->
           <name>!hadoop.profile</name>
         </property>
       </activation>
@@ -267,7 +265,7 @@
         </dependency>
       </dependencies>
     </profile>
-        <!--
+    <!--
           profile for building against Hadoop 3.0.x. Activate using:
            mvn -Dhadoop.profile=3.0
         -->

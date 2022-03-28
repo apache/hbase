@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.io.IOException;
@@ -25,7 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,6 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
@@ -46,11 +45,9 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
 /**
  * Tool to test performance of different {@link org.apache.hadoop.hbase.master.LoadBalancer}
- * implementations.
- * Example command:
- * $ bin/hbase org.apache.hadoop.hbase.master.balancer.LoadBalancerPerformanceEvaluation
- *   -regions 1000 -servers 100
- *   -load_balancer org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer
+ * implementations. Example command: $ bin/hbase
+ * org.apache.hadoop.hbase.master.balancer.LoadBalancerPerformanceEvaluation -regions 1000 -servers
+ * 100 -load_balancer org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
@@ -87,7 +84,8 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
 
   // Non-default configurations.
   private void setupConf() {
-    conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, loadBalancerClazz, LoadBalancer.class);
+    conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, loadBalancerClazz,
+      LoadBalancer.class);
     loadBalancer = LoadBalancerFactory.getLoadBalancer(conf);
   }
 
@@ -102,12 +100,8 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
 
       Bytes.putInt(start, 0, i);
       Bytes.putInt(end, 0, i + 1);
-      RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
-        .setStartKey(start)
-        .setEndKey(end)
-        .setSplit(false)
-        .setRegionId(i)
-        .build();
+      RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).setStartKey(start).setEndKey(end)
+          .setSplit(false).setRegionId(i).build();
       regions.add(hri);
       regionServerMap.put(hri, null);
     }

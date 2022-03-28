@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -131,7 +131,8 @@ public class TestSecureWAL {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(row, family, Bytes.toBytes(i), value));
       wal.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
-        EnvironmentEdgeManager.currentTime(), mvcc, scopes), kvs);
+          EnvironmentEdgeManager.currentTime(), mvcc, scopes),
+        kvs);
     }
     wal.sync();
     final Path walPath = AbstractFSWALProvider.getCurrentFileName(wal);
@@ -140,7 +141,7 @@ public class TestSecureWAL {
     // Insure edits are not plaintext
     long length = fs.getFileStatus(walPath).getLen();
     FSDataInputStream in = fs.open(walPath);
-    byte[] fileData = new byte[(int)length];
+    byte[] fileData = new byte[(int) length];
     IOUtils.readFully(in, fileData);
     in.close();
     assertFalse("Cells appear to be plaintext", Bytes.contains(fileData, value));
@@ -153,7 +154,7 @@ public class TestSecureWAL {
       count++;
       List<Cell> cells = entry.getEdit().getCells();
       assertTrue("Should be one KV per WALEdit", cells.size() == 1);
-      for (Cell cell: cells) {
+      for (Cell cell : cells) {
         assertTrue("Incorrect row", Bytes.equals(cell.getRowArray(), cell.getRowOffset(),
           cell.getRowLength(), row, 0, row.length));
         assertTrue("Incorrect family", Bytes.equals(cell.getFamilyArray(), cell.getFamilyOffset(),

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -62,9 +61,9 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
       walSplitter.getFileBeingSplit().getPath().getName(), walSplitter.getTmpDirName(),
       walSplitter.conf);
     if (walSplitter.walFS.exists(regionEditsPath)) {
-      LOG.warn("Found old edits file. It could be the " +
-        "result of a previous failed split attempt. Deleting " + regionEditsPath + ", length=" +
-        walSplitter.walFS.getFileStatus(regionEditsPath).getLen());
+      LOG.warn("Found old edits file. It could be the "
+          + "result of a previous failed split attempt. Deleting " + regionEditsPath + ", length="
+          + walSplitter.walFS.getFileStatus(regionEditsPath).getLen());
       if (!walSplitter.walFS.delete(regionEditsPath, false)) {
         LOG.warn("Failed delete of old {}", regionEditsPath);
       }
@@ -88,8 +87,8 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
       return null;
     }
     final String msg = "Closed recovered edits writer path=" + editsWriter.path + " (wrote "
-      + editsWriter.editsWritten + " edits, skipped " + editsWriter.editsSkipped + " edits in " + (
-      editsWriter.nanosSpent / 1000 / 1000) + " ms)";
+        + editsWriter.editsWritten + " edits, skipped " + editsWriter.editsSkipped + " edits in "
+        + (editsWriter.nanosSpent / 1000 / 1000) + " ms)";
     LOG.info(msg);
     updateStatusWithMsg(msg);
     if (editsWriter.editsWritten == 0) {
@@ -116,7 +115,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
       if (walSplitter.walFS.exists(editsWriter.path)) {
         if (!walSplitter.walFS.rename(editsWriter.path, dst)) {
           final String errorMsg =
-            "Failed renaming recovered edits " + editsWriter.path + " to " + dst;
+              "Failed renaming recovered edits " + editsWriter.path + " to " + dst;
           updateStatusWithMsg(errorMsg);
           throw new IOException(errorMsg);
         }
@@ -125,8 +124,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
         updateStatusWithMsg(renameEditMsg);
       }
     } catch (IOException ioe) {
-      final String errorMsg = "Could not rename recovered edits " + editsWriter.path
-        + " to " + dst;
+      final String errorMsg = "Could not rename recovered edits " + editsWriter.path + " to " + dst;
       LOG.error(errorMsg, ioe);
       updateStatusWithMsg(errorMsg);
       thrown.add(ioe);
@@ -161,7 +159,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
 
   // delete the one with fewer wal entries
   private void deleteOneWithFewerEntries(RecoveredEditsWriter editsWriter, Path dst)
-    throws IOException {
+      throws IOException {
     long dstMinLogSeqNum = -1L;
     try (WAL.Reader reader = walSplitter.getWalFactory().createReader(walSplitter.walFS, dst)) {
       WAL.Entry entry = reader.next();
@@ -173,17 +171,17 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
         e);
     }
     if (editsWriter.minLogSeqNum < dstMinLogSeqNum) {
-      LOG.warn("Found existing old edits file. It could be the result of a previous failed" +
-        " split attempt or we have duplicated wal entries. Deleting " + dst + ", length=" +
-        walSplitter.walFS.getFileStatus(dst).getLen());
+      LOG.warn("Found existing old edits file. It could be the result of a previous failed"
+          + " split attempt or we have duplicated wal entries. Deleting " + dst + ", length="
+          + walSplitter.walFS.getFileStatus(dst).getLen());
       if (!walSplitter.walFS.delete(dst, false)) {
         LOG.warn("Failed deleting of old {}", dst);
         throw new IOException("Failed deleting of old " + dst);
       }
     } else {
       LOG.warn(
-        "Found existing old edits file and we have less entries. Deleting " + editsWriter.path +
-          ", length=" + walSplitter.walFS.getFileStatus(editsWriter.path).getLen());
+        "Found existing old edits file and we have less entries. Deleting " + editsWriter.path
+            + ", length=" + walSplitter.walFS.getFileStatus(editsWriter.path).getLen());
       if (!walSplitter.walFS.delete(editsWriter.path, false)) {
         LOG.warn("Failed deleting of {}", editsWriter.path);
         throw new IOException("Failed deleting of " + editsWriter.path);
@@ -209,7 +207,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
     final long minLogSeqNum;
 
     RecoveredEditsWriter(byte[] encodedRegionName, Path path, WALProvider.Writer writer,
-      long minLogSeqNum) {
+        long minLogSeqNum) {
       this.encodedRegionName = encodedRegionName;
       this.path = path;
       this.writer = writer;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,10 +44,10 @@ public final class RegionReplicaTestHelper {
 
   // waits for all replicas to have region location
   static void waitUntilAllMetaReplicasAreReady(HBaseTestingUtility util,
-    ConnectionRegistry registry) throws IOException {
+      ConnectionRegistry registry) throws IOException {
     Configuration conf = util.getConfiguration();
     int regionReplicaCount =
-      util.getAdmin().getDescriptor(TableName.META_TABLE_NAME).getRegionReplication();
+        util.getAdmin().getDescriptor(TableName.META_TABLE_NAME).getRegionReplication();
     Waiter.waitFor(conf, conf.getLong("hbase.client.sync.wait.timeout.msec", 60000), 200, true,
       new ExplainingPredicate<IOException>() {
         @Override
@@ -84,9 +84,9 @@ public final class RegionReplicaTestHelper {
   static Optional<ServerName> getRSCarryingReplica(HBaseTestingUtility util, TableName tableName,
       int replicaId) {
     return util.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
-      .filter(rs -> rs.getRegions(tableName).stream()
-        .anyMatch(r -> r.getRegionInfo().getReplicaId() == replicaId))
-      .findAny().map(rs -> rs.getServerName());
+        .filter(rs -> rs.getRegions(tableName).stream()
+            .anyMatch(r -> r.getRegionInfo().getReplicaId() == replicaId))
+        .findAny().map(rs -> rs.getServerName());
   }
 
   /**
@@ -99,8 +99,8 @@ public final class RegionReplicaTestHelper {
     TableName tableName = regionInfo.getTable();
     int replicaId = regionInfo.getReplicaId();
     ServerName newServerName = util.getHBaseCluster().getRegionServerThreads().stream()
-      .map(t -> t.getRegionServer().getServerName()).filter(sn -> !sn.equals(serverName)).findAny()
-      .get();
+        .map(t -> t.getRegionServer().getServerName()).filter(sn -> !sn.equals(serverName))
+        .findAny().get();
     util.getAdmin().move(regionInfo.getEncodedNameAsBytes(), newServerName);
     util.waitFor(30000, new ExplainingPredicate<Exception>() {
 
@@ -128,7 +128,7 @@ public final class RegionReplicaTestHelper {
   static void testLocator(HBaseTestingUtility util, TableName tableName, Locator locator)
       throws Exception {
     RegionLocations locs =
-      locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID, false);
+        locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID, false);
     assertEquals(3, locs.size());
     for (int i = 0; i < 3; i++) {
       HRegionLocation loc = locs.getRegionLocation(i);
@@ -140,14 +140,15 @@ public final class RegionReplicaTestHelper {
     // The cached location should not be changed
     assertEquals(locs.getDefaultRegionLocation().getServerName(),
       locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID, false)
-        .getDefaultRegionLocation().getServerName());
+          .getDefaultRegionLocation().getServerName());
     // should get the new location when reload = true
     // when meta replica LoadBalance mode is enabled, it may delay a bit.
     util.waitFor(3000, new ExplainingPredicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        ServerName sn = locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID,
-          true).getDefaultRegionLocation().getServerName();
+        ServerName sn =
+            locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID, true)
+                .getDefaultRegionLocation().getServerName();
         return newServerName.equals(sn);
       }
 
@@ -159,11 +160,11 @@ public final class RegionReplicaTestHelper {
 
     assertEquals(newServerName,
       locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID, true)
-        .getDefaultRegionLocation().getServerName());
+          .getDefaultRegionLocation().getServerName());
     // the cached location should be replaced
     assertEquals(newServerName,
       locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID, false)
-        .getDefaultRegionLocation().getServerName());
+          .getDefaultRegionLocation().getServerName());
 
     ServerName newServerName1 = moveRegion(util, locs.getRegionLocation(1));
     ServerName newServerName2 = moveRegion(util, locs.getRegionLocation(2));
@@ -186,13 +187,13 @@ public final class RegionReplicaTestHelper {
   }
 
   public static void assertReplicaDistributed(HBaseTestingUtility util, Table t)
-    throws IOException {
+      throws IOException {
     if (t.getDescriptor().getRegionReplication() <= 1) {
       return;
     }
     List<RegionInfo> regionInfos = new ArrayList<>();
     for (JVMClusterUtil.RegionServerThread rs : util.getMiniHBaseCluster()
-      .getRegionServerThreads()) {
+        .getRegionServerThreads()) {
       regionInfos.clear();
       for (Region r : rs.getRegionServer().getRegions(t.getName())) {
         if (contains(regionInfos, r.getRegionInfo())) {

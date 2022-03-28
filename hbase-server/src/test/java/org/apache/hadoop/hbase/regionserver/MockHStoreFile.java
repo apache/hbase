@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.TreeMap;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
@@ -52,8 +51,8 @@ public class MockHStoreFile extends HStoreFile {
   long modificationTime;
   boolean compactedAway;
 
-  MockHStoreFile(HBaseTestingUtility testUtil, Path testPath,
-      long length, long ageInDisk, boolean isRef, long sequenceid) throws IOException {
+  MockHStoreFile(HBaseTestingUtility testUtil, Path testPath, long length, long ageInDisk,
+      boolean isRef, long sequenceid) throws IOException {
     super(testUtil.getTestFileSystem(), testPath, testUtil.getConfiguration(),
         new CacheConfig(testUtil.getConfiguration()), BloomType.NONE, true);
     this.length = length;
@@ -62,8 +61,9 @@ public class MockHStoreFile extends HStoreFile {
     this.sequenceid = sequenceid;
     this.isMajor = false;
     hdfsBlocksDistribution = new HDFSBlocksDistribution();
-    hdfsBlocksDistribution.addHostsAndBlockWeight(new String[]
-      { DNS.getHostname(testUtil.getConfiguration(), DNS.ServerType.REGIONSERVER) }, 1);
+    hdfsBlocksDistribution.addHostsAndBlockWeight(
+      new String[] { DNS.getHostname(testUtil.getConfiguration(), DNS.ServerType.REGIONSERVER) },
+      1);
     modificationTime = EnvironmentEdgeManager.currentTime();
   }
 
@@ -181,7 +181,7 @@ public class MockHStoreFile extends HStoreFile {
 
       @Override
       public long getMaxTimestamp() {
-        return timeRange == null? Long.MAX_VALUE: timeRangeTracker.getMax();
+        return timeRange == null ? Long.MAX_VALUE : timeRangeTracker.getMax();
       }
 
       @Override
@@ -197,9 +197,9 @@ public class MockHStoreFile extends HStoreFile {
       @Override
       public Optional<Cell> getLastKey() {
         if (splitPoint != null) {
-          return Optional.of(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-              .setType(Cell.Type.Put)
-              .setRow(Arrays.copyOf(splitPoint, splitPoint.length + 1)).build());
+          return Optional
+              .of(CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setType(Cell.Type.Put)
+                  .setRow(Arrays.copyOf(splitPoint, splitPoint.length + 1)).build());
         } else {
           return Optional.empty();
         }
@@ -219,8 +219,7 @@ public class MockHStoreFile extends HStoreFile {
       public Optional<Cell> getFirstKey() {
         if (splitPoint != null) {
           return Optional.of(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-              .setType(Cell.Type.Put).setRow(splitPoint, 0, splitPoint.length - 1)
-              .build());
+              .setType(Cell.Type.Put).setRow(splitPoint, 0, splitPoint.length - 1).build());
         } else {
           return Optional.empty();
         }

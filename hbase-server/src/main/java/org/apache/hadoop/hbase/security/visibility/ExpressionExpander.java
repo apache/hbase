@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,12 +18,11 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.security.visibility.expression.ExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.LeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.NonLeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.Operator;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class ExpressionExpander {
@@ -117,10 +116,10 @@ public class ExpressionExpander {
             newNode = leftChildNLE;
           } else if (leftChildNLE.getOperator() == Operator.AND
               && rightChildNLE.getOperator() == Operator.OR) {
-            // (a & b) | (c | d)
-            rightChildNLE.addChildExp(leftChildNLE);
-            newNode = rightChildNLE;
-          }
+                // (a & b) | (c | d)
+                rightChildNLE.addChildExp(leftChildNLE);
+                newNode = rightChildNLE;
+              }
           // (a & b) | (c & d)
           // This case no need to do any thing
         } else {
@@ -136,25 +135,25 @@ public class ExpressionExpander {
             }
           } else if (leftChildNLE.getOperator() == Operator.AND
               && rightChildNLE.getOperator() == Operator.OR) {
-            // (a & b) & (c | d) => (a & b & c) | (a & b & d)
-            newNode = new NonLeafExpressionNode(Operator.OR);
-            for (ExpressionNode exp : rightChildNLE.getChildExps()) {
-              NonLeafExpressionNode leftChildNLEClone = leftChildNLE.deepClone();
-              leftChildNLEClone.addChildExp(exp);
-              newNode.addChildExp(leftChildNLEClone);
-            }
-          } else {
-            // (a | b) & (c | d) => (a & c) | (a & d) | (b & c) | (b & d)
-            newNode = new NonLeafExpressionNode(Operator.OR);
-            for (ExpressionNode leftExp : leftChildNLE.getChildExps()) {
-              for (ExpressionNode rightExp : rightChildNLE.getChildExps()) {
-                NonLeafExpressionNode newChild = new NonLeafExpressionNode(Operator.AND);
-                newChild.addChildExp(leftExp.deepClone());
-                newChild.addChildExp(rightExp.deepClone());
-                newNode.addChildExp(newChild);
+                // (a & b) & (c | d) => (a & b & c) | (a & b & d)
+                newNode = new NonLeafExpressionNode(Operator.OR);
+                for (ExpressionNode exp : rightChildNLE.getChildExps()) {
+                  NonLeafExpressionNode leftChildNLEClone = leftChildNLE.deepClone();
+                  leftChildNLEClone.addChildExp(exp);
+                  newNode.addChildExp(leftChildNLEClone);
+                }
+              } else {
+                // (a | b) & (c | d) => (a & c) | (a & d) | (b & c) | (b & d)
+                newNode = new NonLeafExpressionNode(Operator.OR);
+                for (ExpressionNode leftExp : leftChildNLE.getChildExps()) {
+                  for (ExpressionNode rightExp : rightChildNLE.getChildExps()) {
+                    NonLeafExpressionNode newChild = new NonLeafExpressionNode(Operator.AND);
+                    newChild.addChildExp(leftExp.deepClone());
+                    newChild.addChildExp(rightExp.deepClone());
+                    newNode.addChildExp(newChild);
+                  }
+                }
               }
-            }
-          }
         }
       }
     }

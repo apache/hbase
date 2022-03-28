@@ -29,9 +29,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- *  Test for MetricsMasterSourceImpl
+ * Test for MetricsMasterSourceImpl
  */
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsMasterSourceImpl {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -39,11 +39,11 @@ public class TestMetricsMasterSourceImpl {
 
   @Test
   public void testGetInstance() {
-    MetricsMasterSourceFactory metricsMasterSourceFactory = CompatibilitySingletonFactory
-        .getInstance(MetricsMasterSourceFactory.class);
+    MetricsMasterSourceFactory metricsMasterSourceFactory =
+        CompatibilitySingletonFactory.getInstance(MetricsMasterSourceFactory.class);
     MetricsMasterSource masterSource = metricsMasterSourceFactory.create(null);
     assertTrue(masterSource instanceof MetricsMasterSourceImpl);
-    assertSame(metricsMasterSourceFactory, CompatibilitySingletonFactory.getInstance(
-            MetricsMasterSourceFactory.class));
+    assertSame(metricsMasterSourceFactory,
+      CompatibilitySingletonFactory.getInstance(MetricsMasterSourceFactory.class));
   }
 }

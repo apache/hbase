@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,9 +21,8 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Thrown when server finds fatal issue w/ connection setup: e.g. bad rpc version
- * or unsupported auth method.
- * Closes connection after throwing this exception with message on why the failure.
+ * Thrown when server finds fatal issue w/ connection setup: e.g. bad rpc version or unsupported
+ * auth method. Closes connection after throwing this exception with message on why the failure.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
@@ -176,8 +175,8 @@ class SimpleRpcServerResponder extends Thread {
         if (connection == null) {
           throw new IllegalStateException("Coding error: SelectionKey key without attachment.");
         }
-        if (connection.lastSentTime > 0 &&
-            now > connection.lastSentTime + this.simpleRpcServer.purgeTimeout) {
+        if (connection.lastSentTime > 0
+            && now > connection.lastSentTime + this.simpleRpcServer.purgeTimeout) {
           conWithOldCalls.add(connection);
         }
       }
@@ -227,8 +226,7 @@ class SimpleRpcServerResponder extends Thread {
     BufferChain buf = resp.getResponse();
     try {
       // Send as much data as we can in the non-blocking fashion
-      long numBytes =
-          this.simpleRpcServer.channelWrite(conn.channel, buf);
+      long numBytes = this.simpleRpcServer.channelWrite(conn.channel, buf);
       if (numBytes < 0) {
         throw new HBaseIOException("Error writing on the socket " + conn);
       }

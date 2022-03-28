@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,11 +33,11 @@ public class TestFSHLogDurability extends WALDurabilityTestBase<CustomFSHLog> {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFSHLogDurability.class);
+      HBaseClassTestRule.forClass(TestFSHLogDurability.class);
 
   @Override
   protected CustomFSHLog getWAL(FileSystem fs, Path root, String logDir, Configuration conf)
-    throws IOException {
+      throws IOException {
     CustomFSHLog wal = new CustomFSHLog(fs, root, logDir, conf);
     wal.init();
     return wal;
@@ -65,7 +65,7 @@ class CustomFSHLog extends FSHLog {
   private Boolean writerSyncFlag;
 
   public CustomFSHLog(FileSystem fs, Path root, String logDir, Configuration conf)
-    throws IOException {
+      throws IOException {
     super(fs, root, logDir, conf);
   }
 

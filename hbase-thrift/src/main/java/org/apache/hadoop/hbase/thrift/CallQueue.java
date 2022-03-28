@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.thrift;
 
 import java.util.ArrayList;
@@ -24,14 +23,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A BlockingQueue reports waiting time in queue and queue length to
- * ThriftMetrics.
+ * A BlockingQueue reports waiting time in queue and queue length to ThriftMetrics.
  */
 @InterfaceAudience.Private
 public class CallQueue implements BlockingQueue<Runnable> {
@@ -40,8 +37,7 @@ public class CallQueue implements BlockingQueue<Runnable> {
   private final BlockingQueue<Call> underlyingQueue;
   private final ThriftMetrics metrics;
 
-  public CallQueue(BlockingQueue<Call> underlyingQueue,
-                   ThriftMetrics metrics) {
+  public CallQueue(BlockingQueue<Call> underlyingQueue, ThriftMetrics metrics) {
     this.underlyingQueue = underlyingQueue;
     this.metrics = metrics;
   }
@@ -71,7 +67,7 @@ public class CallQueue implements BlockingQueue<Runnable> {
     @Override
     public boolean equals(Object other) {
       if (other instanceof Call) {
-        Call otherCall = (Call)(other);
+        Call otherCall = (Call) (other);
         return this.underlyingRunnable.equals(otherCall.underlyingRunnable);
       } else if (other instanceof Runnable) {
         return this.underlyingRunnable.equals(other);
@@ -127,11 +123,9 @@ public class CallQueue implements BlockingQueue<Runnable> {
   }
 
   @Override
-  public int drainTo(Collection<? super Runnable> destination,
-                     int maxElements) {
+  public int drainTo(Collection<? super Runnable> destination, int maxElements) {
     if (destination == this) {
-      throw new IllegalArgumentException(
-          "A BlockingQueue cannot drain to itself.");
+      throw new IllegalArgumentException("A BlockingQueue cannot drain to itself.");
     }
     List<Call> drained = new ArrayList<>();
     underlyingQueue.drainTo(drained, maxElements);
@@ -144,17 +138,16 @@ public class CallQueue implements BlockingQueue<Runnable> {
     return sz;
   }
 
-
   @Override
   public boolean offer(Runnable element) {
     return underlyingQueue.offer(new Call(element));
   }
 
   @Override
-  public boolean offer(Runnable element, long timeout, TimeUnit unit)
-      throws InterruptedException {
+  public boolean offer(Runnable element, long timeout, TimeUnit unit) throws InterruptedException {
     return underlyingQueue.offer(new Call(element), timeout, unit);
   }
+
   @Override
   public void put(Runnable element) throws InterruptedException {
     underlyingQueue.put(new Call(element));
@@ -203,6 +196,7 @@ public class CallQueue implements BlockingQueue<Runnable> {
   public Iterator<Runnable> iterator() {
     return new Iterator<Runnable>() {
       final Iterator<Call> underlyingIterator = underlyingQueue.iterator();
+
       @Override
       public Runnable next() {
         return underlyingIterator.next();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -41,15 +40,15 @@ public class HBaseConfiguration extends Configuration {
   }
 
   /**
-   * Instantiating HBaseConfiguration() is deprecated. Please use
-   * HBaseConfiguration#create() to construct a plain Configuration
+   * Instantiating HBaseConfiguration() is deprecated. Please use HBaseConfiguration#create() to
+   * construct a plain Configuration
    * @deprecated since 0.90.0. Please use {@link #create()} instead.
    * @see #create()
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2036">HBASE-2036</a>
    */
   @Deprecated
   public HBaseConfiguration() {
-    //TODO:replace with private constructor, HBaseConfiguration should not extend Configuration
+    // TODO:replace with private constructor, HBaseConfiguration should not extend Configuration
     super();
     addHbaseResources(this);
     LOG.warn("instantiating HBaseConfiguration() is deprecated. Please use"
@@ -57,15 +56,15 @@ public class HBaseConfiguration extends Configuration {
   }
 
   /**
-   * Instantiating HBaseConfiguration() is deprecated. Please use
-   * HBaseConfiguration#create(conf) to construct a plain Configuration
+   * Instantiating HBaseConfiguration() is deprecated. Please use HBaseConfiguration#create(conf) to
+   * construct a plain Configuration
    * @deprecated since 0.90.0. Please use {@link #create(Configuration)} instead.
    * @see #create(Configuration)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2036">HBASE-2036</a>
    */
   @Deprecated
   public HBaseConfiguration(final Configuration c) {
-    //TODO:replace with private constructor
+    // TODO:replace with private constructor
     this();
     merge(this, c);
   }
@@ -76,47 +75,41 @@ public class HBaseConfiguration extends Configuration {
     String thisVersion = VersionInfo.getVersion();
     if (!thisVersion.equals(defaultsVersion)) {
       throw new RuntimeException(
-        "hbase-default.xml file seems to be for an older version of HBase (" +
-        defaultsVersion + "), this version is " + thisVersion);
+          "hbase-default.xml file seems to be for an older version of HBase (" + defaultsVersion
+              + "), this version is " + thisVersion);
     }
   }
 
   /**
    * The hbase.ipc.server.reservoir.initial.max and hbase.ipc.server.reservoir.initial.buffer.size
    * were introduced in HBase2.0.0, while in HBase3.0.0 the two config keys will be replaced by
-   * hbase.server.allocator.max.buffer.count and hbase.server.allocator.buffer.size.
-   * Also the hbase.ipc.server.reservoir.enabled will be replaced by
-   * hbase.server.allocator.pool.enabled. Keep the three old config keys here for HBase2.x
-   * compatibility.
-   * <br>
-   * HBASE-24667: This config hbase.regionserver.hostname.disable.master.reversedns will be
-   * replaced by hbase.unsafe.regionserver.hostname.disable.master.reversedns. Keep the old config
-   * keys here for backward compatibility.
-   * <br>
+   * hbase.server.allocator.max.buffer.count and hbase.server.allocator.buffer.size. Also the
+   * hbase.ipc.server.reservoir.enabled will be replaced by hbase.server.allocator.pool.enabled.
+   * Keep the three old config keys here for HBase2.x compatibility. <br>
+   * HBASE-24667: This config hbase.regionserver.hostname.disable.master.reversedns will be replaced
+   * by hbase.unsafe.regionserver.hostname.disable.master.reversedns. Keep the old config keys here
+   * for backward compatibility. <br>
    * Note: Before Hadoop-3.3, we must call the addDeprecations method before creating the
-   * Configuration object to work correctly. After this bug is fixed in hadoop-3.3, there will be
-   * no order problem.
+   * Configuration object to work correctly. After this bug is fixed in hadoop-3.3, there will be no
+   * order problem.
    * @see <a href="https://issues.apache.org/jira/browse/HADOOP-15708">HADOOP-15708</a>
    */
   private static void addDeprecatedKeys() {
-    Configuration.addDeprecations(new DeprecationDelta[]{
-      new DeprecationDelta("hbase.regionserver.hostname", "hbase.unsafe.regionserver.hostname"),
-      new DeprecationDelta("hbase.regionserver.hostname.disable.master.reversedns",
-        "hbase.unsafe.regionserver.hostname.disable.master.reversedns"),
-      new DeprecationDelta("hbase.offheapcache.minblocksize",
-        "hbase.blockcache.minblocksize"),
-      new DeprecationDelta("hbase.ipc.server.reservoir.enabled",
-        "hbase.server.allocator.pool.enabled"),
-      new DeprecationDelta("hbase.ipc.server.reservoir.initial.max",
-        "hbase.server.allocator.max.buffer.count"),
-      new DeprecationDelta("hbase.ipc.server.reservoir.initial.buffer.size",
-        "hbase.server.allocator.buffer.size"),
-      new DeprecationDelta("hlog.bulk.output", "wal.bulk.output"),
-      new DeprecationDelta("hlog.input.tables", "wal.input.tables"),
-      new DeprecationDelta("hlog.input.tablesmap", "wal.input.tablesmap"),
-      new DeprecationDelta("hbase.normalizer.min.region.count",
-        "hbase.normalizer.merge.min.region.count")
-    });
+    Configuration.addDeprecations(new DeprecationDelta[] {
+        new DeprecationDelta("hbase.regionserver.hostname", "hbase.unsafe.regionserver.hostname"),
+        new DeprecationDelta("hbase.regionserver.hostname.disable.master.reversedns",
+            "hbase.unsafe.regionserver.hostname.disable.master.reversedns"),
+        new DeprecationDelta("hbase.offheapcache.minblocksize", "hbase.blockcache.minblocksize"),
+        new DeprecationDelta("hbase.ipc.server.reservoir.enabled",
+            "hbase.server.allocator.pool.enabled"),
+        new DeprecationDelta("hbase.ipc.server.reservoir.initial.max",
+            "hbase.server.allocator.max.buffer.count"),
+        new DeprecationDelta("hbase.ipc.server.reservoir.initial.buffer.size",
+            "hbase.server.allocator.buffer.size"),
+        new DeprecationDelta("hlog.bulk.output", "wal.bulk.output"),
+        new DeprecationDelta("hlog.input.tables", "wal.input.tables"),
+        new DeprecationDelta("hlog.input.tablesmap", "wal.input.tablesmap"), new DeprecationDelta(
+            "hbase.normalizer.min.region.count", "hbase.normalizer.merge.min.region.count") });
   }
 
   public static Configuration addHbaseResources(Configuration conf) {
@@ -142,8 +135,7 @@ public class HBaseConfiguration extends Configuration {
 
   /**
    * @param that Configuration to clone.
-   * @return a Configuration created with the hbase-*.xml files plus
-   * the given configuration.
+   * @return a Configuration created with the hbase-*.xml files plus the given configuration.
    */
   public static Configuration create(final Configuration that) {
     Configuration conf = create();
@@ -153,8 +145,7 @@ public class HBaseConfiguration extends Configuration {
 
   /**
    * Merge two configurations.
-   * @param destConf the configuration that will be overwritten with items
-   *                 from the srcConf
+   * @param destConf the configuration that will be overwritten with items from the srcConf
    * @param srcConf the source configuration
    **/
   public static void merge(Configuration destConf, Configuration srcConf) {
@@ -164,11 +155,11 @@ public class HBaseConfiguration extends Configuration {
   }
 
   /**
-   * Returns a subset of the configuration properties, matching the given key prefix.
-   * The prefix is stripped from the return keys, ie. when calling with a prefix of "myprefix",
-   * the entry "myprefix.key1 = value1" would be returned as "key1 = value1".  If an entry's
-   * key matches the prefix exactly ("myprefix = value2"), it will <strong>not</strong> be
-   * included in the results, since it would show up as an entry with an empty key.
+   * Returns a subset of the configuration properties, matching the given key prefix. The prefix is
+   * stripped from the return keys, ie. when calling with a prefix of "myprefix", the entry
+   * "myprefix.key1 = value1" would be returned as "key1 = value1". If an entry's key matches the
+   * prefix exactly ("myprefix = value2"), it will <strong>not</strong> be included in the results,
+   * since it would show up as an entry with an empty key.
    */
   public static Configuration subset(Configuration srcConf, String prefix) {
     Configuration newConf = new Configuration(false);
@@ -185,12 +176,12 @@ public class HBaseConfiguration extends Configuration {
   }
 
   /**
-   * Sets all the entries in the provided {@code Map<String, String>} as properties in the
-   * given {@code Configuration}.  Each property will have the specified prefix prepended,
-   * so that the configuration entries are keyed by {@code prefix + entry.getKey()}.
+   * Sets all the entries in the provided {@code Map<String, String>} as properties in the given
+   * {@code Configuration}. Each property will have the specified prefix prepended, so that the
+   * configuration entries are keyed by {@code prefix + entry.getKey()}.
    */
   public static void setWithPrefix(Configuration conf, String prefix,
-                                   Iterable<Map.Entry<String, String>> properties) {
+      Iterable<Map.Entry<String, String>> properties) {
     for (Map.Entry<String, String> entry : properties) {
       conf.set(prefix + entry.getKey(), entry.getValue());
     }
@@ -206,8 +197,8 @@ public class HBaseConfiguration extends Configuration {
         isShowConf = true;
       }
     } catch (LinkageError e) {
-       // should we handle it more aggressively in addition to log the error?
-       LOG.warn("Error thrown: ", e);
+      // should we handle it more aggressively in addition to log the error?
+      LOG.warn("Error thrown: ", e);
     } catch (ClassNotFoundException ce) {
       LOG.debug("ClassNotFound: ConfServlet");
       // ignore
@@ -230,11 +221,11 @@ public class HBaseConfiguration extends Configuration {
    *             {@link Configuration#addDeprecation(String, String)} instead.
    */
   @Deprecated
-  public static int getInt(Configuration conf, String name,
-      String deprecatedName, int defaultValue) {
+  public static int getInt(Configuration conf, String name, String deprecatedName,
+      int defaultValue) {
     if (conf.get(deprecatedName) != null) {
-      LOG.warn(String.format("Config option \"%s\" is deprecated. Instead, use \"%s\""
-        , deprecatedName, name));
+      LOG.warn(String.format("Config option \"%s\" is deprecated. Instead, use \"%s\"",
+        deprecatedName, name));
       return conf.getInt(deprecatedName, defaultValue);
     } else {
       return conf.getInt(name, defaultValue);
@@ -242,18 +233,16 @@ public class HBaseConfiguration extends Configuration {
   }
 
   /**
-   * Get the password from the Configuration instance using the
-   * getPassword method if it exists. If not, then fall back to the
-   * general get method for configuration elements.
-   *
-   * @param conf    configuration instance for accessing the passwords
-   * @param alias   the name of the password element
+   * Get the password from the Configuration instance using the getPassword method if it exists. If
+   * not, then fall back to the general get method for configuration elements.
+   * @param conf configuration instance for accessing the passwords
+   * @param alias the name of the password element
    * @param defPass the default password
    * @return String password or default password
    * @throws IOException
    */
-  public static String getPassword(Configuration conf, String alias,
-      String defPass) throws IOException {
+  public static String getPassword(Configuration conf, String alias, String defPass)
+      throws IOException {
     String passwd;
     char[] p = conf.getPassword(alias);
     if (p != null) {
@@ -267,16 +256,12 @@ public class HBaseConfiguration extends Configuration {
   }
 
   /**
-   * Generates a {@link Configuration} instance by applying the ZooKeeper cluster key
-   * to the base Configuration.  Note that additional configuration properties may be needed
-   * for a remote cluster, so it is preferable to use
-   * {@link #createClusterConf(Configuration, String, String)}.
-   *
+   * Generates a {@link Configuration} instance by applying the ZooKeeper cluster key to the base
+   * Configuration. Note that additional configuration properties may be needed for a remote
+   * cluster, so it is preferable to use {@link #createClusterConf(Configuration, String, String)}.
    * @param baseConf the base configuration to use, containing prefixed override properties
    * @param clusterKey the ZooKeeper quorum cluster key to apply, or {@code null} if none
-   *
    * @return the merged configuration with override properties and cluster key applied
-   *
    * @see #createClusterConf(Configuration, String, String)
    */
   public static Configuration createClusterConf(Configuration baseConf, String clusterKey)
@@ -285,15 +270,14 @@ public class HBaseConfiguration extends Configuration {
   }
 
   /**
-   * Generates a {@link Configuration} instance by applying property overrides prefixed by
-   * a cluster profile key to the base Configuration.  Override properties are extracted by
-   * the {@link #subset(Configuration, String)} method, then the merged on top of the base
-   * Configuration and returned.
-   *
+   * Generates a {@link Configuration} instance by applying property overrides prefixed by a cluster
+   * profile key to the base Configuration. Override properties are extracted by the
+   * {@link #subset(Configuration, String)} method, then the merged on top of the base Configuration
+   * and returned.
    * @param baseConf the base configuration to use, containing prefixed override properties
    * @param clusterKey the ZooKeeper quorum cluster key to apply, or {@code null} if none
-   * @param overridePrefix the property key prefix to match for override properties,
-   *     or {@code null} if none
+   * @param overridePrefix the property key prefix to match for override properties, or {@code null}
+   *          if none
    * @return the merged configuration with override properties and cluster key applied
    */
   public static Configuration createClusterConf(Configuration baseConf, String clusterKey,
@@ -311,13 +295,12 @@ public class HBaseConfiguration extends Configuration {
   }
 
   /**
-   * Apply the settings in the given key to the given configuration, this is
-   * used to communicate with distant clusters
+   * Apply the settings in the given key to the given configuration, this is used to communicate
+   * with distant clusters
    * @param conf configuration object to configure
    * @param key string that contains the 3 required configuratins
    */
-  private static void applyClusterKeyToConf(Configuration conf, String key)
-      throws IOException {
+  private static void applyClusterKeyToConf(Configuration conf, String key) throws IOException {
     ZKConfig.ZKClusterKey zkClusterKey = ZKConfig.transformClusterKey(key);
     conf.set(HConstants.ZOOKEEPER_QUORUM, zkClusterKey.getQuorumString());
     conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClusterKey.getClientPort());
@@ -327,15 +310,14 @@ public class HBaseConfiguration extends Configuration {
     // This will be broken if ZkConnectionRegistry class gets renamed or moved. Is there a better
     // way?
     LOG.info("Overriding client registry implementation to {}",
-        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
+      HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
-        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
+      HConstants.ZK_CONNECTION_REGISTRY_CLASS);
   }
 
   /**
-   * For debugging.  Dump configurations to system output as xml format.
-   * Master and RS configurations can also be dumped using
-   * http services. e.g. "curl http://master:16010/dump"
+   * For debugging. Dump configurations to system output as xml format. Master and RS configurations
+   * can also be dumped using http services. e.g. "curl http://master:16010/dump"
    */
   public static void main(String[] args) throws Exception {
     HBaseConfiguration.create().writeXml(System.out);

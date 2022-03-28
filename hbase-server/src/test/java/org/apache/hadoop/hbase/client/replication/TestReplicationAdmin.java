@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,7 +65,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Unit testing of ReplicationAdmin
  */
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestReplicationAdmin {
 
   @ClassRule
@@ -74,8 +74,7 @@ public class TestReplicationAdmin {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationAdmin.class);
 
-  private final static HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private final String ID_ONE = "1";
   private static String KEY_ONE;
@@ -211,8 +210,7 @@ public class TestReplicationAdmin {
   }
 
   /**
-   * Simple testing of adding and removing peers, basically shows that
-   * all interactions with ZK work
+   * Simple testing of adding and removing peers, basically shows that all interactions with ZK work
    * @throws Exception
    */
   @Test
@@ -268,8 +266,7 @@ public class TestReplicationAdmin {
   }
 
   /**
-   * Tests that the peer configuration used by ReplicationAdmin contains all
-   * the peer's properties.
+   * Tests that the peer configuration used by ReplicationAdmin contains all the peer's properties.
    */
   @Test
   public void testPeerConfig() throws Exception {
@@ -297,7 +294,7 @@ public class TestReplicationAdmin {
     rpc2.setClusterKey(KEY_SECOND);
     Configuration conf = TEST_UTIL.getConfiguration();
     ReplicationQueueStorage queueStorage =
-      ReplicationStorageFactory.getReplicationQueueStorage(TEST_UTIL.getZooKeeperWatcher(), conf);
+        ReplicationStorageFactory.getReplicationQueueStorage(TEST_UTIL.getZooKeeperWatcher(), conf);
 
     ServerName serverName = ServerName.valueOf("server1", 8000, 1234);
     // add queue for ID_ONE
@@ -366,7 +363,7 @@ public class TestReplicationAdmin {
     tableCFs.put(tableName1, null);
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     Map<TableName, List<String>> result =
-      ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
+        ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(1, result.size());
     assertEquals(true, result.containsKey(tableName1));
     assertNull(result.get(tableName1));
@@ -486,7 +483,7 @@ public class TestReplicationAdmin {
     } catch (ReplicationException e) {
     }
     Map<TableName, List<String>> result =
-      ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
+        ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(2, result.size());
     assertTrue("Should contain t1", result.containsKey(tableName1));
     assertTrue("Should contain t2", result.containsKey(tableName2));

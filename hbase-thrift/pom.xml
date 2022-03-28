@@ -1,7 +1,5 @@
-<?xml version="1.0"?>
-<project xmlns="https://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -23,127 +21,14 @@
 -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-build-configuration</artifactId>
     <version>2.6.0-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-thrift</artifactId>
   <name>Apache HBase - Thrift</name>
   <description>HBase Thrift Server</description>
-
-  <build>
-    <!-- Makes sure the resources get added before they are processed
-  by placing this first -->
-    <resources>
-      <!-- Add the build webabpps to the classpth -->
-      <resource>
-        <directory>${project.build.directory}</directory>
-        <includes>
-          <include>hbase-webapps/**</include>
-        </includes>
-      </resource>
-      <resource>
-        <directory>src/main/resources/</directory>
-        <includes>
-          <include>**/*.thrift</include>
-        </includes>
-      </resource>
-    </resources>
-    <testResources>
-      <testResource>
-        <directory>src/test/resources/META-INF/</directory>
-        <targetPath>META-INF/</targetPath>
-        <includes>
-          <include>LICENSE</include>
-          <include>NOTICE</include>
-        </includes>
-        <filtering>true</filtering>
-      </testResource>
-      <testResource>
-        <directory>src/test/resources</directory>
-        <includes>
-          <include>**/**</include>
-        </includes>
-      </testResource>
-    </testResources>
-
-    <plugins>
-      <plugin>
-        <!--Make it so assembly:single does nothing in here-->
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <skipAssembly>true</skipAssembly>
-        </configuration>
-      </plugin>
-      <!-- General ant tasks, bound to different build phases -->
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <!-- Generate web app sources -->
-          <execution>
-            <id>generate</id>
-            <phase>generate-sources</phase>
-            <configuration>
-              <target>
-                <property name="build.webapps" location="${project.build.directory}/hbase-webapps"/>
-                <property name="src.webapps"
-                          location="${basedir}/src/main/resources/hbase-webapps"/>
-                <property name="generated.sources"
-                          location="${project.build.directory}/generated-sources"/>
-                <mkdir dir="${build.webapps}"/>
-                <copy todir="${build.webapps}">
-                  <fileset dir="${src.webapps}">
-                    <exclude name="**/*.jsp"/>
-                    <exclude name="**/.*"/>
-                    <exclude name="**/*~"/>
-                  </fileset>
-                </copy>
-                <!--The compile.classpath is passed in by maven -->
-                <taskdef classname="org.apache.jasper.JspC" name="jspcompiler"
-                         classpathref="maven.compile.classpath"/>
-                <mkdir dir="${build.webapps}/thrift/WEB-INF"/>
-                <jspcompiler uriroot="${src.webapps}/thrift" outputdir="${generated.sources}/java"
-                             package="org.apache.hadoop.hbase.generated.thrift"
-                             webxml="${build.webapps}/thrift/WEB-INF/web.xml"/>
-              </target>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <executions>
-          <!-- Add the generated sources -->
-          <execution>
-            <id>jspcSource-packageInfo-source</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
-            <configuration>
-              <sources>
-                <source>${project.build.directory}/generated-sources/java</source>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <!-- Make a jar and put the sources in the jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>net.revelc.code</groupId>
-        <artifactId>warbucks-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
 
   <dependencies>
     <!-- Intra-project dependencies -->
@@ -276,6 +161,114 @@
     </dependency>
   </dependencies>
 
+  <build>
+    <!-- Makes sure the resources get added before they are processed
+  by placing this first -->
+    <resources>
+      <!-- Add the build webabpps to the classpth -->
+      <resource>
+        <directory>${project.build.directory}</directory>
+        <includes>
+          <include>hbase-webapps/**</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>src/main/resources/</directory>
+        <includes>
+          <include>**/*.thrift</include>
+        </includes>
+      </resource>
+    </resources>
+    <testResources>
+      <testResource>
+        <targetPath>META-INF/</targetPath>
+        <filtering>true</filtering>
+        <directory>src/test/resources/META-INF/</directory>
+        <includes>
+          <include>LICENSE</include>
+          <include>NOTICE</include>
+        </includes>
+      </testResource>
+      <testResource>
+        <directory>src/test/resources</directory>
+        <includes>
+          <include>**/**</include>
+        </includes>
+      </testResource>
+    </testResources>
+
+    <plugins>
+      <plugin>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
+      </plugin>
+      <!-- General ant tasks, bound to different build phases -->
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <!-- Generate web app sources -->
+          <execution>
+            <id>generate</id>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <target>
+                <property location="${project.build.directory}/hbase-webapps" name="build.webapps"/>
+                <property location="${basedir}/src/main/resources/hbase-webapps" name="src.webapps"/>
+                <property location="${project.build.directory}/generated-sources" name="generated.sources"/>
+                <mkdir dir="${build.webapps}"/>
+                <copy todir="${build.webapps}">
+                  <fileset dir="${src.webapps}">
+                    <exclude name="**/*.jsp"/>
+                    <exclude name="**/.*"/>
+                    <exclude name="**/*~"/>
+                  </fileset>
+                </copy>
+                <!--The compile.classpath is passed in by maven -->
+                <taskdef classname="org.apache.jasper.JspC" classpathref="maven.compile.classpath" name="jspcompiler"/>
+                <mkdir dir="${build.webapps}/thrift/WEB-INF"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.thrift" uriroot="${src.webapps}/thrift" webxml="${build.webapps}/thrift/WEB-INF/web.xml"/>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <!-- Add the generated sources -->
+          <execution>
+            <id>jspcSource-packageInfo-source</id>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-sources/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Make a jar and put the sources in the jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
   <profiles>
     <!-- Needs to make the profile in apache parent pom -->
     <profile>
@@ -288,10 +281,10 @@
             <executions>
               <execution>
                 <id>license-javadocs</id>
-                <phase>prepare-package</phase>
                 <goals>
                   <goal>copy-resources</goal>
                 </goals>
+                <phase>prepare-package</phase>
                 <configuration>
                   <outputDirectory>${project.build.directory}/apidocs</outputDirectory>
                   <resources>
@@ -351,16 +344,14 @@
                       <property>thrift.version</property>
                       <message>"The Thrift version must be specified."</message>
                       <regex>0\.14\.1</regex>
-                      <regexMessage>
--
+                      <regexMessage>-
 -
 [FATAL] ==========================================================================================
 [FATAL] HBase Thrift requires the thrift generator version 0.14.1.
 [FATAL] Setting it to something else needs to be reviewed for wire and behavior compatibility.
 [FATAL] ==========================================================================================
 -
--
-                      </regexMessage>
+-</regexMessage>
                     </requireProperty>
                   </rules>
                   <fail>true</fail>
@@ -375,10 +366,10 @@
             <executions>
               <execution>
                 <id>check-thrift-version</id>
-                <phase>generate-sources</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>
+                <phase>generate-sources</phase>
                 <configuration>
                   <executable>sh</executable>
                   <workingDirectory>${basedir}</workingDirectory>
@@ -393,10 +384,10 @@
               </execution>
               <execution>
                 <id>thrift</id>
-                <phase>generate-sources</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>
+                <phase>generate-sources</phase>
                 <configuration>
                   <executable>${thrift.path}</executable>
                   <workingDirectory>${basedir}</workingDirectory>
@@ -412,10 +403,10 @@
               </execution>
               <execution>
                 <id>thrift2</id>
-                <phase>generate-sources</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>
+                <phase>generate-sources</phase>
                 <configuration>
                   <executable>${thrift.path}</executable>
                   <workingDirectory>${basedir}</workingDirectory>
@@ -517,17 +508,16 @@
             <executions>
               <execution>
                 <id>create-mrapp-generated-classpath</id>
-                <phase>generate-test-resources</phase>
                 <goals>
                   <goal>build-classpath</goal>
                 </goals>
+                <phase>generate-test-resources</phase>
                 <configuration>
                   <!-- needed to run the unit test for DS to generate
                   the required classpath that is required in the env
                   of the launch container in the mini mr/yarn cluster
                   -->
-                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath
-                  </outputFile>
+                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
                 </configuration>
               </execution>
             </executions>
@@ -579,17 +569,16 @@
             <executions>
               <execution>
                 <id>create-mrapp-generated-classpath</id>
-                <phase>generate-test-resources</phase>
                 <goals>
                   <goal>build-classpath</goal>
                 </goals>
+                <phase>generate-test-resources</phase>
                 <configuration>
                   <!-- needed to run the unit test for DS to generate
                   the required classpath that is required in the env
                   of the launch container in the mini mr/yarn cluster
                   -->
-                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath
-                  </outputFile>
+                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
                 </configuration>
               </execution>
             </executions>
@@ -625,7 +614,7 @@
                         </goals>
                       </pluginExecutionFilter>
                       <action>
-                        <ignore></ignore>
+                        <ignore/>
                       </action>
                     </pluginExecution>
                     <pluginExecution>
@@ -638,7 +627,7 @@
                         </goals>
                       </pluginExecutionFilter>
                       <action>
-                        <ignore></ignore>
+                        <ignore/>
                       </action>
                     </pluginExecution>
                   </pluginExecutions>

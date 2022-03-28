@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,7 @@ public class TestWALEntryStreamDifferentCountsFSHLog extends TestWALEntryStreamD
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALEntryStreamDifferentCountsFSHLog.class);
+      HBaseClassTestRule.forClass(TestWALEntryStreamDifferentCountsFSHLog.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {

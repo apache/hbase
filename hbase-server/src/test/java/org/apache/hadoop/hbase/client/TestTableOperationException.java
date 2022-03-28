@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -41,7 +40,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestTableOperationException {
 
   @ClassRule
@@ -66,12 +65,14 @@ public class TestTableOperationException {
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     UTIL.startMiniCluster();
-    UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TABLE_DONOT_RETRY)
-        .setCoprocessor(ThrowDoNotRetryIOExceptionCoprocessor.class.getName())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build());
-    UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TABLE_RETRY)
-        .setCoprocessor(ThrowIOExceptionCoprocessor.class.getName())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build());
+    UTIL.getAdmin()
+        .createTable(TableDescriptorBuilder.newBuilder(TABLE_DONOT_RETRY)
+            .setCoprocessor(ThrowDoNotRetryIOExceptionCoprocessor.class.getName())
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build());
+    UTIL.getAdmin()
+        .createTable(TableDescriptorBuilder.newBuilder(TABLE_RETRY)
+            .setCoprocessor(ThrowIOExceptionCoprocessor.class.getName())
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build());
     tableDoNotRetry = UTIL.getConnection().getTable(TABLE_DONOT_RETRY);
     tableRetry = UTIL.getConnection().getTable(TABLE_RETRY);
   }
@@ -178,8 +179,7 @@ public class TestTableOperationException {
     }
   }
 
-  public static class ThrowIOExceptionCoprocessor
-      implements RegionCoprocessor, RegionObserver {
+  public static class ThrowIOExceptionCoprocessor implements RegionCoprocessor, RegionObserver {
 
     public ThrowIOExceptionCoprocessor() {
     }

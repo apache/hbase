@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +30,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestByteRangeWithKVSerialization {
 
   @ClassRule
@@ -83,17 +83,16 @@ public class TestByteRangeWithKVSerialization {
       writeCell(pbr, kv);
     }
 
-    PositionedByteRange pbr1 = new SimplePositionedMutableByteRange(pbr.getBytes(), 0,
-        pbr.getPosition());
+    PositionedByteRange pbr1 =
+        new SimplePositionedMutableByteRange(pbr.getBytes(), 0, pbr.getPosition());
     for (int i = 0; i < kvCount; i++) {
       KeyValue kv = readCell(pbr1);
       KeyValue kv1 = kvs.get(i);
       Assert.assertTrue(kv.equals(kv1));
       Assert.assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(),
-          kv1.getValueArray(), kv1.getValueOffset(), kv1.getValueLength()));
-      Assert.assertTrue(Bytes.equals(kv.getTagsArray(), kv.getTagsOffset(),
-          kv.getTagsLength(), kv1.getTagsArray(), kv1.getTagsOffset(),
-          kv1.getTagsLength()));
+        kv1.getValueArray(), kv1.getValueOffset(), kv1.getValueLength()));
+      Assert.assertTrue(Bytes.equals(kv.getTagsArray(), kv.getTagsOffset(), kv.getTagsLength(),
+        kv1.getTagsArray(), kv1.getTagsOffset(), kv1.getTagsLength()));
       Assert.assertEquals(kv1.getSequenceId(), kv.getSequenceId());
     }
   }

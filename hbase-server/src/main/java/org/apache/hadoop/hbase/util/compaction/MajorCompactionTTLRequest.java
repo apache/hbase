@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util.compaction;
 
 import java.io.IOException;
@@ -94,9 +93,8 @@ public class MajorCompactionTTLRequest extends MajorCompactionRequest {
       // Lets only compact when all files are older than TTL
       if (storeFile.getModificationTime() >= ts) {
         LOG.info("There is atleast one file in store: " + family + " file: " + storeFile.getPath()
-            + " with timestamp " + storeFile.getModificationTime()
-            + " for region: " + fileSystem.getRegionInfo().getEncodedName()
-            + " older than TTL: " + ts);
+            + " with timestamp " + storeFile.getModificationTime() + " for region: "
+            + fileSystem.getRegionInfo().getEncodedName() + " older than TTL: " + ts);
         return false;
       }
     }

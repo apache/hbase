@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,14 +34,13 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-
 @Category(SmallTests.class)
 @RunWith(MockitoJUnitRunner.class)
 public class TestHelpScreenPresenter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHelpScreenPresenter.class);
+      HBaseClassTestRule.forClass(TestHelpScreenPresenter.class);
 
   private static final long TEST_REFRESH_DELAY = 5;
 
@@ -55,8 +54,8 @@ public class TestHelpScreenPresenter {
 
   @Before
   public void setup() {
-    helpScreenPresenter = new HelpScreenPresenter(helpScreenView, TEST_REFRESH_DELAY,
-      topScreenView);
+    helpScreenPresenter =
+        new HelpScreenPresenter(helpScreenView, TEST_REFRESH_DELAY, topScreenView);
   }
 
   @Test

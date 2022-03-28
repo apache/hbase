@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,14 +30,12 @@ public interface Histogram extends Metric {
 
   /**
    * Adds a new value to the distribution.
-   *
    * @param value The value to add
    */
   void update(int value);
 
   /**
    * Adds a new value to the distribution.
-   *
    * @param value The value to add
    */
   void update(long value);

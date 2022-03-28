@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestRegionServerCoprocessorEndpoint {
 
   @ClassRule
@@ -75,13 +75,13 @@ public class TestRegionServerCoprocessorEndpoint {
   public void testEndpoint() throws Exception {
     final ServerName serverName = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     final ServerRpcController controller = new ServerRpcController();
-    final CoprocessorRpcUtils.BlockingRpcCallback<DummyRegionServerEndpointProtos.DummyResponse>
-        rpcCallback = new CoprocessorRpcUtils.BlockingRpcCallback<>();
+    final CoprocessorRpcUtils.BlockingRpcCallback<DummyRegionServerEndpointProtos.DummyResponse> rpcCallback =
+        new CoprocessorRpcUtils.BlockingRpcCallback<>();
     DummyRegionServerEndpointProtos.DummyService service =
         ProtobufUtil.newServiceStub(DummyRegionServerEndpointProtos.DummyService.class,
           TEST_UTIL.getAdmin().coprocessorService(serverName));
-    service.dummyCall(controller,
-        DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance(), rpcCallback);
+    service.dummyCall(controller, DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance(),
+      rpcCallback);
     assertEquals(DUMMY_VALUE, rpcCallback.get().getValue());
     if (controller.failedOnException()) {
       throw controller.getFailedOn();
@@ -92,17 +92,17 @@ public class TestRegionServerCoprocessorEndpoint {
   public void testEndpointExceptions() throws Exception {
     final ServerName serverName = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     final ServerRpcController controller = new ServerRpcController();
-    final CoprocessorRpcUtils.BlockingRpcCallback<DummyRegionServerEndpointProtos.DummyResponse>
-        rpcCallback = new CoprocessorRpcUtils.BlockingRpcCallback<>();
+    final CoprocessorRpcUtils.BlockingRpcCallback<DummyRegionServerEndpointProtos.DummyResponse> rpcCallback =
+        new CoprocessorRpcUtils.BlockingRpcCallback<>();
     DummyRegionServerEndpointProtos.DummyService service =
         ProtobufUtil.newServiceStub(DummyRegionServerEndpointProtos.DummyService.class,
-            TEST_UTIL.getAdmin().coprocessorService(serverName));
+          TEST_UTIL.getAdmin().coprocessorService(serverName));
     service.dummyThrow(controller,
-        DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance(), rpcCallback);
+      DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance(), rpcCallback);
     assertEquals(null, rpcCallback.get());
     assertTrue(controller.failedOnException());
     assertEquals(WHAT_TO_THROW.getClass().getName().trim(),
-        ((RemoteWithExtrasException) controller.getFailedOn().getCause()).getClassName().trim());
+      ((RemoteWithExtrasException) controller.getFailedOn().getCause()).getClassName().trim());
   }
 
   public static class DummyRegionServerEndpoint extends DummyService
@@ -120,8 +120,7 @@ public class TestRegionServerCoprocessorEndpoint {
     }
 
     @Override
-    public void dummyThrow(RpcController controller,
-        DummyRequest request,
+    public void dummyThrow(RpcController controller, DummyRequest request,
         RpcCallback<DummyResponse> done) {
       CoprocessorRpcUtils.setControllerException(controller, WHAT_TO_THROW);
     }

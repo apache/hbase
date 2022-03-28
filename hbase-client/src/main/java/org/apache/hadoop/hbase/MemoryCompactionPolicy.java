@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,16 +30,15 @@ public enum MemoryCompactionPolicy {
   NONE,
   /**
    * Basic policy applies optimizations which modify the index to a more compacted representation.
-   * This is beneficial in all access patterns. The smaller the cells are the greater the
-   * benefit of this policy.
-   * This is the default policy.
+   * This is beneficial in all access patterns. The smaller the cells are the greater the benefit of
+   * this policy. This is the default policy.
    */
   BASIC,
   /**
-   * In addition to compacting the index representation as the basic policy, eager policy
-   * eliminates duplication while the data is still in memory (much like the
-   * on-disk compaction does after the data is flushed to disk). This policy is most useful for
-   * applications with high data churn or small working sets.
+   * In addition to compacting the index representation as the basic policy, eager policy eliminates
+   * duplication while the data is still in memory (much like the on-disk compaction does after the
+   * data is flushed to disk). This policy is most useful for applications with high data churn or
+   * small working sets.
    */
   EAGER,
   /**

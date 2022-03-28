@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,17 +20,16 @@ package org.apache.hadoop.hbase.master;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.ScriptBasedMapping;
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
- * Wrapper over the rack resolution utility in Hadoop. The rack resolution
- * utility in Hadoop does resolution from hosts to the racks they belong to.
- *
+ * Wrapper over the rack resolution utility in Hadoop. The rack resolution utility in Hadoop does
+ * resolution from hosts to the racks they belong to.
  */
 @InterfaceAudience.Private
 public class RackManager {
@@ -43,14 +42,13 @@ public class RackManager {
 
   public RackManager(Configuration conf) {
     switchMapping = ReflectionUtils.instantiateWithCustomCtor(
-        conf.getClass("hbase.util.ip.to.rack.determiner", ScriptBasedMapping.class,
-             DNSToSwitchMapping.class).getName(), new Class<?>[]{Configuration.class},
-               new Object[]{conf});
+      conf.getClass("hbase.util.ip.to.rack.determiner", ScriptBasedMapping.class,
+        DNSToSwitchMapping.class).getName(),
+      new Class<?>[] { Configuration.class }, new Object[] { conf });
   }
 
   /**
-   * Get the name of the rack containing a server, according to the DNS to
-   * switch mapping.
+   * Get the name of the rack containing a server, according to the DNS to switch mapping.
    * @param server the server for which to get the rack name
    * @return the rack name of the server
    */

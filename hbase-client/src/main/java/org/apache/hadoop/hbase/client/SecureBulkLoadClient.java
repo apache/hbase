@@ -15,17 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
+
+import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.security.token.Token;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
@@ -36,9 +38,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBul
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.security.token.Token;
-
-import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
 
 /**
  * Client proxy for SecureBulkLoadProtocol
@@ -55,21 +54,21 @@ public class SecureBulkLoadClient {
 
   public String prepareBulkLoad(final Connection conn) throws IOException {
     try {
-      ClientServiceCallable<String> callable = new ClientServiceCallable<String>(conn,
-          table.getName(), HConstants.EMPTY_START_ROW,
-          this.rpcControllerFactory.newController(), PRIORITY_UNSET) {
-        @Override
-        protected String rpcCall() throws Exception {
-          byte[] regionName = getLocation().getRegionInfo().getRegionName();
-          RegionSpecifier region =
-              RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
-          PrepareBulkLoadRequest request = PrepareBulkLoadRequest.newBuilder()
-              .setTableName(ProtobufUtil.toProtoTableName(table.getName()))
-              .setRegion(region).build();
-          PrepareBulkLoadResponse response = getStub().prepareBulkLoad(null, request);
-          return response.getBulkToken();
-        }
-      };
+      ClientServiceCallable<String> callable =
+          new ClientServiceCallable<String>(conn, table.getName(), HConstants.EMPTY_START_ROW,
+              this.rpcControllerFactory.newController(), PRIORITY_UNSET) {
+            @Override
+            protected String rpcCall() throws Exception {
+              byte[] regionName = getLocation().getRegionInfo().getRegionName();
+              RegionSpecifier region = RequestConverter
+                  .buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
+              PrepareBulkLoadRequest request = PrepareBulkLoadRequest.newBuilder()
+                  .setTableName(ProtobufUtil.toProtoTableName(table.getName())).setRegion(region)
+                  .build();
+              PrepareBulkLoadResponse response = getStub().prepareBulkLoad(null, request);
+              return response.getBulkToken();
+            }
+          };
       return RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null)
           .<String> newCaller().callWithRetries(callable, Integer.MAX_VALUE);
     } catch (Throwable throwable) {
@@ -79,21 +78,21 @@ public class SecureBulkLoadClient {
 
   public void cleanupBulkLoad(final Connection conn, final String bulkToken) throws IOException {
     try {
-      ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(conn,
-          table.getName(), HConstants.EMPTY_START_ROW, this.rpcControllerFactory.newController(), PRIORITY_UNSET) {
+      ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(conn, table.getName(),
+          HConstants.EMPTY_START_ROW, this.rpcControllerFactory.newController(), PRIORITY_UNSET) {
         @Override
         protected Void rpcCall() throws Exception {
           byte[] regionName = getLocation().getRegionInfo().getRegionName();
-          RegionSpecifier region = RequestConverter.buildRegionSpecifier(
-              RegionSpecifierType.REGION_NAME, regionName);
+          RegionSpecifier region =
+              RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
           CleanupBulkLoadRequest request =
               CleanupBulkLoadRequest.newBuilder().setRegion(region).setBulkToken(bulkToken).build();
           getStub().cleanupBulkLoad(null, request);
           return null;
         }
       };
-      RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null)
-          .<Void> newCaller().callWithRetries(callable, Integer.MAX_VALUE);
+      RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null).<Void> newCaller()
+          .callWithRetries(callable, Integer.MAX_VALUE);
     } catch (Throwable throwable) {
       throw new IOException(throwable);
     }
@@ -101,7 +100,6 @@ public class SecureBulkLoadClient {
 
   /**
    * Securely bulk load a list of HFiles using client protocol.
-   *
    * @param client
    * @param familyPaths
    * @param regionName
@@ -112,16 +110,14 @@ public class SecureBulkLoadClient {
    * @throws IOException
    */
   public boolean secureBulkLoadHFiles(final ClientService.BlockingInterface client,
-      final List<Pair<byte[], String>> familyPaths,
-      final byte[] regionName, boolean assignSeqNum,
+      final List<Pair<byte[], String>> familyPaths, final byte[] regionName, boolean assignSeqNum,
       final Token<?> userToken, final String bulkToken) throws IOException {
-    return secureBulkLoadHFiles(client, familyPaths, regionName, assignSeqNum, userToken,
-      bulkToken, false, null, true);
+    return secureBulkLoadHFiles(client, familyPaths, regionName, assignSeqNum, userToken, bulkToken,
+      false, null, true);
   }
 
   /**
    * Securely bulk load a list of HFiles using client protocol.
-   *
    * @param client
    * @param familyPaths
    * @param regionName
@@ -133,22 +129,18 @@ public class SecureBulkLoadClient {
    * @throws IOException
    */
   public boolean secureBulkLoadHFiles(final ClientService.BlockingInterface client,
-    final List<Pair<byte[], String>> familyPaths,
-    final byte[] regionName, boolean assignSeqNum,
-    final Token<?> userToken, final String bulkToken,
-    boolean copyFiles) throws IOException {
-    return secureBulkLoadHFiles(client, familyPaths, regionName, assignSeqNum, userToken,
-      bulkToken, copyFiles, null, true);
+      final List<Pair<byte[], String>> familyPaths, final byte[] regionName, boolean assignSeqNum,
+      final Token<?> userToken, final String bulkToken, boolean copyFiles) throws IOException {
+    return secureBulkLoadHFiles(client, familyPaths, regionName, assignSeqNum, userToken, bulkToken,
+      copyFiles, null, true);
   }
 
   public boolean secureBulkLoadHFiles(final ClientService.BlockingInterface client,
-      final List<Pair<byte[], String>> familyPaths,
-      final byte[] regionName, boolean assignSeqNum,
-      final Token<?> userToken, final String bulkToken,
-      boolean copyFiles, List<String> clusterIds, boolean replicate) throws IOException {
-    BulkLoadHFileRequest request =
-        RequestConverter.buildBulkLoadHFileRequest(familyPaths, regionName, assignSeqNum,
-          userToken, bulkToken, copyFiles, clusterIds, replicate);
+      final List<Pair<byte[], String>> familyPaths, final byte[] regionName, boolean assignSeqNum,
+      final Token<?> userToken, final String bulkToken, boolean copyFiles, List<String> clusterIds,
+      boolean replicate) throws IOException {
+    BulkLoadHFileRequest request = RequestConverter.buildBulkLoadHFileRequest(familyPaths,
+      regionName, assignSeqNum, userToken, bulkToken, copyFiles, clusterIds, replicate);
 
     try {
       BulkLoadHFileResponse response = client.bulkLoadHFile(null, request);

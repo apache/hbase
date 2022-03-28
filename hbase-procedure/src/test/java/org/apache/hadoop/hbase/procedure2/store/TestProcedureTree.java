@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ public class TestProcedureTree {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureTree.class);
+      HBaseClassTestRule.forClass(TestProcedureTree.class);
 
   public static final class TestProcedure extends Procedure<Void> {
 

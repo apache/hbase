@@ -19,13 +19,11 @@ package org.apache.hadoop.hbase.client.coprocessor;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
-
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
@@ -39,7 +37,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public final class AggregationHelper {
-  private AggregationHelper() {}
+  private AggregationHelper() {
+  }
 
   /**
    * @param scan the HBase scan object to use to read data from HBase

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
@@ -29,8 +28,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A chore service that periodically cleans up the compacted files when there are no active readers
- * using those compacted files and also helps in clearing the block cache of these compacted
- * file entries.
+ * using those compacted files and also helps in clearing the block cache of these compacted file
+ * entries.
  */
 @InterfaceAudience.Private
 public class CompactedHFilesDischarger extends ScheduledChore {
@@ -65,9 +64,9 @@ public class CompactedHFilesDischarger extends ScheduledChore {
   }
 
   /**
-   * CompactedHFilesDischarger runs asynchronously by default using the hosting
-   * RegionServer's Executor. In tests it can be useful to force a synchronous
-   * cleanup. Use this method to set no-executor before you call run.
+   * CompactedHFilesDischarger runs asynchronously by default using the hosting RegionServer's
+   * Executor. In tests it can be useful to force a synchronous cleanup. Use this method to set
+   * no-executor before you call run.
    * @return The old setting for <code>useExecutor</code>
    */
   boolean setUseExecutor(final boolean useExecutor) {
@@ -105,12 +104,13 @@ public class CompactedHFilesDischarger extends ScheduledChore {
         } catch (Exception e) {
           LOG.error("Exception while trying to close and archive the compacted store "
               + "files of the store  " + store.getColumnFamilyName() + " in the" + " region "
-              + region.getRegionInfo(), e);
+              + region.getRegionInfo(),
+            e);
         }
       }
       if (LOG.isTraceEnabled()) {
         LOG.trace(
-            "Completed the compacted hfiles cleaner for the region " + region.getRegionInfo());
+          "Completed the compacted hfiles cleaner for the region " + region.getRegionInfo());
       }
     }
   }

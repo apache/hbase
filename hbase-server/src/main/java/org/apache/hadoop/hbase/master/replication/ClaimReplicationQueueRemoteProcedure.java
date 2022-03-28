@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,10 +38,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.C
 
 @InterfaceAudience.Private
 public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
-  implements ServerProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
+    implements ServerProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(ClaimReplicationQueueRemoteProcedure.class);
+      LoggerFactory.getLogger(ClaimReplicationQueueRemoteProcedure.class);
 
   private ServerName crashedServer;
 
@@ -51,7 +51,7 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
   }
 
   public ClaimReplicationQueueRemoteProcedure(ServerName crashedServer, String queue,
-    ServerName targetServer) {
+      ServerName targetServer) {
     this.crashedServer = crashedServer;
     this.queue = queue;
     this.targetServer = targetServer;
@@ -61,9 +61,9 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
   public Optional<RemoteOperation> remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
     assert targetServer.equals(remote);
     return Optional.of(new ServerOperation(this, getProcId(), ClaimReplicationQueueCallable.class,
-      ClaimReplicationQueueRemoteParameter.newBuilder()
-        .setCrashedServer(ProtobufUtil.toServerName(crashedServer)).setQueue(queue).build()
-        .toByteArray()));
+        ClaimReplicationQueueRemoteParameter.newBuilder()
+            .setCrashedServer(ProtobufUtil.toServerName(crashedServer)).setQueue(queue).build()
+            .toByteArray()));
   }
 
   @Override
@@ -112,14 +112,14 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     serializer.serialize(ClaimReplicationQueueRemoteStateData.newBuilder()
-      .setCrashedServer(ProtobufUtil.toServerName(crashedServer)).setQueue(queue)
-      .setTargetServer(ProtobufUtil.toServerName(targetServer)).build());
+        .setCrashedServer(ProtobufUtil.toServerName(crashedServer)).setQueue(queue)
+        .setTargetServer(ProtobufUtil.toServerName(targetServer)).build());
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     ClaimReplicationQueueRemoteStateData data =
-      serializer.deserialize(ClaimReplicationQueueRemoteStateData.class);
+        serializer.deserialize(ClaimReplicationQueueRemoteStateData.class);
     crashedServer = ProtobufUtil.toServerName(data.getCrashedServer());
     queue = data.getQueue();
     targetServer = ProtobufUtil.toServerName(data.getTargetServer());

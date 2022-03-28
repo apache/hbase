@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ public class TestCurrentHourProvider {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCurrentHourProvider.class);
+      HBaseClassTestRule.forClass(TestCurrentHourProvider.class);
 
   private static final List<String> ZONE_IDS = Lists.newArrayList("UTC", "US/Pacific", "Etc/GMT+8");
 

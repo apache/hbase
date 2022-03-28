@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -87,7 +87,7 @@ class CompletedProcedureCleaner<TEnvironment> extends ProcedureInMemoryChore<TEn
     }
 
     final long evictTtl =
-      conf.getInt(ProcedureExecutor.EVICT_TTL_CONF_KEY, ProcedureExecutor.DEFAULT_EVICT_TTL);
+        conf.getInt(ProcedureExecutor.EVICT_TTL_CONF_KEY, ProcedureExecutor.DEFAULT_EVICT_TTL);
     final long evictAckTtl = conf.getInt(ProcedureExecutor.EVICT_ACKED_TTL_CONF_KEY,
       ProcedureExecutor.DEFAULT_ACKED_EVICT_TTL);
     final int batchSize = conf.getInt(BATCH_SIZE_CONF_KEY, DEFAULT_BATCH_SIZE);
@@ -97,7 +97,7 @@ class CompletedProcedureCleaner<TEnvironment> extends ProcedureInMemoryChore<TEn
 
     final long now = EnvironmentEdgeManager.currentTime();
     final Iterator<Map.Entry<Long, CompletedProcedureRetainer<TEnvironment>>> it =
-      completed.entrySet().iterator();
+        completed.entrySet().iterator();
     while (it.hasNext() && store.isRunning()) {
       final Map.Entry<Long, CompletedProcedureRetainer<TEnvironment>> entry = it.next();
       final CompletedProcedureRetainer<TEnvironment> retainer = entry.getValue();

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +45,7 @@ public class MetaLocationSyncer extends ClientZKSyncer {
   @Override
   protected Set<String> getPathsToWatch() {
     return IntStream.range(0, metaReplicaCount)
-      .mapToObj(watcher.getZNodePaths()::getZNodeForReplica).collect(Collectors.toSet());
+        .mapToObj(watcher.getZNodePaths()::getZNodeForReplica).collect(Collectors.toSet());
   }
 
   public void setMetaReplicaCount(int replicaCount) {

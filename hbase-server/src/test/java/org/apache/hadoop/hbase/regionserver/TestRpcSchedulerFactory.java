@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,8 +36,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * A silly test that does nothing but make sure an rpcscheduler factory makes what it says
- * it is going to make.
+ * A silly test that does nothing but make sure an rpcscheduler factory makes what it says it is
+ * going to make.
  */
 @Category(SmallTests.class)
 public class TestRpcSchedulerFactory {
@@ -46,7 +46,8 @@ public class TestRpcSchedulerFactory {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRpcSchedulerFactory.class);
 
-  @Rule public TestName testName = new TestName();
+  @Rule
+  public TestName testName = new TestName();
   private Configuration conf;
 
   @Before

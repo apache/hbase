@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestBucketWriterThread {
 
   @ClassRule
@@ -73,18 +73,18 @@ public class TestBucketWriterThread {
   }
 
   /**
-   * Set up variables and get BucketCache and WriterThread into state where tests can  manually
+   * Set up variables and get BucketCache and WriterThread into state where tests can manually
    * control the running of WriterThread and BucketCache is empty.
    */
   @Before
   public void setUp() throws Exception {
     // Arbitrary capacity.
     final int capacity = 16;
-    // Run with one writer thread only. Means there will be one writer queue only too.  We depend
+    // Run with one writer thread only. Means there will be one writer queue only too. We depend
     // on this in below.
     final int writerThreadsCount = 1;
-    this.bc = new MockBucketCache("offheap", capacity, 1, new int [] {1}, writerThreadsCount,
-      capacity, null, 100/*Tolerate ioerrors for 100ms*/);
+    this.bc = new MockBucketCache("offheap", capacity, 1, new int[] { 1 }, writerThreadsCount,
+        capacity, null, 100/* Tolerate ioerrors for 100ms */);
     assertEquals(writerThreadsCount, bc.writerThreads.length);
     assertEquals(writerThreadsCount, bc.writerQueues.size());
     // Get reference to our single WriterThread instance.
@@ -117,8 +117,8 @@ public class TestBucketWriterThread {
   }
 
   /**
-   * Pass through a too big entry and ensure it is cleared from queues and ramCache.
-   * Manually run the WriterThread.
+   * Pass through a too big entry and ensure it is cleared from queues and ramCache. Manually run
+   * the WriterThread.
    * @throws InterruptedException
    */
   @Test
@@ -130,8 +130,8 @@ public class TestBucketWriterThread {
   }
 
   /**
-   * Do IOE. Take the RAMQueueEntry that was on the queue, doctor it to throw exception, then
-   * put it back and process it.
+   * Do IOE. Take the RAMQueueEntry that was on the queue, doctor it to throw exception, then put it
+   * back and process it.
    * @throws IOException
    * @throws InterruptedException
    */
@@ -141,8 +141,8 @@ public class TestBucketWriterThread {
     this.bc.cacheBlock(this.plainKey, plainCacheable);
     RAMQueueEntry rqe = q.remove();
     RAMQueueEntry spiedRqe = Mockito.spy(rqe);
-    Mockito.doThrow(new IOException("Mocked!")).when(spiedRqe).
-        writeToCache(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+    Mockito.doThrow(new IOException("Mocked!")).when(spiedRqe).writeToCache(Mockito.any(),
+      Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     this.q.add(spiedRqe);
     doDrainOfOneEntry(bc, wt, q);
     // Cache disabled when ioes w/o ever healing.
@@ -155,24 +155,20 @@ public class TestBucketWriterThread {
    * @throws InterruptedException
    */
   @Test
-  public void testCacheFullException()
-      throws IOException, InterruptedException {
+  public void testCacheFullException() throws IOException, InterruptedException {
     this.bc.cacheBlock(this.plainKey, plainCacheable);
     RAMQueueEntry rqe = q.remove();
     RAMQueueEntry spiedRqe = Mockito.spy(rqe);
     final CacheFullException cfe = new CacheFullException(0, 0);
     BucketEntry mockedBucketEntry = Mockito.mock(BucketEntry.class);
-    Mockito.doThrow(cfe).
-      doReturn(mockedBucketEntry).
-        when(spiedRqe).writeToCache(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
-        Mockito.any());
+    Mockito.doThrow(cfe).doReturn(mockedBucketEntry).when(spiedRqe).writeToCache(Mockito.any(),
+      Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     this.q.add(spiedRqe);
     doDrainOfOneEntry(bc, wt, q);
   }
 
   private static void doDrainOfOneEntry(final BucketCache bc, final BucketCache.WriterThread wt,
-      final BlockingQueue<RAMQueueEntry> q)
-  throws InterruptedException {
+      final BlockingQueue<RAMQueueEntry> q) throws InterruptedException {
     List<RAMQueueEntry> rqes = BucketCache.getRAMQueueEntries(q, new ArrayList<>(1));
     bc.doDrain(rqes, ByteBuffer.allocate(HFileBlock.BLOCK_METADATA_SPACE));
     assertTrue(q.isEmpty());

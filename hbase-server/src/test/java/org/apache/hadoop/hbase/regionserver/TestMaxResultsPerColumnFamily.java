@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -45,15 +46,12 @@ public class TestMaxResultsPerColumnFamily {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMaxResultsPerColumnFamily.class);
+      HBaseClassTestRule.forClass(TestMaxResultsPerColumnFamily.class);
 
-  private static final byte [][] FAMILIES = {
-    Bytes.toBytes("1"), Bytes.toBytes("2")
-  };
+  private static final byte[][] FAMILIES = { Bytes.toBytes("1"), Bytes.toBytes("2") };
 
-  private static final byte [][] VALUES = {
-    Bytes.toBytes("testValueOne"), Bytes.toBytes("testValueTwo")
-  };
+  private static final byte[][] VALUES =
+      { Bytes.toBytes("testValueOne"), Bytes.toBytes("testValueTwo") };
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -75,10 +73,10 @@ public class TestMaxResultsPerColumnFamily {
     TableName tableName = TableName.valueOf(name.getMethodName());
     Admin admin = UTIL.getAdmin();
     ColumnFamilyDescriptorBuilder cfBuilder0 =
-    ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[0]);
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[0]);
 
     TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(cfBuilder0.build()).build();
+        TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(cfBuilder0.build()).build();
     admin.createTable(tableDescriptor);
     try (Table table = UTIL.getConnection().getTable(tableName)) {
 
@@ -107,9 +105,9 @@ public class TestMaxResultsPerColumnFamily {
   static int countScanRows(Table t, Scan scan) throws Exception {
 
     int count = 0;
-    try(ResultScanner scanner = t.getScanner(scan)) {
-      for(Result r:scanner) {
-        count ++;
+    try (ResultScanner scanner = t.getScanner(scan)) {
+      for (Result r : scanner) {
+        count++;
       }
     }
     return count;

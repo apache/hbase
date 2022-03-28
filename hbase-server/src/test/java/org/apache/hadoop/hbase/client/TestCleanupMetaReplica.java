@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,7 @@ public class TestCleanupMetaReplica extends MetaWithReplicasTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCleanupMetaReplica.class);
+      HBaseClassTestRule.forClass(TestCleanupMetaReplica.class);
 
   @BeforeClass
   public static void setUp() throws Exception {

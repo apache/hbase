@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestFSTableDescriptorForceCreation {
 
   @ClassRule
@@ -47,15 +47,14 @@ public class TestFSTableDescriptorForceCreation {
   public TestName name = new TestName();
 
   @Test
-  public void testShouldCreateNewTableDescriptorIfForcefulCreationIsFalse()
-      throws IOException {
+  public void testShouldCreateNewTableDescriptorIfForcefulCreationIsFalse() throws IOException {
     final String name = this.name.getMethodName();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
     FSTableDescriptors fstd = new FSTableDescriptors(fs, rootdir);
 
-    assertTrue("Should create new table descriptor",
-      fstd.createTableDescriptor(TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).build(), false));
+    assertTrue("Should create new table descriptor", fstd.createTableDescriptor(
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).build(), false));
   }
 
   @Test
@@ -72,17 +71,14 @@ public class TestFSTableDescriptorForceCreation {
   }
 
   @Test
-  public void testShouldAllowForcefulCreationOfAlreadyExistingTableDescriptor()
-      throws Exception {
+  public void testShouldAllowForcefulCreationOfAlreadyExistingTableDescriptor() throws Exception {
     final String name = this.name.getMethodName();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
     FSTableDescriptors fstd = new FSTableDescriptors(fs, rootdir);
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).build();
     fstd.createTableDescriptor(htd, false);
-    assertTrue("Should create new table descriptor",
-        fstd.createTableDescriptor(htd, true));
+    assertTrue("Should create new table descriptor", fstd.createTableDescriptor(htd, true));
   }
 
 }
-

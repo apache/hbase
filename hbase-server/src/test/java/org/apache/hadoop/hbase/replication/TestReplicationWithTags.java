@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,7 +68,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ReplicationTests.class, MediumTests.class})
+@Category({ ReplicationTests.class, MediumTests.class })
 public class TestReplicationWithTags {
 
   @ClassRule
@@ -112,7 +113,7 @@ public class TestReplicationWithTags {
     conf1.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf1.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        TestCoprocessorForTagsAtSource.class.getName());
+      TestCoprocessorForTagsAtSource.class.getName());
 
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
@@ -130,7 +131,7 @@ public class TestReplicationWithTags {
     conf2.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf2.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     conf2.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-            TestCoprocessorForTagsAtSink.class.getName());
+      TestCoprocessorForTagsAtSink.class.getName());
 
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);

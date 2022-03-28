@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,7 @@ public class TestDeleteTableWithMasterFailover extends MasterFailoverWithProcedu
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDeleteTableWithMasterFailover.class);
+      HBaseClassTestRule.forClass(TestDeleteTableWithMasterFailover.class);
 
   // ==========================================================================
   // Test Delete Table
@@ -67,7 +67,7 @@ public class TestDeleteTableWithMasterFailover extends MasterFailoverWithProcedu
 
     // Start the Delete procedure && kill the executor
     long procId =
-      procExec.submitProcedure(new DeleteTableProcedure(procExec.getEnvironment(), tableName));
+        procExec.submitProcedure(new DeleteTableProcedure(procExec.getEnvironment(), tableName));
     testRecoveryAndDoubleExecution(UTIL, procId, step);
 
     MasterProcedureTestingUtility.validateTableDeletion(UTIL.getHBaseCluster().getMaster(),

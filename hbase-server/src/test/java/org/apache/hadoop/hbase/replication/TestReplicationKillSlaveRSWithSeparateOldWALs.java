@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -31,7 +30,7 @@ public class TestReplicationKillSlaveRSWithSeparateOldWALs extends TestReplicati
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationKillSlaveRSWithSeparateOldWALs.class);
+      HBaseClassTestRule.forClass(TestReplicationKillSlaveRSWithSeparateOldWALs.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {

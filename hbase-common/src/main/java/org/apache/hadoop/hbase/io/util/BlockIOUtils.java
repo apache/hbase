@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.util;
 
 import java.io.IOException;
@@ -23,7 +22,6 @@ import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -34,8 +32,7 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public final class BlockIOUtils {
-  private static final Logger LOG =
-    LoggerFactory.getLogger(BlockIOUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BlockIOUtils.class);
   // TODO: remove the reflection when we update to Hadoop 3.3 or above.
   private static Method byteBufferPositionedReadMethod;
 
@@ -50,12 +47,12 @@ public final class BlockIOUtils {
 
   private static void initByteBufferPositionReadableMethod() {
     try {
-      //long position, ByteBuffer buf
-      byteBufferPositionedReadMethod = FSDataInputStream.class.getMethod("read", long.class,
-        ByteBuffer.class);
+      // long position, ByteBuffer buf
+      byteBufferPositionedReadMethod =
+          FSDataInputStream.class.getMethod("read", long.class, ByteBuffer.class);
     } catch (NoSuchMethodException e) {
       LOG.debug("Unable to find positioned bytebuffer read API of FSDataInputStream. "
-        + "preadWithExtra() will use a temporary on-heap byte array.");
+          + "preadWithExtra() will use a temporary on-heap byte array.");
     }
   }
 
@@ -219,11 +216,8 @@ public final class BlockIOUtils {
    * <code>extraLen</code> also if available. Analogous to
    * {@link IOUtils#readFully(InputStream, byte[], int, int)}, but uses positional read and
    * specifies a number of "extra" bytes that would be desirable but not absolutely necessary to
-   * read.
-   *
-   * If the input stream supports ByteBufferPositionedReadable, it reads to the byte buffer
+   * read. If the input stream supports ByteBufferPositionedReadable, it reads to the byte buffer
    * directly, and does not allocate a temporary byte array.
-   *
    * @param buff ByteBuff to read into.
    * @param dis the input stream to read from
    * @param position the position within the stream from which to start reading
@@ -244,7 +238,7 @@ public final class BlockIOUtils {
   }
 
   private static boolean preadWithExtraOnHeap(ByteBuff buff, FSDataInputStream dis, long position,
-    int necessaryLen, int extraLen) throws IOException {
+      int necessaryLen, int extraLen) throws IOException {
     int remain = necessaryLen + extraLen;
     byte[] buf = new byte[remain];
     int bytesRead = 0;
@@ -263,7 +257,7 @@ public final class BlockIOUtils {
   }
 
   private static boolean preadWithExtraDirectly(ByteBuff buff, FSDataInputStream dis, long position,
-    int necessaryLen, int extraLen) throws IOException {
+      int necessaryLen, int extraLen) throws IOException {
     int remain = necessaryLen + extraLen, bytesRead = 0, idx = 0;
     ByteBuffer[] buffers = buff.nioByteBuffers();
     ByteBuffer cur = buffers[idx];
@@ -280,10 +274,10 @@ public final class BlockIOUtils {
         ret = (Integer) byteBufferPositionedReadMethod.invoke(dis, position + bytesRead, cur);
       } catch (IllegalAccessException e) {
         throw new IOException("Unable to invoke ByteBuffer positioned read when trying to read "
-          + bytesRead + " bytes from position " + position, e);
+            + bytesRead + " bytes from position " + position, e);
       } catch (InvocationTargetException e) {
         throw new IOException("Encountered an exception when invoking ByteBuffer positioned read"
-          + " when trying to read " + bytesRead + " bytes from position " + position, e);
+            + " when trying to read " + bytesRead + " bytes from position " + position, e);
       } catch (NullPointerException e) {
         throw new IOException("something is null");
       } catch (Exception e) {
@@ -291,8 +285,8 @@ public final class BlockIOUtils {
       }
       if (ret < 0) {
         throw new IOException("Premature EOF from inputStream (positional read returned " + ret
-          + ", was trying to read " + necessaryLen + " necessary bytes and " + extraLen
-          + " extra bytes, successfully read " + bytesRead);
+            + ", was trying to read " + necessaryLen + " necessary bytes and " + extraLen
+            + " extra bytes, successfully read " + bytesRead);
       }
       bytesRead += ret;
       remain -= ret;

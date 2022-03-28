@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -112,12 +112,10 @@ public class TestCompactionWithThroughputController {
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY, 200);
     conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
     conf.setLong(
-      PressureAwareCompactionThroughputController
-        .HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND,
+      PressureAwareCompactionThroughputController.HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND,
       throughputLimit);
     conf.setLong(
-      PressureAwareCompactionThroughputController
-        .HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND,
+      PressureAwareCompactionThroughputController.HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND,
       throughputLimit);
     conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
       PressureAwareCompactionThroughputController.class.getName());
@@ -184,12 +182,10 @@ public class TestCompactionWithThroughputController {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(StoreEngine.STORE_ENGINE_CLASS_KEY, DefaultStoreEngine.class.getName());
     conf.setLong(
-      PressureAwareCompactionThroughputController
-        .HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND,
+      PressureAwareCompactionThroughputController.HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND,
       20L * 1024 * 1024);
     conf.setLong(
-      PressureAwareCompactionThroughputController
-        .HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND,
+      PressureAwareCompactionThroughputController.HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND,
       10L * 1024 * 1024);
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 4);
     conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 6);
@@ -236,8 +232,8 @@ public class TestCompactionWithThroughputController {
         NoLimitThroughputController.class.getName());
       regionServer.getCompactSplitThread().onConfigurationChange(conf);
       assertTrue(throughputController.isStopped());
-      assertTrue(regionServer.getCompactSplitThread().getCompactionThroughputController()
-        instanceof NoLimitThroughputController);
+      assertTrue(regionServer.getCompactSplitThread()
+          .getCompactionThroughputController() instanceof NoLimitThroughputController);
     } finally {
       conn.close();
       TEST_UTIL.shutdownMiniCluster();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.M
  */
 @InterfaceAudience.Private
 public abstract class ModifyStoreFileTrackerProcedure
-  extends AbstractStateMachineTableProcedure<ModifyStoreFileTrackerState> {
+    extends AbstractStateMachineTableProcedure<ModifyStoreFileTrackerState> {
 
   private static final Logger LOG = LoggerFactory.getLogger(ModifyStoreFileTrackerProcedure.class);
 
@@ -62,7 +62,7 @@ public abstract class ModifyStoreFileTrackerProcedure
   }
 
   protected ModifyStoreFileTrackerProcedure(MasterProcedureEnv env, TableName tableName,
-    String dstSFT) throws HBaseIOException {
+      String dstSFT) throws HBaseIOException {
     super(env);
     checkDstSFT(dstSFT);
     this.tableName = tableName;
@@ -72,7 +72,7 @@ public abstract class ModifyStoreFileTrackerProcedure
 
   private void checkDstSFT(String dstSFT) throws DoNotRetryIOException {
     if (MigrationStoreFileTracker.class
-      .isAssignableFrom(StoreFileTrackerFactory.getTrackerClass(dstSFT))) {
+        .isAssignableFrom(StoreFileTrackerFactory.getTrackerClass(dstSFT))) {
       throw new DoNotRetryIOException("Do not need to transfer to " + dstSFT);
     }
   }
@@ -112,7 +112,7 @@ public abstract class ModifyStoreFileTrackerProcedure
       return StoreFileTrackerState.NEED_START_MIGRATION;
     }
     Class<? extends StoreFileTracker> currentDstSFT = StoreFileTrackerFactory
-      .getStoreFileTrackerClassForMigration(conf, MigrationStoreFileTracker.DST_IMPL);
+        .getStoreFileTrackerClassForMigration(conf, MigrationStoreFileTracker.DST_IMPL);
     if (currentDstSFT.equals(dstSFTClass)) {
       return StoreFileTrackerState.NEED_FINISH_MIGRATION;
     } else {
@@ -122,7 +122,7 @@ public abstract class ModifyStoreFileTrackerProcedure
 
   private final String getRestoreSFT(Configuration conf) {
     Class<? extends StoreFileTracker> currentDstSFT = StoreFileTrackerFactory
-      .getStoreFileTrackerClassForMigration(conf, MigrationStoreFileTracker.DST_IMPL);
+        .getStoreFileTrackerClassForMigration(conf, MigrationStoreFileTracker.DST_IMPL);
     return StoreFileTrackerFactory.getStoreFileTrackerName(currentDstSFT);
   }
 
@@ -131,7 +131,7 @@ public abstract class ModifyStoreFileTrackerProcedure
   protected abstract Configuration createConf(Configuration conf, TableDescriptor current);
 
   protected abstract TableDescriptor createRestoreTableDescriptor(TableDescriptor current,
-    String restoreSFT);
+      String restoreSFT);
 
   private Flow preCheckAndTryRestoreSFT(MasterProcedureEnv env) throws IOException {
     // Checks whether the table exists
@@ -166,7 +166,7 @@ public abstract class ModifyStoreFileTrackerProcedure
   }
 
   protected abstract TableDescriptor createMigrationTableDescriptor(Configuration conf,
-    TableDescriptor current);
+      TableDescriptor current);
 
   protected final void migrate(Configuration conf, BiConsumer<String, String> setValue) {
     setValue.accept(StoreFileTrackerFactory.TRACKER_IMPL,
@@ -199,7 +199,7 @@ public abstract class ModifyStoreFileTrackerProcedure
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, ModifyStoreFileTrackerState state)
-    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     try {
       switch (state) {
         case MODIFY_STORE_FILE_TRACKER_FINISH_PREVIOUS_MIGRATION:
@@ -226,7 +226,7 @@ public abstract class ModifyStoreFileTrackerProcedure
 
   @Override
   protected void rollbackState(MasterProcedureEnv env, ModifyStoreFileTrackerState state)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     if (isRollbackSupported(state)) {
       return;
     }
@@ -257,14 +257,14 @@ public abstract class ModifyStoreFileTrackerProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     serializer.serialize(ModifyStoreFileTrackerStateData.newBuilder()
-      .setTableName(ProtobufUtil.toProtoTableName(tableName)).setDstSft(dstSFT).build());
+        .setTableName(ProtobufUtil.toProtoTableName(tableName)).setDstSft(dstSFT).build());
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     ModifyStoreFileTrackerStateData data =
-      serializer.deserialize(ModifyStoreFileTrackerStateData.class);
+        serializer.deserialize(ModifyStoreFileTrackerStateData.class);
     this.tableName = ProtobufUtil.toTableName(data.getTableName());
     this.dstSFT = data.getDstSft();
   }

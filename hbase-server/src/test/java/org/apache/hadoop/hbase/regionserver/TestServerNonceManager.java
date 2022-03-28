@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestServerNonceManager {
 
   @ClassRule
@@ -95,7 +95,7 @@ public class TestServerNonceManager {
       for (int j = 0; j < numbers.length; ++j) {
         nm.endOperation(numbers[i], numbers[j], true);
         assertEquals(numbers[j] == NO_NONCE,
-            nm.startOperation(numbers[i], numbers[j], createStoppable()));
+          nm.startOperation(numbers[i], numbers[j], createStoppable()));
       }
     }
   }
@@ -106,7 +106,8 @@ public class TestServerNonceManager {
     try {
       nm.endOperation(NO_NONCE, 1, true);
       throw new Error("Should have thrown");
-    } catch (AssertionError err) {}
+    } catch (AssertionError err) {
+    }
   }
 
   @Test
@@ -197,7 +198,7 @@ public class TestServerNonceManager {
 
     nm.startOperation(NO_NONCE, 3, createStoppable());
     tr = new TestRunnable(nm, 4, true, createStoppable());
-    tr.start().join();  // nonce 3 must have no bearing on nonce 4
+    tr.start().join(); // nonce 3 must have no bearing on nonce 4
     tr.propagateError();
   }
 
@@ -208,6 +209,7 @@ public class TestServerNonceManager {
     Stoppable stoppingStoppable = createStoppable();
     Mockito.when(stoppingStoppable.isStopped()).thenAnswer(new Answer<Boolean>() {
       AtomicInteger answer = new AtomicInteger(3);
+
       @Override
       public Boolean answer(InvocationOnMock invocation) throws Throwable {
         return 0 < answer.decrementAndGet();

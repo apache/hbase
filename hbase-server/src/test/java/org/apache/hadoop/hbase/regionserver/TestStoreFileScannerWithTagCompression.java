@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestStoreFileScannerWithTagCompression {
 
   @ClassRule
@@ -60,8 +60,8 @@ public class TestStoreFileScannerWithTagCompression {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf = TEST_UTIL.getConfiguration();
   private static CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
-  private static String ROOT_DIR = TEST_UTIL.getDataTestDir(
-      "TestStoreFileScannerWithTagCompression").toString();
+  private static String ROOT_DIR =
+      TEST_UTIL.getDataTestDir("TestStoreFileScannerWithTagCompression").toString();
   private static FileSystem fs = null;
 
   @BeforeClass
@@ -97,8 +97,8 @@ public class TestStoreFileScannerWithTagCompression {
       kv = s.next();
       kv = s.next();
       byte[] key5 = Bytes.toBytes("k5");
-      assertTrue(Bytes.equals(key5, 0, key5.length, kv.getRowArray(), kv.getRowOffset(),
-          kv.getRowLength()));
+      assertTrue(
+        Bytes.equals(key5, 0, key5.length, kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
       List<Tag> tags = PrivateCellUtil.getTags(kv);
       assertEquals(1, tags.size());
       assertEquals("tag3", Bytes.toString(Tag.cloneValue(tags.get(0))));

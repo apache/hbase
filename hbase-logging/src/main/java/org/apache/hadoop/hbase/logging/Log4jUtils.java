@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class Log4jUtils {
 
   private static final String INTERNAL_UTILS_CLASS_NAME =
-    "org.apache.hadoop.hbase.logging.InternalLog4jUtils";
+      "org.apache.hadoop.hbase.logging.InternalLog4jUtils";
 
   private Log4jUtils() {
   }

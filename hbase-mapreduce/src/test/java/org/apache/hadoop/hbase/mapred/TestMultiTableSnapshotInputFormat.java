@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,7 +65,7 @@ public class TestMultiTableSnapshotInputFormat
     job.setReducerClass(Reducer.class);
 
     TableMapReduceUtil.initMultiTableSnapshotMapperJob(getSnapshotScanMapping(scans), Mapper.class,
-        ImmutableBytesWritable.class, ImmutableBytesWritable.class, job, true, restoreDir);
+      ImmutableBytesWritable.class, ImmutableBytesWritable.class, job, true, restoreDir);
 
     TableMapReduceUtil.addDependencyJars(job);
 
@@ -92,10 +92,8 @@ public class TestMultiTableSnapshotInputFormat
     }
 
     /**
-     * Closes this stream and releases any system resources associated
-     * with it. If the stream is already closed then invoking this
-     * method has no effect.
-     *
+     * Closes this stream and releases any system resources associated with it. If the stream is
+     * already closed then invoking this method has no effect.
      * @throws IOException if an I/O error occurs
      */
     @Override
@@ -109,8 +107,7 @@ public class TestMultiTableSnapshotInputFormat
   }
 
   public static class Reducer extends TestMultiTableSnapshotInputFormat.ScanReducer implements
-      org.apache.hadoop.mapred.Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
-          NullWritable, NullWritable> {
+      org.apache.hadoop.mapred.Reducer<ImmutableBytesWritable, ImmutableBytesWritable, NullWritable, NullWritable> {
 
     private JobConf jobConf;
 
@@ -122,10 +119,8 @@ public class TestMultiTableSnapshotInputFormat
     }
 
     /**
-     * Closes this stream and releases any system resources associated
-     * with it. If the stream is already closed then invoking this
-     * method has no effect.
-     *
+     * Closes this stream and releases any system resources associated with it. If the stream is
+     * already closed then invoking this method has no effect.
      * @throws IOException if an I/O error occurs
      */
     @Override

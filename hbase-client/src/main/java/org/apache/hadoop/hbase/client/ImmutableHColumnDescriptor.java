@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Read-only column descriptor.
@@ -36,8 +36,8 @@ public class ImmutableHColumnDescriptor extends HColumnDescriptor {
   }
 
   public ImmutableHColumnDescriptor(final ColumnFamilyDescriptor desc) {
-    super(desc instanceof ModifyableColumnFamilyDescriptor ?
-      (ModifyableColumnFamilyDescriptor) desc : new ModifyableColumnFamilyDescriptor(desc));
+    super(desc instanceof ModifyableColumnFamilyDescriptor ? (ModifyableColumnFamilyDescriptor) desc
+        : new ModifyableColumnFamilyDescriptor(desc));
   }
 
   @Override

@@ -15,14 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup;
-
-import org.apache.hadoop.fs.Path;
-import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
 import java.util.Collection;
+import org.apache.hadoop.fs.Path;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Exception indicating that some files in the requested set could not be archived.
@@ -42,9 +40,6 @@ public class FailedArchiveException extends IOException {
 
   @Override
   public String getMessage() {
-    return new StringBuilder(super.getMessage())
-        .append("; files=")
-        .append(failedFiles)
-        .toString();
+    return new StringBuilder(super.getMessage()).append("; files=").append(failedFiles).toString();
   }
 }

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,24 +21,23 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.regionserver.querymatcher.ScanDeleteTracker;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.regionserver.querymatcher.ScanDeleteTracker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Triple;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Similar to ScanDeletTracker but tracks the visibility expression also before
- * deciding if a Cell can be considered deleted
+ * Similar to ScanDeletTracker but tracks the visibility expression also before deciding if a Cell
+ * can be considered deleted
  */
 @InterfaceAudience.Private
 public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
@@ -50,10 +48,10 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
    * This tag is used for the DELETE cell which has no visibility label.
    */
   private static final List<Tag> EMPTY_TAG = Collections.EMPTY_LIST;
-  // Its better to track the visibility tags in delete based on each type.  Create individual
-  // data structures for tracking each of them.  This would ensure that there is no tracking based
+  // Its better to track the visibility tags in delete based on each type. Create individual
+  // data structures for tracking each of them. This would ensure that there is no tracking based
   // on time and also would handle all cases where deletefamily or deletecolumns is specified with
-  // Latest_timestamp.  In such cases the ts in the delete marker and the masking
+  // Latest_timestamp. In such cases the ts in the delete marker and the masking
   // put will not be same. So going with individual data structures for different delete
   // type would solve this problem and also ensure that the combination of different type
   // of deletes with diff ts would also work fine
@@ -73,7 +71,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
 
   @Override
   public void add(Cell delCell) {
-    //Cannot call super.add because need to find if the delete needs to be considered
+    // Cannot call super.add because need to find if the delete needs to be considered
     long timestamp = delCell.getTimestamp();
     byte type = delCell.getTypeByte();
     if (type == KeyValue.Type.DeleteFamily.getCode()) {
@@ -124,23 +122,27 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
         }
         deleteCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(delCell, delTags);
         if (!delTags.isEmpty()) {
-          visibilityTagsDeleteFamily.add(new Triple<>(delTags, deleteCellVisTagsFormat, delCell.getTimestamp()));
+          visibilityTagsDeleteFamily
+              .add(new Triple<>(delTags, deleteCellVisTagsFormat, delCell.getTimestamp()));
           hasVisTag = true;
         } else {
-          visibilityTagsDeleteFamily.add(new Triple<>(EMPTY_TAG, deleteCellVisTagsFormat, delCell.getTimestamp()));
+          visibilityTagsDeleteFamily
+              .add(new Triple<>(EMPTY_TAG, deleteCellVisTagsFormat, delCell.getTimestamp()));
         }
         break;
       case DeleteFamilyVersion:
-        if(visibilityTagsDeleteFamilyVersion == null) {
+        if (visibilityTagsDeleteFamilyVersion == null) {
           visibilityTagsDeleteFamilyVersion = new ArrayList<>();
         }
         delTags = new ArrayList<>();
         deleteCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(delCell, delTags);
         if (!delTags.isEmpty()) {
-          visibilityTagsDeleteFamilyVersion.add(new Triple<>(delTags, deleteCellVisTagsFormat, delCell.getTimestamp()));
+          visibilityTagsDeleteFamilyVersion
+              .add(new Triple<>(delTags, deleteCellVisTagsFormat, delCell.getTimestamp()));
           hasVisTag = true;
         } else {
-          visibilityTagsDeleteFamilyVersion.add(new Triple<>(EMPTY_TAG, deleteCellVisTagsFormat, delCell.getTimestamp()));
+          visibilityTagsDeleteFamilyVersion
+              .add(new Triple<>(EMPTY_TAG, deleteCellVisTagsFormat, delCell.getTimestamp()));
         }
         break;
       case DeleteColumn:
@@ -311,13 +313,14 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
           visibilityTagsDeleteColumns = null;
           visiblityTagsDeleteColumnVersion = null;
         } else {
-          throw new IllegalStateException("isDeleted failed: deleteBuffer="
-              + Bytes.toStringBinary(deleteCell.getQualifierArray(),
+          throw new IllegalStateException(
+              "isDeleted failed: deleteBuffer="
+                  + Bytes.toStringBinary(deleteCell.getQualifierArray(),
                     deleteCell.getQualifierOffset(), deleteCell.getQualifierLength())
-              + ", qualifier="
-              + Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
-                  cell.getQualifierLength())
-              + ", timestamp=" + timestamp + ", comparison result: " + ret);
+                  + ", qualifier="
+                  + Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
+                    cell.getQualifierLength())
+                  + ", timestamp=" + timestamp + ", comparison result: " + ret);
         }
       }
     } catch (IOException e) {

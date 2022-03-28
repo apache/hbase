@@ -165,7 +165,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
             walCopy.close();
           } catch (Throwable t) {
             throw new FailedCloseWALAfterInitializedErrorException(
-              "Failed close after init wal failed.", t);
+                "Failed close after init wal failed.", t);
           }
         }
       }
@@ -274,7 +274,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * description.
    */
   private static final Pattern pattern =
-    Pattern.compile(".*\\.\\d*(" + META_WAL_PROVIDER_ID + ")*");
+      Pattern.compile(".*\\.\\d*(" + META_WAL_PROVIDER_ID + ")*");
 
   /**
    * A WAL file name is of the format: &lt;wal-name&gt;{@link #WAL_FILE_NAME_DELIMITER}
@@ -418,8 +418,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   /**
-   * Comparator used to compare WAL files together based on their start time.
-   * Just compares start times and nothing else.
+   * Comparator used to compare WAL files together based on their start time. Just compares start
+   * times and nothing else.
    */
   public static class WALStartTimeComparator implements Comparator<Path> {
     @Override
@@ -428,10 +428,9 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
 
     /**
-     * Split a path to get the start time
-     * For example: 10.20.20.171%3A60020.1277499063250
-     * Could also be a meta WAL which adds a '.meta' suffix or a synchronous replication WAL
-     * which adds a '.syncrep' suffix. Check.
+     * Split a path to get the start time For example: 10.20.20.171%3A60020.1277499063250 Could also
+     * be a meta WAL which adds a '.meta' suffix or a synchronous replication WAL which adds a
+     * '.syncrep' suffix. Check.
      * @param p path to split
      * @return start time
      */
@@ -439,8 +438,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       return WAL.getTimestamp(p.getName());
     }
   }
-
-
 
   public static boolean isArchivedLogFile(Path p) {
     String oldLog = Path.SEPARATOR + HConstants.HREGION_OLDLOGDIR_NAME + Path.SEPARATOR;
@@ -471,8 +468,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
 
     ServerName serverName = getServerNameFromWALDirectoryName(path);
     // Try finding the log in separate old log dir
-    oldLogDir =
-      new Path(walRootDir, new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME)
+    oldLogDir = new Path(walRootDir, new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME)
         .append(Path.SEPARATOR).append(serverName.getServerName()).toString());
     archivedLogLocation = new Path(oldLogDir, path.getName());
     if (fs.exists(archivedLogLocation)) {

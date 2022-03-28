@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,7 +64,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 /**
  * Test the restore/clone operation from a file-system point of view.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestRestoreSnapshotHelper {
 
   @ClassRule
@@ -154,7 +154,7 @@ public class TestRestoreSnapshotHelper {
     Path restoreDir = new Path("/hbase/.tmp-restore/testScannerWithRestoreScanner2");
     // restore snapshot.
     final RestoreSnapshotHelper.RestoreMetaChanges meta =
-      RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
+        RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
     TableDescriptor htd = meta.getTableDescriptor();
     final List<RegionInfo> restoredRegions = meta.getRegionsToAdd();
     for (RegionInfo restoredRegion : restoredRegions) {
@@ -165,7 +165,7 @@ public class TestRestoreSnapshotHelper {
       region.setRestoredRegion(true);
       region.initialize();
       Path recoveredEdit =
-        CommonFSUtils.getWALRegionDir(conf, tableName, region.getRegionInfo().getEncodedName());
+          CommonFSUtils.getWALRegionDir(conf, tableName, region.getRegionInfo().getEncodedName());
       long maxSeqId = WALSplitUtil.getMaxRegionSequenceId(fs, recoveredEdit);
 
       // open restored region without set restored flag
@@ -207,7 +207,8 @@ public class TestRestoreSnapshotHelper {
     return false;
   }
 
-  private void restoreAndVerify(final String snapshotName, final String tableName) throws IOException {
+  private void restoreAndVerify(final String snapshotName, final String tableName)
+      throws IOException {
     // Test Rolling-Upgrade like Snapshot.
     // half machines writing using v1 and the others using v2 format.
     SnapshotMock snapshotMock = createSnapshotMock();
@@ -226,10 +227,8 @@ public class TestRestoreSnapshotHelper {
     verifyRestore(rootDir, htd, htdClone);
 
     // Test clone a clone ("link to link")
-    SnapshotDescription cloneDesc = SnapshotDescription.newBuilder()
-        .setName("cloneSnapshot")
-        .setTable("testtb-clone")
-        .build();
+    SnapshotDescription cloneDesc =
+        SnapshotDescription.newBuilder().setName("cloneSnapshot").setTable("testtb-clone").build();
     Path cloneDir = CommonFSUtils.getTableDir(rootDir, htdClone.getTableName());
     TableDescriptor htdClone2 = snapshotMock.createHtd("testtb-clone2");
     testRestore(cloneDir, cloneDesc, htdClone2);
@@ -243,13 +242,14 @@ public class TestRestoreSnapshotHelper {
     assertEquals(12, files.size());
     for (int i = 0; i < files.size(); i += 2) {
       String linkFile = files.get(i);
-      String refFile = files.get(i+1);
+      String refFile = files.get(i + 1);
       assertTrue(linkFile + " should be a HFileLink", HFileLink.isHFileLink(linkFile));
       assertTrue(refFile + " should be a Referene", StoreFileInfo.isReference(refFile));
       assertEquals(sourceHtd.getTableName(), HFileLink.getReferencedTableName(linkFile));
       Path refPath = getReferredToFile(refFile);
       LOG.debug("get reference name for file " + refFile + " = " + refPath);
-      assertTrue(refPath.getName() + " should be a HFileLink", HFileLink.isHFileLink(refPath.getName()));
+      assertTrue(refPath.getName() + " should be a HFileLink",
+        HFileLink.isHFileLink(refPath.getName()));
       assertEquals(linkFile, refPath.getName());
     }
   }
@@ -282,8 +282,7 @@ public class TestRestoreSnapshotHelper {
     MonitoredTask status = Mockito.mock(MonitoredTask.class);
 
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, sd);
-    return new RestoreSnapshotHelper(conf, fs, manifest,
-      htdClone, rootDir, monitor, status);
+    return new RestoreSnapshotHelper(conf, fs, manifest, htdClone, rootDir, monitor, status);
   }
 
   private Path getReferredToFile(final String referenceName) {

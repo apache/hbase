@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -63,7 +62,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerIn
 /**
  * Tests for the region server status page and its template.
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestRSStatusServlet {
 
   @ClassRule
@@ -78,13 +77,11 @@ public class TestRSStatusServlet {
   static final int FAKE_IPC_PORT = 1585;
   static final int FAKE_WEB_PORT = 1586;
 
-  private final ServerName fakeServerName =
-      ServerName.valueOf("localhost", FAKE_IPC_PORT, 11111);
+  private final ServerName fakeServerName = ServerName.valueOf("localhost", FAKE_IPC_PORT, 11111);
   private final GetServerInfoResponse fakeResponse =
-    ResponseConverter.buildGetServerInfoResponse(fakeServerName, FAKE_WEB_PORT);
+      ResponseConverter.buildGetServerInfoResponse(fakeServerName, FAKE_WEB_PORT);
 
-  private final ServerName fakeMasterAddress =
-      ServerName.valueOf("localhost", 60010, 1212121212);
+  private final ServerName fakeMasterAddress = ServerName.valueOf("localhost", 60010, 1212121212);
 
   @Rule
   public TestName name = new TestName();

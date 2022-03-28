@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,6 +37,6 @@ public class JulToSlf4jInitializer {
 
   public JulToSlf4jInitializer() throws IOException {
     LogManager.getLogManager()
-      .readConfiguration(new ByteArrayInputStream(PROPERTIES.getBytes(StandardCharsets.UTF_8)));
+        .readConfiguration(new ByteArrayInputStream(PROPERTIES.getBytes(StandardCharsets.UTF_8)));
   }
 }

@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -54,11 +53,12 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestMajorCompactionRequest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -69,12 +69,14 @@ public class TestMajorCompactionRequest {
   protected Path rootRegionDir;
   protected Path regionStoreDir;
 
-  @Before public void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     rootRegionDir = UTILITY.getDataTestDirOnTestFS("TestMajorCompactionRequest");
     regionStoreDir = new Path(rootRegionDir, FAMILY);
   }
 
-  @Test public void testStoresNeedingCompaction() throws Exception {
+  @Test
+  public void testStoresNeedingCompaction() throws Exception {
     // store files older than timestamp
     List<StoreFileInfo> storeFiles = mockStoreFiles(regionStoreDir, 5, 10);
     MajorCompactionRequest request = makeMockRequest(storeFiles, false);
@@ -89,7 +91,8 @@ public class TestMajorCompactionRequest {
     assertFalse(result.isPresent());
   }
 
-  @Test public void testIfWeHaveNewReferenceFilesButOldStoreFiles() throws Exception {
+  @Test
+  public void testIfWeHaveNewReferenceFilesButOldStoreFiles() throws Exception {
     // this tests that reference files that are new, but have older timestamps for the files
     // they reference still will get compacted.
     TableName table = TableName.valueOf("TestMajorCompactor");
@@ -103,12 +106,11 @@ public class TestMajorCompactionRequest {
     List<StoreFileInfo> storeFiles = mockStoreFiles(regionStoreDir, 4, 101);
     List<Path> paths = storeFiles.stream().map(StoreFileInfo::getPath).collect(Collectors.toList());
     // the files that are referenced are older, thus we still compact.
-    HRegionFileSystem fileSystem =
-        mockFileSystem(region.getRegionInfo(), true, storeFiles, 50);
-    MajorCompactionRequest majorCompactionRequest = spy(new MajorCompactionRequest(connection,
-        region.getRegionInfo(), Sets.newHashSet(FAMILY)));
+    HRegionFileSystem fileSystem = mockFileSystem(region.getRegionInfo(), true, storeFiles, 50);
+    MajorCompactionRequest majorCompactionRequest = spy(
+      new MajorCompactionRequest(connection, region.getRegionInfo(), Sets.newHashSet(FAMILY)));
     doReturn(paths).when(majorCompactionRequest).getReferenceFilePaths(any(FileSystem.class),
-        any(Path.class));
+      any(Path.class));
     doReturn(fileSystem).when(majorCompactionRequest).getFileSystem();
     Set<String> result =
         majorCompactionRequest.getStoresRequiringCompaction(Sets.newHashSet("a"), 100);
@@ -153,8 +155,8 @@ public class TestMajorCompactionRequest {
     return infos;
   }
 
-  private MajorCompactionRequest makeMockRequest(List<StoreFileInfo> storeFiles,
-      boolean references) throws IOException {
+  private MajorCompactionRequest makeMockRequest(List<StoreFileInfo> storeFiles, boolean references)
+      throws IOException {
     Connection connection = mock(Connection.class);
     RegionInfo regionInfo = mock(RegionInfo.class);
     when(regionInfo.getEncodedName()).thenReturn("HBase");

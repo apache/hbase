@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ public class RpcRetryingCallerFactory {
   private final int rpcTimeout;
   private final RetryingCallerInterceptor interceptor;
   private final int startLogErrorsCnt;
-  /* These below data members are UNUSED!!!*/
+  /* These below data members are UNUSED!!! */
   private final boolean enableBackPressure;
   private ServerStatisticTracker stats;
 
@@ -50,8 +50,7 @@ public class RpcRetryingCallerFactory {
 
   public RpcRetryingCallerFactory(Configuration conf, RetryingCallerInterceptor interceptor) {
     this.conf = conf;
-    pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
-        HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE, HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     long configuredPauseForCQTBE = conf.getLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, pause);
     if (configuredPauseForCQTBE < pause) {
       LOG.warn("The " + HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE + " setting: "
@@ -62,13 +61,14 @@ public class RpcRetryingCallerFactory {
       this.pauseForCQTBE = configuredPauseForCQTBE;
     }
     retries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+      HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     startLogErrorsCnt = conf.getInt(AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY,
-        AsyncProcess.DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
+      AsyncProcess.DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
     this.interceptor = interceptor;
     enableBackPressure = conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
-        HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
-    rpcTimeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+      HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
+    rpcTimeout =
+        conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
   }
 
   /**
@@ -83,7 +83,7 @@ public class RpcRetryingCallerFactory {
    */
   public <T> RpcRetryingCaller<T> newCaller(int rpcTimeout) {
     // We store the values in the factory instance. This way, constructing new objects
-    //  is cheap as it does not require parsing a complex structure.
+    // is cheap as it does not require parsing a complex structure.
     RpcRetryingCaller<T> caller = new RpcRetryingCallerImpl<>(pause, pauseForCQTBE, retries,
         interceptor, startLogErrorsCnt, rpcTimeout);
     return caller;
@@ -94,7 +94,7 @@ public class RpcRetryingCallerFactory {
    */
   public <T> RpcRetryingCaller<T> newCaller() {
     // We store the values in the factory instance. This way, constructing new objects
-    //  is cheap as it does not require parsing a complex structure.
+    // is cheap as it does not require parsing a complex structure.
     RpcRetryingCaller<T> caller = new RpcRetryingCallerImpl<>(pause, pauseForCQTBE, retries,
         interceptor, startLogErrorsCnt, rpcTimeout);
     return caller;
@@ -118,9 +118,8 @@ public class RpcRetryingCallerFactory {
     if (rpcCallerFactoryClazz.equals(clazzName)) {
       factory = new RpcRetryingCallerFactory(configuration, interceptor);
     } else {
-      factory = ReflectionUtils.instantiateWithCustomCtor(
-          rpcCallerFactoryClazz, new Class[] { Configuration.class },
-          new Object[] { configuration });
+      factory = ReflectionUtils.instantiateWithCustomCtor(rpcCallerFactoryClazz,
+        new Class[] { Configuration.class }, new Object[] { configuration });
     }
 
     // setting for backwards compat with existing caller factories, rather than in the ctor

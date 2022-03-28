@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +21,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /*
-  Thrown whenever we are not able to get the lock within the specified wait time.
+ * Thrown whenever we are not able to get the lock within the specified wait time.
  */
 @InterfaceAudience.Public
 public class LockTimeoutException extends HBaseIOException {

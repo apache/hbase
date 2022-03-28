@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,6 +22,7 @@ import java.nio.ByteOrder;
 import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
 import org.apache.hbase.thirdparty.io.netty.util.internal.PlatformDependent;
 
 @InterfaceAudience.Private
@@ -32,7 +33,7 @@ public final class UnsafeAccess {
   public static final long BYTE_ARRAY_BASE_OFFSET;
 
   public static final boolean LITTLE_ENDIAN =
-    ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
+      ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
 
   // This number limits the number of bytes to copy per call to Unsafe's
   // copyMemory method. A limit is imposed to allow for safepoint polling
@@ -59,7 +60,7 @@ public final class UnsafeAccess {
   public static short toShort(byte[] bytes, int offset) {
     if (LITTLE_ENDIAN) {
       return Short
-        .reverseBytes(HBasePlatformDependent.getShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
+          .reverseBytes(HBasePlatformDependent.getShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
     } else {
       return HBasePlatformDependent.getShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
     }
@@ -74,7 +75,7 @@ public final class UnsafeAccess {
   public static int toInt(byte[] bytes, int offset) {
     if (LITTLE_ENDIAN) {
       return Integer
-        .reverseBytes(HBasePlatformDependent.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
+          .reverseBytes(HBasePlatformDependent.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
     } else {
       return HBasePlatformDependent.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
     }
@@ -89,7 +90,7 @@ public final class UnsafeAccess {
   public static long toLong(byte[] bytes, int offset) {
     if (LITTLE_ENDIAN) {
       return Long
-        .reverseBytes(HBasePlatformDependent.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
+          .reverseBytes(HBasePlatformDependent.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
     } else {
       return HBasePlatformDependent.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
     }
@@ -358,7 +359,7 @@ public final class UnsafeAccess {
    * @param length length of data to copy
    */
   public static void copy(ByteBuffer src, int srcOffset, ByteBuffer dest, int destOffset,
-    int length) {
+      int length) {
     long srcAddress, destAddress;
     Object srcBase = null, destBase = null;
     if (src.isDirect()) {

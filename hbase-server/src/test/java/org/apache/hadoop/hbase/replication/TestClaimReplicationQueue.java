@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestClaimReplicationQueue extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClaimReplicationQueue.class);
+      HBaseClassTestRule.forClass(TestClaimReplicationQueue.class);
 
   private static final TableName tableName3 = TableName.valueOf("test3");
 
@@ -93,8 +93,8 @@ public class TestClaimReplicationQueue extends TestReplicationBase {
     }
 
     @Override
-    protected ServerManager createServerManager(MasterServices master,
-      RegionServerList storage) throws IOException {
+    protected ServerManager createServerManager(MasterServices master, RegionServerList storage)
+        throws IOException {
       setupClusterConnection();
       return new ServerManagerForTest(master, storage);
     }
@@ -149,8 +149,8 @@ public class TestClaimReplicationQueue extends TestReplicationBase {
     HMaster master = UTIL1.getMiniHBaseCluster().getMaster();
     UTIL1.waitFor(30000,
       () -> master.getProcedures().stream()
-        .filter(p -> p instanceof ClaimReplicationQueuesProcedure)
-        .anyMatch(p -> p.getState() == ProcedureState.WAITING_TIMEOUT));
+          .filter(p -> p instanceof ClaimReplicationQueuesProcedure)
+          .anyMatch(p -> p.getState() == ProcedureState.WAITING_TIMEOUT));
 
     hbaseAdmin.enableReplicationPeer(PEER_ID2);
     hbaseAdmin.enableReplicationPeer(PEER_ID3);
@@ -158,7 +158,7 @@ public class TestClaimReplicationQueue extends TestReplicationBase {
     EMPTY = false;
     // wait until the SCP finished, ClaimReplicationQueuesProcedure is a sub procedure of SCP
     UTIL1.waitFor(30000, () -> master.getProcedures().stream()
-      .filter(p -> p instanceof ServerCrashProcedure).allMatch(Procedure::isSuccess));
+        .filter(p -> p instanceof ServerCrashProcedure).allMatch(Procedure::isSuccess));
 
     // we should get all the data in the target cluster
     waitForReplication(htable2, count1, NB_RETRIES);

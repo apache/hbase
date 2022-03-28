@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -101,7 +101,7 @@ public class RecoverMetaProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     MasterProcedureProtos.RecoverMetaStateData.Builder state =
-      MasterProcedureProtos.RecoverMetaStateData.newBuilder().setShouldSplitWal(shouldSplitWal);
+        MasterProcedureProtos.RecoverMetaStateData.newBuilder().setShouldSplitWal(shouldSplitWal);
     if (failedMetaServer != null) {
       state.setFailedMetaServer(ProtobufUtil.toServerName(failedMetaServer));
     }
@@ -113,10 +113,10 @@ public class RecoverMetaProcedure
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     MasterProcedureProtos.RecoverMetaStateData state =
-      serializer.deserialize(MasterProcedureProtos.RecoverMetaStateData.class);
+        serializer.deserialize(MasterProcedureProtos.RecoverMetaStateData.class);
     this.shouldSplitWal = state.hasShouldSplitWal() && state.getShouldSplitWal();
     this.failedMetaServer =
-      state.hasFailedMetaServer() ? ProtobufUtil.toServerName(state.getFailedMetaServer()) : null;
+        state.hasFailedMetaServer() ? ProtobufUtil.toServerName(state.getFailedMetaServer()) : null;
     this.replicaId = state.hasReplicaId() ? state.getReplicaId() : RegionInfo.DEFAULT_REPLICA_ID;
   }
 }

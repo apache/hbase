@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,14 +45,14 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
   }
 
   private final CellSinkFactory<StoreFileWriter> writerFactory =
-    new CellSinkFactory<StoreFileWriter>() {
-      @Override
-      public StoreFileWriter createWriter(InternalScanner scanner,
-        org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
-        boolean shouldDropBehind, boolean major) throws IOException {
-        return DefaultCompactor.this.createWriter(fd, shouldDropBehind, major);
-      }
-    };
+      new CellSinkFactory<StoreFileWriter>() {
+        @Override
+        public StoreFileWriter createWriter(InternalScanner scanner,
+            org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
+            boolean shouldDropBehind, boolean major) throws IOException {
+          return DefaultCompactor.this.createWriter(fd, shouldDropBehind, major);
+        }
+      };
 
   /**
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
@@ -63,8 +63,8 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
   }
 
   @Override
-  protected List<Path> commitWriter(FileDetails fd,
-      CompactionRequestImpl request) throws IOException {
+  protected List<Path> commitWriter(FileDetails fd, CompactionRequestImpl request)
+      throws IOException {
     List<Path> newFiles = Lists.newArrayList(writer.getPath());
     writer.appendMetadata(fd.maxSeqId, request.isAllFiles(), request.getFiles());
     writer.close();

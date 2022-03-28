@@ -116,8 +116,7 @@ public final class ServerConnectionUtils {
      * surround the scan and get method call,so the {@link RegionScanner} created for the directly
      * {@link RSRpcServices#get} could be closed immediately,see HBASE-26812 for more.
      */
-    static class ClientServiceBlockingInterfaceWrapper
-        implements ClientService.BlockingInterface {
+    static class ClientServiceBlockingInterfaceWrapper implements ClientService.BlockingInterface {
 
       private ClientService.BlockingInterface target;
 

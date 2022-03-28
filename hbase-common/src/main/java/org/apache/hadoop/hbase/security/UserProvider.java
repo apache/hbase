@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,10 +46,9 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 public class UserProvider extends BaseConfigurable {
 
   private static final String USER_PROVIDER_CONF_KEY = "hbase.client.userprovider.class";
-  private static final ListeningExecutorService executor = MoreExecutors.listeningDecorator(
-      Executors.newScheduledThreadPool(
-          1,
-          new ThreadFactoryBuilder().setDaemon(true).setNameFormat("group-cache-%d").build()));
+  private static final ListeningExecutorService executor =
+      MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(1,
+        new ThreadFactoryBuilder().setDaemon(true).setNameFormat("group-cache-%d").build()));
 
   private LoadingCache<String, String[]> groupCache = null;
 
@@ -73,19 +72,18 @@ public class UserProvider extends BaseConfigurable {
       }
     }
 
-    long cacheTimeout =
-        getConf().getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS,
-            CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT) * 1000;
+    long cacheTimeout = getConf().getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS,
+      CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT) * 1000;
 
     this.groupCache = CacheBuilder.newBuilder()
         // This is the same timeout that hadoop uses. So we'll follow suit.
         .refreshAfterWrite(cacheTimeout, TimeUnit.MILLISECONDS)
         .expireAfterWrite(10 * cacheTimeout, TimeUnit.MILLISECONDS)
-            // Set concurrency level equal to the default number of handlers that
-            // the simple handler spins up.
+        // Set concurrency level equal to the default number of handlers that
+        // the simple handler spins up.
         .concurrencyLevel(20)
-            // create the loader
-            // This just delegates to UGI.
+        // create the loader
+        // This just delegates to UGI.
         .build(new CacheLoader<String, String[]>() {
 
           // Since UGI's don't hash based on the user id
@@ -168,9 +166,8 @@ public class UserProvider extends BaseConfigurable {
   }
 
   /**
-   * In secure environment, if a user specified his keytab and principal,
-   * a hbase client will try to login with them. Otherwise, hbase client will try to obtain
-   * ticket(through kinit) from system.
+   * In secure environment, if a user specified his keytab and principal, a hbase client will try to
+   * login with them. Otherwise, hbase client will try to obtain ticket(through kinit) from system.
    */
   public boolean shouldLoginFromKeytab() {
     return User.shouldLoginFromKeytab(this.getConf());

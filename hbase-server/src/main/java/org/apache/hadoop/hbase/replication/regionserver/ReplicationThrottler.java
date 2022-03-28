@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Per-peer per-node throttling controller for replication: enabled if
- * bandwidth &gt; 0, a cycle = 100ms, by throttling we guarantee data pushed
- * to peer within each cycle won't exceed 'bandwidth' bytes
+ * Per-peer per-node throttling controller for replication: enabled if bandwidth &gt; 0, a cycle =
+ * 100ms, by throttling we guarantee data pushed to peer within each cycle won't exceed 'bandwidth'
+ * bytes
  */
 @InterfaceAudience.Private
 public class ReplicationThrottler {
@@ -33,8 +33,7 @@ public class ReplicationThrottler {
   private long cycleStartTick;
 
   /**
-   * ReplicationThrottler constructor
-   * If bandwidth less than 1, throttling is disabled
+   * ReplicationThrottler constructor If bandwidth less than 1, throttling is disabled
    * @param bandwidth per cycle(100ms)
    */
   public ReplicationThrottler(final double bandwidth) {
@@ -55,9 +54,8 @@ public class ReplicationThrottler {
   }
 
   /**
-   * Get how long the caller should sleep according to the current size and
-   * current cycle's total push size and start tick, return the sleep interval
-   * for throttling control.
+   * Get how long the caller should sleep according to the current size and current cycle's total
+   * push size and start tick, return the sleep interval for throttling control.
    * @param size is the size of edits to be pushed
    * @return sleep interval for throttling control
    */
@@ -69,11 +67,11 @@ public class ReplicationThrottler {
     long sleepTicks = 0;
     long now = EnvironmentEdgeManager.currentTime();
     // 1. if cyclePushSize exceeds bandwidth, we need to sleep some
-    //    following cycles to amortize, this case can occur when a single push
-    //    exceeds the bandwidth
-    if ((double)this.cyclePushSize > bandwidth) {
-      double cycles = Math.ceil((double)this.cyclePushSize / bandwidth);
-      long shouldTillTo = this.cycleStartTick + (long)(cycles * 100);
+    // following cycles to amortize, this case can occur when a single push
+    // exceeds the bandwidth
+    if ((double) this.cyclePushSize > bandwidth) {
+      double cycles = Math.ceil((double) this.cyclePushSize / bandwidth);
+      long shouldTillTo = this.cycleStartTick + (long) (cycles * 100);
       if (shouldTillTo > now) {
         sleepTicks = shouldTillTo - now;
       } else {
@@ -82,16 +80,15 @@ public class ReplicationThrottler {
       }
       this.cyclePushSize = 0;
     } else {
-      long nextCycleTick = this.cycleStartTick + 100;  //a cycle is 100ms
+      long nextCycleTick = this.cycleStartTick + 100; // a cycle is 100ms
       if (now >= nextCycleTick) {
         // 2. switch to next cycle if the current cycle has passed
         this.cycleStartTick = now;
         this.cyclePushSize = 0;
-      } else if (this.cyclePushSize > 0 &&
-          (double)(this.cyclePushSize + size) >= bandwidth) {
+      } else if (this.cyclePushSize > 0 && (double) (this.cyclePushSize + size) >= bandwidth) {
         // 3. delay the push to next cycle if exceeds throttling bandwidth.
-        //    enforcing cyclePushSize > 0 to avoid the unnecessary sleep for case
-        //    where a cycle's first push size(currentSize) > bandwidth
+        // enforcing cyclePushSize > 0 to avoid the unnecessary sleep for case
+        // where a cycle's first push size(currentSize) > bandwidth
         sleepTicks = nextCycleTick - now;
         this.cyclePushSize = 0;
       }
@@ -101,8 +98,7 @@ public class ReplicationThrottler {
 
   /**
    * Add current size to the current cycle's total push size
-   * @param size is the current size added to the current cycle's
-   * total push size
+   * @param size is the current size added to the current cycle's total push size
    */
   public void addPushSize(final int size) {
     if (this.enabled) {

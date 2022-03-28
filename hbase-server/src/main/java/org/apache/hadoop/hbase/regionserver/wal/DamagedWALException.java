@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,8 +21,8 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Thrown when a failed append or sync on a WAL.
- * Thrown when WAL can no longer be used. Roll the WAL.
+ * Thrown when a failed append or sync on a WAL. Thrown when WAL can no longer be used. Roll the
+ * WAL.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Private

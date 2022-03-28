@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,14 +51,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests for the hdfs fix from HBASE-6435.
- *
- * Please don't add new subtest which involves starting / stopping MiniDFSCluster in this class.
- * When stopping MiniDFSCluster, shutdown hooks would be cleared in hadoop's ShutdownHookManager
- *   in hadoop 3.
- * This leads to 'Failed suppression of fs shutdown hook' error in region server.
+ * Tests for the hdfs fix from HBASE-6435. Please don't add new subtest which involves starting /
+ * stopping MiniDFSCluster in this class. When stopping MiniDFSCluster, shutdown hooks would be
+ * cleared in hadoop's ShutdownHookManager in hadoop 3. This leads to 'Failed suppression of fs
+ * shutdown hook' error in region server.
  */
-@Category({MiscTests.class, LargeTests.class})
+@Category({ MiscTests.class, LargeTests.class })
 public class TestBlockReorder {
 
   @ClassRule
@@ -83,8 +81,8 @@ public class TestBlockReorder {
     htu = new HBaseTestingUtility();
     htu.getConfiguration().setInt("dfs.blocksize", 1024);// For the test with multiple blocks
     htu.getConfiguration().setInt("dfs.replication", 3);
-    htu.startMiniDFSCluster(3,
-        new String[]{"/r1", "/r2", "/r3"}, new String[]{host1, host2, host3});
+    htu.startMiniDFSCluster(3, new String[] { "/r1", "/r2", "/r3" },
+      new String[] { host1, host2, host3 });
 
     conf = htu.getConfiguration();
     cluster = htu.getDFSCluster();
@@ -152,13 +150,13 @@ public class TestBlockReorder {
         break;
       }
     }
-    Assert.assertTrue(
-        "didn't find the server to kill, was looking for " + lookup + " found " + sb, ok);
+    Assert.assertTrue("didn't find the server to kill, was looking for " + lookup + " found " + sb,
+      ok);
     LOG.info("ipc port= " + ipcPort);
 
     // Add the hook, with an implementation checking that we don't use the port we've just killed.
-    Assert.assertTrue(HFileSystem.addLocationsOrderInterceptor(conf,
-        new HFileSystem.ReorderBlocks() {
+    Assert
+        .assertTrue(HFileSystem.addLocationsOrderInterceptor(conf, new HFileSystem.ReorderBlocks() {
           @Override
           public void reorderBlocks(Configuration c, LocatedBlocks lbs, String src) {
             for (LocatedBlock lb : lbs.getLocatedBlocks()) {
@@ -175,7 +173,6 @@ public class TestBlockReorder {
           }
         }));
 
-
     final int retries = 10;
     ServerSocket ss = null;
     ServerSocket ssI;
@@ -183,9 +180,10 @@ public class TestBlockReorder {
       ss = new ServerSocket(port);// We're taking the port to have a timeout issue later.
       ssI = new ServerSocket(ipcPort);
     } catch (BindException be) {
-      LOG.warn("Got bind exception trying to set up socket on " + port + " or " + ipcPort +
-          ", this means that the datanode has not closed the socket or" +
-          " someone else took it. It may happen, skipping this test for this time.", be);
+      LOG.warn("Got bind exception trying to set up socket on " + port + " or " + ipcPort
+          + ", this means that the datanode has not closed the socket or"
+          + " someone else took it. It may happen, skipping this test for this time.",
+        be);
       if (ss != null) {
         ss.close();
       }
@@ -193,7 +191,7 @@ public class TestBlockReorder {
     }
 
     // Now it will fail with a timeout, unfortunately it does not always connect to the same box,
-    // so we try retries times;  with the reorder it will never last more than a few milli seconds
+    // so we try retries times; with the reorder it will never last more than a few milli seconds
     for (int i = 0; i < retries; i++) {
       start = EnvironmentEdgeManager.currentTime();
       fin = dfs.open(p);

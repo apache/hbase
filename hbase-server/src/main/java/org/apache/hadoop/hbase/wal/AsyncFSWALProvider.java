@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +35,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
@@ -59,7 +59,7 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
     /**
      * @throws IOException if something goes wrong initializing an output stream
      * @throws StreamLacksCapabilityException if the given FileSystem can't provide streams that
-     *         meet the needs of the given Writer implementation.
+     *           meet the needs of the given Writer implementation.
      */
     void init(FileSystem fs, Path path, Configuration c, boolean overwritable, long blocksize,
         StreamSlowMonitor monitor) throws IOException, CommonFSUtils.StreamLacksCapabilityException;
@@ -68,13 +68,14 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
   private EventLoopGroup eventLoopGroup;
 
   private Class<? extends Channel> channelClass;
+
   @Override
   protected AsyncFSWAL createWAL() throws IOException {
     return new AsyncFSWAL(CommonFSUtils.getWALFileSystem(conf), this.abortable,
-      CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
-      getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
-      META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null, eventLoopGroup,
-      channelClass, factory.getExcludeDatanodeManager().getStreamSlowMonitor(providerId));
+        CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
+        getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
+        META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null, eventLoopGroup,
+        channelClass, factory.getExcludeDatanodeManager().getStreamSlowMonitor(providerId));
   }
 
   @Override
@@ -95,10 +96,10 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
    * Public because of AsyncFSWAL. Should be package-private
    */
   public static AsyncWriter createAsyncWriter(Configuration conf, FileSystem fs, Path path,
-      boolean overwritable, EventLoopGroup eventLoopGroup,
-      Class<? extends Channel> channelClass) throws IOException {
+      boolean overwritable, EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass)
+      throws IOException {
     return createAsyncWriter(conf, fs, path, overwritable, WALUtil.getWALBlockSize(conf, fs, path),
-        eventLoopGroup, channelClass, StreamSlowMonitor.create(conf, path.getName()));
+      eventLoopGroup, channelClass, StreamSlowMonitor.create(conf, path.getName()));
   }
 
   /**
@@ -108,8 +109,8 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
       boolean overwritable, long blocksize, EventLoopGroup eventLoopGroup,
       Class<? extends Channel> channelClass, StreamSlowMonitor monitor) throws IOException {
     // Configuration already does caching for the Class lookup.
-    Class<? extends AsyncWriter> logWriterClass = conf.getClass(
-      WRITER_IMPL, AsyncProtobufLogWriter.class, AsyncWriter.class);
+    Class<? extends AsyncWriter> logWriterClass =
+        conf.getClass(WRITER_IMPL, AsyncProtobufLogWriter.class, AsyncWriter.class);
     try {
       AsyncWriter writer = logWriterClass.getConstructor(EventLoopGroup.class, Class.class)
           .newInstance(eventLoopGroup, channelClass);
@@ -117,11 +118,11 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
       return writer;
     } catch (Exception e) {
       if (e instanceof CommonFSUtils.StreamLacksCapabilityException) {
-        LOG.error("The RegionServer async write ahead log provider " +
-          "relies on the ability to call " + e.getMessage() + " for proper operation during " +
-          "component failures, but the current FileSystem does not support doing so. Please " +
-          "check the config value of '" + CommonFSUtils.HBASE_WAL_DIR + "' and ensure " +
-          "it points to a FileSystem mount that has suitable capabilities for output streams.");
+        LOG.error("The RegionServer async write ahead log provider "
+            + "relies on the ability to call " + e.getMessage() + " for proper operation during "
+            + "component failures, but the current FileSystem does not support doing so. Please "
+            + "check the config value of '" + CommonFSUtils.HBASE_WAL_DIR + "' and ensure "
+            + "it points to a FileSystem mount that has suitable capabilities for output streams.");
       } else {
         LOG.debug("Error instantiating log writer.", e);
       }

@@ -22,16 +22,17 @@ import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
 /*
-* Test rules to prevent System.exit or Runtime.halt from exiting
-* the JVM - instead an exception is thrown.
-* */
+ * Test rules to prevent System.exit or Runtime.halt from exiting the JVM - instead an exception is
+ * thrown.
+ */
 public class SystemExitRule implements TestRule {
   final static SecurityManager securityManager = new TestSecurityManager();
 
   @Override
   public Statement apply(final Statement s, Description d) {
     return new Statement() {
-      @Override public void evaluate() throws Throwable {
+      @Override
+      public void evaluate() throws Throwable {
 
         try {
           forbidSystemExitCall();
@@ -44,8 +45,8 @@ public class SystemExitRule implements TestRule {
     };
   };
 
-   // Exiting the JVM is not allowed in tests and this exception is thrown instead
-   // when it is done
+  // Exiting the JVM is not allowed in tests and this exception is thrown instead
+  // when it is done
   public static class SystemExitInTestException extends SecurityException {
   }
 

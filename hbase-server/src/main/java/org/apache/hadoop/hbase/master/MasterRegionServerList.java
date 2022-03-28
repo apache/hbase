@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,9 +65,9 @@ public class MasterRegionServerList implements RegionServerList {
 
   @Override
   public void started(ServerName sn) {
-    Put put =
-      new Put(Bytes.toBytes(sn.getServerName())).addColumn(MasterRegionFactory.REGION_SERVER_FAMILY,
-        HConstants.STATE_QUALIFIER, Bytes.toBytes(ServerState.ONLINE.name()));
+    Put put = new Put(Bytes.toBytes(sn.getServerName())).addColumn(
+      MasterRegionFactory.REGION_SERVER_FAMILY, HConstants.STATE_QUALIFIER,
+      Bytes.toBytes(ServerState.ONLINE.name()));
     try {
       region.update(r -> r.put(put));
     } catch (IOException e) {
@@ -81,7 +81,7 @@ public class MasterRegionServerList implements RegionServerList {
   @Override
   public void expired(ServerName sn) {
     Delete delete = new Delete(Bytes.toBytes(sn.getServerName()))
-      .addFamily(MasterRegionFactory.REGION_SERVER_FAMILY);
+        .addFamily(MasterRegionFactory.REGION_SERVER_FAMILY);
     try {
       region.update(r -> r.delete(delete));
     } catch (IOException e) {
@@ -96,7 +96,7 @@ public class MasterRegionServerList implements RegionServerList {
   public Set<ServerName> getAll() throws IOException {
     Set<ServerName> rsList = new HashSet<>();
     try (ResultScanner scanner =
-      region.getScanner(new Scan().addFamily(MasterRegionFactory.REGION_SERVER_FAMILY))) {
+        region.getScanner(new Scan().addFamily(MasterRegionFactory.REGION_SERVER_FAMILY))) {
       for (;;) {
         Result result = scanner.next();
         if (result == null) {

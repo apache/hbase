@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,9 +52,7 @@ class MasterCoprocessorRpcChannelImpl implements RpcChannel {
     CompletableFuture<Message> future = new CompletableFuture<>();
     CoprocessorServiceRequest csr =
         CoprocessorRpcUtils.getCoprocessorServiceRequest(method, request);
-    stub.execMasterService(
-      controller,
-      csr,
+    stub.execMasterService(controller, csr,
       new org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback<CoprocessorServiceResponse>() {
 
         @Override

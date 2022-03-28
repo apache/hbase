@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,7 +39,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestRSGroupUtil {
 
   @ClassRule
@@ -61,16 +60,15 @@ public class TestRSGroupUtil {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL.getConfiguration().set(
-      HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+    UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
       RSGroupBasedLoadBalancer.class.getName());
     UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       RSGroupAdminEndpoint.class.getName());
     UTIL.startMiniCluster(5);
     master = UTIL.getMiniHBaseCluster().getMaster();
 
-    UTIL.waitFor(60000, (Predicate<Exception>) () ->
-        master.isInitialized() && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline());
+    UTIL.waitFor(60000, (Predicate<Exception>) () -> master.isInitialized()
+        && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline());
 
     rsGroupAdminClient = new RSGroupAdminClient(UTIL.getConnection());
 
@@ -93,7 +91,8 @@ public class TestRSGroupUtil {
 
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
     rsGroupAdminClient.addRSGroup(GROUP_NAME);
-    rsGroupAdminClient.moveServers(Collections.singleton(rs.getServerName().getAddress()), GROUP_NAME);
+    rsGroupAdminClient.moveServers(Collections.singleton(rs.getServerName().getAddress()),
+      GROUP_NAME);
 
     rsGroupInfoManager.refresh();
     RSGroupInfo rsGroup = rsGroupInfoManager.getRSGroup(GROUP_NAME);

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -77,8 +76,7 @@ public class TestScannerCallable {
 
   @Test
   public void testPrepareAlwaysUsesCache() throws Exception {
-    when(connection.locateRegion(TABLE_NAME, ROW, true, true, 0))
-        .thenReturn(regionLocations);
+    when(connection.locateRegion(TABLE_NAME, ROW, true, true, 0)).thenReturn(regionLocations);
 
     ScannerCallable callable =
         new ScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null, rpcFactory, 0);

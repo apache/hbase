@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SecurityTests.class, SmallTests.class})
+@Category({ SecurityTests.class, SmallTests.class })
 public class TestExpressionExpander {
 
   @ClassRule
@@ -43,8 +43,8 @@ public class TestExpressionExpander {
     ExpressionExpander expander = new ExpressionExpander();
 
     // (!a) -> (!a)
-    NonLeafExpressionNode exp1 = new NonLeafExpressionNode(Operator.NOT,
-        new LeafExpressionNode("a"));
+    NonLeafExpressionNode exp1 =
+        new NonLeafExpressionNode(Operator.NOT, new LeafExpressionNode("a"));
     ExpressionNode result = expander.expand(exp1);
     assertTrue(result instanceof NonLeafExpressionNode);
     NonLeafExpressionNode nlResult = (NonLeafExpressionNode) result;
@@ -52,8 +52,8 @@ public class TestExpressionExpander {
     assertEquals("a", ((LeafExpressionNode) nlResult.getChildExps().get(0)).getIdentifier());
 
     // (a | b) -> (a | b)
-    NonLeafExpressionNode exp2 = new NonLeafExpressionNode(Operator.OR,
-        new LeafExpressionNode("a"), new LeafExpressionNode("b"));
+    NonLeafExpressionNode exp2 = new NonLeafExpressionNode(Operator.OR, new LeafExpressionNode("a"),
+        new LeafExpressionNode("b"));
     result = expander.expand(exp2);
     assertTrue(result instanceof NonLeafExpressionNode);
     nlResult = (NonLeafExpressionNode) result;
@@ -74,9 +74,9 @@ public class TestExpressionExpander {
     assertEquals("b", ((LeafExpressionNode) nlResult.getChildExps().get(1)).getIdentifier());
 
     // ((a | b) | c) -> (a | b | c)
-    NonLeafExpressionNode exp4 = new NonLeafExpressionNode(Operator.OR, new NonLeafExpressionNode(
-        Operator.OR, new LeafExpressionNode("a"), new LeafExpressionNode("b")),
-        new LeafExpressionNode("c"));
+    NonLeafExpressionNode exp4 =
+        new NonLeafExpressionNode(Operator.OR, new NonLeafExpressionNode(Operator.OR,
+            new LeafExpressionNode("a"), new LeafExpressionNode("b")), new LeafExpressionNode("c"));
     result = expander.expand(exp4);
     assertTrue(result instanceof NonLeafExpressionNode);
     nlResult = (NonLeafExpressionNode) result;
@@ -87,9 +87,9 @@ public class TestExpressionExpander {
     assertEquals("c", ((LeafExpressionNode) nlResult.getChildExps().get(2)).getIdentifier());
 
     // ((a & b) & c) -> (a & b & c)
-    NonLeafExpressionNode exp5 = new NonLeafExpressionNode(Operator.AND, new NonLeafExpressionNode(
-        Operator.AND, new LeafExpressionNode("a"), new LeafExpressionNode("b")),
-        new LeafExpressionNode("c"));
+    NonLeafExpressionNode exp5 =
+        new NonLeafExpressionNode(Operator.AND, new NonLeafExpressionNode(Operator.AND,
+            new LeafExpressionNode("a"), new LeafExpressionNode("b")), new LeafExpressionNode("c"));
     result = expander.expand(exp5);
     assertTrue(result instanceof NonLeafExpressionNode);
     nlResult = (NonLeafExpressionNode) result;
@@ -100,9 +100,9 @@ public class TestExpressionExpander {
     assertEquals("c", ((LeafExpressionNode) nlResult.getChildExps().get(2)).getIdentifier());
 
     // (a | b) & c -> ((a & c) | (b & c))
-    NonLeafExpressionNode exp6 = new NonLeafExpressionNode(Operator.AND, new NonLeafExpressionNode(
-        Operator.OR, new LeafExpressionNode("a"), new LeafExpressionNode("b")),
-        new LeafExpressionNode("c"));
+    NonLeafExpressionNode exp6 =
+        new NonLeafExpressionNode(Operator.AND, new NonLeafExpressionNode(Operator.OR,
+            new LeafExpressionNode("a"), new LeafExpressionNode("b")), new LeafExpressionNode("c"));
     result = expander.expand(exp6);
     assertTrue(result instanceof NonLeafExpressionNode);
     nlResult = (NonLeafExpressionNode) result;
@@ -120,9 +120,9 @@ public class TestExpressionExpander {
     assertEquals("c", ((LeafExpressionNode) temp.getChildExps().get(1)).getIdentifier());
 
     // (a & b) | c -> ((a & b) | c)
-    NonLeafExpressionNode exp7 = new NonLeafExpressionNode(Operator.OR, new NonLeafExpressionNode(
-        Operator.AND, new LeafExpressionNode("a"), new LeafExpressionNode("b")),
-        new LeafExpressionNode("c"));
+    NonLeafExpressionNode exp7 =
+        new NonLeafExpressionNode(Operator.OR, new NonLeafExpressionNode(Operator.AND,
+            new LeafExpressionNode("a"), new LeafExpressionNode("b")), new LeafExpressionNode("c"));
     result = expander.expand(exp7);
     assertTrue(result instanceof NonLeafExpressionNode);
     nlResult = (NonLeafExpressionNode) result;
@@ -226,12 +226,12 @@ public class TestExpressionExpander {
 
     // (((a | b) | c) | d) & e -> ((a & e) | (b & e) | (c & e) | (d & e))
     NonLeafExpressionNode exp12 = new NonLeafExpressionNode(Operator.AND);
-    NonLeafExpressionNode tempExp1 = new NonLeafExpressionNode(Operator.OR, new LeafExpressionNode(
-        "a"), new LeafExpressionNode("b"));
-    NonLeafExpressionNode tempExp2 = new NonLeafExpressionNode(Operator.OR, tempExp1,
-        new LeafExpressionNode("c"));
-    NonLeafExpressionNode tempExp3 = new NonLeafExpressionNode(Operator.OR, tempExp2,
-        new LeafExpressionNode("d"));
+    NonLeafExpressionNode tempExp1 = new NonLeafExpressionNode(Operator.OR,
+        new LeafExpressionNode("a"), new LeafExpressionNode("b"));
+    NonLeafExpressionNode tempExp2 =
+        new NonLeafExpressionNode(Operator.OR, tempExp1, new LeafExpressionNode("c"));
+    NonLeafExpressionNode tempExp3 =
+        new NonLeafExpressionNode(Operator.OR, tempExp2, new LeafExpressionNode("d"));
     exp12.addChildExp(tempExp3);
     exp12.addChildExp(new LeafExpressionNode("e"));
     result = expander.expand(exp12);
@@ -261,9 +261,11 @@ public class TestExpressionExpander {
     assertEquals("e", ((LeafExpressionNode) temp.getChildExps().get(1)).getIdentifier());
 
     // (a | b | c) & d -> ((a & d) | (b & d) | (c & d))
-    NonLeafExpressionNode exp13 = new NonLeafExpressionNode(Operator.AND,
-        new NonLeafExpressionNode(Operator.OR, new LeafExpressionNode("a"), new LeafExpressionNode(
-            "b"), new LeafExpressionNode("c")), new LeafExpressionNode("d"));
+    NonLeafExpressionNode exp13 =
+        new NonLeafExpressionNode(Operator.AND,
+            new NonLeafExpressionNode(Operator.OR, new LeafExpressionNode("a"),
+                new LeafExpressionNode("b"), new LeafExpressionNode("c")),
+            new LeafExpressionNode("d"));
     result = expander.expand(exp13);
     assertTrue(result instanceof NonLeafExpressionNode);
     nlResult = (NonLeafExpressionNode) result;
@@ -382,9 +384,9 @@ public class TestExpressionExpander {
     assertEquals("d", ((LeafExpressionNode) temp.getChildExps().get(1)).getIdentifier());
 
     // !(a | b) -> ((!a) & (!b))
-    NonLeafExpressionNode exp16 = new NonLeafExpressionNode(Operator.NOT,
-        new NonLeafExpressionNode(Operator.OR, new LeafExpressionNode("a"), new LeafExpressionNode(
-            "b")));
+    NonLeafExpressionNode exp16 =
+        new NonLeafExpressionNode(Operator.NOT, new NonLeafExpressionNode(Operator.OR,
+            new LeafExpressionNode("a"), new LeafExpressionNode("b")));
     result = expander.expand(exp16);
     assertTrue(result instanceof NonLeafExpressionNode);
     nlResult = (NonLeafExpressionNode) result;

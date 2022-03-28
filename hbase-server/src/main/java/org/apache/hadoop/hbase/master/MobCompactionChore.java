@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,18 +20,17 @@ package org.apache.hadoop.hbase.master;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure2.LockType;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The Class MobCompactChore for running compaction regularly to merge small mob files.
@@ -64,8 +62,8 @@ public class MobCompactionChore extends ScheduledChore {
         boolean reported = false;
         try {
           final LockManager.MasterLock lock = master.getLockManager().createMasterLock(
-              MobUtils.getTableLockName(htd.getTableName()), LockType.EXCLUSIVE,
-              this.getClass().getName() + ": mob compaction");
+            MobUtils.getTableLockName(htd.getTableName()), LockType.EXCLUSIVE,
+            this.getClass().getName() + ": mob compaction");
           for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
             if (!hcd.isMobEnabled()) {
               continue;
@@ -75,7 +73,7 @@ public class MobCompactionChore extends ScheduledChore {
               reported = true;
             }
             MobUtils.doMobCompaction(master.getConfiguration(), master.getFileSystem(),
-                htd.getTableName(), hcd, pool, false, lock);
+              htd.getTableName(), hcd, pool, false, lock);
           }
         } finally {
           if (reported) {

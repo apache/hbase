@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,14 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.util;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -121,11 +119,8 @@ public class StreamUtils {
 
   /**
    * Reads a varInt value stored in an array.
-   *
-   * @param input
-   *          Input array where the varInt is available
-   * @param offset
-   *          Offset in the input array where varInt is available
+   * @param input Input array where the varInt is available
+   * @param offset Offset in the input array where varInt is available
    * @return A pair of integers in which first value is the actual decoded varInt value and second
    *         value as number of bytes taken by this varInt for it's storage in the input array.
    * @throws IOException When varint is malformed and not able to be read correctly

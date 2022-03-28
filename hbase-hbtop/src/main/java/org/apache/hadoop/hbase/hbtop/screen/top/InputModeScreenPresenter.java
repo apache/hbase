@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.util.function.Function;
 import org.apache.hadoop.hbase.hbtop.screen.ScreenView;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * The presentation logic for the input mode.
  */
@@ -42,7 +41,7 @@ public class InputModeScreenPresenter {
   private int historyPosition = -1;
 
   public InputModeScreenPresenter(InputModeScreenView inputModeScreenView, String message,
-    @Nullable List<String> histories, Function<String, ScreenView> resultListener) {
+      @Nullable List<String> histories, Function<String, ScreenView> resultListener) {
     this.inputModeScreenView = Objects.requireNonNull(inputModeScreenView);
     this.message = Objects.requireNonNull(message);
 

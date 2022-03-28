@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,15 +19,14 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 
 /**
- * A sink for a replication stream has to expose this service.
- * This service allows an application to hook into the
- * regionserver and behave as a replication sink.
+ * A sink for a replication stream has to expose this service. This service allows an application to
+ * hook into the regionserver and behave as a replication sink.
  */
 @InterfaceAudience.Private
 public interface ReplicationSinkService extends ReplicationService {

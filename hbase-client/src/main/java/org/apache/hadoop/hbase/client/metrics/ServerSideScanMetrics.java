@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client.metrics;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
@@ -51,16 +50,16 @@ public class ServerSideScanMetrics {
 
   /**
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-17886">HBASE-17886</a>).
-   *             Use {@link #COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME}.
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-17886">HBASE-17886</a>). Use
+   *             {@link #COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME}.
    */
   @Deprecated
   public static final String COUNT_OF_ROWS_SCANNED_KEY = COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
 
   /**
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-17886">HBASE-17886</a>).
-   *             Use {@link #COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME}.
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-17886">HBASE-17886</a>). Use
+   *             {@link #COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME}.
    */
   @Deprecated
   public static final String COUNT_OF_ROWS_FILTERED_KEY = COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME;
@@ -68,7 +67,8 @@ public class ServerSideScanMetrics {
   /**
    * number of rows filtered during scan RPC
    */
-  public final AtomicLong countOfRowsFiltered = createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
+  public final AtomicLong countOfRowsFiltered =
+      createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
 
   /**
    * number of rows scanned during scan RPC. Not every row scanned will be returned to the client

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Cluster;
@@ -43,27 +41,24 @@ public abstract class JobUtil {
 
   /**
    * Initializes the staging directory and returns the path.
-   *
    * @param conf system configuration
    * @return staging directory path
    * @throws IOException if the ownership on the staging directory is not as expected
    * @throws InterruptedException if the thread getting the staging directory is interrupted
    */
-  public static Path getStagingDir(Configuration conf)
-      throws IOException, InterruptedException {
+  public static Path getStagingDir(Configuration conf) throws IOException, InterruptedException {
     return JobSubmissionFiles.getStagingDir(new Cluster(conf), conf);
   }
 
   /**
    * Initializes the staging directory and returns the qualified path.
-   *
    * @param conf conf system configuration
    * @return qualified staging directory path
    * @throws IOException if the ownership on the staging directory is not as expected
    * @throws InterruptedException if the thread getting the staging directory is interrupted
    */
   public static Path getQualifiedStagingDir(Configuration conf)
-    throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     Cluster cluster = new Cluster(conf);
     Path stagingDir = JobSubmissionFiles.getStagingDir(cluster, conf);
     return cluster.getFileSystem().makeQualified(stagingDir);

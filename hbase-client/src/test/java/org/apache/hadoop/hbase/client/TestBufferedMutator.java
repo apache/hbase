@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({SmallTests.class, ClientTests.class})
+@Category({ SmallTests.class, ClientTests.class })
 public class TestBufferedMutator {
 
   @ClassRule
@@ -45,8 +45,7 @@ public class TestBufferedMutator {
   public TestName name = new TestName();
 
   /**
-   * My BufferedMutator.
-   * Just to prove that I can insert a BM other than default.
+   * My BufferedMutator. Just to prove that I can insert a BM other than default.
    */
   public static class MyBufferedMutator extends BufferedMutatorImpl {
     MyBufferedMutator(ClusterConnection conn, RpcRetryingCallerFactory rpcCallerFactory,
@@ -57,10 +56,11 @@ public class TestBufferedMutator {
 
   @Test
   public void testAlternateBufferedMutatorImpl() throws IOException {
-    BufferedMutatorParams params =  new BufferedMutatorParams(TableName.valueOf(name.getMethodName()));
+    BufferedMutatorParams params =
+        new BufferedMutatorParams(TableName.valueOf(name.getMethodName()));
     Configuration conf = HBaseConfiguration.create();
     conf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
-        DoNothingConnectionRegistry.class.getName());
+      DoNothingConnectionRegistry.class.getName());
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       BufferedMutator bm = connection.getBufferedMutator(params);
       // Assert we get default BM if nothing specified.

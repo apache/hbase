@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,7 @@ final class MasterRegionUtils {
   }
 
   static void moveFilesUnderDir(FileSystem fs, Path src, Path dst, String suffix)
-    throws IOException {
+      throws IOException {
     if (!fs.exists(dst) && !fs.mkdirs(dst)) {
       LOG.warn("Failed to create dir {}", dst);
       return;

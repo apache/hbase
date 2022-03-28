@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,9 +18,7 @@
 package org.apache.hadoop.hbase.metrics.impl;
 
 import com.codahale.metrics.Meter;
-
 import java.util.Objects;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -39,11 +37,13 @@ public class DropwizardMeter implements org.apache.hadoop.hbase.metrics.Meter {
     this.meter = Objects.requireNonNull(meter);
   }
 
-  @Override public void mark() {
+  @Override
+  public void mark() {
     this.meter.mark();
   }
 
-  @Override public void mark(long count) {
+  @Override
+  public void mark(long count) {
     this.meter.mark(count);
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -77,15 +77,15 @@ public class TestMasterOperationsForRegionReplicas {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterOperationsForRegionReplicas.class);
+      HBaseClassTestRule.forClass(TestMasterOperationsForRegionReplicas.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionPlacement.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Connection CONNECTION = null;
   private static Admin ADMIN;
   private static int numSlaves = 2;
-  private final static StartMiniClusterOption option = StartMiniClusterOption.builder().
-      numRegionServers(numSlaves).numMasters(1).numAlwaysStandByMasters(1).build();
+  private final static StartMiniClusterOption option = StartMiniClusterOption.builder()
+      .numRegionServers(numSlaves).numMasters(1).numAlwaysStandByMasters(1).build();
   private static Configuration conf;
 
   @Rule
@@ -99,7 +99,7 @@ public class TestMasterOperationsForRegionReplicas {
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
     resetConnections();
     while (ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics()
-      .size() < numSlaves) {
+        .size() < numSlaves) {
       Thread.sleep(100);
     }
   }
@@ -125,8 +125,8 @@ public class TestMasterOperationsForRegionReplicas {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
       TableDescriptor desc =
-        TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(numReplica)
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
+          TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(numReplica)
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
       ADMIN.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       TEST_UTIL.waitUntilNoRegionsInTransition();
@@ -147,8 +147,8 @@ public class TestMasterOperationsForRegionReplicas {
     final int numReplica = 2;
     try {
       TableDescriptor desc =
-        TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(numReplica)
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
+          TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(numReplica)
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
       ADMIN.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       TEST_UTIL.waitUntilNoRegionsInTransition();
@@ -196,12 +196,12 @@ public class TestMasterOperationsForRegionReplicas {
       // up at same coordinates -- and the assignment retention logic has a chance to cut in.
       List<Integer> rsports = new ArrayList<>();
       for (JVMClusterUtil.RegionServerThread rst : TEST_UTIL.getHBaseCluster()
-        .getLiveRegionServerThreads()) {
+          .getLiveRegionServerThreads()) {
         rsports.add(rst.getRegionServer().getRpcServer().getListenerAddress().getPort());
       }
       TEST_UTIL.shutdownMiniHBaseCluster();
       StartMiniClusterOption option =
-        StartMiniClusterOption.builder().numRegionServers(numSlaves).rsPorts(rsports).build();
+          StartMiniClusterOption.builder().numRegionServers(numSlaves).rsPorts(rsports).build();
       TEST_UTIL.startMiniHBaseCluster(option);
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       TEST_UTIL.waitUntilNoRegionsInTransition();
@@ -233,9 +233,10 @@ public class TestMasterOperationsForRegionReplicas {
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       TEST_UTIL.waitUntilNoRegionsInTransition();
       List<RegionInfo> regions = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
-        .getRegionStates().getRegionsOfTable(tableName);
-      assertTrue("regions.size=" + regions.size() + ", numRegions=" + numRegions + ", numReplica=" +
-        numReplica, regions.size() == numRegions * (numReplica + 1));
+          .getRegionStates().getRegionsOfTable(tableName);
+      assertTrue("regions.size=" + regions.size() + ", numRegions=" + numRegions + ", numReplica="
+          + numReplica,
+        regions.size() == numRegions * (numReplica + 1));
 
       // decrease the replica(earlier, table was modified to have a replica count of numReplica + 1)
       ADMIN.disableTable(tableName);
@@ -246,7 +247,7 @@ public class TestMasterOperationsForRegionReplicas {
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       TEST_UTIL.waitUntilNoRegionsInTransition();
       regions = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-        .getRegionsOfTable(tableName);
+          .getRegionsOfTable(tableName);
       assertEquals(numRegions * numReplica, regions.size());
       // also make sure the meta table has the replica locations removed
       hris = MetaTableAccessor.getTableRegions(ADMIN.getConnection(), tableName);
@@ -275,9 +276,8 @@ public class TestMasterOperationsForRegionReplicas {
     for (int i = 0; i < numRegions; i++) {
       for (int j = 0; j < numReplica; j++) {
         RegionInfo replica = RegionReplicaUtil.getRegionInfoForReplica(hris.get(i), j);
-        RegionState state =
-            TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-                .getRegionState(replica);
+        RegionState state = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+            .getRegionStates().getRegionState(replica);
         assertNotNull(state);
       }
     }
@@ -292,8 +292,8 @@ public class TestMasterOperationsForRegionReplicas {
       // Create a table and let the meta table be updated with the location of the
       // region locations.
       TableDescriptor desc =
-        TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(numReplica)
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
+          TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(numReplica)
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
       ADMIN.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       TEST_UTIL.waitUntilNoRegionsInTransition();
@@ -324,7 +324,7 @@ public class TestMasterOperationsForRegionReplicas {
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       TEST_UTIL.waitUntilNoRegionsInTransition();
       List<RegionInfo> regions = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
-        .getRegionStates().getRegionsOfTable(tableName);
+          .getRegionStates().getRegionsOfTable(tableName);
       assertEquals(numRegions * numReplica, regions.size());
     } finally {
       ADMIN.disableTable(tableName);
@@ -350,7 +350,7 @@ public class TestMasterOperationsForRegionReplicas {
   private void validateFromSnapshotFromMeta(HBaseTestingUtility util, TableName table,
       int numRegions, int numReplica, Connection connection) throws IOException {
     SnapshotOfRegionAssignmentFromMeta snapshot =
-      new SnapshotOfRegionAssignmentFromMeta(connection);
+        new SnapshotOfRegionAssignmentFromMeta(connection);
     snapshot.initialize();
     Map<RegionInfo, ServerName> regionToServerMap = snapshot.getRegionToRegionServerMap();
     assert (regionToServerMap.size() == numRegions * numReplica + 1); // '1' for the namespace
@@ -377,7 +377,7 @@ public class TestMasterOperationsForRegionReplicas {
   private void validateSingleRegionServerAssignment(Connection connection, int numRegions,
       int numReplica) throws IOException {
     SnapshotOfRegionAssignmentFromMeta snapshot =
-      new SnapshotOfRegionAssignmentFromMeta(connection);
+        new SnapshotOfRegionAssignmentFromMeta(connection);
     snapshot.initialize();
     Map<RegionInfo, ServerName> regionToServerMap = snapshot.getRegionToRegionServerMap();
     assertEquals(regionToServerMap.size(), numRegions * numReplica + 1);

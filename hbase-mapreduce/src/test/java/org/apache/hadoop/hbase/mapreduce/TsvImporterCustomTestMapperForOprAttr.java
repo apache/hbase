@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.util.Arrays;
-
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
@@ -27,8 +26,7 @@ import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.ParsedLine;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Just shows a simple example of how the attributes can be extracted and added
- * to the puts
+ * Just shows a simple example of how the attributes can be extracted and added to the puts
  */
 public class TsvImporterCustomTestMapperForOprAttr extends TsvImporterMapper {
   @Override

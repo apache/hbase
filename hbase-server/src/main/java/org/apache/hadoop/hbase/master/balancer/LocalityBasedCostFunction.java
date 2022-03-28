@@ -34,7 +34,7 @@ abstract class LocalityBasedCostFunction extends CostFunction {
   private double locality; // current locality across cluster weighted by local data size
 
   LocalityBasedCostFunction(Configuration conf, LocalityType type, String localityCostKey,
-    float defaultLocalityCost) {
+      float defaultLocalityCost) {
     this.type = type;
     this.setMultiplier(conf.getFloat(localityCostKey, defaultLocalityCost));
     this.locality = 0.0;
@@ -66,11 +66,11 @@ abstract class LocalityBasedCostFunction extends CostFunction {
   @Override
   protected void regionMoved(int region, int oldServer, int newServer) {
     int oldEntity =
-      type == LocalityType.SERVER ? oldServer : cluster.serverIndexToRackIndex[oldServer];
+        type == LocalityType.SERVER ? oldServer : cluster.serverIndexToRackIndex[oldServer];
     int newEntity =
-      type == LocalityType.SERVER ? newServer : cluster.serverIndexToRackIndex[newServer];
+        type == LocalityType.SERVER ? newServer : cluster.serverIndexToRackIndex[newServer];
     double localityDelta =
-      getWeightedLocality(region, newEntity) - getWeightedLocality(region, oldEntity);
+        getWeightedLocality(region, newEntity) - getWeightedLocality(region, oldEntity);
     double normalizedDelta = bestLocality == 0 ? 0.0 : localityDelta / bestLocality;
     locality += normalizedDelta;
   }

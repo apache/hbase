@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,19 +39,19 @@ import org.junit.experimental.categories.Category;
 
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestFSHLogCorruptionWithMultiPutDueToDanglingByteBuffer
-  extends WALCorruptionWithMultiPutDueToDanglingByteBufferTestBase {
+    extends WALCorruptionWithMultiPutDueToDanglingByteBufferTestBase {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
-    .forClass(TestFSHLogCorruptionWithMultiPutDueToDanglingByteBuffer.class);
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFSHLogCorruptionWithMultiPutDueToDanglingByteBuffer.class);
 
   public static final class PauseWAL extends FSHLog {
 
     private int testTableWalAppendsCount = 0;
 
     public PauseWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
-      Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
-      String prefix, String suffix) throws IOException {
+        Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
+        String prefix, String suffix) throws IOException {
       super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
     }
 
@@ -88,9 +87,9 @@ public class TestFSHLogCorruptionWithMultiPutDueToDanglingByteBuffer
     @Override
     protected PauseWAL createWAL() throws IOException {
       return new PauseWAL(CommonFSUtils.getWALFileSystem(conf), CommonFSUtils.getWALRootDir(conf),
-        getWALDirectoryName(factory.factoryId), getWALArchiveDirectoryName(conf, factory.factoryId),
-        conf, listeners, true, logPrefix,
-        META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
+          getWALDirectoryName(factory.factoryId),
+          getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
+          META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
     }
 
     @Override
@@ -118,4 +117,3 @@ public class TestFSHLogCorruptionWithMultiPutDueToDanglingByteBuffer
     UTIL.shutdownMiniCluster();
   }
 }
-

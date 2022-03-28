@@ -20,16 +20,14 @@ package org.apache.hadoop.hbase.master.normalizer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A {@link NormalizationPlan} describes some modification to region split points as identified
- * by an instance of {@link RegionNormalizer}. It is a POJO describing what action needs taken
- * and the regions it targets.
+ * A {@link NormalizationPlan} describes some modification to region split points as identified by
+ * an instance of {@link RegionNormalizer}. It is a POJO describing what action needs taken and the
+ * regions it targets.
  */
 @InterfaceAudience.Private
 public interface NormalizationPlan {
   enum PlanType {
-    SPLIT,
-    MERGE,
-    NONE
+    SPLIT, MERGE, NONE
   }
 
   /**

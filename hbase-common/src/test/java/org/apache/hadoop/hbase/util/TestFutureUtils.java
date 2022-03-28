@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public class TestFutureUtils {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFutureUtils.class);
+      HBaseClassTestRule.forClass(TestFutureUtils.class);
 
   private ExecutorService executor;
 
@@ -80,7 +80,7 @@ public class TestFutureUtils {
       assertThat(elements[4].toString(),
         startsWith("org.apache.hadoop.hbase.util.TestFutureUtils.testRecordStackTrace"));
       assertTrue(Stream.of(elements)
-        .anyMatch(element -> element.toString().contains("--------Future.get--------")));
+          .anyMatch(element -> element.toString().contains("--------Future.get--------")));
     } catch (Throwable t) {
       throw new AssertionError("Caught unexpected Throwable", t);
     }

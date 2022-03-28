@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,7 @@ public class TestAsyncTableRegionReplicasGet extends AbstractTestAsyncTableRegio
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableRegionReplicasGet.class);
+      HBaseClassTestRule.forClass(TestAsyncTableRegionReplicasGet.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {

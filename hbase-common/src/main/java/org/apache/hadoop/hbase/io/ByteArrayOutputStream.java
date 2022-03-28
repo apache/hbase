@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.OutputStream;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -107,7 +106,7 @@ public class ByteArrayOutputStream extends OutputStream implements ByteBufferWri
 
   /**
    * Copies the content of this Stream into a new byte array.
-   * @return  the contents of this output stream, as new byte array.
+   * @return the contents of this output stream, as new byte array.
    */
   public byte[] toByteArray() {
     return Arrays.copyOf(buf, pos);

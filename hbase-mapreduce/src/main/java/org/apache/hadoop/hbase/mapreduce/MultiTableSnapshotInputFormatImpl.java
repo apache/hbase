@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
@@ -42,8 +41,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
- * Shared implementation of mapreduce code over multiple table snapshots.
- * Utilized by both mapreduce
+ * Shared implementation of mapreduce code over multiple table snapshots. Utilized by both mapreduce
  * {@link org.apache.hadoop.hbase.mapreduce.MultiTableSnapshotInputFormat} and mapred
  * {@link org.apache.hadoop.hbase.mapred.MultiTableSnapshotInputFormat} implementations.
  */
@@ -78,9 +76,7 @@ public class MultiTableSnapshotInputFormatImpl {
 
   /**
    * Return the list of splits extracted from the scans/snapshots pushed to conf by
-   * {@link
-   * #setInput(org.apache.hadoop.conf.Configuration, java.util.Map, org.apache.hadoop.fs.Path)}
-   *
+   * {@link #setInput(org.apache.hadoop.conf.Configuration, java.util.Map, org.apache.hadoop.fs.Path)}
    * @param conf Configuration to determine splits from
    * @return Return the list of splits extracted from the scans/snapshots pushed to conf
    * @throws IOException
@@ -116,7 +112,6 @@ public class MultiTableSnapshotInputFormatImpl {
   /**
    * Retrieve the snapshot name -&gt; list&lt;scan&gt; mapping pushed to configuration by
    * {@link #setSnapshotToScans(org.apache.hadoop.conf.Configuration, java.util.Map)}
-   *
    * @param conf Configuration to extract name -&gt; list&lt;scan&gt; mappings from.
    * @return the snapshot name -&gt; list&lt;scan&gt; mapping pushed to configuration
    * @throws IOException
@@ -125,8 +120,8 @@ public class MultiTableSnapshotInputFormatImpl {
 
     Map<String, Collection<Scan>> rtn = Maps.newHashMap();
 
-    for (Map.Entry<String, String> entry : ConfigurationUtil
-        .getKeyValues(conf, SNAPSHOT_TO_SCANS_KEY)) {
+    for (Map.Entry<String, String> entry : ConfigurationUtil.getKeyValues(conf,
+      SNAPSHOT_TO_SCANS_KEY)) {
       String snapshotName = entry.getKey();
       String scan = entry.getValue();
 
@@ -144,7 +139,6 @@ public class MultiTableSnapshotInputFormatImpl {
 
   /**
    * Push snapshotScans to conf (under the key {@link #SNAPSHOT_TO_SCANS_KEY})
-   *
    * @param conf
    * @param snapshotScans
    * @throws IOException
@@ -171,7 +165,6 @@ public class MultiTableSnapshotInputFormatImpl {
   /**
    * Retrieve the directories into which snapshots have been restored from
    * ({@link #RESTORE_DIRS_KEY})
-   *
    * @param conf Configuration to extract restore directories from
    * @return the directories into which snapshots have been restored from
    * @throws IOException
@@ -198,10 +191,9 @@ public class MultiTableSnapshotInputFormatImpl {
   }
 
   /**
-   * Generate a random path underneath baseRestoreDir for each snapshot in snapshots and
-   * return a map from the snapshot to the restore directory.
-   *
-   * @param snapshots      collection of snapshot names to restore
+   * Generate a random path underneath baseRestoreDir for each snapshot in snapshots and return a
+   * map from the snapshot to the restore directory.
+   * @param snapshots collection of snapshot names to restore
    * @param baseRestoreDir base directory under which all snapshots in snapshots will be restored
    * @return a mapping from snapshot name to the directory in which that snapshot has been restored
    */
@@ -220,10 +212,9 @@ public class MultiTableSnapshotInputFormatImpl {
 
   /**
    * Restore each (snapshot name, restore directory) pair in snapshotToDir
-   *
-   * @param conf          configuration to restore with
+   * @param conf configuration to restore with
    * @param snapshotToDir mapping from snapshot names to restore directories
-   * @param fs            filesystem to do snapshot restoration on
+   * @param fs filesystem to do snapshot restoration on
    */
   public void restoreSnapshots(Configuration conf, Map<String, Path> snapshotToDir, FileSystem fs)
       throws IOException {

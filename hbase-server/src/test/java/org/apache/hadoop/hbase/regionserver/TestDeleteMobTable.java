@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -73,9 +72,7 @@ public class TestDeleteMobTable {
 
   /**
    * Generate the mob value.
-   *
-   * @param size
-   *          the size of the value
+   * @param size the size of the value
    * @return the mob value generated
    */
   private static byte[] generateMobValue(int size) {
@@ -201,11 +198,10 @@ public class TestDeleteMobTable {
     return 0;
   }
 
-  private int countArchiveMobFiles(TableName tn, String familyName)
-      throws IOException {
+  private int countArchiveMobFiles(TableName tn, String familyName) throws IOException {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path storePath = HFileArchiveUtil.getStoreArchivePath(TEST_UTIL.getConfiguration(), tn,
-        MobUtils.getMobRegionInfo(tn).getEncodedName(), familyName);
+      MobUtils.getMobRegionInfo(tn).getEncodedName(), familyName);
     if (fs.exists(storePath)) {
       return fs.listStatus(storePath).length;
     }
@@ -215,7 +211,7 @@ public class TestDeleteMobTable {
   private boolean mobTableDirExist(TableName tn) throws IOException {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path tableDir =
-      CommonFSUtils.getTableDir(MobUtils.getMobHome(TEST_UTIL.getConfiguration()), tn);
+        CommonFSUtils.getTableDir(MobUtils.getMobHome(TEST_UTIL.getConfiguration()), tn);
     return fs.exists(tableDir);
   }
 
@@ -229,7 +225,7 @@ public class TestDeleteMobTable {
       throws IOException {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path storePath = HFileArchiveUtil.getStoreArchivePath(TEST_UTIL.getConfiguration(), tn,
-        MobUtils.getMobRegionInfo(tn).getEncodedName(), familyName);
+      MobUtils.getMobRegionInfo(tn).getEncodedName(), familyName);
     return fs.exists(new Path(storePath, fileName));
   }
 
@@ -241,8 +237,8 @@ public class TestDeleteMobTable {
     Result r = rs.next();
     Assert.assertNotNull(r);
     String fileName = MobUtils.getMobFileName(r.getColumnLatestCell(FAMILY, QF));
-    Path filePath = new Path(
-        MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tn, familyName), fileName);
+    Path filePath =
+        new Path(MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tn, familyName), fileName);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Assert.assertTrue(fs.exists(filePath));
     r = rs.next();

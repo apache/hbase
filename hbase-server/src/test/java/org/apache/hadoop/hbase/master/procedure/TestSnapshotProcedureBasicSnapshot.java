@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.fail;
@@ -36,7 +35,7 @@ public class TestSnapshotProcedureBasicSnapshot extends TestSnapshotProcedure {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotProcedureBasicSnapshot.class);
+      HBaseClassTestRule.forClass(TestSnapshotProcedureBasicSnapshot.class);
 
   @Test
   public void testSimpleSnapshotTable() throws Exception {
@@ -62,7 +61,7 @@ public class TestSnapshotProcedureBasicSnapshot extends TestSnapshotProcedure {
     Thread.sleep(1000);
     // we don't allow different snapshot with same name
     SnapshotDescription snapshotWithSameName =
-      new SnapshotDescription(SNAPSHOT_NAME, TABLE_NAME, SnapshotType.SKIPFLUSH);
+        new SnapshotDescription(SNAPSHOT_NAME, TABLE_NAME, SnapshotType.SKIPFLUSH);
     TEST_UTIL.getAdmin().snapshot(snapshotWithSameName);
   }
 

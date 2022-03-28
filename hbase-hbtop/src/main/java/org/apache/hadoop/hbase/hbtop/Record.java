@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -94,7 +94,8 @@ public final class Record implements Map<Field, FieldValue> {
   }
 
   public static Record ofEntries(Stream<Entry> entries) {
-    return entries.collect(Record::builder, Builder::put, (r1, r2) -> {}).build();
+    return entries.collect(Record::builder, Builder::put, (r1, r2) -> {
+    }).build();
   }
 
   private Record(ImmutableMap<Field, FieldValue> values) {
@@ -165,12 +166,11 @@ public final class Record implements Map<Field, FieldValue> {
   }
 
   public Record combine(Record o) {
-    return ofEntries(values.keySet().stream()
-      .map(k -> {
-        if (k.getFieldValueType() == FieldValueType.STRING) {
-          return entry(k, values.get(k));
-        }
-        return entry(k, values.get(k).plus(o.values.get(k)));
-      }));
+    return ofEntries(values.keySet().stream().map(k -> {
+      if (k.getFieldValueType() == FieldValueType.STRING) {
+        return entry(k, values.get(k));
+      }
+      return entry(k, values.get(k).plus(o.values.get(k)));
+    }));
   }
 }

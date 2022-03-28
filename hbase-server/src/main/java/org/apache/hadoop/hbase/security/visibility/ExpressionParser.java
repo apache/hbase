@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,13 +21,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.security.visibility.expression.ExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.LeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.NonLeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.Operator;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class ExpressionParser {
@@ -39,6 +38,7 @@ public class ExpressionParser {
   private static final char NOT = '!';
   private static final char SPACE = ' ';
   private static final char DOUBLE_QUOTES = '"';
+
   public ExpressionNode parse(String expS) throws ParseException {
     expS = expS.trim();
     Stack<ExpressionNode> expStack = new Stack<>();
@@ -66,28 +66,28 @@ public class ExpressionParser {
           break;
         case DOUBLE_QUOTES:
           int labelOffset = ++index;
-          // We have to rewrite the expression within double quotes as incase of expressions 
+          // We have to rewrite the expression within double quotes as incase of expressions
           // with escape characters we may have to avoid them as the original expression did
           // not have them
           List<Byte> list = new ArrayList<>();
           while (index < endPos && !endDoubleQuotesFound(exp[index])) {
             if (exp[index] == '\\') {
               index++;
-              if (exp[index] != '\\' && exp[index] != '"')
-                throw new ParseException("invalid escaping with quotes " + expS + " at column : "
-                    + index);
+              if (exp[index] != '\\' && exp[index] != '"') throw new ParseException(
+                  "invalid escaping with quotes " + expS + " at column : " + index);
             }
             list.add(exp[index]);
             index++;
           }
-          // The expression has come to the end. still no double quotes found 
-          if(index == endPos) {
+          // The expression has come to the end. still no double quotes found
+          if (index == endPos) {
             throw new ParseException("No terminating quotes " + expS + " at column : " + index);
           }
           // This could be costly. but do we have any alternative?
           // If we don't do this way then we may have to handle while checking the authorizations.
           // Better to do it here.
-          byte[] array = org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.toArray(list);
+          byte[] array =
+              org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.toArray(list);
           String leafExp = Bytes.toString(array).trim();
           if (leafExp.isEmpty()) {
             throw new ParseException("Error parsing expression " + expS + " at column : " + index);
@@ -99,8 +99,8 @@ public class ExpressionParser {
           labelOffset = index;
           do {
             if (!VisibilityLabelsValidator.isValidAuthChar(exp[index])) {
-              throw new ParseException("Error parsing expression " 
-                 + expS + " at column : " + index);
+              throw new ParseException(
+                  "Error parsing expression " + expS + " at column : " + index);
             }
             index++;
           } while (index < endPos && !isEndOfLabel(exp[index]));
@@ -137,7 +137,7 @@ public class ExpressionParser {
   }
 
   private int skipSpaces(byte[] exp, int index) {
-    while (index < exp.length -1 && exp[index+1] == SPACE) {
+    while (index < exp.length - 1 && exp[index + 1] == SPACE) {
       index++;
     }
     return index;
@@ -293,21 +293,21 @@ public class ExpressionParser {
   private static boolean endDoubleQuotesFound(byte b) {
     return (b == DOUBLE_QUOTES);
   }
+
   private static boolean isEndOfLabel(byte b) {
-    return (b == OPEN_PARAN || b == CLOSE_PARAN || b == OR || b == AND || 
-        b == NOT || b == SPACE);
+    return (b == OPEN_PARAN || b == CLOSE_PARAN || b == OR || b == AND || b == NOT || b == SPACE);
   }
 
   private static Operator getOperator(byte op) {
     switch (op) {
-    case AND:
-      return Operator.AND;
-    case OR:
-      return Operator.OR;
-    case NOT:
-      return Operator.NOT;
-    default:
-      return null;
+      case AND:
+        return Operator.AND;
+      case OR:
+        return Operator.OR;
+      case NOT:
+        return Operator.NOT;
+      default:
+        return null;
     }
   }
 }

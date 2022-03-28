@@ -89,8 +89,8 @@ public class Report {
    * @return True if an 'empty' lastReport -- no problems found.
    */
   public boolean isEmpty() {
-    return this.holes.isEmpty() && this.overlaps.isEmpty() && this.unknownServers.isEmpty() &&
-      this.emptyRegionInfo.isEmpty();
+    return this.holes.isEmpty() && this.overlaps.isEmpty() && this.unknownServers.isEmpty()
+        && this.emptyRegionInfo.isEmpty();
   }
 
   @Override
@@ -101,14 +101,14 @@ public class Report {
         sb.append(", ");
       }
       sb.append("hole=").append(p.getFirst().getRegionNameAsString()).append("/")
-        .append(p.getSecond().getRegionNameAsString());
+          .append(p.getSecond().getRegionNameAsString());
     }
     for (Pair<RegionInfo, RegionInfo> p : this.overlaps) {
       if (sb.length() > 0) {
         sb.append(", ");
       }
       sb.append("overlap=").append(p.getFirst().getRegionNameAsString()).append("/")
-        .append(p.getSecond().getRegionNameAsString());
+          .append(p.getSecond().getRegionNameAsString());
     }
     for (byte[] r : this.emptyRegionInfo) {
       if (sb.length() > 0) {
@@ -121,7 +121,7 @@ public class Report {
         sb.append(", ");
       }
       sb.append("unknown_server=").append(p.getSecond()).append("/")
-        .append(p.getFirst().getRegionNameAsString());
+          .append(p.getFirst().getRegionNameAsString());
     }
     return sb.toString();
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -106,7 +105,8 @@ public class TestBucketCacheRefCnt {
     }
   }
 
-  @org.junit.Ignore @Test // Disabled by HBASE-24079. Reenable issue HBASE-24082
+  @org.junit.Ignore
+  @Test // Disabled by HBASE-24079. Reenable issue HBASE-24082
   // Flakey TestBucketCacheRefCnt.testBlockInRAMCache:121 expected:<3> but was:<2>
   public void testBlockInRAMCache() throws IOException {
     cache = create(1, 1000);
@@ -317,6 +317,7 @@ public class TestBucketCacheRefCnt {
    *    by Thread2 and the content of Block1 would be overwritten after it is freed, which may
    *    cause a serious error.
    * </pre>
+   * 
    * @throws Exception
    */
   @Test

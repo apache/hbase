@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.procedure2;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Used internally signaling failed queue of a remote procedure operation.
- * The target server passed is null.
+ * Used internally signaling failed queue of a remote procedure operation. The target server passed
+ * is null.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Private

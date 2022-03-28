@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,8 +65,8 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRegionObserverForAddingMutationsFromCoprocessors.class);
 
-  private static final Logger LOG
-    = LoggerFactory.getLogger(TestRegionObserverForAddingMutationsFromCoprocessors.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRegionObserverForAddingMutationsFromCoprocessors.class);
 
   private static HBaseTestingUtility util;
   private static final byte[] dummy = Bytes.toBytes("dummy");
@@ -98,10 +98,8 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
   }
 
   private void createTable(String coprocessor) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName)
-        .addFamily(new HColumnDescriptor(dummy))
-        .addFamily(new HColumnDescriptor(test))
-        .addCoprocessor(coprocessor);
+    HTableDescriptor htd = new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(dummy))
+        .addFamily(new HColumnDescriptor(test)).addCoprocessor(coprocessor);
     util.getAdmin().createTable(htd);
   }
 
@@ -138,7 +136,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
   private static void assertRowCount(Table t, int expected) throws IOException {
     try (ResultScanner scanner = t.getScanner(new Scan())) {
       int i = 0;
-      for (Result r: scanner) {
+      for (Result r : scanner) {
         LOG.info(r.toString());
         i++;
       }
@@ -151,11 +149,8 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     createTable(TestDeleteCellCoprocessor.class.getName());
 
     try (Table t = util.getConnection().getTable(tableName)) {
-      t.put(Lists.newArrayList(
-        new Put(row1).addColumn(test, dummy, dummy),
-        new Put(row2).addColumn(test, dummy, dummy),
-        new Put(row3).addColumn(test, dummy, dummy)
-          ));
+      t.put(Lists.newArrayList(new Put(row1).addColumn(test, dummy, dummy),
+        new Put(row2).addColumn(test, dummy, dummy), new Put(row3).addColumn(test, dummy, dummy)));
 
       assertRowCount(t, 3);
 
@@ -169,11 +164,8 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     createTable(TestDeleteFamilyCoprocessor.class.getName());
 
     try (Table t = util.getConnection().getTable(tableName)) {
-      t.put(Lists.newArrayList(
-        new Put(row1).addColumn(test, dummy, dummy),
-        new Put(row2).addColumn(test, dummy, dummy),
-        new Put(row3).addColumn(test, dummy, dummy)
-          ));
+      t.put(Lists.newArrayList(new Put(row1).addColumn(test, dummy, dummy),
+        new Put(row2).addColumn(test, dummy, dummy), new Put(row3).addColumn(test, dummy, dummy)));
 
       assertRowCount(t, 3);
 
@@ -187,11 +179,8 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
     createTable(TestDeleteRowCoprocessor.class.getName());
 
     try (Table t = util.getConnection().getTable(tableName)) {
-      t.put(Lists.newArrayList(
-        new Put(row1).addColumn(test, dummy, dummy),
-        new Put(row2).addColumn(test, dummy, dummy),
-        new Put(row3).addColumn(test, dummy, dummy)
-          ));
+      t.put(Lists.newArrayList(new Put(row1).addColumn(test, dummy, dummy),
+        new Put(row2).addColumn(test, dummy, dummy), new Put(row3).addColumn(test, dummy, dummy)));
 
       assertRowCount(t, 3);
 
@@ -224,10 +213,9 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
         MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
       Mutation mut = miniBatchOp.getOperation(0);
       List<Cell> cells = mut.getFamilyCellMap().get(test);
-      Put[] puts = new Put[] {
-          new Put(Bytes.toBytes("cpPut")).addColumn(test, dummy, cells.get(0).getTimestamp(),
-            Bytes.toBytes("cpdummy")).setTTL(mut.getTTL())
-          };
+      Put[] puts = new Put[] { new Put(Bytes.toBytes("cpPut"))
+          .addColumn(test, dummy, cells.get(0).getTimestamp(), Bytes.toBytes("cpdummy"))
+          .setTTL(mut.getTTL()) };
       LOG.info("Putting:" + Arrays.toString(puts));
       miniBatchOp.addOperationsFromCP(0, puts);
     }
@@ -248,8 +236,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
           new Put(row1).addColumn(test, dummy, cells.get(0).getTimestamp(),
             Bytes.toBytes("cpdummy")),
           new Put(row2).addColumn(test, dummy, cells.get(0).getTimestamp(), dummy),
-          new Put(row3).addColumn(test, dummy, cells.get(0).getTimestamp(), dummy),
-      };
+          new Put(row3).addColumn(test, dummy, cells.get(0).getTimestamp(), dummy), };
       LOG.info("Putting:" + Arrays.toString(puts));
       miniBatchOp.addOperationsFromCP(0, puts);
     }
@@ -271,8 +258,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
         Delete[] deletes = new Delete[] {
             // delete only 2 rows
             new Delete(row1).addColumns(test, dummy, cells.get(0).getTimestamp()),
-            new Delete(row2).addColumns(test, dummy, cells.get(0).getTimestamp()),
-        };
+            new Delete(row2).addColumns(test, dummy, cells.get(0).getTimestamp()), };
         LOG.info("Deleting:" + Arrays.toString(deletes));
         miniBatchOp.addOperationsFromCP(0, deletes);
       }
@@ -295,8 +281,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
         Delete[] deletes = new Delete[] {
             // delete only 2 rows
             new Delete(row1).addFamily(test, cells.get(0).getTimestamp()),
-            new Delete(row2).addFamily(test, cells.get(0).getTimestamp()),
-        };
+            new Delete(row2).addFamily(test, cells.get(0).getTimestamp()), };
         LOG.info("Deleting:" + Arrays.toString(deletes));
         miniBatchOp.addOperationsFromCP(0, deletes);
       }
@@ -319,8 +304,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
         Delete[] deletes = new Delete[] {
             // delete only 2 rows
             new Delete(row1, cells.get(0).getTimestamp()),
-            new Delete(row2, cells.get(0).getTimestamp()),
-        };
+            new Delete(row2, cells.get(0).getTimestamp()), };
         LOG.info("Deleting:" + Arrays.toString(deletes));
         miniBatchOp.addOperationsFromCP(0, deletes);
       }
@@ -337,7 +321,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
 
     @Override
     public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-                             RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+        RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
       if (info.getTable().equals(TableName.valueOf("testCPMutationsAreWrittenToWALEdit"))) {
         savedEdit = logEdit;
       }

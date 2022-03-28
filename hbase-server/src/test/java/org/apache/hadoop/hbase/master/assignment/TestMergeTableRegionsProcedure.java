@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,7 +59,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestMergeTableRegionsProcedure {
 
   @ClassRule
@@ -124,7 +125,7 @@ public class TestMergeTableRegionsProcedure {
   @After
   public void tearDown() throws Exception {
     resetProcExecutorTestingKillFlag();
-    for (TableDescriptor htd: admin.listTableDescriptors()) {
+    for (TableDescriptor htd : admin.listTableDescriptors()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       UTIL.deleteTable(htd.getTableName());
     }
@@ -136,20 +137,19 @@ public class TestMergeTableRegionsProcedure {
     assertTrue("expected executor to be running", procExec.isRunning());
   }
 
-  private int loadARowPerRegion(final Table t, List<RegionInfo> ris)
-      throws IOException {
+  private int loadARowPerRegion(final Table t, List<RegionInfo> ris) throws IOException {
     List<Put> puts = new ArrayList<>();
-    for (RegionInfo ri: ris) {
-      Put put = new Put(ri.getStartKey() == null || ri.getStartKey().length == 0?
-          new byte [] {'a'}: ri.getStartKey());
+    for (RegionInfo ri : ris) {
+      Put put =
+          new Put(ri.getStartKey() == null || ri.getStartKey().length == 0 ? new byte[] { 'a' }
+              : ri.getStartKey());
       put.addColumn(HConstants.CATALOG_FAMILY, HConstants.CATALOG_FAMILY,
-          HConstants.CATALOG_FAMILY);
+        HConstants.CATALOG_FAMILY);
       puts.add(put);
     }
     t.put(puts);
     return puts.size();
   }
-
 
   /**
    * This tests two region merges
@@ -157,8 +157,8 @@ public class TestMergeTableRegionsProcedure {
   @Test
   public void testMergeTwoRegions() throws Exception {
     final TableName tableName = TableName.valueOf(this.name.getMethodName());
-    UTIL.createTable(tableName, new byte[][]{HConstants.CATALOG_FAMILY},
-        new byte[][]{new byte[]{'b'}, new byte[]{'c'}, new byte[]{'d'}, new byte[]{'e'}});
+    UTIL.createTable(tableName, new byte[][] { HConstants.CATALOG_FAMILY }, new byte[][] {
+        new byte[] { 'b' }, new byte[] { 'c' }, new byte[] { 'd' }, new byte[] { 'e' } });
     testMerge(tableName, 2);
   }
 
@@ -166,7 +166,7 @@ public class TestMergeTableRegionsProcedure {
     List<RegionInfo> ris = MetaTableAccessor.getTableRegions(UTIL.getConnection(), tableName);
     int originalRegionCount = ris.size();
     assertTrue(originalRegionCount > mergeCount);
-    RegionInfo[] regionsToMerge = ris.subList(0, mergeCount).toArray(new RegionInfo [] {});
+    RegionInfo[] regionsToMerge = ris.subList(0, mergeCount).toArray(new RegionInfo[] {});
     int countOfRowsLoaded = 0;
     try (Table table = UTIL.getConnection().getTable(tableName)) {
       countOfRowsLoaded = loadARowPerRegion(table, ris);
@@ -183,14 +183,14 @@ public class TestMergeTableRegionsProcedure {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
     MetaTableAccessor.fullScanMetaAndPrint(UTIL.getConnection());
     assertEquals(originalRegionCount - mergeCount + 1,
-        MetaTableAccessor.getTableRegions(UTIL.getConnection(), tableName).size());
+      MetaTableAccessor.getTableRegions(UTIL.getConnection(), tableName).size());
 
     assertEquals(mergeSubmittedCount + 1, mergeProcMetrics.getSubmittedCounter().getCount());
     assertEquals(mergeFailedCount, mergeProcMetrics.getFailedCounter().getCount());
     assertEquals(assignSubmittedCount + 1, assignProcMetrics.getSubmittedCounter().getCount());
     assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
     assertEquals(unassignSubmittedCount + mergeCount,
-        unassignProcMetrics.getSubmittedCounter().getCount());
+      unassignProcMetrics.getSubmittedCounter().getCount());
     assertEquals(unassignFailedCount, unassignProcMetrics.getFailedCounter().getCount());
 
     // Need to get the references cleaned out. Close of region will move them
@@ -205,7 +205,7 @@ public class TestMergeTableRegionsProcedure {
     // the merged regions cleanup.
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(true);
     UTIL.getHBaseCluster().getMaster().getCatalogJanitor().triggerNow();
-    byte [] mergedRegion = proc.getMergedRegion().getRegionName();
+    byte[] mergedRegion = proc.getMergedRegion().getRegionName();
     while (ris != null && ris.get(0) != null && ris.get(1) != null) {
       ris = MetaTableAccessor.getMergeRegions(UTIL.getConnection(), mergedRegion);
       LOG.info("{} {}", Bytes.toStringBinary(mergedRegion), ris);
@@ -245,10 +245,10 @@ public class TestMergeTableRegionsProcedure {
     // collect AM metrics before test
     collectAssignmentManagerMetrics();
 
-    long procId1 = procExec.submitProcedure(new MergeTableRegionsProcedure(
-      procExec.getEnvironment(), regionsToMerge1, true));
-    long procId2 = procExec.submitProcedure(new MergeTableRegionsProcedure(
-      procExec.getEnvironment(), regionsToMerge2, true));
+    long procId1 = procExec.submitProcedure(
+      new MergeTableRegionsProcedure(procExec.getEnvironment(), regionsToMerge1, true));
+    long procId2 = procExec.submitProcedure(
+      new MergeTableRegionsProcedure(procExec.getEnvironment(), regionsToMerge2, true));
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
@@ -347,7 +347,7 @@ public class TestMergeTableRegionsProcedure {
 
   private List<RegionInfo> createTable(final TableName tableName) throws Exception {
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     byte[][] splitRows = new byte[initialRegionCount - 1][];
     for (int i = 0; i < splitRows.length; ++i) {
       splitRows[i] = Bytes.toBytes(String.format("%d", i));

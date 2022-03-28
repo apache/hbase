@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -31,6 +32,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ ClientTests.class, SmallTests.class })
@@ -38,7 +40,7 @@ public class TestConnectionFactoryTracing extends TestTracingBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConnectionFactoryTracing.class);
+      HBaseClassTestRule.forClass(TestConnectionFactoryTracing.class);
 
   private User currentUser;
   private Object connection;
@@ -64,7 +66,7 @@ public class TestConnectionFactoryTracing extends TestTracingBase {
 
   @Test
   public void testAsyncConnectionTracing()
-    throws IOException, ExecutionException, InterruptedException {
+      throws IOException, ExecutionException, InterruptedException {
     connection = ConnectionFactory.createAsyncConnection(conf, currentUser).get();
     assertTrace(ConnectionFactory.class.getSimpleName(), "createAsyncConnection", null, null);
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,42 +21,15 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Objects;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * Represents the user pressing a key on the keyboard.
  */
 @InterfaceAudience.Private
 public class KeyPress {
   public enum Type {
-    Character,
-    Escape,
-    Backspace,
-    ArrowLeft,
-    ArrowRight,
-    ArrowUp,
-    ArrowDown,
-    Insert,
-    Delete,
-    Home,
-    End,
-    PageUp,
-    PageDown,
-    ReverseTab,
-    Tab,
-    Enter,
-    F1,
-    F2,
-    F3,
-    F4,
-    F5,
-    F6,
-    F7,
-    F8,
-    F9,
-    F10,
-    F11,
-    F12,
-    Unknown
+    Character, Escape, Backspace, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Insert, Delete, Home,
+    End, PageUp, PageDown, ReverseTab, Tab, Enter, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11,
+    F12, Unknown
   }
 
   private final Type type;
@@ -66,7 +39,7 @@ public class KeyPress {
   private final boolean shift;
 
   public KeyPress(Type type, @Nullable Character character, boolean alt, boolean ctrl,
-    boolean shift) {
+      boolean shift) {
     this.type = Objects.requireNonNull(type);
     this.character = character;
     this.alt = alt;
@@ -97,13 +70,8 @@ public class KeyPress {
 
   @Override
   public String toString() {
-    return "KeyPress{" +
-      "type=" + type +
-      ", character=" + escape(character) +
-      ", alt=" + alt +
-      ", ctrl=" + ctrl +
-      ", shift=" + shift +
-      '}';
+    return "KeyPress{" + "type=" + type + ", character=" + escape(character) + ", alt=" + alt
+        + ", ctrl=" + ctrl + ", shift=" + shift + '}';
   }
 
   private String escape(Character character) {

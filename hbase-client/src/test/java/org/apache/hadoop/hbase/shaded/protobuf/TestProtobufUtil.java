@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,7 +72,8 @@ public class TestProtobufUtil {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestProtobufUtil.class);
   private static final String TAG_STR = "tag-1";
-  private static final byte TAG_TYPE = (byte)10;
+  private static final byte TAG_TYPE = (byte) 10;
+
   public TestProtobufUtil() {
   }
 
@@ -93,7 +94,6 @@ public class TestProtobufUtil {
 
   /**
    * Test basic Get conversions.
-   *
    * @throws IOException if the conversion to a {@link Get} fails
    */
   @Test
@@ -126,9 +126,8 @@ public class TestProtobufUtil {
 
   /**
    * Test Delete Mutate conversions.
-   *
    * @throws IOException if the conversion to a {@link Delete} or a
-   *                     {@link org.apache.hadoop.hbase.client.Mutation} fails
+   *           {@link org.apache.hadoop.hbase.client.Mutation} fails
    */
   @Test
   public void testDelete() throws IOException {
@@ -161,22 +160,18 @@ public class TestProtobufUtil {
 
     // delete always have empty value,
     // add empty value to the original mutate
-    for (ColumnValue.Builder column:
-        mutateBuilder.getColumnValueBuilderList()) {
-      for (QualifierValue.Builder qualifier:
-          column.getQualifierValueBuilderList()) {
+    for (ColumnValue.Builder column : mutateBuilder.getColumnValueBuilderList()) {
+      for (QualifierValue.Builder qualifier : column.getQualifierValueBuilderList()) {
         qualifier.setValue(ByteString.EMPTY);
       }
     }
-    assertEquals(mutateBuilder.build(),
-      ProtobufUtil.toMutation(MutationType.DELETE, delete));
+    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.DELETE, delete));
   }
 
   /**
    * Test Put Mutate conversions.
-   *
    * @throws IOException if the conversion to a {@link Put} or a
-   *                     {@link org.apache.hadoop.hbase.client.Mutation} fails
+   *           {@link org.apache.hadoop.hbase.client.Mutation} fails
    */
   @Test
   public void testPut() throws IOException {
@@ -210,22 +205,18 @@ public class TestProtobufUtil {
     // value level timestamp specified,
     // add the timestamp to the original mutate
     long timestamp = put.getTimestamp();
-    for (ColumnValue.Builder column:
-        mutateBuilder.getColumnValueBuilderList()) {
-      for (QualifierValue.Builder qualifier:
-          column.getQualifierValueBuilderList()) {
+    for (ColumnValue.Builder column : mutateBuilder.getColumnValueBuilderList()) {
+      for (QualifierValue.Builder qualifier : column.getQualifierValueBuilderList()) {
         if (!qualifier.hasTimestamp()) {
           qualifier.setTimestamp(timestamp);
         }
       }
     }
-    assertEquals(mutateBuilder.build(),
-      ProtobufUtil.toMutation(MutationType.PUT, put));
+    assertEquals(mutateBuilder.build(), ProtobufUtil.toMutation(MutationType.PUT, put));
   }
 
   /**
    * Test basic Scan conversions.
-   *
    * @throws IOException if the conversion to a {@link org.apache.hadoop.hbase.client.Scan} fails
    */
   @Test
@@ -259,8 +250,7 @@ public class TestProtobufUtil {
     scanBuilder.setIncludeStopRow(false);
     ClientProtos.Scan expectedProto = scanBuilder.build();
 
-    ClientProtos.Scan actualProto = ProtobufUtil.toScan(
-        ProtobufUtil.toScan(expectedProto));
+    ClientProtos.Scan actualProto = ProtobufUtil.toScan(ProtobufUtil.toScan(expectedProto));
     assertEquals(expectedProto, actualProto);
   }
 
@@ -281,17 +271,15 @@ public class TestProtobufUtil {
     dbb.put(arr);
     ByteBufferKeyValue offheapKV = new ByteBufferKeyValue(dbb, kv1.getLength(), kv2.getLength());
     CellProtos.Cell cell = ProtobufUtil.toCell(offheapKV, false);
-    Cell newOffheapKV =
-        ProtobufUtil.toCell(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), cell,
-          false);
+    Cell newOffheapKV = ProtobufUtil
+        .toCell(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), cell, false);
     assertTrue(CellComparatorImpl.COMPARATOR.compare(offheapKV, newOffheapKV) == 0);
   }
 
   /**
    * Test Increment Mutate conversions.
-   *
    * @throws IOException if converting to an {@link Increment} or
-   *                     {@link org.apache.hadoop.hbase.client.Mutation} fails
+   *           {@link org.apache.hadoop.hbase.client.Mutation} fails
    */
   @Test
   public void testIncrement() throws IOException {
@@ -334,23 +322,20 @@ public class TestProtobufUtil {
   }
 
   /**
-   * Older clients may not send along a timestamp in the MutationProto. Check that we
-   * default correctly.
+   * Older clients may not send along a timestamp in the MutationProto. Check that we default
+   * correctly.
    */
   @Test
   public void testIncrementNoTimestamp() throws IOException {
     MutationProto mutation = getIncrementMutation(null);
     Increment increment = ProtobufUtil.toIncrement(mutation, null);
     assertEquals(HConstants.LATEST_TIMESTAMP, increment.getTimestamp());
-    increment.getFamilyCellMap().values()
-      .forEach(cells ->
-        cells.forEach(cell ->
-          assertEquals(HConstants.LATEST_TIMESTAMP, cell.getTimestamp())));
+    increment.getFamilyCellMap().values().forEach(cells -> cells
+        .forEach(cell -> assertEquals(HConstants.LATEST_TIMESTAMP, cell.getTimestamp())));
   }
 
   /**
    * Test Append Mutate conversions.
-   *
    * @throws IOException if converting to an {@link Append} fails
    */
   @Test
@@ -373,15 +358,16 @@ public class TestProtobufUtil {
   }
 
   /**
-   * Older clients may not send along a timestamp in the MutationProto. Check that we
-   * default correctly.
+   * Older clients may not send along a timestamp in the MutationProto. Check that we default
+   * correctly.
    */
   @Test
   public void testAppendNoTimestamp() throws IOException {
     MutationProto mutation = getAppendMutation(null);
     Append append = ProtobufUtil.toAppend(mutation, null);
     assertEquals(HConstants.LATEST_TIMESTAMP, append.getTimestamp());
-    append.getFamilyCellMap().values().forEach(cells -> cells.forEach(cell -> assertEquals(HConstants.LATEST_TIMESTAMP, cell.getTimestamp())));
+    append.getFamilyCellMap().values().forEach(cells -> cells
+        .forEach(cell -> assertEquals(HConstants.LATEST_TIMESTAMP, cell.getTimestamp())));
   }
 
   private MutationProto getAppendMutation(Long timestamp) {
@@ -425,8 +411,8 @@ public class TestProtobufUtil {
 
   private static LockServiceProtos.LockedResource createLockedResource(
       LockServiceProtos.LockedResourceType resourceType, String resourceName,
-      LockServiceProtos.LockType lockType,
-      ProcedureProtos.Procedure exclusiveLockOwnerProcedure, int sharedLockCount) {
+      LockServiceProtos.LockType lockType, ProcedureProtos.Procedure exclusiveLockOwnerProcedure,
+      int sharedLockCount) {
     LockServiceProtos.LockedResource.Builder build = LockServiceProtos.LockedResource.newBuilder();
     build.setResourceType(resourceType);
     build.setResourceName(resourceName);
@@ -448,94 +434,70 @@ public class TestProtobufUtil {
     ProcedureProtos.Procedure procedure = builder.build();
 
     String procJson = ProtobufUtil.toProcedureJson(Lists.newArrayList(procedure));
-    assertEquals("[{"
-        + "\"className\":\"java.lang.Object\","
-        + "\"procId\":\"1\","
-        + "\"submittedTime\":\"0\","
-        + "\"state\":\"RUNNABLE\","
-        + "\"lastUpdate\":\"0\","
-        + "\"stateMessage\":[{\"value\":\"QQ==\"}]"
-        + "}]", procJson);
+    assertEquals("[{" + "\"className\":\"java.lang.Object\"," + "\"procId\":\"1\","
+        + "\"submittedTime\":\"0\"," + "\"state\":\"RUNNABLE\"," + "\"lastUpdate\":\"0\","
+        + "\"stateMessage\":[{\"value\":\"QQ==\"}]" + "}]",
+      procJson);
   }
 
   @Test
   public void testServerLockInfo() {
-    LockServiceProtos.LockedResource resource = createLockedResource(
-        LockServiceProtos.LockedResourceType.SERVER, "server",
-        LockServiceProtos.LockType.SHARED, null, 2);
+    LockServiceProtos.LockedResource resource =
+        createLockedResource(LockServiceProtos.LockedResourceType.SERVER, "server",
+          LockServiceProtos.LockType.SHARED, null, 2);
 
     String lockJson = ProtobufUtil.toLockJson(Lists.newArrayList(resource));
-    assertEquals("[{"
-        + "\"resourceType\":\"SERVER\","
-        + "\"resourceName\":\"server\","
-        + "\"lockType\":\"SHARED\","
-        + "\"sharedLockCount\":2"
-        + "}]", lockJson);
+    assertEquals("[{" + "\"resourceType\":\"SERVER\"," + "\"resourceName\":\"server\","
+        + "\"lockType\":\"SHARED\"," + "\"sharedLockCount\":2" + "}]",
+      lockJson);
   }
 
   @Test
   public void testNamespaceLockInfo() {
-    LockServiceProtos.LockedResource resource = createLockedResource(
-        LockServiceProtos.LockedResourceType.NAMESPACE, "ns",
-        LockServiceProtos.LockType.EXCLUSIVE, createProcedure(2), 0);
+    LockServiceProtos.LockedResource resource =
+        createLockedResource(LockServiceProtos.LockedResourceType.NAMESPACE, "ns",
+          LockServiceProtos.LockType.EXCLUSIVE, createProcedure(2), 0);
 
     String lockJson = ProtobufUtil.toLockJson(Lists.newArrayList(resource));
-    assertEquals("[{"
-        + "\"resourceType\":\"NAMESPACE\","
-        + "\"resourceName\":\"ns\","
-        + "\"lockType\":\"EXCLUSIVE\","
-        + "\"exclusiveLockOwnerProcedure\":{"
-          + "\"className\":\"java.lang.Object\","
-          + "\"procId\":\"2\","
-          + "\"submittedTime\":\"0\","
-          + "\"state\":\"RUNNABLE\","
-          + "\"lastUpdate\":\"0\""
-        + "},"
-        + "\"sharedLockCount\":0"
-        + "}]", lockJson);
+    assertEquals("[{" + "\"resourceType\":\"NAMESPACE\"," + "\"resourceName\":\"ns\","
+        + "\"lockType\":\"EXCLUSIVE\"," + "\"exclusiveLockOwnerProcedure\":{"
+        + "\"className\":\"java.lang.Object\"," + "\"procId\":\"2\"," + "\"submittedTime\":\"0\","
+        + "\"state\":\"RUNNABLE\"," + "\"lastUpdate\":\"0\"" + "}," + "\"sharedLockCount\":0"
+        + "}]",
+      lockJson);
   }
 
   @Test
   public void testTableLockInfo() {
-    LockServiceProtos.LockedResource resource = createLockedResource(
-        LockServiceProtos.LockedResourceType.TABLE, "table",
-        LockServiceProtos.LockType.SHARED, null, 2);
+    LockServiceProtos.LockedResource resource =
+        createLockedResource(LockServiceProtos.LockedResourceType.TABLE, "table",
+          LockServiceProtos.LockType.SHARED, null, 2);
 
     String lockJson = ProtobufUtil.toLockJson(Lists.newArrayList(resource));
-    assertEquals("[{"
-        + "\"resourceType\":\"TABLE\","
-        + "\"resourceName\":\"table\","
-        + "\"lockType\":\"SHARED\","
-        + "\"sharedLockCount\":2"
-        + "}]", lockJson);
+    assertEquals("[{" + "\"resourceType\":\"TABLE\"," + "\"resourceName\":\"table\","
+        + "\"lockType\":\"SHARED\"," + "\"sharedLockCount\":2" + "}]",
+      lockJson);
   }
 
   @Test
   public void testRegionLockInfo() {
-    LockServiceProtos.LockedResource resource = createLockedResource(
-        LockServiceProtos.LockedResourceType.REGION, "region",
-        LockServiceProtos.LockType.EXCLUSIVE, createProcedure(3), 0);
+    LockServiceProtos.LockedResource resource =
+        createLockedResource(LockServiceProtos.LockedResourceType.REGION, "region",
+          LockServiceProtos.LockType.EXCLUSIVE, createProcedure(3), 0);
 
     String lockJson = ProtobufUtil.toLockJson(Lists.newArrayList(resource));
-    assertEquals("[{"
-        + "\"resourceType\":\"REGION\","
-        + "\"resourceName\":\"region\","
-        + "\"lockType\":\"EXCLUSIVE\","
-        + "\"exclusiveLockOwnerProcedure\":{"
-          + "\"className\":\"java.lang.Object\","
-          + "\"procId\":\"3\","
-          + "\"submittedTime\":\"0\","
-          + "\"state\":\"RUNNABLE\","
-          + "\"lastUpdate\":\"0\""
-        + "},"
-        + "\"sharedLockCount\":0"
-        + "}]", lockJson);
+    assertEquals("[{" + "\"resourceType\":\"REGION\"," + "\"resourceName\":\"region\","
+        + "\"lockType\":\"EXCLUSIVE\"," + "\"exclusiveLockOwnerProcedure\":{"
+        + "\"className\":\"java.lang.Object\"," + "\"procId\":\"3\"," + "\"submittedTime\":\"0\","
+        + "\"state\":\"RUNNABLE\"," + "\"lastUpdate\":\"0\"" + "}," + "\"sharedLockCount\":0"
+        + "}]",
+      lockJson);
   }
 
   /**
    * Test {@link ProtobufUtil#toCell(Cell, boolean)} and
-   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell, boolean)} conversion
-   * methods when it contains tags and encode/decode tags is set to true.
+   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell, boolean)} conversion methods
+   * when it contains tags and encode/decode tags is set to true.
    */
   @Test
   public void testCellConversionWithTags() {
@@ -546,7 +508,7 @@ public class TestProtobufUtil {
 
     Cell decodedCell = getCellFromProtoResult(protoCell, true);
     List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
-    assertEquals(1,  decodedTags.size());
+    assertEquals(1, decodedTags.size());
     Tag decodedTag = decodedTags.get(0);
     assertEquals(TAG_TYPE, decodedTag.getType());
     assertEquals(TAG_STR, Tag.getValueAsString(decodedTag));
@@ -566,14 +528,14 @@ public class TestProtobufUtil {
 
   private Cell getCellFromProtoResult(CellProtos.Cell protoCell, boolean decodeTags) {
     ExtendedCellBuilder decodedBuilder =
-      ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
+        ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
     return ProtobufUtil.toCell(decodedBuilder, protoCell, decodeTags);
   }
 
   /**
    * Test {@link ProtobufUtil#toCell(Cell, boolean)} and
-   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell, boolean)} conversion
-   * methods when it contains tags and encode/decode tags is set to false.
+   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell, boolean)} conversion methods
+   * when it contains tags and encode/decode tags is set to false.
    */
   @Test
   public void testCellConversionWithoutTags() {
@@ -583,14 +545,13 @@ public class TestProtobufUtil {
 
     Cell decodedCell = getCellFromProtoResult(protoCell, false);
     List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
-    assertEquals(0,  decodedTags.size());
+    assertEquals(0, decodedTags.size());
   }
 
   /**
    * Test {@link ProtobufUtil#toCell(Cell, boolean)} and
-   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell, boolean)} conversion
-   * methods when it contains tags and encoding of tags is set to false
-   * and decoding of tags is set to true.
+   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell, boolean)} conversion methods
+   * when it contains tags and encoding of tags is set to false and decoding of tags is set to true.
    */
   @Test
   public void testTagEncodeFalseDecodeTrue() {
@@ -600,14 +561,13 @@ public class TestProtobufUtil {
 
     Cell decodedCell = getCellFromProtoResult(protoCell, true);
     List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
-    assertEquals(0,  decodedTags.size());
+    assertEquals(0, decodedTags.size());
   }
 
   /**
    * Test {@link ProtobufUtil#toCell(Cell, boolean)} and
-   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell, boolean)} conversion
-   * methods when it contains tags and encoding of tags is set to true
-   * and decoding of tags is set to false.
+   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell, boolean)} conversion methods
+   * when it contains tags and encoding of tags is set to true and decoding of tags is set to false.
    */
   @Test
   public void testTagEncodeTrueDecodeFalse() {
@@ -617,6 +577,6 @@ public class TestProtobufUtil {
 
     Cell decodedCell = getCellFromProtoResult(protoCell, false);
     List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
-    assertEquals(0,  decodedTags.size());
+    assertEquals(0, decodedTags.size());
   }
 }

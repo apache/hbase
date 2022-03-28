@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
 import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * The message mode in the top screen.
  */
@@ -35,11 +34,10 @@ public class MessageModeScreenView extends AbstractScreenView {
   private final MessageModeScreenPresenter messageModeScreenPresenter;
 
   public MessageModeScreenView(Screen screen, Terminal terminal, int row, String message,
-    ScreenView nextScreenView) {
+      ScreenView nextScreenView) {
     super(screen, terminal);
     this.row = row;
-    this.messageModeScreenPresenter =
-      new MessageModeScreenPresenter(this, message, nextScreenView);
+    this.messageModeScreenPresenter = new MessageModeScreenPresenter(this, message, nextScreenView);
   }
 
   @Override
@@ -61,6 +59,6 @@ public class MessageModeScreenView extends AbstractScreenView {
 
   public void showMessage(String message) {
     getTerminalPrinter(row).startHighlight().print(" ").print(message).print(" ").stopHighlight()
-      .endOfLine();
+        .endOfLine();
   }
 }

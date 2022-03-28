@@ -29,9 +29,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 class MoveCostFunction extends CostFunction {
   private static final String MOVE_COST_KEY = "hbase.master.balancer.stochastic.moveCost";
   private static final String MOVE_COST_OFFPEAK_KEY =
-    "hbase.master.balancer.stochastic.moveCost.offpeak";
+      "hbase.master.balancer.stochastic.moveCost.offpeak";
   private static final String MAX_MOVES_PERCENT_KEY =
-    "hbase.master.balancer.stochastic.maxMovePercent";
+      "hbase.master.balancer.stochastic.maxMovePercent";
   static final float DEFAULT_MOVE_COST = 7;
   static final float DEFAULT_MOVE_COST_OFFPEAK = 3;
   private static final int DEFAULT_MAX_MOVES = 600;

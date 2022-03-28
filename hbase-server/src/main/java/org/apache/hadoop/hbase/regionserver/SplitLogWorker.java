@@ -42,8 +42,8 @@ import org.slf4j.LoggerFactory;
 /**
  * This worker is spawned in every regionserver, including master. The Worker waits for log
  * splitting tasks to be put up by the {@link org.apache.hadoop.hbase.master.SplitLogManager}
- * running in the master and races with other workers in other serves to acquire those tasks.
- * The coordination is done via coordination engine.
+ * running in the master and races with other workers in other serves to acquire those tasks. The
+ * coordination is done via coordination engine.
  * <p>
  * If a worker has successfully moved the task from state UNASSIGNED to OWNED then it owns the task.
  * It keeps heart beating the manager by periodically moving the task from UNASSIGNED to OWNED
@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory;
  * its task when it is stripped of its ownership. Here we rely on the idempotency of the log
  * splitting task for correctness
  * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
- *   distributed WAL splitter, see SplitWALRemoteProcedure
+ *             distributed WAL splitter, see SplitWALRemoteProcedure
  */
 @Deprecated
 @InterfaceAudience.Private
@@ -103,10 +103,10 @@ public class SplitLogWorker implements Runnable {
     // encountered a bad non-retry-able persistent error.
     try {
       SplitLogWorkerCoordination splitLogWorkerCoordination =
-         server.getCoordinatedStateManager() == null ? null
-             : server.getCoordinatedStateManager().getSplitLogWorkerCoordination();
+          server.getCoordinatedStateManager() == null ? null
+              : server.getCoordinatedStateManager().getSplitLogWorkerCoordination();
       if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, filename)), fs, conf,
-          p, sequenceIdChecker, splitLogWorkerCoordination, factory, server)) {
+        p, sequenceIdChecker, splitLogWorkerCoordination, factory, server)) {
         return Status.PREEMPTED;
       }
     } catch (InterruptedIOException iioe) {
@@ -134,7 +134,6 @@ public class SplitLogWorker implements Runnable {
     return Status.DONE;
   }
 
-
   @Override
   public void run() {
     try {
@@ -150,8 +149,8 @@ public class SplitLogWorker implements Runnable {
       }
     } catch (Throwable t) {
       if (ExceptionUtil.isInterrupt(t)) {
-        LOG.info("SplitLogWorker interrupted. Exiting. " + (coordination.isStop() ? "" :
-            " (ERROR: exitWorker is not set, exiting anyway)"));
+        LOG.info("SplitLogWorker interrupted. Exiting. "
+            + (coordination.isStop() ? "" : " (ERROR: exitWorker is not set, exiting anyway)"));
       } else {
         // only a logical error can cause here. Printing it out
         // to make debugging easier
@@ -164,8 +163,8 @@ public class SplitLogWorker implements Runnable {
   }
 
   /**
-   * If the worker is doing a task i.e. splitting a log file then stop the task.
-   * It doesn't exit the worker thread.
+   * If the worker is doing a task i.e. splitting a log file then stop the task. It doesn't exit the
+   * worker thread.
    */
   public void stopTask() {
     LOG.info("Sending interrupt to stop the worker thread");
@@ -189,26 +188,22 @@ public class SplitLogWorker implements Runnable {
   }
 
   /**
-   * Objects implementing this interface actually do the task that has been
-   * acquired by a {@link SplitLogWorker}. Since there isn't a water-tight
-   * guarantee that two workers will not be executing the same task therefore it
-   * is better to have workers prepare the task and then have the
-   * {@link org.apache.hadoop.hbase.master.SplitLogManager} commit the work in
+   * Objects implementing this interface actually do the task that has been acquired by a
+   * {@link SplitLogWorker}. Since there isn't a water-tight guarantee that two workers will not be
+   * executing the same task therefore it is better to have workers prepare the task and then have
+   * the {@link org.apache.hadoop.hbase.master.SplitLogManager} commit the work in
    * SplitLogManager.TaskFinisher
    */
   public interface TaskExecutor {
     enum Status {
-      DONE(),
-      ERR(),
-      RESIGNED(),
-      PREEMPTED()
+      DONE(), ERR(), RESIGNED(), PREEMPTED()
     }
+
     Status exec(String name, CancelableProgressable p);
   }
 
   /**
-   * Returns the number of tasks processed by coordination.
-   * This method is used by tests only
+   * Returns the number of tasks processed by coordination. This method is used by tests only
    */
   public int getTaskReadySeq() {
     return coordination.getTaskReadySeq();

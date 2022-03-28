@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -89,7 +89,7 @@ public abstract class AbstractTestAsyncTableRegionReplicasRead {
   protected static volatile boolean FAIL_PRIMARY_GET = false;
 
   protected static ConcurrentMap<Integer, AtomicInteger> REPLICA_ID_TO_COUNT =
-    new ConcurrentHashMap<>();
+      new ConcurrentHashMap<>();
 
   public static final class FailPrimaryGetCP implements RegionObserver, RegionCoprocessor {
 
@@ -105,7 +105,7 @@ public abstract class AbstractTestAsyncTableRegionReplicasRead {
         return;
       }
       REPLICA_ID_TO_COUNT.computeIfAbsent(region.getReplicaId(), k -> new AtomicInteger())
-        .incrementAndGet();
+          .incrementAndGet();
       if (region.getReplicaId() == RegionReplicaUtil.DEFAULT_REPLICA_ID && FAIL_PRIMARY_GET) {
         throw new IOException("Inject error");
       }
@@ -137,9 +137,11 @@ public abstract class AbstractTestAsyncTableRegionReplicasRead {
 
   protected static void startClusterAndCreateTable() throws Exception {
     TEST_UTIL.startMiniCluster(3);
-    TEST_UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TABLE_NAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setRegionReplication(REPLICA_COUNT)
-      .setCoprocessor(FailPrimaryGetCP.class.getName()).build());
+    TEST_UTIL.getAdmin()
+        .createTable(TableDescriptorBuilder.newBuilder(TABLE_NAME)
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+            .setRegionReplication(REPLICA_COUNT).setCoprocessor(FailPrimaryGetCP.class.getName())
+            .build());
     TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_NAME);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
@@ -159,8 +161,8 @@ public abstract class AbstractTestAsyncTableRegionReplicasRead {
 
   protected static int getSecondaryGetCount() {
     return REPLICA_ID_TO_COUNT.entrySet().stream()
-      .filter(e -> e.getKey().intValue() != RegionReplicaUtil.DEFAULT_REPLICA_ID)
-      .mapToInt(e -> e.getValue().get()).sum();
+        .filter(e -> e.getKey().intValue() != RegionReplicaUtil.DEFAULT_REPLICA_ID)
+        .mapToInt(e -> e.getValue().get()).sum();
   }
 
   protected static int getPrimaryGetCount() {

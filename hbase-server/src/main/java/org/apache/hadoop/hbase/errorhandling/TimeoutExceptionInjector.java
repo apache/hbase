@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,11 +19,10 @@ package org.apache.hadoop.hbase.errorhandling;
 
 import java.util.Timer;
 import java.util.TimerTask;
-
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Time a given process/operation and report a failure if the elapsed time exceeds the max allowed
@@ -63,8 +62,8 @@ public class TimeoutExceptionInjector {
           TimeoutExceptionInjector.this.complete = true;
         }
         long end = EnvironmentEdgeManager.currentTime();
-        TimeoutException tee =  new TimeoutException(
-            "Timeout caused Foreign Exception", start, end, maxTime);
+        TimeoutException tee =
+            new TimeoutException("Timeout caused Foreign Exception", start, end, maxTime);
         String source = "timer-" + timer;
         listener.receive(new ForeignException(source, tee));
       }
@@ -85,8 +84,8 @@ public class TimeoutExceptionInjector {
         return;
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Marking timer as complete - no error notifications will be received for " +
-          "this timer.");
+        LOG.debug("Marking timer as complete - no error notifications will be received for "
+            + "this timer.");
       }
       this.complete = true;
     }

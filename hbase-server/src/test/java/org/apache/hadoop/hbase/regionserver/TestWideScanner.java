@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,7 +57,7 @@ public class TestWideScanner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWideScanner.class);
+      HBaseClassTestRule.forClass(TestWideScanner.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -71,11 +71,11 @@ public class TestWideScanner {
   private static final TableDescriptor TESTTABLEDESC;
   static {
     TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf("testwidescan"));
+        TableDescriptorBuilder.newBuilder(TableName.valueOf("testwidescan"));
     for (byte[] cfName : new byte[][] { A, B, C }) {
       // Keep versions to help debugging.
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(cfName).setMaxVersions(100)
-        .setBlocksize(8 * 1024).build());
+          .setBlocksize(8 * 1024).build());
     }
     TESTTABLEDESC = builder.build();
   }
@@ -87,8 +87,8 @@ public class TestWideScanner {
   public static void setUp() throws IOException {
     Path testDir = UTIL.getDataTestDir();
     RegionInfo hri = RegionInfoBuilder.newBuilder(TESTTABLEDESC.getTableName()).build();
-    REGION =
-      HBaseTestingUtility.createRegionAndWAL(hri, testDir, UTIL.getConfiguration(), TESTTABLEDESC);
+    REGION = HBaseTestingUtility.createRegionAndWAL(hri, testDir, UTIL.getConfiguration(),
+      TESTTABLEDESC);
   }
 
   @AfterClass

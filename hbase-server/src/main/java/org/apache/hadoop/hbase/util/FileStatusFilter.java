@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,20 +17,17 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.fs.FileStatus;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public interface FileStatusFilter {
   /**
-   * Tests whether or not the specified filestatus should be
-   * included in a filestatus list.
-   *
-   * @param  f  The filestatus to be tested
-   * @return  <code>true</code> if and only if the filestatus
-   *          should be included
+   * Tests whether or not the specified filestatus should be included in a filestatus list.
+   * @param f The filestatus to be tested
+   * @return <code>true</code> if and only if the filestatus should be included
    */
   boolean accept(FileStatus f);
 }

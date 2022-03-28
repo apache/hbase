@@ -113,7 +113,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformati
 public abstract class CustomSaslAuthenticationProviderTestBase {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(CustomSaslAuthenticationProviderTestBase.class);
+      LoggerFactory.getLogger(CustomSaslAuthenticationProviderTestBase.class);
 
   private static final Map<String, String> USER_DATABASE = createUserDatabase();
 
@@ -184,10 +184,10 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
   }
 
   public static Token<? extends TokenIdentifier> createPasswordToken(String username,
-    String password, String clusterId) {
+      String password, String clusterId) {
     PasswordAuthTokenIdentifier id = new PasswordAuthTokenIdentifier(username);
     Token<? extends TokenIdentifier> token =
-      new Token<>(id.getBytes(), Bytes.toBytes(password), id.getKind(), new Text(clusterId));
+        new Token<>(id.getBytes(), Bytes.toBytes(password), id.getKind(), new Text(clusterId));
     return token;
   }
 
@@ -198,20 +198,21 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
   public static class InMemoryClientProvider extends AbstractSaslClientAuthenticationProvider {
     public static final String MECHANISM = "DIGEST-MD5";
     public static final SaslAuthMethod SASL_AUTH_METHOD =
-      new SaslAuthMethod("IN_MEMORY", (byte) 42, MECHANISM, AuthenticationMethod.TOKEN);
+        new SaslAuthMethod("IN_MEMORY", (byte) 42, MECHANISM, AuthenticationMethod.TOKEN);
 
     @Override
     public SaslClient createClient(Configuration conf, InetAddress serverAddr,
-      SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
-      Map<String, String> saslProps) throws IOException {
+        SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
+        Map<String, String> saslProps) throws IOException {
       return Sasl.createSaslClient(new String[] { MECHANISM }, null, null,
         SaslUtil.SASL_DEFAULT_REALM, saslProps, new InMemoryClientProviderCallbackHandler(token));
     }
 
     public Optional<Token<? extends TokenIdentifier>> findToken(User user) {
       List<Token<? extends TokenIdentifier>> tokens = user.getTokens().stream()
-        .filter((token) -> token.getKind().equals(PasswordAuthTokenIdentifier.PASSWORD_AUTH_TOKEN))
-        .collect(Collectors.toList());
+          .filter(
+            (token) -> token.getKind().equals(PasswordAuthTokenIdentifier.PASSWORD_AUTH_TOKEN))
+          .collect(Collectors.toList());
       if (tokens.isEmpty()) {
         return Optional.empty();
       }
@@ -277,16 +278,16 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
    * Server provider which validates credentials from an in-memory database.
    */
   public static class InMemoryServerProvider extends InMemoryClientProvider
-    implements SaslServerAuthenticationProvider {
+      implements SaslServerAuthenticationProvider {
 
     @Override
     public AttemptingUserProvidingSaslServer
-      createServer(SecretManager<TokenIdentifier> secretManager, Map<String, String> saslProps)
-        throws IOException {
+        createServer(SecretManager<TokenIdentifier> secretManager, Map<String, String> saslProps)
+            throws IOException {
       return new AttemptingUserProvidingSaslServer(
-        Sasl.createSaslServer(getSaslAuthMethod().getSaslMechanism(), null,
-          SaslUtil.SASL_DEFAULT_REALM, saslProps, new InMemoryServerProviderCallbackHandler()),
-        () -> null);
+          Sasl.createSaslServer(getSaslAuthMethod().getSaslMechanism(), null,
+            SaslUtil.SASL_DEFAULT_REALM, saslProps, new InMemoryServerProviderCallbackHandler()),
+          () -> null);
     }
 
     /**
@@ -320,10 +321,10 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
             id.readFields(new DataInputStream(new ByteArrayInputStream(encodedId)));
           } catch (IOException e) {
             throw (InvalidToken) new InvalidToken("Can't de-serialize tokenIdentifier")
-              .initCause(e);
+                .initCause(e);
           }
           char[] actualPassword =
-            SaslUtil.encodePassword(Bytes.toBytes(getPassword(id.getUser().getUserName())));
+              SaslUtil.encodePassword(Bytes.toBytes(getPassword(id.getUser().getUserName())));
           pc.setPassword(actualPassword);
         }
         if (ac != null) {
@@ -348,7 +349,7 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
 
     @Override
     public UserGroupInformation getAuthorizedUgi(String authzId,
-      SecretManager<TokenIdentifier> secretManager) throws IOException {
+        SecretManager<TokenIdentifier> secretManager) throws IOException {
       UserGroupInformation authorizedUgi;
       byte[] encodedId = SaslUtil.decodeIdentifier(authzId);
       PasswordAuthTokenIdentifier tokenId = new PasswordAuthTokenIdentifier();
@@ -376,20 +377,20 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
 
     @Override
     public void configure(Configuration conf,
-      Collection<SaslClientAuthenticationProvider> providers) {
+        Collection<SaslClientAuthenticationProvider> providers) {
       super.configure(conf, providers);
       Optional<SaslClientAuthenticationProvider> o =
-        providers.stream().filter((p) -> p instanceof InMemoryClientProvider).findAny();
+          providers.stream().filter((p) -> p instanceof InMemoryClientProvider).findAny();
 
       inMemoryProvider = (InMemoryClientProvider) o.orElseThrow(() -> new RuntimeException(
-        "InMemoryClientProvider not found in available providers: " + providers));
+          "InMemoryClientProvider not found in available providers: " + providers));
     }
 
     @Override
     public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
-      selectProvider(String clusterId, User user) {
+        selectProvider(String clusterId, User user) {
       Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> superPair =
-        super.selectProvider(clusterId, user);
+          super.selectProvider(clusterId, user);
 
       Optional<Token<? extends TokenIdentifier>> optional = inMemoryProvider.findToken(user);
       if (optional.isPresent()) {
@@ -403,7 +404,7 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
   }
 
   private static void createBaseCluster(HBaseTestingUtility util, File keytabFile, MiniKdc kdc)
-    throws Exception {
+      throws Exception {
     String servicePrincipal = "hbase/localhost";
     String spnegoPrincipal = "HTTP/localhost";
     kdc.createPrincipal(keytabFile, servicePrincipal);
@@ -477,14 +478,14 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
 
     // Create a table and write a record as the service user (hbase)
     UserGroupInformation serviceUgi = UserGroupInformation
-      .loginUserFromKeytabAndReturnUGI("hbase/localhost", KEYTAB_FILE.getAbsolutePath());
+        .loginUserFromKeytabAndReturnUGI("hbase/localhost", KEYTAB_FILE.getAbsolutePath());
     clusterId = serviceUgi.doAs(new PrivilegedExceptionAction<String>() {
       @Override
       public String run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(CONF);
-          Admin admin = conn.getAdmin();) {
+            Admin admin = conn.getAdmin();) {
           admin.createTable(TableDescriptorBuilder.newBuilder(tableName)
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1")).build());
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1")).build());
 
           UTIL.waitTableAvailable(tableName);
 
@@ -516,7 +517,7 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
       @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(getClientConf());
-          Table t = conn.getTable(tableName)) {
+            Table t = conn.getTable(tableName)) {
           Result r = t.get(new Get(Bytes.toBytes("r1")));
           assertNotNull(r);
           assertFalse("Should have read a non-empty Result", r.isEmpty());
@@ -536,13 +537,13 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
     // This test does not work with master registry in branch-2 because of a nuance in the non-async
     // connection implementation. See the detail below.
     clientConf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
-        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
+      HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     clientConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
-    UserGroupInformation user1 = UserGroupInformation.createUserForTesting(
-        "user1", new String[0]);
+    UserGroupInformation user1 = UserGroupInformation.createUserForTesting("user1", new String[0]);
     user1.addToken(createPasswordToken("user1", "definitely not the password", clusterId));
     user1.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
+      @Override
+      public Void run() throws Exception {
         // There is a slight behavioral difference here in the 3.x vs 2.x branches. 3.x branches
         // use async client connection implementation which throws if there is an exception when
         // fetching the clusterId(). 2.x branches that use non-async client falls back to using a
@@ -551,15 +552,15 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
         // since it makes sense only when master registry is in use (which has RPCs to master).
         // That is the reason if you see a slight difference in the test between 3.x and 2.x.
         try (Connection conn = ConnectionFactory.createConnection(clientConf);
-          Table t = conn.getTable(tableName)) {
+            Table t = conn.getTable(tableName)) {
           t.get(new Get(Bytes.toBytes("r1")));
           fail("Should not successfully authenticate with HBase");
         } catch (RetriesExhaustedException re) {
           assertTrue(re.getMessage(), re.getMessage().contains("SaslException"));
         } catch (Exception e) {
           // Any other exception is unexpected.
-          fail("Unexpected exception caught, was expecting a authentication error: " +
-            Throwables.getStackTraceAsString(e));
+          fail("Unexpected exception caught, was expecting a authentication error: "
+              + Throwables.getStackTraceAsString(e));
         }
         return null;
       }

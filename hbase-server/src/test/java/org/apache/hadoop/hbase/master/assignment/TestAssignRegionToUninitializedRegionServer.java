@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,7 +56,7 @@ public class TestAssignRegionToUninitializedRegionServer {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAssignRegionToUninitializedRegionServer.class);
+      HBaseClassTestRule.forClass(TestAssignRegionToUninitializedRegionServer.class);
 
   private static CountDownLatch ARRIVE;
 
@@ -72,7 +72,7 @@ public class TestAssignRegionToUninitializedRegionServer {
 
     @Override
     public ExecuteProceduresResponse executeProcedures(RpcController controller,
-      ExecuteProceduresRequest request) throws ServiceException {
+        ExecuteProceduresRequest request) throws ServiceException {
       if (request.getOpenRegionCount() > 0) {
         ASSIGN_CALLED.set(true);
       }
@@ -88,7 +88,7 @@ public class TestAssignRegionToUninitializedRegionServer {
 
     @Override
     protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
-      throws IOException {
+        throws IOException {
       if (ARRIVE != null) {
         ARRIVE.countDown();
         ARRIVE = null;
@@ -134,7 +134,7 @@ public class TestAssignRegionToUninitializedRegionServer {
     // restart a new region server, and wait until it finish initialization and want to call
     // regionServerReport, so it will load the peer state to peer cache.
     Future<HRegionServer> regionServerFuture = ForkJoinPool.commonPool()
-      .submit(() -> UTIL.getMiniHBaseCluster().startRegionServer().getRegionServer());
+        .submit(() -> UTIL.getMiniHBaseCluster().startRegionServer().getRegionServer());
     ARRIVE.await();
     // try move region to the new region server, it will fail, but we need to make sure that we do
     // not try to assign it to the new server.

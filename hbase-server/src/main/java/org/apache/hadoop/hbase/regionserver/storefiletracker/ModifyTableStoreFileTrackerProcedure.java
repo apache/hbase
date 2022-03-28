@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +33,7 @@ public class ModifyTableStoreFileTrackerProcedure extends ModifyStoreFileTracker
   }
 
   public ModifyTableStoreFileTrackerProcedure(MasterProcedureEnv env, TableName tableName,
-    String dstSFT) throws HBaseIOException {
+      String dstSFT) throws HBaseIOException {
     super(env, tableName, dstSFT);
   }
 
@@ -48,14 +48,14 @@ public class ModifyTableStoreFileTrackerProcedure extends ModifyStoreFileTracker
 
   @Override
   protected TableDescriptor createRestoreTableDescriptor(TableDescriptor current,
-    String restoreSFT) {
+      String restoreSFT) {
     return TableDescriptorBuilder.newBuilder(current)
-      .setValue(StoreFileTrackerFactory.TRACKER_IMPL, restoreSFT).build();
+        .setValue(StoreFileTrackerFactory.TRACKER_IMPL, restoreSFT).build();
   }
 
   @Override
   protected TableDescriptor createMigrationTableDescriptor(Configuration conf,
-    TableDescriptor current) {
+      TableDescriptor current) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(current);
     migrate(conf, builder::setValue);
     return builder.build();

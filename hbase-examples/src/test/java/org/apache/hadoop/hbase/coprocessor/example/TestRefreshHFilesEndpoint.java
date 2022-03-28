@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -90,8 +90,7 @@ public class TestRefreshHFilesEndpoint extends TestRefreshHFilesBase {
     public List<HStore> getStores() {
       List<HStore> list = new ArrayList<>(stores.size());
       /*
-       * This is used to trigger the custom definition (faulty)
-       * of refresh HFiles API.
+       * This is used to trigger the custom definition (faulty) of refresh HFiles API.
        */
       try {
         if (this.store == null) {

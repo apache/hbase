@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -84,9 +83,9 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
           + comConf.getCompactionPolicyForDateTieredWindow() + "'", e);
     }
     try {
-      windowFactory = ReflectionUtils.instantiateWithCustomCtor(
-        comConf.getDateTieredCompactionWindowFactory(),
-        new Class[] { CompactionConfiguration.class }, new Object[] { comConf });
+      windowFactory =
+          ReflectionUtils.instantiateWithCustomCtor(comConf.getDateTieredCompactionWindowFactory(),
+            new Class[] { CompactionConfiguration.class }, new Object[] { comConf });
     } catch (Exception e) {
       throw new IOException("Unable to load configured window factory '"
           + comConf.getDateTieredCompactionWindowFactory() + "'", e);
@@ -125,8 +124,8 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     long now = EnvironmentEdgeManager.currentTime();
     if (lowTimestamp <= 0L || lowTimestamp >= (now - mcTime)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("lowTimestamp: " + lowTimestamp + " lowTimestamp: " + lowTimestamp + " now: " +
-            now + " mcTime: " + mcTime); 
+        LOG.debug("lowTimestamp: " + lowTimestamp + " lowTimestamp: " + lowTimestamp + " now: "
+            + now + " mcTime: " + mcTime);
       }
       return false;
     }
@@ -136,18 +135,17 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     List<Long> boundaries = getCompactBoundariesForMajor(filesToCompact, now);
     boolean[] filesInWindow = new boolean[boundaries.size()];
 
-    for (HStoreFile file: filesToCompact) {
+    for (HStoreFile file : filesToCompact) {
       OptionalLong minTimestamp = file.getMinimumTimestamp();
       long oldest = minTimestamp.isPresent() ? now - minTimestamp.getAsLong() : Long.MIN_VALUE;
       if (cfTTL != Long.MAX_VALUE && oldest >= cfTTL) {
-        LOG.debug("Major compaction triggered on store " + this
-          + "; for TTL maintenance");
+        LOG.debug("Major compaction triggered on store " + this + "; for TTL maintenance");
         return true;
       }
       if (!file.isMajorCompactionResult() || file.isBulkLoadResult()) {
         LOG.debug("Major compaction triggered on store " + this
-          + ", because there are new files and time since last major compaction "
-          + (now - lowTimestamp) + "ms");
+            + ", because there are new files and time since last major compaction "
+            + (now - lowTimestamp) + "ms");
         return true;
       }
 
@@ -159,12 +157,12 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
       lowerWindowIndex = (lowerWindowIndex < 0) ? Math.abs(lowerWindowIndex + 2) : lowerWindowIndex;
       upperWindowIndex = (upperWindowIndex < 0) ? Math.abs(upperWindowIndex + 2) : upperWindowIndex;
       if (lowerWindowIndex != upperWindowIndex) {
-        LOG.debug("Major compaction triggered on store " + this + "; because file "
-          + file.getPath() + " has data with timestamps cross window boundaries");
+        LOG.debug("Major compaction triggered on store " + this + "; because file " + file.getPath()
+            + " has data with timestamps cross window boundaries");
         return true;
       } else if (filesInWindow[upperWindowIndex]) {
-        LOG.debug("Major compaction triggered on store " + this +
-          "; because there are more than one file in some windows");
+        LOG.debug("Major compaction triggered on store " + this
+            + "; because there are more than one file in some windows");
         return true;
       } else {
         filesInWindow[upperWindowIndex] = true;
@@ -176,21 +174,21 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
         .getBlockLocalityIndex(DNS.getHostname(comConf.conf, DNS.ServerType.REGIONSERVER));
     if (blockLocalityIndex < comConf.getMinLocalityToForceCompact()) {
       LOG.debug("Major compaction triggered on store " + this
-        + "; to make hdfs blocks local, current blockLocalityIndex is "
-        + blockLocalityIndex + " (min " + comConf.getMinLocalityToForceCompact() + ")");
+          + "; to make hdfs blocks local, current blockLocalityIndex is " + blockLocalityIndex
+          + " (min " + comConf.getMinLocalityToForceCompact() + ")");
       return true;
     }
 
-    LOG.debug("Skipping major compaction of " + this +
-      ", because the files are already major compacted");
+    LOG.debug(
+      "Skipping major compaction of " + this + ", because the files are already major compacted");
     return false;
   }
 
   @Override
   protected CompactionRequestImpl createCompactionRequest(ArrayList<HStoreFile> candidateSelection,
-    boolean tryingMajor, boolean mayUseOffPeak, boolean mayBeStuck) throws IOException {
+      boolean tryingMajor, boolean mayUseOffPeak, boolean mayBeStuck) throws IOException {
     CompactionRequestImpl result = tryingMajor ? selectMajorCompaction(candidateSelection)
-      : selectMinorCompaction(candidateSelection, mayUseOffPeak, mayBeStuck);
+        : selectMinorCompaction(candidateSelection, mayUseOffPeak, mayBeStuck);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Generated compaction request: " + result);
     }
@@ -201,8 +199,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     long now = EnvironmentEdgeManager.currentTime();
     List<Long> boundaries = getCompactBoundariesForMajor(candidateSelection, now);
     Map<Long, String> boundariesPolicies = getBoundariesStoragePolicyForMajor(boundaries, now);
-    return new DateTieredCompactionRequest(candidateSelection,
-      boundaries, boundariesPolicies);
+    return new DateTieredCompactionRequest(candidateSelection, boundaries, boundariesPolicies);
   }
 
   /**
@@ -277,18 +274,18 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     // Compact everything in the window if have more files than comConf.maxBlockingFiles
     compactionPolicyPerWindow.setMinThreshold(minThreshold);
     ArrayList<HStoreFile> storeFileSelection = mayBeStuck ? storeFiles
-      : compactionPolicyPerWindow.applyCompactionPolicy(storeFiles, mayUseOffPeak, false);
+        : compactionPolicyPerWindow.applyCompactionPolicy(storeFiles, mayUseOffPeak, false);
     if (storeFileSelection != null && !storeFileSelection.isEmpty()) {
       // If there is any file in the window excluded from compaction,
       // only one file will be output from compaction.
-      boolean singleOutput = storeFiles.size() != storeFileSelection.size() ||
-        comConf.useDateTieredSingleOutputForMinorCompaction();
+      boolean singleOutput = storeFiles.size() != storeFileSelection.size()
+          || comConf.useDateTieredSingleOutputForMinorCompaction();
       List<Long> boundaries = getCompactionBoundariesForMinor(window, singleOutput);
       // we want to generate policy to boundaries for minor compaction
       Map<Long, String> boundaryPolicyMap =
-        getBoundariesStoragePolicyForMinor(singleOutput, window, now);
-      DateTieredCompactionRequest result = new DateTieredCompactionRequest(storeFileSelection,
-        boundaries, boundaryPolicyMap);
+          getBoundariesStoragePolicyForMinor(singleOutput, window, now);
+      DateTieredCompactionRequest result =
+          new DateTieredCompactionRequest(storeFileSelection, boundaries, boundaryPolicyMap);
       return result;
     }
     return null;

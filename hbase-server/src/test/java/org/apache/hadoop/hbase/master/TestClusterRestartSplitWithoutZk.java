@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,7 @@ public class TestClusterRestartSplitWithoutZk extends TestClusterRestart {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClusterRestartSplitWithoutZk.class);
+      HBaseClassTestRule.forClass(TestClusterRestartSplitWithoutZk.class);
 
   @Override
   protected boolean splitWALCoordinatedByZk() {

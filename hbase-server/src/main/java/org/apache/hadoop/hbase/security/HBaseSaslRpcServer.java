@@ -43,7 +43,7 @@ public class HBaseSaslRpcServer {
 
   public HBaseSaslRpcServer(SaslServerAuthenticationProvider provider,
       Map<String, String> saslProps, SecretManager<TokenIdentifier> secretManager)
-          throws IOException {
+      throws IOException {
     serverWithProvider = provider.createServer(secretManager, saslProps);
     saslServer = serverWithProvider.getServer();
   }
@@ -62,9 +62,7 @@ public class HBaseSaslRpcServer {
   }
 
   public String getAttemptingUser() {
-    return serverWithProvider.getAttemptingUser()
-      .map(Object::toString)
-      .orElse("Unknown");
+    return serverWithProvider.getAttemptingUser().map(Object::toString).orElse("Unknown");
   }
 
   public byte[] wrap(byte[] buf, int off, int len) throws SaslException {

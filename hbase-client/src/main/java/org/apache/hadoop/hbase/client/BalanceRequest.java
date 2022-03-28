@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,19 +34,15 @@ public final class BalanceRequest {
     private boolean dryRun = false;
     private boolean ignoreRegionsInTransition = false;
 
-    private Builder() {}
+    private Builder() {
+    }
 
     /**
-     * Updates BalancerRequest to run the balancer in dryRun mode.
-     * In this mode, the balancer will try to find a plan but WILL NOT
-     * execute any region moves or call any coprocessors.
-     *
-     * You can run in dryRun mode regardless of whether the balancer switch
-     * is enabled or disabled, but dryRun mode will not run over an existing
-     * request or chore.
-     *
-     * Dry run is useful for testing out new balance configs. See the logs
-     * on the active HMaster for the results of the dry run.
+     * Updates BalancerRequest to run the balancer in dryRun mode. In this mode, the balancer will
+     * try to find a plan but WILL NOT execute any region moves or call any coprocessors. You can
+     * run in dryRun mode regardless of whether the balancer switch is enabled or disabled, but
+     * dryRun mode will not run over an existing request or chore. Dry run is useful for testing out
+     * new balance configs. See the logs on the active HMaster for the results of the dry run.
      */
     public Builder setDryRun(boolean dryRun) {
       this.dryRun = dryRun;
@@ -55,10 +50,8 @@ public final class BalanceRequest {
     }
 
     /**
-     * Updates BalancerRequest to run the balancer even if there are regions
-     * in transition.
-     *
-     * WARNING: Advanced usage only, this could cause more issues than it fixes.
+     * Updates BalancerRequest to run the balancer even if there are regions in transition. WARNING:
+     * Advanced usage only, this could cause more issues than it fixes.
      */
     public Builder setIgnoreRegionsInTransition(boolean ignoreRegionsInTransition) {
       this.ignoreRegionsInTransition = ignoreRegionsInTransition;
@@ -81,8 +74,8 @@ public final class BalanceRequest {
   }
 
   /**
-   * Get a BalanceRequest for a default run of the balancer. The default mode executes
-   * any moves calculated and will not run if regions are already in transition.
+   * Get a BalanceRequest for a default run of the balancer. The default mode executes any moves
+   * calculated and will not run if regions are already in transition.
    */
   public static BalanceRequest defaultInstance() {
     return DEFAULT;
@@ -97,16 +90,16 @@ public final class BalanceRequest {
   }
 
   /**
-   * Returns true if the balancer should run in dry run mode, otherwise false. In
-   * dry run mode, moves will be calculated but not executed.
+   * Returns true if the balancer should run in dry run mode, otherwise false. In dry run mode,
+   * moves will be calculated but not executed.
    */
   public boolean isDryRun() {
     return dryRun;
   }
 
   /**
-   * Returns true if the balancer should execute even if regions are in transition, otherwise
-   * false. This is an advanced usage feature, as it can cause more issues than it fixes.
+   * Returns true if the balancer should execute even if regions are in transition, otherwise false.
+   * This is an advanced usage feature, as it can cause more issues than it fixes.
    */
   public boolean isIgnoreRegionsInTransition() {
     return ignoreRegionsInTransition;

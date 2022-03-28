@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,24 +31,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Distributed procedure member's Subprocedure.  A procedure is sarted on a ProcedureCoordinator
- * which communicates with ProcedureMembers who create and start its part of the Procedure.  This
- * sub part is called a Subprocedure
- *
- * Users should subclass this and implement {@link #acquireBarrier()} (get local barrier for this
- * member), {@link #insideBarrier()} (execute while globally barriered and release barrier) and
- * {@link #cleanup(Exception)} (release state associated with subprocedure.)
- *
- * When submitted to a ProcedureMember, the call method is executed in a separate thread.
- * Latches are use too block its progress and trigger continuations when barrier conditions are
- * met.
- *
- * Exception that makes it out of calls to {@link #acquireBarrier()} or {@link #insideBarrier()}
- * gets converted into {@link ForeignException}, which will get propagated to the
- * {@link ProcedureCoordinator}.
- *
- * There is a category of procedure (ex: online-snapshots), and a user-specified instance-specific
- * barrierName. (ex: snapshot121126).
+ * Distributed procedure member's Subprocedure. A procedure is sarted on a ProcedureCoordinator
+ * which communicates with ProcedureMembers who create and start its part of the Procedure. This sub
+ * part is called a Subprocedure Users should subclass this and implement {@link #acquireBarrier()}
+ * (get local barrier for this member), {@link #insideBarrier()} (execute while globally barriered
+ * and release barrier) and {@link #cleanup(Exception)} (release state associated with
+ * subprocedure.) When submitted to a ProcedureMember, the call method is executed in a separate
+ * thread. Latches are use too block its progress and trigger continuations when barrier conditions
+ * are met. Exception that makes it out of calls to {@link #acquireBarrier()} or
+ * {@link #insideBarrier()} gets converted into {@link ForeignException}, which will get propagated
+ * to the {@link ProcedureCoordinator}. There is a category of procedure (ex: online-snapshots), and
+ * a user-specified instance-specific barrierName. (ex: snapshot121126).
  */
 @InterfaceAudience.Private
 abstract public class Subprocedure implements Callable<Void> {
@@ -98,7 +91,7 @@ abstract public class Subprocedure implements Callable<Void> {
     this.rpcs = member.getRpcs();
     this.barrierName = procName;
     this.monitor = monitor;
-    // forward any failures to coordinator.  Since this is a dispatcher, resend loops should not be
+    // forward any failures to coordinator. Since this is a dispatcher, resend loops should not be
     // possible.
     this.monitor.addListener(new ForeignExceptionListener() {
       @Override
@@ -132,7 +125,7 @@ abstract public class Subprocedure implements Callable<Void> {
   }
 
   public String getName() {
-     return barrierName;
+    return barrierName;
   }
 
   public String getMemberName() {
@@ -144,20 +137,18 @@ abstract public class Subprocedure implements Callable<Void> {
   }
 
   /**
-   * Execute the Subprocedure {@link #acquireBarrier()} and {@link #insideBarrier()} methods
-   * while keeping some state for other threads to access.
-   *
-   * This would normally be executed by the ProcedureMember when a acquire message comes from the
-   * coordinator.  Rpcs are used to spend message back to the coordinator after different phases
-   * are executed.  Any exceptions caught during the execution (except for InterruptedException) get
-   * converted and propagated to coordinator via {@link ProcedureMemberRpcs#sendMemberAborted(
-   * Subprocedure, ForeignException)}.
+   * Execute the Subprocedure {@link #acquireBarrier()} and {@link #insideBarrier()} methods while
+   * keeping some state for other threads to access. This would normally be executed by the
+   * ProcedureMember when a acquire message comes from the coordinator. Rpcs are used to spend
+   * message back to the coordinator after different phases are executed. Any exceptions caught
+   * during the execution (except for InterruptedException) get converted and propagated to
+   * coordinator via {@link ProcedureMemberRpcs#sendMemberAborted( Subprocedure, ForeignException)}.
    */
   @SuppressWarnings("finally")
   @Override
   final public Void call() {
-    LOG.debug("Starting subprocedure '" + barrierName + "' with timeout " +
-        executionTimeoutTimer.getMaxTime() + "ms");
+    LOG.debug("Starting subprocedure '" + barrierName + "' with timeout "
+        + executionTimeoutTimer.getMaxTime() + "ms");
     // start the execution timeout timer
     executionTimeoutTimer.start();
 
@@ -171,8 +162,8 @@ abstract public class Subprocedure implements Callable<Void> {
 
       // vote yes to coordinator about being prepared
       rpcs.sendMemberAcquired(this);
-      LOG.debug("Subprocedure '" + barrierName + "' coordinator notified of 'acquire', waiting on" +
-          " 'reached' or 'abort' from coordinator");
+      LOG.debug("Subprocedure '" + barrierName + "' coordinator notified of 'acquire', waiting on"
+          + " 'reached' or 'abort' from coordinator");
 
       // wait for the procedure to reach global barrier before proceding
       waitForReachedGlobalBarrier();
@@ -180,7 +171,7 @@ abstract public class Subprocedure implements Callable<Void> {
 
       // In traditional 2PC, if a member reaches this state the TX has been committed and the
       // member is responsible for rolling forward and recovering and completing the subsequent
-      // operations in the case of failure.  It cannot rollback.
+      // operations in the case of failure. It cannot rollback.
       //
       // This implementation is not 2PC since it can still rollback here, and thus has different
       // semantics.
@@ -199,8 +190,8 @@ abstract public class Subprocedure implements Callable<Void> {
     } catch (Exception e) {
       String msg = null;
       if (e instanceof InterruptedException) {
-        msg = "Procedure '" + barrierName + "' aborting due to interrupt!" +
-            " Likely due to pool shutdown.";
+        msg = "Procedure '" + barrierName + "' aborting due to interrupt!"
+            + " Likely due to pool shutdown.";
         Thread.currentThread().interrupt();
       } else if (e instanceof ForeignException) {
         msg = "Subprocedure '" + barrierName + "' aborting due to a ForeignException!";
@@ -234,26 +225,21 @@ abstract public class Subprocedure implements Callable<Void> {
   }
 
   /**
-   * The implementation of this method should gather and hold required resources (locks, disk
-   * space, etc) to satisfy the Procedures barrier condition.  For example, this would be where
-   * to make all the regions on a RS on the quiescent for an procedure that required all regions
-   * to be globally quiesed.
-   *
-   * Users should override this method.  If a quiescent is not required, this is overkill but
-   * can still be used to execute a procedure on all members and to propagate any exceptions.
-   *
+   * The implementation of this method should gather and hold required resources (locks, disk space,
+   * etc) to satisfy the Procedures barrier condition. For example, this would be where to make all
+   * the regions on a RS on the quiescent for an procedure that required all regions to be globally
+   * quiesed. Users should override this method. If a quiescent is not required, this is overkill
+   * but can still be used to execute a procedure on all members and to propagate any exceptions.
    * @throws ForeignException
    */
   abstract public void acquireBarrier() throws ForeignException;
 
   /**
-   * The implementation of this method should act with the assumption that the barrier condition
-   * has been satisfied.  Continuing the previous example, a condition could be that all RS's
-   * globally have been quiesced, and procedures that require this precondition could be
-   * implemented here.
-   * The implementation should also collect the result of the subprocedure as data to be returned
-   * to the coordinator upon successful completion.
-   * Users should override this method.
+   * The implementation of this method should act with the assumption that the barrier condition has
+   * been satisfied. Continuing the previous example, a condition could be that all RS's globally
+   * have been quiesced, and procedures that require this precondition could be implemented here.
+   * The implementation should also collect the result of the subprocedure as data to be returned to
+   * the coordinator upon successful completion. Users should override this method.
    * @return the data the subprocedure wants to return to coordinator side.
    * @throws ForeignException
    */
@@ -282,9 +268,9 @@ abstract public class Subprocedure implements Callable<Void> {
   }
 
   /**
-   * Callback for the member rpcs to call when the global barrier has been reached.  This
-   * unblocks the main subprocedure exectuion thread so that the Subprocedure's
-   * {@link #insideBarrier()} method can be run.
+   * Callback for the member rpcs to call when the global barrier has been reached. This unblocks
+   * the main subprocedure exectuion thread so that the Subprocedure's {@link #insideBarrier()}
+   * method can be run.
    */
   public void receiveReachedGlobalBarrier() {
     inGlobalBarrier.countDown();
@@ -295,16 +281,13 @@ abstract public class Subprocedure implements Callable<Void> {
   //
 
   /**
-   * Wait for the reached global barrier notification.
-   *
-   * Package visibility for testing
-   *
+   * Wait for the reached global barrier notification. Package visibility for testing
    * @throws ForeignException
    * @throws InterruptedException
    */
   void waitForReachedGlobalBarrier() throws ForeignException, InterruptedException {
     Procedure.waitForLatch(inGlobalBarrier, monitor, wakeFrequency,
-        barrierName + ":remote acquired");
+      barrierName + ":remote acquired");
   }
 
   /**
@@ -314,13 +297,11 @@ abstract public class Subprocedure implements Callable<Void> {
    */
   public void waitForLocallyCompleted() throws ForeignException, InterruptedException {
     Procedure.waitForLatch(releasedLocalBarrier, monitor, wakeFrequency,
-        barrierName + ":completed");
+      barrierName + ":completed");
   }
 
   /**
-   * Empty Subprocedure for testing.
-   *
-   * Must be public for stubbing used in testing to work.
+   * Empty Subprocedure for testing. Must be public for stubbing used in testing to work.
    */
   public static class SubprocedureImpl extends Subprocedure {
 
@@ -330,7 +311,8 @@ abstract public class Subprocedure implements Callable<Void> {
     }
 
     @Override
-    public void acquireBarrier() throws ForeignException {}
+    public void acquireBarrier() throws ForeignException {
+    }
 
     @Override
     public byte[] insideBarrier() throws ForeignException {
@@ -338,6 +320,7 @@ abstract public class Subprocedure implements Callable<Void> {
     }
 
     @Override
-    public void cleanup(Exception e) {}
+    public void cleanup(Exception e) {
+    }
   };
 }

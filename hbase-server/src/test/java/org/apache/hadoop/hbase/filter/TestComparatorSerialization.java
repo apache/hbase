@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,7 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
-@Category({FilterTests.class, SmallTests.class})
+@Category({ FilterTests.class, SmallTests.class })
 public class TestComparatorSerialization {
 
   @ClassRule
@@ -49,7 +49,7 @@ public class TestComparatorSerialization {
   @Test
   public void testBinaryPrefixComparator() throws Exception {
     BinaryPrefixComparator binaryPrefixComparator =
-      new BinaryPrefixComparator(Bytes.toBytes("binaryPrefixComparator"));
+        new BinaryPrefixComparator(Bytes.toBytes("binaryPrefixComparator"));
     assertTrue(binaryPrefixComparator.areSerializedFieldsEqual(
       ProtobufUtil.toComparator(ProtobufUtil.toComparator(binaryPrefixComparator))));
   }
@@ -57,7 +57,7 @@ public class TestComparatorSerialization {
   @Test
   public void testBitComparator() throws Exception {
     BitComparator bitComparator =
-      new BitComparator(Bytes.toBytes("bitComparator"), BitComparator.BitwiseOp.XOR);
+        new BitComparator(Bytes.toBytes("bitComparator"), BitComparator.BitwiseOp.XOR);
     assertTrue(bitComparator.areSerializedFieldsEqual(
       ProtobufUtil.toComparator(ProtobufUtil.toComparator(bitComparator))));
   }
@@ -95,8 +95,8 @@ public class TestComparatorSerialization {
   public void testBigDecimalComparator() throws Exception {
     BigDecimal bigDecimal = new BigDecimal(Double.MIN_VALUE);
     BigDecimalComparator bigDecimalComparator = new BigDecimalComparator(bigDecimal);
-    assertTrue(bigDecimalComparator.areSerializedFieldsEqual(ProtobufUtil.toComparator(ProtobufUtil
-        .toComparator(bigDecimalComparator))));
+    assertTrue(bigDecimalComparator.areSerializedFieldsEqual(
+      ProtobufUtil.toComparator(ProtobufUtil.toComparator(bigDecimalComparator))));
   }
 
 }

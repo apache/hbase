@@ -30,7 +30,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 class RegionReplicaHostCostFunction extends RegionReplicaGroupingCostFunction {
 
   private static final String REGION_REPLICA_HOST_COST_KEY =
-    "hbase.master.balancer.stochastic.regionReplicaHostCostKey";
+      "hbase.master.balancer.stochastic.regionReplicaHostCostKey";
   private static final float DEFAULT_REGION_REPLICA_HOST_COST_KEY = 100000;
 
   private Int2IntCounterMap[] colocatedReplicaCountsPerGroup;
@@ -46,8 +46,9 @@ class RegionReplicaHostCostFunction extends RegionReplicaGroupingCostFunction {
     maxCost = cluster.numHosts > 1 ? getMaxCost(cluster) : 0;
     costsPerGroup = new long[cluster.numHosts];
     // either server based or host based
-    colocatedReplicaCountsPerGroup = cluster.multiServersPerHost
-      ? cluster.colocatedReplicaCountsPerHost : cluster.colocatedReplicaCountsPerServer;
+    colocatedReplicaCountsPerGroup =
+        cluster.multiServersPerHost ? cluster.colocatedReplicaCountsPerHost
+            : cluster.colocatedReplicaCountsPerServer;
     for (int i = 0; i < colocatedReplicaCountsPerGroup.length; i++) {
       costsPerGroup[i] = costPerGroup(colocatedReplicaCountsPerGroup[i]);
     }

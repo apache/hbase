@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,7 @@ public class TestBitSetNode {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBitSetNode.class);
+      HBaseClassTestRule.forClass(TestBitSetNode.class);
 
   @Test
   public void testGetActiveMaxMinProcId() {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -138,8 +138,7 @@ public class HttpProxyExample {
       write(ctx, status, null);
     }
 
-    private void write(ChannelHandlerContext ctx, HttpResponseStatus status,
-        String content) {
+    private void write(ChannelHandlerContext ctx, HttpResponseStatus status, String content) {
       DefaultFullHttpResponse resp;
       if (content != null) {
         ByteBuf buf = ctx.alloc().buffer().writeBytes(Bytes.toBytes(content));
@@ -165,13 +164,13 @@ public class HttpProxyExample {
       Params params = parse(req);
       addListener(
         conn.getTable(TableName.valueOf(params.table)).get(new Get(Bytes.toBytes(params.row))
-          .addColumn(Bytes.toBytes(params.family), Bytes.toBytes(params.qualifier))),
+            .addColumn(Bytes.toBytes(params.family), Bytes.toBytes(params.qualifier))),
         (r, e) -> {
           if (e != null) {
             exceptionCaught(ctx, e);
           } else {
             byte[] value =
-              r.getValue(Bytes.toBytes(params.family), Bytes.toBytes(params.qualifier));
+                r.getValue(Bytes.toBytes(params.family), Bytes.toBytes(params.qualifier));
             if (value != null) {
               write(ctx, HttpResponseStatus.OK, Bytes.toStringBinary(value));
             } else {
@@ -187,7 +186,7 @@ public class HttpProxyExample {
       req.content().readBytes(value);
       addListener(
         conn.getTable(TableName.valueOf(params.table)).put(new Put(Bytes.toBytes(params.row))
-          .addColumn(Bytes.toBytes(params.family), Bytes.toBytes(params.qualifier), value)),
+            .addColumn(Bytes.toBytes(params.family), Bytes.toBytes(params.qualifier), value)),
         (r, e) -> {
           if (e != null) {
             exceptionCaught(ctx, e);

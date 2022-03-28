@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -199,15 +199,10 @@ public class TestFlushLifeCycleTracker {
     try (Table table = UTIL.getConnection().getTable(NAME)) {
       for (int i = 0; i < 100; i++) {
         byte[] row = Bytes.toBytes(i);
-        table.put(new Put(row, true)
-                    .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-                        .setRow(row)
-                        .setFamily(CF)
-                        .setQualifier(QUALIFIER)
-                        .setTimestamp(HConstants.LATEST_TIMESTAMP)
-                        .setType(Type.Put)
-                        .setValue(Bytes.toBytes(i))
-                        .build()));
+        table.put(
+          new Put(row, true).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
+              .setFamily(CF).setQualifier(QUALIFIER).setTimestamp(HConstants.LATEST_TIMESTAMP)
+              .setType(Type.Put).setValue(Bytes.toBytes(i)).build()));
       }
     }
     Tracker tracker = new Tracker();
@@ -233,15 +228,10 @@ public class TestFlushLifeCycleTracker {
     try (Table table = UTIL.getConnection().getTable(NAME)) {
       for (int i = 0; i < 100; i++) {
         byte[] row = Bytes.toBytes(i);
-        table.put(new Put(row, true)
-                    .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-                        .setRow(row)
-                        .setFamily(CF)
-                        .setQualifier(QUALIFIER)
-                        .setTimestamp(HConstants.LATEST_TIMESTAMP)
-                        .setType(Type.Put)
-                        .setValue(Bytes.toBytes(i))
-                        .build()));
+        table.put(
+          new Put(row, true).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
+              .setFamily(CF).setQualifier(QUALIFIER).setTimestamp(HConstants.LATEST_TIMESTAMP)
+              .setType(Type.Put).setValue(Bytes.toBytes(i)).build()));
       }
     }
     // here we may have overlap when calling the CP hooks so we do not assert on TRACKER

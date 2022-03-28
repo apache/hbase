@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,7 +16,6 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.client;
-
 
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -58,6 +56,7 @@ public class SingleResponse extends AbstractResponse {
   public void setEntry(Entry entry) {
     this.entry = entry;
   }
+
   @Override
   public ResponseType type() {
     return ResponseType.SINGLE;

@@ -2473,8 +2473,6 @@
         <artifactId>spotless-maven-plugin</artifactId>
         <version>${spotless.version}</version>
         <configuration>
-          <!-- optional: limit format enforcement to just the files changed from this point -->
-          <ratchetFrom>762390045ba2cc5884e91ecbe363015b7e684878</ratchetFrom>
           <!-- define a language-specific format -->
           <java>
             <!-- apply a specific flavor -->

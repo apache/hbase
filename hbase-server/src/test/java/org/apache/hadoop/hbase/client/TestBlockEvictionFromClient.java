@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -72,6 +73,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 @Category({ LargeTests.class, ClientTests.class })
@@ -111,7 +113,7 @@ public class TestBlockEvictionFromClient {
     ROWS[1] = ROW1;
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        MultiRowMutationEndpoint.class.getName());
+      MultiRowMutationEndpoint.class.getName());
     conf.setInt("hbase.regionserver.handler.count", 20);
     conf.setInt("hbase.bucketcache.size", 400);
     conf.setStrings(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
@@ -174,12 +176,11 @@ public class TestBlockEvictionFromClient {
       final TableName tableName = TableName.valueOf(name.getMethodName());
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
-          CustomInnerRegionObserver.class.getName());
+        CustomInnerRegionObserver.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName)
-          .getRegion(regionName);
+      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
@@ -264,12 +265,11 @@ public class TestBlockEvictionFromClient {
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
-          CustomInnerRegionObserver.class.getName());
+        CustomInnerRegionObserver.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      HRegion region =
-          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
@@ -323,12 +323,11 @@ public class TestBlockEvictionFromClient {
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
-          CustomInnerRegionObserver.class.getName());
+        CustomInnerRegionObserver.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      HRegion region =
-          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
@@ -385,12 +384,11 @@ public class TestBlockEvictionFromClient {
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
-          CustomInnerRegionObserver.class.getName());
+        CustomInnerRegionObserver.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      HRegion region =
-          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       BlockCache cache = setCacheProperties(region);
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -478,12 +476,11 @@ public class TestBlockEvictionFromClient {
         fams[i] = (Bytes.toBytes("testFamily" + i));
       }
       table = TEST_UTIL.createTable(tableName, fams, 1, 1024,
-          CustomInnerRegionObserver.class.getName());
+        CustomInnerRegionObserver.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      HRegion region =
-          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       BlockCache cache = setCacheProperties(region);
 
       Put put = new Put(ROW);
@@ -602,7 +599,7 @@ public class TestBlockEvictionFromClient {
       // Wait for splits
       TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getAdmin().getRegions(rs).size() > regionCount);
       List<HRegion> regions = TEST_UTIL.getMiniHBaseCluster().getRegionServer(rs).getRegions();
-      for (HRegion r: regions) {
+      for (HRegion r : regions) {
         LOG.info("" + r.getCompactionState());
         TEST_UTIL.waitFor(30000, () -> r.getCompactionState().equals(CompactionState.NONE));
       }
@@ -629,12 +626,11 @@ public class TestBlockEvictionFromClient {
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
-          CustomInnerRegionObserver.class.getName());
+        CustomInnerRegionObserver.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      HRegion region =
-          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
@@ -679,7 +675,7 @@ public class TestBlockEvictionFromClient {
           foundNonZeroBlock = true;
         }
       }
-      assertTrue("Should have found nonzero ref count block",foundNonZeroBlock);
+      assertTrue("Should have found nonzero ref count block", foundNonZeroBlock);
       CustomInnerRegionObserver.getCdl().get().countDown();
       CustomInnerRegionObserver.getCdl().get().countDown();
       for (MultiGetThread thread : getThreads) {
@@ -697,6 +693,7 @@ public class TestBlockEvictionFromClient {
       }
     }
   }
+
   @Test
   public void testScanWithMultipleColumnFamilies() throws IOException, InterruptedException {
     Table table = null;
@@ -712,12 +709,11 @@ public class TestBlockEvictionFromClient {
         fams[i] = (Bytes.toBytes("testFamily" + i));
       }
       table = TEST_UTIL.createTable(tableName, fams, 1, 1024,
-          CustomInnerRegionObserver.class.getName());
+        CustomInnerRegionObserver.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      HRegion region =
-          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       BlockCache cache = setCacheProperties(region);
 
       Put put = new Put(ROW);
@@ -801,8 +797,8 @@ public class TestBlockEvictionFromClient {
   }
 
   @Test
-  public void testParallelGetsAndScanWithWrappedRegionScanner() throws IOException,
-      InterruptedException {
+  public void testParallelGetsAndScanWithWrappedRegionScanner()
+      throws IOException, InterruptedException {
     Table table = null;
     try {
       latch = new CountDownLatch(2);
@@ -812,12 +808,11 @@ public class TestBlockEvictionFromClient {
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
-          CustomInnerRegionObserverWrapper.class.getName());
+        CustomInnerRegionObserverWrapper.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      HRegion region =
-          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
@@ -878,12 +873,11 @@ public class TestBlockEvictionFromClient {
       TableName tableName = TableName.valueOf(tableNameStr);
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
-          CustomInnerRegionObserverWrapper.class.getName());
+        CustomInnerRegionObserverWrapper.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      HRegion region =
-          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
@@ -996,12 +990,11 @@ public class TestBlockEvictionFromClient {
       final TableName tableName = TableName.valueOf(name.getMethodName());
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
-          CustomInnerRegionObserverWrapper.class.getName());
+        CustomInnerRegionObserverWrapper.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      HRegion region =
-          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
@@ -1115,7 +1108,6 @@ public class TestBlockEvictionFromClient {
     }
   }
 
-
   @Test
   public void testScanWithException() throws IOException, InterruptedException {
     Table table = null;
@@ -1126,12 +1118,11 @@ public class TestBlockEvictionFromClient {
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
-          CustomInnerRegionObserverWrapper.class.getName());
+        CustomInnerRegionObserverWrapper.class.getName());
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      HRegion region =
-          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
@@ -1237,8 +1228,8 @@ public class TestBlockEvictionFromClient {
     table.put(put);
   }
 
-  private ScanThread[] initiateScan(Table table, boolean reverse) throws IOException,
-      InterruptedException {
+  private ScanThread[] initiateScan(Table table, boolean reverse)
+      throws IOException, InterruptedException {
     ScanThread[] scanThreads = new ScanThread[NO_OF_THREADS];
     for (int i = 0; i < NO_OF_THREADS; i++) {
       scanThreads[i] = new ScanThread(table, reverse);
@@ -1261,8 +1252,7 @@ public class TestBlockEvictionFromClient {
     return getThreads;
   }
 
-  private MultiGetThread[] initiateMultiGet(Table table)
-      throws IOException, InterruptedException {
+  private MultiGetThread[] initiateMultiGet(Table table) throws IOException, InterruptedException {
     MultiGetThread[] multiGetThreads = new MultiGetThread[NO_OF_THREADS];
     for (int i = 0; i < NO_OF_THREADS; i++) {
       multiGetThreads[i] = new MultiGetThread(table);
@@ -1338,9 +1328,11 @@ public class TestBlockEvictionFromClient {
   private static class MultiGetThread extends Thread {
     private final Table table;
     private final List<Get> gets = new ArrayList<>();
+
     public MultiGetThread(Table table) {
       this.table = table;
     }
+
     @Override
     public void run() {
       gets.add(new Get(ROW));
@@ -1406,14 +1398,14 @@ public class TestBlockEvictionFromClient {
           assertTrue(Bytes.equals(r.getValue(FAMILY, Bytes.toBytes("testQualifier" + 9)), data2));
         } else {
           assertTrue(Bytes.equals(
-              r.getValue(Bytes.toBytes("testFamily" + 3), Bytes.toBytes("testQualifier" + 3)),
-              data2));
+            r.getValue(Bytes.toBytes("testFamily" + 3), Bytes.toBytes("testQualifier" + 3)),
+            data2));
           assertTrue(Bytes.equals(
-              r.getValue(Bytes.toBytes("testFamily" + 8), Bytes.toBytes("testQualifier" + 8)),
-              data2));
+            r.getValue(Bytes.toBytes("testFamily" + 8), Bytes.toBytes("testQualifier" + 8)),
+            data2));
           assertTrue(Bytes.equals(
-              r.getValue(Bytes.toBytes("testFamily" + 9), Bytes.toBytes("testQualifier" + 9)),
-              data2));
+            r.getValue(Bytes.toBytes("testFamily" + 9), Bytes.toBytes("testQualifier" + 9)),
+            data2));
         }
       }
     }
@@ -1464,12 +1456,12 @@ public class TestBlockEvictionFromClient {
   private void waitForStoreFileCount(HStore store, int count, int timeout)
       throws InterruptedException {
     long start = EnvironmentEdgeManager.currentTime();
-    while (start + timeout > EnvironmentEdgeManager.currentTime() &&
-        store.getStorefilesCount() != count) {
+    while (start + timeout > EnvironmentEdgeManager.currentTime()
+        && store.getStorefilesCount() != count) {
       Thread.sleep(100);
     }
-    System.out.println("start=" + start + ", now=" + EnvironmentEdgeManager.currentTime() +
-      ", cur=" + store.getStorefilesCount());
+    System.out.println("start=" + start + ", now=" + EnvironmentEdgeManager.currentTime() + ", cur="
+        + store.getStorefilesCount());
     assertEquals(count, store.getStorefilesCount());
   }
 
@@ -1556,8 +1548,8 @@ public class TestBlockEvictionFromClient {
 
   public static class CustomInnerRegionObserverWrapper extends CustomInnerRegionObserver {
     @Override
-    public RegionScanner postScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e,
-        Scan scan, RegionScanner s) throws IOException {
+    public RegionScanner postScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan,
+        RegionScanner s) throws IOException {
       return new CustomScanner(s);
     }
   }
@@ -1567,8 +1559,8 @@ public class TestBlockEvictionFromClient {
     static final AtomicInteger countOfGets = new AtomicInteger(0);
     static final AtomicBoolean waitForGets = new AtomicBoolean(false);
     static final AtomicBoolean throwException = new AtomicBoolean(false);
-    private static final AtomicReference<CountDownLatch> cdl = new AtomicReference<>(
-        new CountDownLatch(0));
+    private static final AtomicReference<CountDownLatch> cdl =
+        new AtomicReference<>(new CountDownLatch(0));
 
     @Override
     public Optional<RegionObserver> getRegionObserver() {

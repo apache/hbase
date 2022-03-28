@@ -36,7 +36,7 @@ public interface ReplicationService {
    * Initializes the replication service object.
    */
   void initialize(Server rs, FileSystem fs, Path logdir, Path oldLogDir, WALFactory walFactory)
-    throws IOException;
+      throws IOException;
 
   /**
    * Start replication services.

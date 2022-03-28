@@ -51,8 +51,7 @@ public class TestStochasticLoadBalancerRegionReplica extends BalancerTestBase {
   @Test
   public void testReplicaCost() {
     Configuration conf = HBaseConfiguration.create();
-    CostFunction costFunction =
-        new RegionReplicaHostCostFunction(conf);
+    CostFunction costFunction = new RegionReplicaHostCostFunction(conf);
     for (int[] mockCluster : clusterStateMocks) {
       BalancerClusterState cluster = mockCluster(mockCluster);
       costFunction.prepare(cluster);
@@ -65,8 +64,7 @@ public class TestStochasticLoadBalancerRegionReplica extends BalancerTestBase {
   @Test
   public void testReplicaCostForReplicas() {
     Configuration conf = HBaseConfiguration.create();
-    CostFunction costFunction =
-        new RegionReplicaHostCostFunction(conf);
+    CostFunction costFunction = new RegionReplicaHostCostFunction(conf);
 
     int[] servers = new int[] { 3, 3, 3, 3, 3 };
     TreeMap<ServerName, List<RegionInfo>> clusterState = mockClusterServers(servers);
@@ -163,7 +161,7 @@ public class TestStochasticLoadBalancerRegionReplica extends BalancerTestBase {
     // add another server so that the cluster has some host on another rack
     map.put(ServerName.valueOf("host2", 1000, 11111), randomRegions(1));
     assertFalse(loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
-        new BalancerClusterState(map, null, null, new ForTestRackManagerOne())));
+      new BalancerClusterState(map, null, null, new ForTestRackManagerOne())));
   }
 
   @Test

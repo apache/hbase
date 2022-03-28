@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,7 @@ import org.junit.rules.TestName;
 /**
  * Test ImmutableHRegionInfo
  */
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestImmutableHRegionInfo {
 
   @ClassRule
@@ -46,10 +46,8 @@ public class TestImmutableHRegionInfo {
   @Rule
   public TestName name = new TestName();
 
-  private final List<Consumer<ImmutableHRegionInfo>> TEST_FUNCTIONS = Arrays.asList(
-    hri -> hri.setOffline(true),
-    hri -> hri.setSplit(true)
-  );
+  private final List<Consumer<ImmutableHRegionInfo>> TEST_FUNCTIONS =
+      Arrays.asList(hri -> hri.setOffline(true), hri -> hri.setSplit(true));
 
   @Test
   public void testImmutable() {
@@ -60,7 +58,7 @@ public class TestImmutableHRegionInfo {
       try {
         f.accept(immutableHri);
         fail("ImmutableHRegionInfo can't be modified !!!");
-      } catch(UnsupportedOperationException e) {
+      } catch (UnsupportedOperationException e) {
       }
     });
   }

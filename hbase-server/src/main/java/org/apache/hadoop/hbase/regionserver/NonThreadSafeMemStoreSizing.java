@@ -20,11 +20,9 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Accounting of current heap and data sizes.
- * <em>NOT THREAD SAFE</em>.
- * Use in a 'local' context only where just a single-thread is updating. No concurrency!
- * Used, for example, when summing all Cells in a single batch where result is then applied to the
- * Store.
+ * Accounting of current heap and data sizes. <em>NOT THREAD SAFE</em>. Use in a 'local' context
+ * only where just a single-thread is updating. No concurrency! Used, for example, when summing all
+ * Cells in a single batch where result is then applied to the Store.
  * @see ThreadSafeMemStoreSizing
  */
 @InterfaceAudience.Private

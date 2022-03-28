@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -179,9 +179,9 @@ public class TestExplicitColumnTracker {
     TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     columns.addAll(Arrays.asList(new byte[][] { col2, col3, col5 }));
     List<byte[]> scanner = Arrays.<byte[]> asList(new byte[][] { col1, col4 });
-    List<ScanQueryMatcher.MatchCode> expected = Arrays.<ScanQueryMatcher.MatchCode> asList(
-      new ScanQueryMatcher.MatchCode[] { ScanQueryMatcher.MatchCode.SEEK_NEXT_COL,
-          ScanQueryMatcher.MatchCode.SEEK_NEXT_COL });
+    List<ScanQueryMatcher.MatchCode> expected =
+        Arrays.<ScanQueryMatcher.MatchCode> asList(new ScanQueryMatcher.MatchCode[] {
+            ScanQueryMatcher.MatchCode.SEEK_NEXT_COL, ScanQueryMatcher.MatchCode.SEEK_NEXT_COL });
     runTest(1, columns, scanner, expected);
   }
 

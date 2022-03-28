@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,17 +21,15 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.security.User;
 
 /**
- * This is an implementation for ScanLabelGenerator.
- * It will extract labels from passed in authorizations and cross check
- * against the set of predefined authorization labels for given user.
+ * This is an implementation for ScanLabelGenerator. It will extract labels from passed in
+ * authorizations and cross check against the set of predefined authorization labels for given user.
  * The labels for which the user is not authorized will be dropped.
  */
 @InterfaceAudience.Private
@@ -86,7 +84,7 @@ public class DefinedSetFilterScanLabelGenerator implements ScanLabelGenerator {
       sb.append("Dropping invalid authorizations requested by user ");
       sb.append(userName);
       sb.append(": [ ");
-      for (String label: droppedLabels) {
+      for (String label : droppedLabels) {
         sb.append(label);
         sb.append(' ');
       }

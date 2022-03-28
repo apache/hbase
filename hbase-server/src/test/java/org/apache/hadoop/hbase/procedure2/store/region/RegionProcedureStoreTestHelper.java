@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,12 +40,12 @@ final class RegionProcedureStoreTestHelper {
     Server server = mock(Server.class);
     when(server.getConfiguration()).thenReturn(conf);
     when(server.getServerName())
-      .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));
+        .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));
     return server;
   }
 
   static RegionProcedureStore createStore(Server server, MasterRegion region,
-    ProcedureLoader loader) throws IOException {
+      ProcedureLoader loader) throws IOException {
     RegionProcedureStore store = new RegionProcedureStore(server, region, new LeaseRecovery() {
 
       @Override

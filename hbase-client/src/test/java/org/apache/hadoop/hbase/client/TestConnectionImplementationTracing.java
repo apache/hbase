@@ -28,6 +28,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ ClientTests.class, SmallTests.class })
@@ -35,7 +36,7 @@ public class TestConnectionImplementationTracing extends TestTracingBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConnectionImplementationTracing.class);
+      HBaseClassTestRule.forClass(TestConnectionImplementationTracing.class);
 
   ConnectionImplementation conn;
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,7 @@ import org.junit.experimental.categories.Category;
 import org.apache.hbase.thirdparty.com.google.common.io.CountingInputStream;
 import org.apache.hbase.thirdparty.com.google.common.io.CountingOutputStream;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestKeyValueCodec {
 
   @ClassRule
@@ -56,8 +56,7 @@ public class TestKeyValueCodec {
     dos.close();
     long offset = cos.getCount();
     assertEquals(0, offset);
-    CountingInputStream cis =
-      new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
+    CountingInputStream cis = new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
     DataInputStream dis = new DataInputStream(cis);
     Codec.Decoder decoder = kvc.getDecoder(dis);
     assertFalse(decoder.advance());
@@ -72,20 +71,19 @@ public class TestKeyValueCodec {
     DataOutputStream dos = new DataOutputStream(cos);
     KeyValueCodec kvc = new KeyValueCodec();
     Codec.Encoder encoder = kvc.getEncoder(dos);
-    final KeyValue kv =
-      new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"), Bytes.toBytes("v"));
+    final KeyValue kv = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"),
+        Bytes.toBytes("v"));
     final int length = kv.getLength() + Bytes.SIZEOF_INT;
     encoder.write(kv);
     encoder.flush();
     dos.close();
     long offset = cos.getCount();
     assertEquals(length, offset);
-    CountingInputStream cis =
-      new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
+    CountingInputStream cis = new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
     DataInputStream dis = new DataInputStream(cis);
     Codec.Decoder decoder = kvc.getDecoder(dis);
     assertTrue(decoder.advance()); // First read should pull in the KV
-    // Second read should trip over the end-of-stream  marker and return false
+    // Second read should trip over the end-of-stream marker and return false
     assertFalse(decoder.advance());
     dis.close();
     assertEquals(length, cis.getCount());
@@ -98,12 +96,12 @@ public class TestKeyValueCodec {
     DataOutputStream dos = new DataOutputStream(cos);
     KeyValueCodec kvc = new KeyValueCodec();
     Codec.Encoder encoder = kvc.getEncoder(dos);
-    final KeyValue kv1 =
-      new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("1"), Bytes.toBytes("1"));
-    final KeyValue kv2 =
-      new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("2"), Bytes.toBytes("2"));
-    final KeyValue kv3 =
-      new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("3"), Bytes.toBytes("3"));
+    final KeyValue kv1 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("1"),
+        Bytes.toBytes("1"));
+    final KeyValue kv2 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("2"),
+        Bytes.toBytes("2"));
+    final KeyValue kv3 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("3"),
+        Bytes.toBytes("3"));
     final int length = kv1.getLength() + Bytes.SIZEOF_INT;
     encoder.write(kv1);
     encoder.write(kv2);
@@ -112,18 +110,17 @@ public class TestKeyValueCodec {
     dos.close();
     long offset = cos.getCount();
     assertEquals(length * 3, offset);
-    CountingInputStream cis =
-      new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
+    CountingInputStream cis = new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
     DataInputStream dis = new DataInputStream(cis);
     Codec.Decoder decoder = kvc.getDecoder(dis);
     assertTrue(decoder.advance());
-    KeyValue kv = (KeyValue)decoder.current();
+    KeyValue kv = (KeyValue) decoder.current();
     assertTrue(kv1.equals(kv));
     assertTrue(decoder.advance());
-    kv = (KeyValue)decoder.current();
+    kv = (KeyValue) decoder.current();
     assertTrue(kv2.equals(kv));
     assertTrue(decoder.advance());
-    kv = (KeyValue)decoder.current();
+    kv = (KeyValue) decoder.current();
     assertTrue(kv3.equals(kv));
     assertFalse(decoder.advance());
     dis.close();

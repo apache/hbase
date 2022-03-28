@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -83,30 +82,29 @@ public class NamespacesInstanceResource extends ResourceBase {
    * @param context servlet context
    * @param uriInfo (JAX-RS context variable) request URL
    * @return A response containing NamespacesInstanceModel for a namespace descriptions and
-   * TableListModel for a list of namespace tables.
+   *         TableListModel for a list of namespace tables.
    */
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
-  public Response get(final @Context ServletContext context,
-      final @Context UriInfo uriInfo) {
+  @Produces({ MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+      MIMETYPE_PROTOBUF_IETF })
+  public Response get(final @Context ServletContext context, final @Context UriInfo uriInfo) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("GET " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
 
     // Respond to list of namespace tables requests.
-    if(queryTables){
+    if (queryTables) {
       TableListModel tableModel = new TableListModel();
-      try{
+      try {
         HTableDescriptor[] tables = servlet.getAdmin().listTableDescriptorsByNamespace(namespace);
-        for(int i = 0; i < tables.length; i++){
+        for (int i = 0; i < tables.length; i++) {
           tableModel.add(new TableModel(tables[i].getTableName().getQualifierAsString()));
         }
 
         servlet.getMetrics().incrementSucessfulGetRequests(1);
         return Response.ok(tableModel).build();
-      }catch(IOException e) {
+      } catch (IOException e) {
         servlet.getMetrics().incrementFailedGetRequests(1);
         throw new RuntimeException("Cannot retrieve table list for '" + namespace + "'.");
       }
@@ -114,8 +112,7 @@ public class NamespacesInstanceResource extends ResourceBase {
 
     // Respond to namespace description requests.
     try {
-      NamespacesInstanceModel rowModel =
-          new NamespacesInstanceModel(servlet.getAdmin(), namespace);
+      NamespacesInstanceModel rowModel = new NamespacesInstanceModel(servlet.getAdmin(), namespace);
       servlet.getMetrics().incrementSucessfulGetRequests(1);
       return Response.ok(rowModel).build();
     } catch (IOException e) {
@@ -131,8 +128,7 @@ public class NamespacesInstanceResource extends ResourceBase {
    * @return response code.
    */
   @PUT
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
+  @Consumes({ MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF, MIMETYPE_PROTOBUF_IETF })
   public Response put(final NamespacesInstanceModel model, final @Context UriInfo uriInfo) {
     return processUpdate(model, true, uriInfo);
   }
@@ -144,13 +140,10 @@ public class NamespacesInstanceResource extends ResourceBase {
    * @return response code.
    */
   @POST
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
-  public Response post(final NamespacesInstanceModel model,
-      final @Context UriInfo uriInfo) {
+  @Consumes({ MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF, MIMETYPE_PROTOBUF_IETF })
+  public Response post(final NamespacesInstanceModel model, final @Context UriInfo uriInfo) {
     return processUpdate(model, false, uriInfo);
   }
-
 
   // Check that POST or PUT is valid and then update namespace.
   private Response processUpdate(NamespacesInstanceModel model, final boolean updateExisting,
@@ -161,7 +154,7 @@ public class NamespacesInstanceResource extends ResourceBase {
     if (model == null) {
       try {
         model = new NamespacesInstanceModel(namespace);
-      } catch(IOException ioe) {
+      } catch (IOException ioe) {
         servlet.getMetrics().incrementFailedPutRequests(1);
         throw new RuntimeException("Cannot retrieve info for '" + namespace + "'.");
       }
@@ -179,25 +172,25 @@ public class NamespacesInstanceResource extends ResourceBase {
     try {
       admin = servlet.getAdmin();
       namespaceExists = doesNamespaceExist(admin, namespace);
-    }catch (IOException e) {
+    } catch (IOException e) {
       servlet.getMetrics().incrementFailedPutRequests(1);
       return processException(e);
     }
 
     // Do not allow creation if namespace already exists.
-    if(!updateExisting && namespaceExists){
+    if (!updateExisting && namespaceExists) {
       servlet.getMetrics().incrementFailedPutRequests(1);
-      return Response.status(Response.Status.FORBIDDEN).type(MIMETYPE_TEXT).
-          entity("Namespace '" + namespace + "' already exists.  Use REST PUT " +
-          "to alter the existing namespace.").build();
+      return Response.status(Response.Status.FORBIDDEN).type(MIMETYPE_TEXT).entity("Namespace '"
+          + namespace + "' already exists.  Use REST PUT " + "to alter the existing namespace.")
+          .build();
     }
 
     // Do not allow altering if namespace does not exist.
-    if (updateExisting && !namespaceExists){
+    if (updateExisting && !namespaceExists) {
       servlet.getMetrics().incrementFailedPutRequests(1);
-      return Response.status(Response.Status.FORBIDDEN).type(MIMETYPE_TEXT).
-          entity("Namespace '" + namespace + "' does not exist. Use " +
-          "REST POST to create the namespace.").build();
+      return Response.status(Response.Status.FORBIDDEN).type(MIMETYPE_TEXT).entity(
+        "Namespace '" + namespace + "' does not exist. Use " + "REST POST to create the namespace.")
+          .build();
     }
 
     return createOrUpdate(model, uriInfo, admin, updateExisting);
@@ -208,32 +201,32 @@ public class NamespacesInstanceResource extends ResourceBase {
       final Admin admin, final boolean updateExisting) {
     NamespaceDescriptor.Builder builder = NamespaceDescriptor.create(namespace);
     builder.addConfiguration(model.getProperties());
-    if(model.getProperties().size() > 0){
+    if (model.getProperties().size() > 0) {
       builder.addConfiguration(model.getProperties());
     }
     NamespaceDescriptor nsd = builder.build();
 
-    try{
-      if(updateExisting){
+    try {
+      if (updateExisting) {
         admin.modifyNamespace(nsd);
-      }else{
+      } else {
         admin.createNamespace(nsd);
       }
-    }catch (IOException e) {
+    } catch (IOException e) {
       servlet.getMetrics().incrementFailedPutRequests(1);
       return processException(e);
     }
 
     servlet.getMetrics().incrementSucessfulPutRequests(1);
 
-    return updateExisting ? Response.ok(uriInfo.getAbsolutePath()).build() :
-      Response.created(uriInfo.getAbsolutePath()).build();
+    return updateExisting ? Response.ok(uriInfo.getAbsolutePath()).build()
+        : Response.created(uriInfo.getAbsolutePath()).build();
   }
 
-  private boolean doesNamespaceExist(Admin admin, String namespaceName) throws IOException{
+  private boolean doesNamespaceExist(Admin admin, String namespaceName) throws IOException {
     NamespaceDescriptor[] nd = admin.listNamespaceDescriptors();
-    for(int i = 0; i < nd.length; i++){
-      if(nd[i].getName().equals(namespaceName)){
+    for (int i = 0; i < nd.length; i++) {
+      if (nd[i].getName().equals(namespaceName)) {
         return true;
       }
     }
@@ -247,8 +240,8 @@ public class NamespacesInstanceResource extends ResourceBase {
    * @return response code.
    */
   @DELETE
-  public Response deleteNoBody(final byte[] message,
-      final @Context UriInfo uriInfo, final @Context HttpHeaders headers) {
+  public Response deleteNoBody(final byte[] message, final @Context UriInfo uriInfo,
+      final @Context HttpHeaders headers) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("DELETE " + uriInfo.getAbsolutePath());
     }
@@ -258,12 +251,12 @@ public class NamespacesInstanceResource extends ResourceBase {
           .entity("Forbidden" + CRLF).build();
     }
 
-    try{
+    try {
       Admin admin = servlet.getAdmin();
-      if (!doesNamespaceExist(admin, namespace)){
-        return Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT).
-            entity("Namespace '" + namespace + "' does not exists.  Cannot " +
-            "drop namespace.").build();
+      if (!doesNamespaceExist(admin, namespace)) {
+        return Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT)
+            .entity("Namespace '" + namespace + "' does not exists.  Cannot " + "drop namespace.")
+            .build();
       }
 
       admin.deleteNamespace(namespace);
@@ -280,8 +273,8 @@ public class NamespacesInstanceResource extends ResourceBase {
    * Dispatch to NamespaceInstanceResource for getting list of tables.
    */
   @Path("tables")
-  public NamespacesInstanceResource getNamespaceInstanceResource(
-      final @PathParam("tables") String namespace) throws IOException {
+  public NamespacesInstanceResource
+      getNamespaceInstanceResource(final @PathParam("tables") String namespace) throws IOException {
     return new NamespacesInstanceResource(this.namespace, true);
   }
 }

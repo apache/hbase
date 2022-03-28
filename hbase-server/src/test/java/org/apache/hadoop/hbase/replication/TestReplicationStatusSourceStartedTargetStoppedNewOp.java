@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,7 @@ public class TestReplicationStatusSourceStartedTargetStoppedNewOp extends TestRe
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationStatusSourceStartedTargetStoppedNewOp.class);
+      HBaseClassTestRule.forClass(TestReplicationStatusSourceStartedTargetStoppedNewOp.class);
 
   @Test
   public void testReplicationStatusSourceStartedTargetStoppedNewOp() throws Exception {
@@ -58,7 +58,7 @@ public class TestReplicationStatusSourceStartedTargetStoppedNewOp extends TestRe
     ServerName serverName = UTIL1.getHBaseCluster().getRegionServer(0).getServerName();
     ClusterMetrics metrics = hbaseAdmin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
     List<ReplicationLoadSource> loadSources =
-      metrics.getLiveServerMetrics().get(serverName).getReplicationLoadSourceList();
+        metrics.getLiveServerMetrics().get(serverName).getReplicationLoadSourceList();
     assertEquals(1, loadSources.size());
     ReplicationLoadSource loadSource = loadSources.get(0);
     assertTrue(loadSource.hasEditsSinceRestart());

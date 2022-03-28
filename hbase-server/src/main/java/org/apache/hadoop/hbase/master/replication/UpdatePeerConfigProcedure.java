@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -85,8 +85,8 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
         // both serial, then if the ns/table-cfs configs are not changed, just go with the normal
         // way, otherwise we need to reopen the regions for the newly added tables.
         return ReplicationUtils.isNamespacesAndTableCFsEqual(peerConfig, oldPeerConfig)
-          ? super.nextStateAfterRefresh()
-          : PeerModificationState.SERIAL_PEER_REOPEN_REGIONS;
+            ? super.nextStateAfterRefresh()
+            : PeerModificationState.SERIAL_PEER_REOPEN_REGIONS;
       } else {
         // we change the peer to serial, need to reopen all regions
         return PeerModificationState.SERIAL_PEER_REOPEN_REGIONS;
@@ -132,7 +132,7 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
         if (!peerConfig.needToReplicate(tn)) {
           // removed from peer config
           for (String encodedRegionName : MetaTableAccessor
-            .getTableEncodedRegionNamesForSerialReplication(conn, tn)) {
+              .getTableEncodedRegionNamesForSerialReplication(conn, tn)) {
             addToList(encodedRegionNames, encodedRegionName, queueStorage);
           }
         }
@@ -173,7 +173,7 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
       cpHost.preUpdateReplicationPeerConfig(peerId, peerConfig);
     }
     ReplicationPeerDescription desc =
-      env.getReplicationPeerManager().preUpdatePeerConfig(peerId, peerConfig);
+        env.getReplicationPeerManager().preUpdatePeerConfig(peerId, peerConfig);
     oldPeerConfig = desc.getPeerConfig();
     enabled = desc.isEnabled();
   }
@@ -205,7 +205,7 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     UpdatePeerConfigStateData.Builder builder = UpdatePeerConfigStateData.newBuilder()
-      .setPeerConfig(ReplicationPeerConfigUtil.convert(peerConfig));
+        .setPeerConfig(ReplicationPeerConfigUtil.convert(peerConfig));
     if (oldPeerConfig != null) {
       builder.setOldPeerConfig(ReplicationPeerConfigUtil.convert(oldPeerConfig));
     }

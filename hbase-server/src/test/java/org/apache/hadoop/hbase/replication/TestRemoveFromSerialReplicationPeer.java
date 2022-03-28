@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ public class TestRemoveFromSerialReplicationPeer extends SerialReplicationTestBa
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRemoveFromSerialReplicationPeer.class);
+      HBaseClassTestRule.forClass(TestRemoveFromSerialReplicationPeer.class);
 
   @Before
   public void setUp() throws IOException, StreamLacksCapabilityException {
@@ -56,7 +56,7 @@ public class TestRemoveFromSerialReplicationPeer extends SerialReplicationTestBa
 
   private void waitUntilHasLastPushedSequenceId(RegionInfo region) throws Exception {
     ReplicationQueueStorage queueStorage =
-      UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
+        UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
     UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
 
       @Override
@@ -74,11 +74,12 @@ public class TestRemoveFromSerialReplicationPeer extends SerialReplicationTestBa
   @Test
   public void testRemoveTable() throws Exception {
     TableName tableName = createTable();
-    ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-      .setClusterKey("127.0.0.1:2181:/hbase")
-      .setReplicationEndpointImpl(LocalReplicationEndpoint.class.getName())
-      .setReplicateAllUserTables(false)
-      .setTableCFsMap(ImmutableMap.of(tableName, Collections.emptyList())).setSerial(true).build();
+    ReplicationPeerConfig peerConfig =
+        ReplicationPeerConfig.newBuilder().setClusterKey("127.0.0.1:2181:/hbase")
+            .setReplicationEndpointImpl(LocalReplicationEndpoint.class.getName())
+            .setReplicateAllUserTables(false)
+            .setTableCFsMap(ImmutableMap.of(tableName, Collections.emptyList())).setSerial(true)
+            .build();
     UTIL.getAdmin().addReplicationPeer(PEER_ID, peerConfig, true);
     try (Table table = UTIL.getConnection().getTable(tableName)) {
       for (int i = 0; i < 100; i++) {
@@ -92,7 +93,7 @@ public class TestRemoveFromSerialReplicationPeer extends SerialReplicationTestBa
       ReplicationPeerConfig.newBuilder(peerConfig).setTableCFsMap(Collections.emptyMap()).build());
 
     ReplicationQueueStorage queueStorage =
-      UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
+        UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
     assertEquals(HConstants.NO_SEQNUM,
       queueStorage.getLastSequenceId(region.getEncodedName(), PEER_ID));
   }
@@ -109,11 +110,11 @@ public class TestRemoveFromSerialReplicationPeer extends SerialReplicationTestBa
     RegionInfo region = UTIL.getMiniHBaseCluster().getRegions(tableName).get(0).getRegionInfo();
     waitUntilHasLastPushedSequenceId(region);
     UTIL.getAdmin().updateReplicationPeerConfig(PEER_ID, ReplicationPeerConfig
-      .newBuilder(UTIL.getAdmin().getReplicationPeerConfig(PEER_ID)).setSerial(false).build());
+        .newBuilder(UTIL.getAdmin().getReplicationPeerConfig(PEER_ID)).setSerial(false).build());
     waitUntilReplicationDone(100);
 
     ReplicationQueueStorage queueStorage =
-      UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
+        UTIL.getMiniHBaseCluster().getMaster().getReplicationPeerManager().getQueueStorage();
     assertEquals(HConstants.NO_SEQNUM,
       queueStorage.getLastSequenceId(region.getEncodedName(), PEER_ID));
   }

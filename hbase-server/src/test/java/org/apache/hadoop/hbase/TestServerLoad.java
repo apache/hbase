@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -77,26 +77,25 @@ public class TestServerLoad {
 
   private ClusterStatusProtos.ServerLoad createServerLoadProto() {
     HBaseProtos.RegionSpecifier rSpecOne = HBaseProtos.RegionSpecifier.newBuilder()
-      .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME)
-      .setValue(ByteString.copyFromUtf8("ASDFGQWERT")).build();
+        .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME)
+        .setValue(ByteString.copyFromUtf8("ASDFGQWERT")).build();
     HBaseProtos.RegionSpecifier rSpecTwo = HBaseProtos.RegionSpecifier.newBuilder()
-      .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME)
-      .setValue(ByteString.copyFromUtf8("QWERTYUIOP")).build();
+        .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME)
+        .setValue(ByteString.copyFromUtf8("QWERTYUIOP")).build();
 
-    ClusterStatusProtos.RegionLoad rlOne =
-      ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecOne).setStores(10)
-        .setStorefiles(101).setStoreUncompressedSizeMB(106).setStorefileSizeMB(520)
-        .setFilteredReadRequestsCount(100).setStorefileIndexSizeKB(42).setRootIndexSizeKB(201)
-        .setReadRequestsCount(Integer.MAX_VALUE).setWriteRequestsCount(Integer.MAX_VALUE).build();
-    ClusterStatusProtos.RegionLoad rlTwo =
-      ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecTwo).setStores(3)
-        .setStorefiles(13).setStoreUncompressedSizeMB(23).setStorefileSizeMB(300)
-        .setFilteredReadRequestsCount(200).setStorefileIndexSizeKB(40).setRootIndexSizeKB(303)
-        .setReadRequestsCount(Integer.MAX_VALUE).setWriteRequestsCount(Integer.MAX_VALUE).build();
+    ClusterStatusProtos.RegionLoad rlOne = ClusterStatusProtos.RegionLoad.newBuilder()
+        .setRegionSpecifier(rSpecOne).setStores(10).setStorefiles(101)
+        .setStoreUncompressedSizeMB(106).setStorefileSizeMB(520).setFilteredReadRequestsCount(100)
+        .setStorefileIndexSizeKB(42).setRootIndexSizeKB(201).setReadRequestsCount(Integer.MAX_VALUE)
+        .setWriteRequestsCount(Integer.MAX_VALUE).build();
+    ClusterStatusProtos.RegionLoad rlTwo = ClusterStatusProtos.RegionLoad.newBuilder()
+        .setRegionSpecifier(rSpecTwo).setStores(3).setStorefiles(13).setStoreUncompressedSizeMB(23)
+        .setStorefileSizeMB(300).setFilteredReadRequestsCount(200).setStorefileIndexSizeKB(40)
+        .setRootIndexSizeKB(303).setReadRequestsCount(Integer.MAX_VALUE)
+        .setWriteRequestsCount(Integer.MAX_VALUE).build();
 
-    ClusterStatusProtos.ServerLoad sl =
-      ClusterStatusProtos.ServerLoad.newBuilder().addRegionLoads(rlOne).
-        addRegionLoads(rlTwo).build();
+    ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
+        .addRegionLoads(rlOne).addRegionLoads(rlTwo).build();
     return sl;
   }
 

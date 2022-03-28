@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -66,7 +66,7 @@ public class RestoreSnapshotFromClientSimpleTestBase extends RestoreSnapshotFrom
   public void testCorruptedSnapshot() throws IOException, InterruptedException {
     SnapshotTestingUtils.corruptSnapshot(TEST_UTIL, Bytes.toString(snapshotName0));
     TableName cloneName =
-      TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
+        TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
     try {
       admin.cloneSnapshot(snapshotName0, cloneName);
       fail("Expected CorruptedSnapshotException, got succeeded cloneSnapshot()");

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,12 +20,10 @@ package org.apache.hadoop.hbase.security;
 import java.util.Base64;
 import java.util.Map;
 import java.util.TreeMap;
-
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -39,9 +36,7 @@ public class SaslUtil {
   public static final int SWITCH_TO_SIMPLE_AUTH = -88;
 
   public enum QualityOfProtection {
-    AUTHENTICATION("auth"),
-    INTEGRITY("auth-int"),
-    PRIVACY("auth-conf");
+    AUTHENTICATION("auth"), INTEGRITY("auth-int"), PRIVACY("auth-conf");
 
     private final String saslQop;
 
@@ -81,8 +76,8 @@ public class SaslUtil {
   }
 
   /**
-   * Returns {@link org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection}
-   * corresponding to the given {@code stringQop} value.
+   * Returns {@link org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection} corresponding to
+   * the given {@code stringQop} value.
    * @throws IllegalArgumentException If stringQop doesn't match any QOP.
    */
   public static QualityOfProtection getQop(String stringQop) {
@@ -91,7 +86,7 @@ public class SaslUtil {
         return qop;
       }
     }
-    throw new IllegalArgumentException("Invalid qop: " +  stringQop
+    throw new IllegalArgumentException("Invalid qop: " + stringQop
         + ". It must be one of 'authentication', 'integrity', 'privacy'.");
   }
 
@@ -110,7 +105,7 @@ public class SaslUtil {
         QualityOfProtection qop = getQop(qops[i]);
         saslQopBuilder.append(",").append(qop.getSaslQop());
       }
-      saslQop = saslQopBuilder.substring(1);  // remove first ','
+      saslQop = saslQopBuilder.substring(1); // remove first ','
     }
     Map<String, String> saslProps = new TreeMap<>();
     saslProps.put(Sasl.QOP, saslQop);

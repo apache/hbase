@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 class ReadRequestCostFunction extends CostFromRegionLoadAsRateFunction {
 
   private static final String READ_REQUEST_COST_KEY =
-    "hbase.master.balancer.stochastic.readRequestCost";
+      "hbase.master.balancer.stochastic.readRequestCost";
   private static final float DEFAULT_READ_REQUEST_COST = 5;
 
   ReadRequestCostFunction(Configuration conf) {

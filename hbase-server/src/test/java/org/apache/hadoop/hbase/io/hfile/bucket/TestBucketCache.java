@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -83,10 +83,9 @@ public class TestBucketCache {
 
   @Parameterized.Parameters(name = "{index}: blockSize={0}, bucketSizes={1}")
   public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][] {
-        { 8192, null }, // TODO: why is 8k the default blocksize for these tests?
-        {
-            16 * 1024,
+    return Arrays.asList(new Object[][] { { 8192, null }, // TODO: why is 8k the default blocksize
+                                                          // for these tests?
+        { 16 * 1024,
             new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
                 28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
                 128 * 1024 + 1024 } } });
@@ -146,7 +145,6 @@ public class TestBucketCache {
 
   /**
    * Test Utility to create test dir and return name
-   *
    * @return return name of created dir
    * @throws IOException throws IOException
    */
@@ -335,15 +333,16 @@ public class TestBucketCache {
   @Test
   public void testBucketAllocatorLargeBuckets() throws BucketAllocatorException {
     long availableSpace = 20 * 1024L * 1024 * 1024;
-    int[] bucketSizes = new int[]{1024, 1024 * 1024, 1024 * 1024 * 1024};
+    int[] bucketSizes = new int[] { 1024, 1024 * 1024, 1024 * 1024 * 1024 };
     BucketAllocator allocator = new BucketAllocator(availableSpace, bucketSizes);
     assertTrue(allocator.getBuckets().length > 0);
   }
 
   @Test
   public void testGetPartitionSize() throws IOException {
-    //Test default values
-    validateGetPartitionSize(cache, BucketCache.DEFAULT_SINGLE_FACTOR, BucketCache.DEFAULT_MIN_FACTOR);
+    // Test default values
+    validateGetPartitionSize(cache, BucketCache.DEFAULT_SINGLE_FACTOR,
+      BucketCache.DEFAULT_MIN_FACTOR);
 
     Configuration conf = HBaseConfiguration.create();
     conf.setFloat(BucketCache.MIN_FACTOR_CONFIG_NAME, 0.5f);
@@ -373,64 +372,68 @@ public class TestBucketCache {
         constructedBlockSizes, writeThreads, writerQLen, persistencePath, 100, conf);
 
     assertEquals(BucketCache.ACCEPT_FACTOR_CONFIG_NAME + " failed to propagate.", 0.9f,
-        cache.getAcceptableFactor(), 0);
+      cache.getAcceptableFactor(), 0);
     assertEquals(BucketCache.MIN_FACTOR_CONFIG_NAME + " failed to propagate.", 0.5f,
-        cache.getMinFactor(), 0);
+      cache.getMinFactor(), 0);
     assertEquals(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME + " failed to propagate.", 0.5f,
-        cache.getExtraFreeFactor(), 0);
+      cache.getExtraFreeFactor(), 0);
     assertEquals(BucketCache.SINGLE_FACTOR_CONFIG_NAME + " failed to propagate.", 0.1f,
-        cache.getSingleFactor(), 0);
+      cache.getSingleFactor(), 0);
     assertEquals(BucketCache.MULTI_FACTOR_CONFIG_NAME + " failed to propagate.", 0.7f,
-        cache.getMultiFactor(), 0);
+      cache.getMultiFactor(), 0);
     assertEquals(BucketCache.MEMORY_FACTOR_CONFIG_NAME + " failed to propagate.", 0.2f,
-        cache.getMemoryFactor(), 0);
+      cache.getMemoryFactor(), 0);
   }
 
   @Test
   public void testInvalidAcceptFactorConfig() throws IOException {
-    float[] configValues = {-1f, 0.2f, 0.86f, 1.05f};
-    boolean[] expectedOutcomes = {false, false, true, false};
-    Map<String, float[]> configMappings = ImmutableMap.of(BucketCache.ACCEPT_FACTOR_CONFIG_NAME, configValues);
+    float[] configValues = { -1f, 0.2f, 0.86f, 1.05f };
+    boolean[] expectedOutcomes = { false, false, true, false };
+    Map<String, float[]> configMappings =
+        ImmutableMap.of(BucketCache.ACCEPT_FACTOR_CONFIG_NAME, configValues);
     Configuration conf = HBaseConfiguration.create();
     checkConfigValues(conf, configMappings, expectedOutcomes);
   }
 
   @Test
   public void testInvalidMinFactorConfig() throws IOException {
-    float[] configValues = {-1f, 0f, 0.96f, 1.05f};
-    //throws due to <0, in expected range, minFactor > acceptableFactor, > 1.0
-    boolean[] expectedOutcomes = {false, true, false, false};
-    Map<String, float[]> configMappings = ImmutableMap
-      .of(BucketCache.MIN_FACTOR_CONFIG_NAME, configValues);
+    float[] configValues = { -1f, 0f, 0.96f, 1.05f };
+    // throws due to <0, in expected range, minFactor > acceptableFactor, > 1.0
+    boolean[] expectedOutcomes = { false, true, false, false };
+    Map<String, float[]> configMappings =
+        ImmutableMap.of(BucketCache.MIN_FACTOR_CONFIG_NAME, configValues);
     Configuration conf = HBaseConfiguration.create();
     checkConfigValues(conf, configMappings, expectedOutcomes);
   }
 
   @Test
   public void testInvalidExtraFreeFactorConfig() throws IOException {
-    float[] configValues = {-1f, 0f, 0.2f, 1.05f};
-    //throws due to <0, in expected range, in expected range, config can be > 1.0
-    boolean[] expectedOutcomes = {false, true, true, true};
-    Map<String, float[]> configMappings = ImmutableMap.of(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME, configValues);
+    float[] configValues = { -1f, 0f, 0.2f, 1.05f };
+    // throws due to <0, in expected range, in expected range, config can be > 1.0
+    boolean[] expectedOutcomes = { false, true, true, true };
+    Map<String, float[]> configMappings =
+        ImmutableMap.of(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME, configValues);
     Configuration conf = HBaseConfiguration.create();
     checkConfigValues(conf, configMappings, expectedOutcomes);
   }
 
   @Test
   public void testInvalidCacheSplitFactorConfig() throws IOException {
-    float[] singleFactorConfigValues = {0.2f, 0f, -0.2f, 1f};
-    float[] multiFactorConfigValues = {0.4f, 0f, 1f, .05f};
-    float[] memoryFactorConfigValues = {0.4f, 0f, 0.2f, .5f};
-    // All configs add up to 1.0 and are between 0 and 1.0, configs don't add to 1.0, configs can't be negative, configs don't add to 1.0
-    boolean[] expectedOutcomes = {true, false, false, false};
+    float[] singleFactorConfigValues = { 0.2f, 0f, -0.2f, 1f };
+    float[] multiFactorConfigValues = { 0.4f, 0f, 1f, .05f };
+    float[] memoryFactorConfigValues = { 0.4f, 0f, 0.2f, .5f };
+    // All configs add up to 1.0 and are between 0 and 1.0, configs don't add to 1.0, configs can't
+    // be negative, configs don't add to 1.0
+    boolean[] expectedOutcomes = { true, false, false, false };
     Map<String, float[]> configMappings = ImmutableMap.of(BucketCache.SINGLE_FACTOR_CONFIG_NAME,
-        singleFactorConfigValues, BucketCache.MULTI_FACTOR_CONFIG_NAME, multiFactorConfigValues,
-        BucketCache.MEMORY_FACTOR_CONFIG_NAME, memoryFactorConfigValues);
+      singleFactorConfigValues, BucketCache.MULTI_FACTOR_CONFIG_NAME, multiFactorConfigValues,
+      BucketCache.MEMORY_FACTOR_CONFIG_NAME, memoryFactorConfigValues);
     Configuration conf = HBaseConfiguration.create();
     checkConfigValues(conf, configMappings, expectedOutcomes);
   }
 
-  private void checkConfigValues(Configuration conf, Map<String, float[]> configMap, boolean[] expectSuccess) throws IOException {
+  private void checkConfigValues(Configuration conf, Map<String, float[]> configMap,
+      boolean[] expectSuccess) throws IOException {
     Set<String> configNames = configMap.keySet();
     for (int i = 0; i < expectSuccess.length; i++) {
       try {
@@ -439,15 +442,21 @@ public class TestBucketCache {
         }
         BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
             constructedBlockSizes, writeThreads, writerQLen, persistencePath, 100, conf);
-        assertTrue("Created BucketCache and expected it to succeed: " + expectSuccess[i] + ", but it actually was: " + !expectSuccess[i], expectSuccess[i]);
+        assertTrue("Created BucketCache and expected it to succeed: " + expectSuccess[i]
+            + ", but it actually was: " + !expectSuccess[i],
+          expectSuccess[i]);
       } catch (IllegalArgumentException e) {
-        assertFalse("Created BucketCache and expected it to succeed: " + expectSuccess[i] + ", but it actually was: " + !expectSuccess[i], expectSuccess[i]);
+        assertFalse("Created BucketCache and expected it to succeed: " + expectSuccess[i]
+            + ", but it actually was: " + !expectSuccess[i],
+          expectSuccess[i]);
       }
     }
   }
 
-  private void validateGetPartitionSize(BucketCache bucketCache, float partitionFactor, float minFactor) {
-    long expectedOutput = (long) Math.floor(bucketCache.getAllocator().getTotalSize() * partitionFactor * minFactor);
+  private void validateGetPartitionSize(BucketCache bucketCache, float partitionFactor,
+      float minFactor) {
+    long expectedOutput =
+        (long) Math.floor(bucketCache.getAllocator().getTotalSize() * partitionFactor * minFactor);
     assertEquals(expectedOutput, bucketCache.getPartitionSize(partitionFactor));
   }
 
@@ -456,10 +465,9 @@ public class TestBucketCache {
     // This number is picked because it produces negative output if the values isn't ensured to be
     // positive. See HBASE-18757 for more information.
     long testValue = 549888460800L;
-    BucketEntry bucketEntry =
-        new BucketEntry(testValue, 10, 10L, true, (entry) -> {
-          return ByteBuffAllocator.NONE;
-        }, ByteBuffAllocator.HEAP);
+    BucketEntry bucketEntry = new BucketEntry(testValue, 10, 10L, true, (entry) -> {
+      return ByteBuffAllocator.NONE;
+    }, ByteBuffAllocator.HEAP);
     assertEquals(testValue, bucketEntry.offset());
   }
 

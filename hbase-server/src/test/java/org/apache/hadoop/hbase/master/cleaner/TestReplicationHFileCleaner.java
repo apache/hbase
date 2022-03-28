@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -194,11 +194,9 @@ public class TestReplicationHFileCleaner {
   public void testZooKeeperAbort() throws Exception {
     ReplicationHFileCleaner cleaner = new ReplicationHFileCleaner();
 
-    List<FileStatus> dummyFiles =
-      Lists.newArrayList(new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(),
-          new Path("hfile1")),
-        new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(),
-          new Path("hfile2")));
+    List<FileStatus> dummyFiles = Lists.newArrayList(
+      new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(), new Path("hfile1")),
+      new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(), new Path("hfile2")));
 
     FaultyZooKeeperWatcher faultyZK =
         new FaultyZooKeeperWatcher(conf, "testZooKeeperAbort-faulty", null);
@@ -309,6 +307,7 @@ public class TestReplicationHFileCleaner {
 
   static class FaultyZooKeeperWatcher extends ZKWatcher {
     private RecoverableZooKeeper zk;
+
     public FaultyZooKeeperWatcher(Configuration conf, String identifier, Abortable abortable)
         throws ZooKeeperConnectionException, IOException {
       super(conf, identifier, abortable);
@@ -316,8 +315,8 @@ public class TestReplicationHFileCleaner {
 
     public void init() throws Exception {
       this.zk = spy(super.getRecoverableZooKeeper());
-      doThrow(new KeeperException.ConnectionLossException())
-          .when(zk).getData("/hbase/replication/hfile-refs", null, new Stat());
+      doThrow(new KeeperException.ConnectionLossException()).when(zk)
+          .getData("/hbase/replication/hfile-refs", null, new Stat());
     }
 
     @Override

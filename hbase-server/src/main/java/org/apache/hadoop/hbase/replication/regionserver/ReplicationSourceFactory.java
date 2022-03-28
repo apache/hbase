@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,15 +24,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Constructs a {@link ReplicationSourceInterface}
- * Note, not used to create specialized ReplicationSources
+ * Constructs a {@link ReplicationSourceInterface} Note, not used to create specialized
+ * ReplicationSources
  * @see CatalogReplicationSource
  */
 @InterfaceAudience.Private
 public final class ReplicationSourceFactory {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceFactory.class);
 
-  private ReplicationSourceFactory() {}
+  private ReplicationSourceFactory() {
+  }
 
   static ReplicationSourceInterface create(Configuration conf, String queueId) {
     ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queueId);

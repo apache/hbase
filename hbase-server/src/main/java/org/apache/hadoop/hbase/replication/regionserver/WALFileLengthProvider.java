@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,16 +18,15 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.util.OptionalLong;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used by replication to prevent replicating unacked log entries. See
- * https://issues.apache.org/jira/browse/HBASE-14004 for more details.
- * WALFileLengthProvider exists because we do not want to reference WALFactory and WALProvider
- * directly in the replication code so in the future it will be easier to decouple them.
- * Each walProvider will have its own implementation.
+ * https://issues.apache.org/jira/browse/HBASE-14004 for more details. WALFileLengthProvider exists
+ * because we do not want to reference WALFactory and WALProvider directly in the replication code
+ * so in the future it will be easier to decouple them. Each walProvider will have its own
+ * implementation.
  */
 @InterfaceAudience.Private
 @FunctionalInterface

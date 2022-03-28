@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,20 +43,20 @@ public final class GsonUtil {
    */
   public static GsonBuilder createGson() {
     return new GsonBuilder().setLongSerializationPolicy(LongSerializationPolicy.STRING)
-      .registerTypeAdapter(LongAdder.class, new TypeAdapter<LongAdder>() {
+        .registerTypeAdapter(LongAdder.class, new TypeAdapter<LongAdder>() {
 
-        @Override
-        public void write(JsonWriter out, LongAdder value) throws IOException {
-          out.value(value.longValue());
-        }
+          @Override
+          public void write(JsonWriter out, LongAdder value) throws IOException {
+            out.value(value.longValue());
+          }
 
-        @Override
-        public LongAdder read(JsonReader in) throws IOException {
-          LongAdder value = new LongAdder();
-          value.add(in.nextLong());
-          return value;
-        }
-      });
+          @Override
+          public LongAdder read(JsonReader in) throws IOException {
+            LongAdder value = new LongAdder();
+            value.add(in.nextLong());
+            return value;
+          }
+        });
   }
 
   public static GsonBuilder createGsonWithDisableHtmlEscaping() {

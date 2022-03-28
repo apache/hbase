@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,21 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.policies;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 
 /**
- * A policy, which picks a random action according to the given weights,
- * and performs it every configurable period.
+ * A policy, which picks a random action according to the given weights, and performs it every
+ * configurable period.
  */
 public class PeriodicRandomActionPolicy extends PeriodicPolicy {
   private List<Pair<Action, Integer>> actions;

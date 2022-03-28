@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.security.visibility;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -31,6 +30,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class Authorizations {
 
   private List<String> labels;
+
   public Authorizations(String... labels) {
     this.labels = new ArrayList<>(labels.length);
     Collections.addAll(this.labels, labels);
@@ -43,12 +43,12 @@ public class Authorizations {
   public List<String> getLabels() {
     return Collections.unmodifiableList(this.labels);
   }
-  
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("[ ");
-    for (String label: labels) {
+    for (String label : labels) {
       sb.append(label);
       sb.append(' ');
     }

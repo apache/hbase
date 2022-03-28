@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,25 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * WALLink describes a link to a WAL.
- *
- * An wal can be in /hbase/.logs/&lt;server&gt;/&lt;wal&gt;
- * or it can be in /hbase/.oldlogs/&lt;wal&gt;
- *
- * The link checks first in the original path,
- * if it is not present it fallbacks to the archived path.
+ * WALLink describes a link to a WAL. An wal can be in /hbase/.logs/&lt;server&gt;/&lt;wal&gt; or it
+ * can be in /hbase/.oldlogs/&lt;wal&gt; The link checks first in the original path, if it is not
+ * present it fallbacks to the archived path.
  */
 @InterfaceAudience.Private
 public class WALLink extends FileLink {
@@ -43,8 +37,8 @@ public class WALLink extends FileLink {
    * @param logName WAL file name
    * @throws IOException on unexpected error.
    */
-  public WALLink(final Configuration conf,
-      final String serverName, final String logName) throws IOException {
+  public WALLink(final Configuration conf, final String serverName, final String logName)
+      throws IOException {
     this(CommonFSUtils.getWALRootDir(conf), serverName, logName);
   }
 

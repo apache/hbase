@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +22,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -86,11 +84,12 @@ public final class TableDescriptorUtils {
     }
   }
 
-  private TableDescriptorUtils() { }
+  private TableDescriptorUtils() {
+  }
 
   /**
-   * Compares two {@link TableDescriptor} and indicate which columns were added, deleted,
-   * or modified from oldTD to newTD
+   * Compares two {@link TableDescriptor} and indicate which columns were added, deleted, or
+   * modified from oldTD to newTD
    * @return a TableDescriptorDelta that contains the added/deleted/modified column names
    */
   public static TableDescriptorDelta computeDelta(TableDescriptor oldTD, TableDescriptor newTD) {

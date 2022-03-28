@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,9 +29,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- *  Test for MetricsMasterProcSourceImpl
+ * Test for MetricsMasterProcSourceImpl
  */
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsMasterProcSourceImpl {
 
   @ClassRule
@@ -40,12 +40,12 @@ public class TestMetricsMasterProcSourceImpl {
 
   @Test
   public void testGetInstance() throws Exception {
-    MetricsMasterProcSourceFactory metricsMasterProcSourceFactory = CompatibilitySingletonFactory
-        .getInstance(MetricsMasterProcSourceFactory.class);
+    MetricsMasterProcSourceFactory metricsMasterProcSourceFactory =
+        CompatibilitySingletonFactory.getInstance(MetricsMasterProcSourceFactory.class);
     MetricsMasterProcSource masterProcSource = metricsMasterProcSourceFactory.create(null);
     assertTrue(masterProcSource instanceof MetricsMasterProcSourceImpl);
     assertSame(metricsMasterProcSourceFactory,
-            CompatibilitySingletonFactory.getInstance(MetricsMasterProcSourceFactory.class));
+      CompatibilitySingletonFactory.getInstance(MetricsMasterProcSourceFactory.class));
   }
 
 }

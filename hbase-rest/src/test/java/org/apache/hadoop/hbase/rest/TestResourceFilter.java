@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestResourceFilter {
 
   @ClassRule
@@ -40,8 +40,7 @@ public class TestResourceFilter {
       HBaseClassTestRule.forClass(TestResourceFilter.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
-    new HBaseRESTTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
   private static Client client;
 
   @BeforeClass
@@ -49,8 +48,7 @@ public class TestResourceFilter {
     TEST_UTIL.getConfiguration().set(Constants.FILTER_CLASSES, DummyFilter.class.getName());
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
-    client = new Client(new Cluster().add("localhost",
-      REST_TEST_UTIL.getServletPort()));
+    client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
   }
 
   @AfterClass

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -168,16 +168,16 @@ public class TestAsyncTableBatch {
     Admin admin = TEST_UTIL.getAdmin();
     admin.flush(TABLE_NAME);
     List<Future<?>> splitFutures =
-      TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream().map(r -> {
-        byte[] startKey = r.getRegionInfo().getStartKey();
-        int number = startKey.length == 0 ? 55 : Integer.parseInt(Bytes.toString(startKey));
-        byte[] splitPoint = Bytes.toBytes(String.format("%03d", number + 55));
-        try {
-          return admin.splitRegionAsync(r.getRegionInfo().getRegionName(), splitPoint);
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-      }).collect(Collectors.toList());
+        TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream().map(r -> {
+          byte[] startKey = r.getRegionInfo().getStartKey();
+          int number = startKey.length == 0 ? 55 : Integer.parseInt(Bytes.toString(startKey));
+          byte[] splitPoint = Bytes.toBytes(String.format("%03d", number + 55));
+          try {
+            return admin.splitRegionAsync(r.getRegionInfo().getRegionName(), splitPoint);
+          } catch (IOException e) {
+            throw new UncheckedIOException(e);
+          }
+        }).collect(Collectors.toList());
     for (Future<?> future : splitFutures) {
       future.get(30, TimeUnit.SECONDS);
     }
@@ -341,18 +341,18 @@ public class TestAsyncTableBatch {
 
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
     try {
-      table.batch(Arrays.asList(new Delete(row), new RowMutations(row)
-        .add((Mutation) new Put(row))));
+      table.batch(
+        Arrays.asList(new Delete(row), new RowMutations(row).add((Mutation) new Put(row))));
       fail("Should fail since the put does not contain any cells");
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString("No columns to insert"));
     }
 
     try {
-      table.batch(
-        Arrays.asList(new RowMutations(row).add((Mutation) new Put(row)
-            .addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE])),
-          new Delete(row)));
+      table.batch(Arrays.asList(
+        new RowMutations(row)
+            .add((Mutation) new Put(row).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE])),
+        new Delete(row)));
       fail("Should fail since the put exceeds the max key value size");
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString("KeyValue size too large"));
@@ -366,20 +366,19 @@ public class TestAsyncTableBatch {
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
     try {
       table.batch(Arrays.asList(new Delete(row), CheckAndMutate.newBuilder(row)
-        .ifNotExists(FAMILY, CQ)
-        .build(new RowMutations(row).add((Mutation) new Put(row)))));
+          .ifNotExists(FAMILY, CQ).build(new RowMutations(row).add((Mutation) new Put(row)))));
       fail("Should fail since the put does not contain any cells");
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString("No columns to insert"));
     }
 
     try {
-      table.batch(
-        Arrays.asList(CheckAndMutate.newBuilder(row)
-            .ifNotExists(FAMILY, CQ)
-            .build(new RowMutations(row).add((Mutation) new Put(row)
-              .addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE]))),
-          new Delete(row)));
+      table
+          .batch(Arrays.asList(
+            CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, CQ)
+                .build(new RowMutations(row).add(
+                  (Mutation) new Put(row).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE]))),
+            new Delete(row)));
       fail("Should fail since the put exceeds the max key value size");
     } catch (IllegalArgumentException e) {
       assertThat(e.getMessage(), containsString("KeyValue size too large"));
@@ -398,38 +397,38 @@ public class TestAsyncTableBatch {
     byte[] row6 = Bytes.toBytes("row6");
     byte[] row7 = Bytes.toBytes("row7");
 
-    table.putAll(Arrays.asList(
-      new Put(row1).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a")),
-      new Put(row2).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")),
-      new Put(row3).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")),
-      new Put(row4).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")),
-      new Put(row5).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e")),
-      new Put(row6).addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes(10L)),
-      new Put(row7).addColumn(FAMILY, Bytes.toBytes("G"), Bytes.toBytes("g")))).get();
+    table.putAll(
+      Arrays.asList(new Put(row1).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a")),
+        new Put(row2).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")),
+        new Put(row3).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")),
+        new Put(row4).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")),
+        new Put(row5).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e")),
+        new Put(row6).addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes(10L)),
+        new Put(row7).addColumn(FAMILY, Bytes.toBytes("G"), Bytes.toBytes("g")))).get();
 
     CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(row1)
-      .ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
-      .build(new RowMutations(row1)
-        .add((Mutation) new Put(row1).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("g")))
-        .add((Mutation) new Delete(row1).addColumns(FAMILY, Bytes.toBytes("A")))
-        .add(new Increment(row1).addColumn(FAMILY, Bytes.toBytes("C"), 3L))
-        .add(new Append(row1).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d"))));
+        .ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
+        .build(new RowMutations(row1)
+            .add((Mutation) new Put(row1).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("g")))
+            .add((Mutation) new Delete(row1).addColumns(FAMILY, Bytes.toBytes("A")))
+            .add(new Increment(row1).addColumn(FAMILY, Bytes.toBytes("C"), 3L))
+            .add(new Append(row1).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d"))));
     Get get = new Get(row2).addColumn(FAMILY, Bytes.toBytes("B"));
     RowMutations mutations = new RowMutations(row3)
-      .add((Mutation) new Delete(row3).addColumns(FAMILY, Bytes.toBytes("C")))
-      .add((Mutation) new Put(row3).addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("f")))
-      .add(new Increment(row3).addColumn(FAMILY, Bytes.toBytes("A"), 5L))
-      .add(new Append(row3).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")));
-    CheckAndMutate checkAndMutate2 = CheckAndMutate.newBuilder(row4)
-      .ifEquals(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("a"))
-      .build(new Put(row4).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("h")));
+        .add((Mutation) new Delete(row3).addColumns(FAMILY, Bytes.toBytes("C")))
+        .add((Mutation) new Put(row3).addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("f")))
+        .add(new Increment(row3).addColumn(FAMILY, Bytes.toBytes("A"), 5L))
+        .add(new Append(row3).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")));
+    CheckAndMutate checkAndMutate2 =
+        CheckAndMutate.newBuilder(row4).ifEquals(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("a"))
+            .build(new Put(row4).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("h")));
     Put put = new Put(row5).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("f"));
-    CheckAndMutate checkAndMutate3 = CheckAndMutate.newBuilder(row6)
-      .ifEquals(FAMILY, Bytes.toBytes("F"), Bytes.toBytes(10L))
-      .build(new Increment(row6).addColumn(FAMILY, Bytes.toBytes("F"), 1));
-    CheckAndMutate checkAndMutate4 = CheckAndMutate.newBuilder(row7)
-      .ifEquals(FAMILY, Bytes.toBytes("G"), Bytes.toBytes("g"))
-      .build(new Append(row7).addColumn(FAMILY, Bytes.toBytes("G"), Bytes.toBytes("g")));
+    CheckAndMutate checkAndMutate3 =
+        CheckAndMutate.newBuilder(row6).ifEquals(FAMILY, Bytes.toBytes("F"), Bytes.toBytes(10L))
+            .build(new Increment(row6).addColumn(FAMILY, Bytes.toBytes("F"), 1));
+    CheckAndMutate checkAndMutate4 =
+        CheckAndMutate.newBuilder(row7).ifEquals(FAMILY, Bytes.toBytes("G"), Bytes.toBytes("g"))
+            .build(new Append(row7).addColumn(FAMILY, Bytes.toBytes("G"), Bytes.toBytes("g")));
 
     List<Row> actions = Arrays.asList(checkAndMutate1, get, mutations, checkAndMutate2, put,
       checkAndMutate3, checkAndMutate4);
@@ -458,13 +457,13 @@ public class TestAsyncTableBatch {
 
     checkAndMutateResult = (CheckAndMutateResult) results.get(5);
     assertTrue(checkAndMutateResult.isSuccess());
-    assertEquals(11, Bytes.toLong(checkAndMutateResult.getResult()
-      .getValue(FAMILY, Bytes.toBytes("F"))));
+    assertEquals(11,
+      Bytes.toLong(checkAndMutateResult.getResult().getValue(FAMILY, Bytes.toBytes("F"))));
 
     checkAndMutateResult = (CheckAndMutateResult) results.get(6);
     assertTrue(checkAndMutateResult.isSuccess());
-    assertEquals("gg", Bytes.toString(checkAndMutateResult.getResult()
-      .getValue(FAMILY, Bytes.toBytes("G"))));
+    assertEquals("gg",
+      Bytes.toString(checkAndMutateResult.getResult().getValue(FAMILY, Bytes.toBytes("G"))));
 
     result = table.get(new Get(row1)).get();
     assertEquals("g", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("B"))));

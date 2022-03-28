@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -47,7 +46,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestIllegalTableDescriptor {
 
   @ClassRule
@@ -59,7 +58,7 @@ public class TestIllegalTableDescriptor {
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static byte [] FAMILY = Bytes.toBytes("testFamily");
+  private static byte[] FAMILY = Bytes.toBytes("testFamily");
 
   @Rule
   public TestName name = new TestName();
@@ -145,7 +144,7 @@ public class TestIllegalTableDescriptor {
     checkTableIsLegal(htd);
 
     // HBASE-13776 Setting illegal versions for HColumnDescriptor
-    //  does not throw IllegalArgumentException
+    // does not throw IllegalArgumentException
     // finally, minVersions must be less than or equal to maxVersions
     hcd.setMaxVersions(4);
     hcd.setMinVersions(5);
@@ -202,7 +201,7 @@ public class TestIllegalTableDescriptor {
     try {
       admin.createTable(htd);
       fail();
-    } catch(Exception ex) {
+    } catch (Exception ex) {
       // should throw ex
     }
     assertFalse(admin.tableExists(htd.getTableName()));

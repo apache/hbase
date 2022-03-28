@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncSingleRequestRpcRetryingCaller.class);
+      HBaseClassTestRule.forClass(TestAsyncSingleRequestRpcRetryingCaller.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -75,7 +75,7 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
     ConnectionRegistry registry =
         ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
-      registry.getClusterId().get(), User.getCurrent());
+        registry.getClusterId().get(), User.getCurrent());
   }
 
   @AfterClass
@@ -92,7 +92,7 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
     TEST_UTIL.getAdmin().move(loc.getRegion().getEncodedNameAsBytes(),
       TEST_UTIL.getHBaseCluster().getRegionServer(1 - index).getServerName());
     AsyncTable<?> table = CONN.getTableBuilder(TABLE_NAME).setRetryPause(100, TimeUnit.MILLISECONDS)
-      .setMaxRetries(30).build();
+        .setMaxRetries(30).build();
     table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE)).get();
 
     // move back
@@ -111,8 +111,8 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
   public void testMaxRetries() throws IOException, InterruptedException {
     try {
       CONN.callerFactory.single().table(TABLE_NAME).row(ROW).operationTimeout(1, TimeUnit.DAYS)
-        .maxAttempts(3).pause(10, TimeUnit.MILLISECONDS)
-        .action((controller, loc, stub) -> failedFuture()).call().get();
+          .maxAttempts(3).pause(10, TimeUnit.MILLISECONDS)
+          .action((controller, loc, stub) -> failedFuture()).call().get();
       fail();
     } catch (ExecutionException e) {
       assertThat(e.getCause(), instanceOf(RetriesExhaustedException.class));
@@ -124,8 +124,8 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
     long startNs = System.nanoTime();
     try {
       CONN.callerFactory.single().table(TABLE_NAME).row(ROW).operationTimeout(1, TimeUnit.SECONDS)
-        .pause(100, TimeUnit.MILLISECONDS).maxAttempts(Integer.MAX_VALUE)
-        .action((controller, loc, stub) -> failedFuture()).call().get();
+          .pause(100, TimeUnit.MILLISECONDS).maxAttempts(Integer.MAX_VALUE)
+          .action((controller, loc, stub) -> failedFuture()).call().get();
       fail();
     } catch (ExecutionException e) {
       e.printStackTrace();
@@ -142,30 +142,30 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
     AtomicInteger count = new AtomicInteger(0);
     HRegionLocation loc = CONN.getRegionLocator(TABLE_NAME).getRegionLocation(ROW).get();
     AsyncRegionLocator mockedLocator =
-      new AsyncRegionLocator(CONN, AsyncConnectionImpl.RETRY_TIMER) {
-        @Override
-        CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
-            int replicaId, RegionLocateType locateType, long timeoutNs) {
-          if (tableName.equals(TABLE_NAME)) {
-            CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
-            if (count.getAndIncrement() == 0) {
-              errorTriggered.set(true);
-              future.completeExceptionally(new RuntimeException("Inject error!"));
+        new AsyncRegionLocator(CONN, AsyncConnectionImpl.RETRY_TIMER) {
+          @Override
+          CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
+              int replicaId, RegionLocateType locateType, long timeoutNs) {
+            if (tableName.equals(TABLE_NAME)) {
+              CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
+              if (count.getAndIncrement() == 0) {
+                errorTriggered.set(true);
+                future.completeExceptionally(new RuntimeException("Inject error!"));
+              } else {
+                future.complete(loc);
+              }
+              return future;
             } else {
-              future.complete(loc);
+              return super.getRegionLocation(tableName, row, replicaId, locateType, timeoutNs);
             }
-            return future;
-          } else {
-            return super.getRegionLocation(tableName, row, replicaId, locateType, timeoutNs);
           }
-        }
 
-        @Override
-        void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
-        }
-      };
+          @Override
+          void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
+          }
+        };
     try (AsyncConnectionImpl mockedConn = new AsyncConnectionImpl(CONN.getConfiguration(),
-      CONN.registry, CONN.registry.getClusterId().get(), User.getCurrent()) {
+        CONN.registry, CONN.registry.getClusterId().get(), User.getCurrent()) {
 
       @Override
       AsyncRegionLocator getLocator() {
@@ -173,7 +173,7 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
       }
     }) {
       AsyncTable<?> table = mockedConn.getTableBuilder(TABLE_NAME)
-        .setRetryPause(100, TimeUnit.MILLISECONDS).setMaxRetries(5).build();
+          .setRetryPause(100, TimeUnit.MILLISECONDS).setMaxRetries(5).build();
       table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE)).get();
       assertTrue(errorTriggered.get());
       errorTriggered.set(false);

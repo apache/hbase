@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -337,8 +337,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
           }
           LOG.error("Last row: " + lastRow);
           fail("Waited too much time for normal batch replication, " + res.length + " instead of "
-            + NB_ROWS_IN_BIG_BATCH + "; waited="
-            + (EnvironmentEdgeManager.currentTime() - start) + "ms");
+              + NB_ROWS_IN_BIG_BATCH + "; waited=" + (EnvironmentEdgeManager.currentTime() - start)
+              + "ms");
         } else {
           LOG.info("Only got " + res.length + " rows... retrying");
           Thread.sleep(SLEEP_TIME);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,16 +34,16 @@ final class StoreFileComparators {
    * ordering, then bulkLoadTime. If there are ties, the path name is used as a tie-breaker.
    */
   public static final Comparator<HStoreFile> SEQ_ID =
-    Comparator.comparingLong(HStoreFile::getMaxSequenceId)
-      .thenComparing(Comparator.comparingLong(new GetFileSize()).reversed())
-      .thenComparingLong(new GetBulkTime()).thenComparing(new GetPathName());
+      Comparator.comparingLong(HStoreFile::getMaxSequenceId)
+          .thenComparing(Comparator.comparingLong(new GetFileSize()).reversed())
+          .thenComparingLong(new GetBulkTime()).thenComparing(new GetPathName());
 
   /**
    * Comparator for time-aware compaction. SeqId is still the first ordering criterion to maintain
    * MVCC.
    */
-  public static final Comparator<HStoreFile> SEQ_ID_MAX_TIMESTAMP =
-    Comparator.comparingLong(HStoreFile::getMaxSequenceId).thenComparingLong(new GetMaxTimestamp())
+  public static final Comparator<HStoreFile> SEQ_ID_MAX_TIMESTAMP = Comparator
+      .comparingLong(HStoreFile::getMaxSequenceId).thenComparingLong(new GetMaxTimestamp())
       .thenComparing(Comparator.comparingLong(new GetFileSize()).reversed())
       .thenComparingLong(new GetBulkTime()).thenComparing(new GetPathName());
 

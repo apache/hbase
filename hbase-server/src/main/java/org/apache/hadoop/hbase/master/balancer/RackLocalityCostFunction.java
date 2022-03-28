@@ -25,7 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 class RackLocalityCostFunction extends LocalityBasedCostFunction {
 
   private static final String RACK_LOCALITY_COST_KEY =
-    "hbase.master.balancer.stochastic.rackLocalityCost";
+      "hbase.master.balancer.stochastic.rackLocalityCost";
   private static final float DEFAULT_RACK_LOCALITY_COST = 15;
 
   public RackLocalityCostFunction(Configuration conf) {

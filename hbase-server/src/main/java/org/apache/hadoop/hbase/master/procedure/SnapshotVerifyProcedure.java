@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotVerifyParameter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotVerifyProcedureStateData;
@@ -43,11 +44,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
- *  A remote procedure which is used to send verify snapshot request to region server.
+ * A remote procedure which is used to send verify snapshot request to region server.
  */
 @InterfaceAudience.Private
-public class SnapshotVerifyProcedure
-    extends ServerRemoteProcedure implements TableProcedureInterface {
+public class SnapshotVerifyProcedure extends ServerRemoteProcedure
+    implements TableProcedureInterface {
   private static final Logger LOG = LoggerFactory.getLogger(SnapshotVerifyProcedure.class);
 
   private SnapshotDescription snapshot;
@@ -55,7 +56,8 @@ public class SnapshotVerifyProcedure
 
   private RetryCounter retryCounter;
 
-  public SnapshotVerifyProcedure() {}
+  public SnapshotVerifyProcedure() {
+  }
 
   public SnapshotVerifyProcedure(SnapshotDescription snapshot, RegionInfo region) {
     this.snapshot = snapshot;
@@ -83,7 +85,7 @@ public class SnapshotVerifyProcedure
             // snapshot is corrupted, will touch a flag file and finish the procedure
             succ = true;
             SnapshotProcedure parent = env.getMasterServices().getMasterProcedureExecutor()
-              .getProcedure(SnapshotProcedure.class, getParentProcId());
+                .getProcedure(SnapshotProcedure.class, getParentProcId());
             if (parent != null) {
               parent.markSnapshotCorrupted();
             }
@@ -107,8 +109,8 @@ public class SnapshotVerifyProcedure
       setFailure("verify-snapshot", e);
     } finally {
       // release the worker
-      env.getMasterServices().getSnapshotManager()
-        .releaseSnapshotVerifyWorker(this, targetServer, env.getProcedureScheduler());
+      env.getMasterServices().getSnapshotManager().releaseSnapshotVerifyWorker(this, targetServer,
+        env.getProcedureScheduler());
     }
   }
 
@@ -126,15 +128,15 @@ public class SnapshotVerifyProcedure
       // the new procedures and the undispatched procedures
       if (!dispatched) {
         SnapshotProcedure parent = env.getMasterServices().getMasterProcedureExecutor()
-          .getProcedure(SnapshotProcedure.class, getParentProcId());
+            .getProcedure(SnapshotProcedure.class, getParentProcId());
         if (parent != null && parent.isSnapshotCorrupted()) {
           return null;
         }
       }
       // acquire a worker
       if (!dispatched && targetServer == null) {
-        targetServer = env.getMasterServices()
-          .getSnapshotManager().acquireSnapshotVerifyWorker(this);
+        targetServer =
+            env.getMasterServices().getSnapshotManager().acquireSnapshotVerifyWorker(this);
       }
       // send remote request
       Procedure<MasterProcedureEnv>[] res = super.execute(env);
@@ -174,7 +176,7 @@ public class SnapshotVerifyProcedure
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     SnapshotVerifyProcedureStateData.Builder builder =
-      SnapshotVerifyProcedureStateData.newBuilder();
+        SnapshotVerifyProcedureStateData.newBuilder();
     builder.setSnapshot(snapshot).setRegion(ProtobufUtil.toRegionInfo(region));
     if (targetServer != null) {
       builder.setTargetServer(ProtobufUtil.toServerName(targetServer));
@@ -185,7 +187,7 @@ public class SnapshotVerifyProcedure
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     SnapshotVerifyProcedureStateData data =
-      serializer.deserialize(SnapshotVerifyProcedureStateData.class);
+        serializer.deserialize(SnapshotVerifyProcedureStateData.class);
     this.snapshot = data.getSnapshot();
     this.region = ProtobufUtil.toRegionInfo(data.getRegion());
     if (data.hasTargetServer()) {
@@ -195,8 +197,7 @@ public class SnapshotVerifyProcedure
 
   @Override
   protected void toStringClassDetails(StringBuilder builder) {
-    builder.append(getClass().getSimpleName())
-      .append(", snapshot=").append(snapshot.getName());
+    builder.append(getClass().getSimpleName()).append(", snapshot=").append(snapshot.getName());
     if (targetServer != null) {
       builder.append(", targetServer=").append(targetServer);
     }
@@ -207,7 +208,7 @@ public class SnapshotVerifyProcedure
     SnapshotVerifyParameter.Builder builder = SnapshotVerifyParameter.newBuilder();
     builder.setSnapshot(snapshot).setRegion(ProtobufUtil.toRegionInfo(region));
     return Optional.of(new RSProcedureDispatcher.ServerOperation(this, getProcId(),
-      SnapshotVerifyCallable.class, builder.build().toByteArray()));
+        SnapshotVerifyCallable.class, builder.build().toByteArray()));
   }
 
   @Override

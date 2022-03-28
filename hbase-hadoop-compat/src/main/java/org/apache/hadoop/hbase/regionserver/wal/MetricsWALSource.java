@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.hadoop.hbase.TableName;
@@ -27,7 +26,6 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface MetricsWALSource extends BaseSource {
-
 
   /**
    * The name of the metrics
@@ -48,7 +46,6 @@ public interface MetricsWALSource extends BaseSource {
    * The name of the metrics context that metrics will be under in jmx
    */
   String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
-
 
   String APPEND_TIME = "appendTime";
   String APPEND_TIME_DESC = "Time an append to the log took.";

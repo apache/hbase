@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.exceptions;
 
 import java.io.EOFException;
@@ -48,7 +46,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 @InterfaceStability.Evolving
 public final class ClientExceptionsUtil {
 
-  private ClientExceptionsUtil() {}
+  private ClientExceptionsUtil() {
+  }
 
   public static boolean isMetaClearingException(Throwable cur) {
     cur = findException(cur);
@@ -68,14 +67,10 @@ public final class ClientExceptionsUtil {
         || cur instanceof NotServingRegionException || cur instanceof RequestTooBigException);
   }
 
-
   /**
-   * Look for an exception we know in the remote exception:
-   * - hadoop.ipc wrapped exceptions
-   * - nested exceptions
-   *
-   * Looks for: RegionMovedException / RegionOpeningException / RegionTooBusyException /
-   *            RpcThrottlingException
+   * Look for an exception we know in the remote exception: - hadoop.ipc wrapped exceptions - nested
+   * exceptions Looks for: RegionMovedException / RegionOpeningException / RegionTooBusyException /
+   * RpcThrottlingException
    * @return null if we didn't find the exception, the exception otherwise.
    */
   public static Throwable findException(Object exception) {
@@ -92,7 +87,7 @@ public final class ClientExceptionsUtil {
         cur = re.unwrapRemoteException();
 
         // unwrapRemoteException can return the exception given as a parameter when it cannot
-        //  unwrap it. In this case, there is no need to look further
+        // unwrap it. In this case, there is no need to look further
         // noinspection ObjectEquality
         if (cur == re) {
           return cur;
@@ -112,8 +107,7 @@ public final class ClientExceptionsUtil {
   }
 
   /**
-   * Checks if the exception is CallQueueTooBig exception (maybe wrapped
-   * into some RemoteException).
+   * Checks if the exception is CallQueueTooBig exception (maybe wrapped into some RemoteException).
    * @param t exception to check
    * @return true if it's a CQTBE, false otherwise
    */
@@ -123,8 +117,7 @@ public final class ClientExceptionsUtil {
   }
 
   /**
-   * Checks if the exception is CallDroppedException (maybe wrapped
-   * into some RemoteException).
+   * Checks if the exception is CallDroppedException (maybe wrapped into some RemoteException).
    * @param t exception to check
    * @return true if it's a CQTBE, false otherwise
    */
@@ -137,11 +130,11 @@ public final class ClientExceptionsUtil {
   // For example, in SocketOutputStream a plain IOException is thrown at times when the channel is
   // closed.
   private static final ImmutableSet<Class<? extends Throwable>> CONNECTION_EXCEPTION_TYPES =
-    ImmutableSet.of(SocketTimeoutException.class, ConnectException.class,
-      ClosedChannelException.class, SyncFailedException.class, EOFException.class,
-      TimeoutException.class, TimeoutIOException.class, CallTimeoutException.class,
-      ConnectionClosingException.class, FailedServerException.class,
-      ConnectionClosedException.class);
+      ImmutableSet.of(SocketTimeoutException.class, ConnectException.class,
+        ClosedChannelException.class, SyncFailedException.class, EOFException.class,
+        TimeoutException.class, TimeoutIOException.class, CallTimeoutException.class,
+        ConnectionClosingException.class, FailedServerException.class,
+        ConnectionClosedException.class);
 
   /**
    * For test only. Usually you should use the {@link #isConnectionException(Throwable)} method

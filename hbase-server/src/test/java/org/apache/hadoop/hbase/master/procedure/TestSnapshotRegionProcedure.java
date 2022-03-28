@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
@@ -62,7 +61,7 @@ public class TestSnapshotRegionProcedure {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotRegionProcedure.class);
+      HBaseClassTestRule.forClass(TestSnapshotRegionProcedure.class);
 
   private static HBaseTestingUtility TEST_UTIL;
   private HMaster master;
@@ -88,7 +87,7 @@ public class TestSnapshotRegionProcedure {
     byte[] cf = Bytes.toBytes("cf");
     String SNAPSHOT_NAME = "SnapshotRegionProcedureTest";
     SnapshotDescription snapshot =
-      new SnapshotDescription(SNAPSHOT_NAME, tableName, SnapshotType.FLUSH);
+        new SnapshotDescription(SNAPSHOT_NAME, tableName, SnapshotType.FLUSH);
     snapshotProto = ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
     snapshotProto = SnapshotDescriptionUtils.validate(snapshotProto, master.getConfiguration());
     final byte[][] splitKeys = new RegionSplitter.HexStringSplit().split(10);
@@ -113,7 +112,7 @@ public class TestSnapshotRegionProcedure {
   public void testSimpleSnapshotRegion() throws Exception {
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
     List<Pair<RegionInfo, ServerName>> regions =
-      master.getAssignmentManager().getTableRegionsAndLocations(tableName, true);
+        master.getAssignmentManager().getTableRegionsAndLocations(tableName, true);
     assertEquals(10, regions.size());
     Pair<RegionInfo, ServerName> region = regions.get(0);
     SnapshotRegionProcedure srp = new SnapshotRegionProcedure(snapshotProto, region.getFirst());
@@ -126,14 +125,14 @@ public class TestSnapshotRegionProcedure {
   public void testRegionServerCrashWhileTakingSnapshotRegion() throws Exception {
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
     List<Pair<RegionInfo, ServerName>> regions =
-      master.getAssignmentManager().getTableRegionsAndLocations(tableName, true);
+        master.getAssignmentManager().getTableRegionsAndLocations(tableName, true);
     assertEquals(10, regions.size());
     Pair<RegionInfo, ServerName> pair = regions.get(0);
     SnapshotRegionProcedure srp = new SnapshotRegionProcedure(snapshotProto, pair.getFirst());
     long procId = procExec.submitProcedure(srp);
     TEST_UTIL.getHBaseCluster().killRegionServer(pair.getSecond());
     TEST_UTIL.waitFor(60000, () -> !pair.getSecond().equals(master.getAssignmentManager()
-      .getRegionStates().getRegionStateNode(pair.getFirst()).getRegionLocation()));
+        .getRegionStates().getRegionStateNode(pair.getFirst()).getRegionLocation()));
     TEST_UTIL.waitFor(60000, () -> srp.inRetrying());
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     assertTrue(assertRegionManifestGenerated(pair.getFirst()));
@@ -142,8 +141,8 @@ public class TestSnapshotRegionProcedure {
   @After
   public void teardown() throws Exception {
     if (this.master != null) {
-      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(
-        master.getMasterProcedureExecutor(), false);
+      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(master.getMasterProcedureExecutor(),
+        false);
     }
     TEST_UTIL.shutdownMiniCluster();
   }
